@@ -60,7 +60,7 @@
             }
         }
     }
-    function reactRender(vdata: RenderCode, index?: any) {
+    function reactRender(vdata: RenderCode | any, index?: any) {
         let VirtualDOM: RenderData;
         if (vdata.nodeType != undefined) {
             VirtualDOM = { type: vdata.nodeType }
@@ -92,6 +92,7 @@
         } else {
             return vdata
         }
+        console.log(VirtualDOM)
         return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || null);
     }
     async function get(url: string, parameter: string[] = [], referrer: string, headers: object = {}) {
@@ -248,6 +249,171 @@
             }
         }
     }
+    class tips extends React.Component {
+        type: {
+            Info: string;
+            Warning: string;
+            Success: string;
+            Progress: string;
+        }
+        id: string;
+        constructor(props: any) {
+            super(props)
+            this.type = {
+                Info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+                Warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+                Success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+                Progress: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
+            }
+            this.id = this.props["id"]
+        }
+        render() {
+            let classData = ' tips' + this.props["type"]
+            if (this.props["wait"]) {
+                classData += ' tipsWait'
+            } else {
+                classData += ' tipsActive'
+            }
+            return (reactRender({
+                nodeType: 'div',
+                className: 'tips' + classData,
+                childs: [{
+                    nodeType: 'div',
+                    className: 'tipsIcon',
+                    attribute: {
+                        dangerouslySetInnerHTML: { __html: this.type[this.props["type"]] }
+                    }
+                }, {
+                    nodeType: 'div',
+                    className: 'tipsContent',
+                    childs: [{
+                        nodeType: 'h2',
+                        childs: this.props["title"]
+                    }, {
+                        nodeType: 'p',
+                        childs: this.props["content"]
+                    }]
+                }]
+            }))
+        }
+    }
+    type pluginTipsStateType = {
+        TipsList: Array<React.CElement<tips, any>>
+    }
+    class pluginTips extends React.Component<any, pluginTipsStateType> {
+        WaitingQueue: Queue
+        DownloadingQueue: Queue
+        constructor(props: any) {
+            super(props)
+            this.DownloadingQueue = new Queue()
+            this.WaitingQueue = new Queue()
+            this.state = {
+                TipsList: Array<React.CElement<tips, any>>()
+            }
+        }
+        downloadComplete(id: string) {
+            this.DownloadingQueue.remove(id)
+            this.setState({
+                TipsList: this.state.TipsList.filter((element) => {
+                    return element.props.id != id
+                })
+            })
+            if (this.WaitingQueue.length() > 0) {
+                let downloadTask = this.WaitingQueue.pop()
+                if (GM_info.downloadMode == 'native') {
+                    this.progress(downloadTask.name + ' 下载中...', { id: downloadTask.id })
+                } else {
+                    this.info('下载', downloadTask.name + ' 已开始下载!')
+                }
+                this.DownloadingQueue.push(downloadTask.task)
+                GM_download(downloadTask.task)
+            }
+        }
+        downloading(id: string, value: number) {
+            this.setState({
+                TipsList: this.state.TipsList.filter((element) => {
+                    return element.props.id != id
+                }).concat(React.createElement(tips, {
+                    wait: true,
+                    id: id,
+                    title: '下载中...',
+                    content: [{
+                        nodeType: 'div',
+                        className: 'Progress',
+                        childs: [{
+                            nodeType: 'div',
+                            className: 'value',
+                            attribute: {
+                                value: value.toFixed(2),
+                                style: { width: value + '%' }
+                            }
+                        }]
+                    }],
+                    type: 'Progress'
+                }))
+            })
+        }
+        info(title: string, content: string, wait: boolean = false) {
+            this.setState({
+                TipsList: this.state.TipsList.concat(React.createElement(tips, {
+                    title: title,
+                    content: content,
+                    type: 'Info',
+                    wait: wait
+                }))
+            })
+        }
+        warning(title: string, content: string, wait: boolean = false) {
+            this.setState({
+                TipsList: this.state.TipsList.concat(React.createElement(tips, {
+                    title: title,
+                    content: content,
+                    type: 'Warning',
+                    wait: wait
+                }))
+            })
+        }
+        success(title: string, content: string, wait: boolean = false) {
+            this.setState({
+                TipsList: this.state.TipsList.concat(React.createElement(tips, {
+                    title: title,
+                    content: content,
+                    type: 'Success',
+                    wait: wait
+                }))
+            })
+        }
+        progress(title: string, content: any) {
+            if (!this.state.TipsList.some((element) => { return element.props.id == content.id })) {
+                this.setState({
+                    TipsList: this.state.TipsList.concat(React.createElement(tips, {
+                        title: title,
+                        id: content.id,
+                        wait: true,
+                        content: [{
+                            nodeType: 'div',
+                            className: 'Progress',
+                            childs: [{
+                                nodeType: 'div',
+                                className: 'value',
+                                attribute: {
+                                    value: 0
+                                }
+                            }]
+                        }],
+                        type: 'Progress'
+                    }))
+                })
+            }
+        }
+        render() {
+            return (reactRender({
+                nodeType: 'section',
+                className: 'tipsContainer',
+                childs: React.Children.toArray(this.state.TipsList)
+            }))
+        }
+    }
     class VideoInfo {
         Url: string
         ID: string
@@ -360,7 +526,7 @@
                         },
                         onClick: () => {
                             this.hide()
-                            //main.DownloadSelected()
+                            DownloadSelected()
                         }
                     },
                     {
@@ -372,7 +538,7 @@
                         },
                         onClick: () => {
                             this.hide()
-                            //main.DownloadAll()
+                            DownloadAll()
                         }
                     },
                     {
@@ -384,7 +550,7 @@
                         },
                         onClick: () => {
                             this.hide()
-                            //main.ManualParseDownloadAddress()
+                            ManualParseDownloadAddress()
                         }
                     },
                     {
@@ -412,7 +578,7 @@
             this.synclistener = []
             this.state = {
                 Initialize: GM_getValue('Initialize', false),
-                DownloadType: GM_getValue('DownloadType', DownloadType.others),
+                DownloadType: Number(GM_getValue('DownloadType', DownloadType.others)),
                 DownloadDir: GM_getValue('DownloadDir', ''),
                 DownloadProxy: GM_getValue('DownloadProxy', ''),
                 WebSocketAddress: GM_getValue('WebSocketAddress', 'ws://127.0.0.1:6800/'),
@@ -423,7 +589,7 @@
                     Line: { margin: '10px 0px' },
                     inputLabel: { margin: '5px' },
                     input: { width: '100%' },
-                    main: { display: 'block' }
+                    main: { display: 'none' }
                 }
             }
         }
@@ -437,13 +603,30 @@
             })
         }
         hide() {
-            this.setState((state: any) => {
-                return {
-                    style: Object.assign(state.style, {
-                        main: { display: 'none' }
-                    })
+            if (this.state.Initialize) {
+                this.setState((state: any) => {
+                    return {
+                        style: Object.assign(state.style, {
+                            main: { display: 'none' }
+                        })
+                    }
+                })
+            } else {
+                switch (this.state.DownloadType) {
+                    case DownloadType.aria2:
+                        if (/((((ws|wss):(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/.test(this.state.WebSocketAddress) && this.state.WebSocketToken != '') {
+                            this.configChange({ name: 'Initialize', value: true })
+                            this.hide()
+                        }
+                        break;
+                    case DownloadType.default:
+                    case DownloadType.others:
+                    default:
+                        this.configChange({ name: 'Initialize', value: true })
+                        this.hide()
+                        break;
                 }
-            })
+            }
         }
         componentDidMount() {
             let values = GM_listValues()
@@ -530,7 +713,7 @@
                             {
                                 nodeType: 'input',
                                 name: 'DownloadType',
-                                type: 'Radio',
+                                type: 'radio',
                                 value: DownloadType.aria2,
                                 onChange: ({ target }: any) => this.configChange(target)
                             },
@@ -542,7 +725,7 @@
                             {
                                 nodeType: 'input',
                                 name: 'DownloadType',
-                                type: 'Radio',
+                                type: 'radio',
                                 value: DownloadType.default,
                                 onChange: ({ target }: any) => this.configChange(target)
                             },
@@ -554,7 +737,7 @@
                             {
                                 nodeType: 'input',
                                 name: 'DownloadType',
-                                type: 'Radio',
+                                type: 'radio',
                                 value: DownloadType.others,
                                 onChange: ({ target }: any) => this.configChange(target)
                             },
@@ -562,8 +745,7 @@
                                 nodeType: 'label',
                                 style: this.state.style.radioLabel,
                                 childs: '其他下载器'
-                            }
-                            ]
+                            }].map((item: any) => { if (item.value == this.state.DownloadType) { item.checked = true } return item })
                         }, {
                             nodeType: 'div',
                             style: this.state.style.Line,
@@ -575,7 +757,6 @@
                             {
                                 nodeType: 'input',
                                 name: 'DownloadDir',
-                                type: 'Text',
                                 value: this.state.DownloadDir,
                                 style: this.state.style.input,
                                 onChange: ({ target }: any) => this.configChange(target)
@@ -592,7 +773,6 @@
                             {
                                 nodeType: 'input',
                                 name: 'DownloadProxy',
-                                type: 'Text',
                                 value: this.state.DownloadProxy,
                                 style: this.state.style.input,
                                 onChange: ({ target }: any) => this.configChange(target)
@@ -609,7 +789,6 @@
                             {
                                 nodeType: 'input',
                                 name: 'WebSocketAddress',
-                                type: 'Text',
                                 value: this.state.WebSocketAddress,
                                 style: this.state.style.input,
                                 onChange: ({ target }: any) => this.configChange(target)
@@ -652,173 +831,7 @@
             }))
         }
     }
-    class tips extends React.Component {
-        type: {
-            Info: string;
-            Warning: string;
-            Success: string;
-            Progress: string;
-        }
-        id: string;
-        constructor(props: any) {
-            super(props)
-            this.type = {
-                Info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-                Warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
-                Success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
-                Progress: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
-            }
-            this.id = this.props["id"]
-        }
-        render() {
-            let classData = ' tips' + this.props["type"]
-            if (this.props["wait"]) {
-                classData += ' tipsWait'
-            } else {
-                classData += ' tipsActive'
-            }
-            return (reactRender({
-                nodeType: 'div',
-                className: 'tips' + classData,
-                childs: [{
-                    nodeType: 'div',
-                    className: 'tipsIcon',
-                    attribute: {
-                        dangerouslySetInnerHTML: { __html: this.type[this.props["type"]] }
-                    }
-                }, {
-                    nodeType: 'div',
-                    className: 'tipsContent',
-                    childs: [{
-                        nodeType: 'h2',
-                        childs: this.props["title"]
-                    }, {
-                        nodeType: 'p',
-                        childs: this.props["content"]
-                    }]
-                }]
-            }))
-        }
-    }
-    type pluginTipsStateType = {
-        TipsList: Array<React.CElement<tips, any>>
-    }
-    class pluginTips extends React.Component<any, pluginTipsStateType> {
-        WaitingQueue: Queue
-        DownloadingQueue: Queue
-        constructor(props: any) {
-            super(props)
-            this.DownloadingQueue = new Queue()
-            this.WaitingQueue = new Queue()
-            this.state = {
-                TipsList: Array<React.CElement<tips, any>>()
-            }
-        }
-        downloadComplete(id: string) {
-            this.DownloadingQueue.remove(id)
-            this.setState({
-                TipsList: this.state.TipsList.filter((element) => {
-                    return element.props.id != id
-                })
-            })
-            if (this.WaitingQueue.length() > 0) {
-                let downloadTask = this.WaitingQueue.pop()
-                if (GM_info.downloadMode == 'native') {
-                    this.progress(downloadTask.name + ' 下载中...', { id: downloadTask.id })
-                } else {
-                    this.info('下载', downloadTask.name + ' 已开始下载!')
-                }
-                this.DownloadingQueue.push(downloadTask.task)
-                GM_download(downloadTask.task)
-            }
-        }
-        downloading(id: string, value: number) {
-            let i = this.state.TipsList.findIndex((element) => {
-                return element.props.id == id
-            })
-            if (i > 0) this.state.TipsList.splice(i, 1)
-            this.setState({
-                TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                    wait: true,
-                    id: id,
-                    title: '下载中...',
-                    content: [{
-                        nodeType: 'div',
-                        className: 'Progress',
-                        childs: [{
-                            nodeType: 'div',
-                            className: 'value',
-                            attribute: {
-                                value: value.toFixed(2),
-                                style: { width: value + '%' }
-                            }
-                        }]
-                    }],
-                    type: 'Progress'
-                }))
-            })
-        }
-        info(title: string, content: string, wait: boolean = false) {
-            this.setState({
-                TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                    title: title,
-                    content: content,
-                    type: 'Info',
-                    wait: wait
-                }))
-            })
-        }
-        warning(title: string, content: string, wait: boolean = false) {
-            this.setState({
-                TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                    title: title,
-                    content: content,
-                    type: 'Warning',
-                    wait: wait
-                }))
-            })
-        }
-        success(title: string, content: string, wait: boolean = false) {
-            this.setState({
-                TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                    title: title,
-                    content: content,
-                    type: 'Success',
-                    wait: wait
-                }))
-            })
-        }
-        progress(title: string, content: any) {
-            if (!this.state.TipsList.some((element) => { return element.props.id == content.id })) {
-                this.setState({
-                    TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                        title: title,
-                        id: content.id,
-                        wait: true,
-                        content: [{
-                            nodeType: 'div',
-                            className: 'Progress',
-                            childs: [{
-                                nodeType: 'div',
-                                className: 'value',
-                                attribute: {
-                                    value: 0
-                                }
-                            }]
-                        }],
-                        type: 'Progress'
-                    }))
-                })
-            }
-        }
-        render() {
-            return (reactRender({
-                nodeType: 'section',
-                className: 'tipsContainer',
-                childs: this.state.TipsList
-            }))
-        }
-    }
+
 
 
     // 初始化
@@ -1144,6 +1157,14 @@
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'))
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'))
     let PluginTips = ReactDOM.render(React.createElement(pluginTips), document.getElementById('PluginTips'))
+
+
+    
+
+    if (!PluginControlPanel.state.Initialize) {
+        PluginControlPanel.show()
+    }
+
     document.querySelectorAll('.node-video').forEach((video) => {
         (video as HTMLElement).ondblclick = () => {
             video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false')
@@ -1153,6 +1174,7 @@
         video.setAttribute('checked', 'false')
         video.classList.add('selectButton')
     })
+
     switch (PluginControlPanel.state.DownloadType) {
         case DownloadType.aria2:
             PluginControlPanel.ConnectionWebSocket()
@@ -1173,12 +1195,16 @@
         '高画質'//自定义
     ]
 
+    function ParseVideoID(data: Element) {
+        return data.querySelector('.selectButton').getAttribute('linkData').split('?')[0].split('/')[4].toLowerCase();
+    }
+
     async function ManualParseDownloadAddress() {
         let ID = prompt('请输入需要下载的视频ID', '')
         if (ID!.split('_')[1] != undefined) {
             ID = ID!.split('_')[1]
         }
-        await main.ParseDownloadAddress(ID!)
+        await ParseDownloadAddress(ID!)
         PluginTips.success('下载', '解析完成!')
     }
 
@@ -1188,7 +1214,7 @@
             const element = document.getElementsByClassName('node-video')[index]
             if (!element.classList.contains('node-full')) {
                 if (element.getElementsByClassName('selectButton')[0].getAttribute('checked') === 'true') {
-                    await main.ParseDownloadAddress(element)
+                    await ParseDownloadAddress(ParseVideoID(element))
                 }
             }
         }
@@ -1198,106 +1224,104 @@
     async function DownloadAll() {
         PluginTips.info('下载', '开始解析...')
         if (document.getElementById('block-views-videos-block-2')!.getElementsByClassName('more-link').length == 0) {
-            let videoListPage = library.Dom.parseDom(await library.Net.get(window.location.href, undefined, window.location.href))
+            let videoListPage = parseDom(await get(window.location.href, undefined, window.location.href))
             let videosList = videoListPage.querySelector('#block-views-videos-block-2')!.querySelectorAll('.node-video')
             for (let index = 0; index < videosList.length; index++) {
                 const element = videosList[index]
-                await main.ParseDownloadAddress(element)
+                await ParseDownloadAddress(ParseVideoID(element))
             }
             PluginTips.success('下载', '已全部解析完成!')
         } else {
-            await main.GetAllData(document.querySelector('div.more-link')!.querySelector('a')!.href, [], window.location.href)
+            await GetAllData(document.querySelector('div.more-link')!.querySelector('a')!.href, [], window.location.href)
         }
     }
-    
+
     async function GetAllData(videoListUrl: string, data: string[], referrer: string) {
-        let videoListPage = library.Dom.parseDom(await library.Net.get(videoListUrl, data, referrer))
+        let videoListPage = parseDom(await get(videoListUrl, data, referrer))
         let videosList = videoListPage.querySelector('.view-videos')!.querySelectorAll('.node-video')
         for (let index = 0; index < videosList.length; index++) {
             const element = videosList[index]
-            await main.ParseDownloadAddress(element)
+            await ParseDownloadAddress(ParseVideoID(element))
         }
         if (videoListPage.getElementsByClassName('pager-next').length != 0) {
-            await main.GetAllData(videoListPage.getElementsByClassName('pager-next')[0].querySelector('a')!.href, data, referrer)
+            await GetAllData(videoListPage.getElementsByClassName('pager-next')[0].querySelector('a').href, data, referrer)
         }
         PluginTips.success('下载', '已全部解析完成!')
     }
 
     function CheckIsHaveDownloadLink(comment: string) {
         if (comment == null) return false
-        for (let index = 0; index < main.DownloadLinkCharacteristics.length; index++) {
-            if (comment.indexOf(main.DownloadLinkCharacteristics[index]) != -1) return true
+        for (let index = 0; index < DownloadLinkCharacteristics.length; index++) {
+            if (comment.indexOf(DownloadLinkCharacteristics[index]) != -1) return true
         }
         return false
     }
 
-    async function ParseDownloadAddress(Data: string | Element) {
-        let videoInfo = await main.VideoInfo.createNew(Data)
+    async function ParseDownloadAddress(Data: string) {
+        let videoInfo = await new VideoInfo(Data)
         if (videoInfo.getLock()) {
-            PluginTips.warning('警告', '<a href="' + videoInfo.getUrl() + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 该视频已锁定! <br />请等待作者同意您的添加好友申请后再重试!')
+            PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 该视频已锁定! <br />请等待作者同意您的添加好友申请后再重试!')
         } else {
-            if (main.CheckIsHaveDownloadLink(videoInfo.getComment())) {
-                PluginTips.warning('警告', '<a href="' + videoInfo.getUrl() + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 发现疑似第三方高画质下载链接,请手动处理!', true)
+            if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
+                PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 发现疑似第三方高画质下载链接,请手动处理!', true)
             } else {
                 if (videoInfo.getDownloadQuality() == 'Source') {
-                    main.SendDownloadRequest(videoInfo, document.cookie)
+                    SendDownloadRequest(videoInfo, document.cookie)
                 } else {
-                    PluginTips.warning('警告', '<a href="' + videoInfo.getUrl() + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 没有解析到原画下载地址,请手动处理!', true)
+                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 没有解析到原画下载地址,请手动处理!', true)
                 }
             }
         }
     }
 
-    function defaultDownload(Info: object) {
-        /*
-        config.DownloadDir.replace(/\\\\/g, '/') + Info.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '') + '/' + 
-        */
+    function defaultDownload(Info: VideoInfo) {
+
         (function (ID, Name, DownloadUrl) {
             let Task = {
                 url: DownloadUrl,
                 name: Name.replace(/[\\\\/:*?\"<>|]/g, '') + '[' + ID + '].mp4',
                 saveAs: false,
                 onload: function () {
-                    PluginTips.dispatchEvent(new CustomEvent('downloadComplete', { detail: { id: ID, name: Name, value: 100 } }))
+                    PluginTips.downloadComplete(ID)
                     PluginTips.success('下载', Name + ' 下载完成!')
                 },
                 onerror: function (error: any) {
-                    PluginTips.dispatchEvent(new CustomEvent('downloadComplete', { detail: { id: ID, name: Name, value: 100 } }))
+                    PluginTips.downloadComplete(ID)
                     PluginTips.warning('下载', Name + ' 下载失败! <br />错误报告: ' + JSON.stringify(error))
                 },
                 onprogress: function (progress: { lengthComputable: any; position: number; totalSize: number; }) {
                     if (progress.lengthComputable) {
-                        PluginTips.dispatchEvent(new CustomEvent('downloading', { detail: { id: ID, name: Name, value: progress.position / progress.totalSize * 100 } }))
+                        PluginTips.downloading(ID, progress.position / progress.totalSize * 100)
                     }
                 },
                 ontimeout: function () {
-                    PluginTips.dispatchEvent(new CustomEvent('downloadComplete', { detail: { id: ID, name: Name, value: 100 } }))
+                    PluginTips.downloadComplete(ID)
                     PluginTips.warning('下载', Name + ' 下载超时! ')
                 }
             }
-            if (DownloadingQueue.length() < 4) {
-                DownloadingQueue.push({ id: ID, name: Name, task: Task })
+            if (PluginTips.DownloadingQueue.length() < 4) {
+                PluginTips.DownloadingQueue.push({ id: ID, name: Name, task: Task })
                 GM_download(Task)
                 if (GM_info.downloadMode == 'native') {
-                    main.Progress(Name + ' 下载中...', {
+                    PluginTips.progress(Name + ' 下载中...', {
                         id: ID
                     })
                 } else {
                     PluginTips.info('下载', Name + ' 已开始下载!')
                 }
             } else {
-                WaitingQueue.push({ id: ID, name: Name, task: Task })
+                PluginTips.WaitingQueue.push({ id: ID, name: Name, task: Task })
             }
-        }(Info.getID(), Info.getName(), Info.getDownloadUrl()))
+        }(Info.ID, Info.getName(), Info.getDownloadUrl()))
     }
 
     function aria2Download(Info: any, Cookie: string) {
         let Action = {
             'jsonrpc': '2.0',
             'method': 'aria2.addUri',
-            'id': config.WebSocketID,
+            'id': PluginControlPanel.state.WebSocketID,
             'params': [
-                'token:' + config.WebSocketToken,
+                'token:' + PluginControlPanel.state.WebSocketToken,
                 [Info.getDownloadUrl()],
                 {
                     'referer': 'https://ecchi.iwara.tv/',
@@ -1305,27 +1329,27 @@
                         'Cookie:' + Cookie
                     ],
                     'out': '![' + Info.getID() + ']' + Info.getName().replace(/[\\\\/:*?\"<>|]/g, '') + '.mp4',
-                    'dir': config.DownloadDir + Info.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '')
+                    'dir': PluginControlPanel.state.DownloadDir + Info.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '')
                 }
             ]
         }
-        if (config.DownloadProxy != '') {
-            Action.params[Action.params.length - 1]['all-proxy'] = config.DownloadProxy
+        if (PluginControlPanel.state.DownloadProxy != '') {
+            Action.params[Action.params.length - 1]['all-proxy'] = PluginControlPanel.state.DownloadProxy
         }
-        main.Aria2WebSocket!.send(JSON.stringify(Action))
+        PluginControlPanel.Aria2WebSocket.send(JSON.stringify(Action))
         PluginTips.info('提示', '已将 ' + Info.getName() + ' 的下载地址推送到Aria2!')
     }
-    
-    async function SendDownloadRequest(Info: object, Cookie: string) {
-        switch (config.DownloadType) {
-            case config.Type.Download.aria2:
-                main.aria2Download(Info, Cookie)
+
+    async function SendDownloadRequest(Info: VideoInfo, Cookie: string) {
+        switch (PluginControlPanel.state.DownloadType) {
+            case DownloadType.aria2:
+                aria2Download(Info, Cookie)
                 break
-            case config.Type.Download.default:
+            case DownloadType.default:
                 //PluginTips.warning('警告', '默认下载方式存在问题，暂时停止使用。<br>已调用其他方式下载！')
-                main.defaultDownload(Info)
+                defaultDownload(Info)
                 break
-            case config.Type.Download.others:
+            case DownloadType.others:
                 PluginTips.info('提示', '已将下载请求提交给浏览器!')
                 GM_openInTab(Info.getDownloadUrl(), { active: true, insert: true, setParent: true })
                 break
@@ -1335,17 +1359,36 @@
         }
     }
 
-
-    PluginTips.info('测试0', '插件加载成功!')
-    PluginTips.warning('测试1', '插件加载成功!')
-    PluginTips.success('测试2', '插件加载成功!')
-    PluginTips.progress('测试4', { id: 'test' })
+    PluginTips.info('测试3', '插件加载成功!', true)
+    PluginTips.warning('测试4', '插件加载成功!', true)
+    PluginTips.success('测试5', '插件加载成功!', true)
+    PluginTips.progress('测试6', { id: 'test' })
+    PluginTips.progress('测试7', { id: 'test2' })
     setTimeout(() => {
         PluginTips.downloading('test', 10)
         setTimeout(() => {
             PluginTips.downloading('test', 20)
             setTimeout(() => {
                 PluginTips.downloading('test', 40)
+
+
+                setTimeout(() => {
+                    PluginTips.downloading('test2', 10)
+                    setTimeout(() => {
+                        PluginTips.downloading('test2', 20)
+                        setTimeout(() => {
+                            PluginTips.downloading('test2', 40)
+                            setTimeout(() => {
+                                PluginTips.downloading('test2', 80)
+                                setTimeout(() => {
+                                    PluginTips.downloadComplete('test2')
+                                }, 1000);
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
+                }, 1000);
+
+
                 setTimeout(() => {
                     PluginTips.downloading('test', 80)
                     setTimeout(() => {
