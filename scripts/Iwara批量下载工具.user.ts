@@ -109,9 +109,7 @@
             if (vdata.childs != undefined) {
                 if (VirtualDOM.children == undefined) VirtualDOM.children = []
                 if (vdata.childs instanceof Array) {
-                    let test = vdata.childs.map((item: any) => reactRender(item))
-                    if (Object.prototype.isPrototypeOf(test[0]) && Object.keys(test[0]).length === 0) debugger
-                    VirtualDOM.children = React.Children.toArray(test)
+                    VirtualDOM.children = React.Children.toArray(vdata.childs.map((item: any) => reactRender(item)))
                 } else {
                     VirtualDOM.children.push(reactRender(vdata.childs))
                 }
