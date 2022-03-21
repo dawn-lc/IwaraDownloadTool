@@ -1,7 +1,7 @@
 interface RenderCode { 
     nodeType: string;
     childs?: any;
-    className?: string;
+    className?: string | Array<string>;
     attribute?: object;
     parent?: any;
     before?: any;
