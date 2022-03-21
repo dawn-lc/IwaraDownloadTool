@@ -1,10 +1,10 @@
 "use strict";
 // ==UserScript==
-// @name:en               Iwara Download Tool
-// @name:zh-CN            Iwara 批量下载工具
+// @name                  Iwara 批量下载工具
+// @name:en               Iwara Download Tool 
 // @name:ja               Iwara バッチダウンローダー
+// @description           批量下载 Iwara 视频
 // @description:en        Download videos from iwara.tv
-// @description:zh-CN     批量下载 Iwara 视频
 // @description:ja        Iwara 動画バッチをダウンロード
 // @namespace             https://github.com/dawn-lc/user.js
 // @icon                  https://iwara.tv/sites/all/themes/main/img/logo.png
