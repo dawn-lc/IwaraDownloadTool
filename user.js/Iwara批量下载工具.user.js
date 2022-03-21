@@ -25,25 +25,35 @@
                         RenderDOM.setAttribute(key, vdata.attribute[key]);
                     }
                     break;
-                case 'innerHTML':
-                    RenderDOM.innerHTML = vdata.innerHTML;
+                case 'className':
+                    if (getType(vdata.className) == 'Array') {
+                        RenderDOM.className = vdata.className.join(' ');
+                    }
+                    else {
+                        RenderDOM.className = vdata.className.toString();
+                    }
                     break;
                 case 'childs':
-                    if (vdata.childs instanceof Array) {
-                        vdata.childs.forEach((child) => {
-                            if (child instanceof HTMLElement) {
-                                RenderDOM.appendChild(child);
-                            }
-                            else if (typeof (child) == 'string') {
-                                RenderDOM.insertAdjacentHTML('beforeend', child);
-                            }
-                            else {
-                                console.log(RenderDOM);
-                                console.log(child);
-                                console.log(sourceRender(child));
-                                RenderDOM.appendChild(sourceRender(child));
-                            }
-                        });
+                    switch (getType(vdata.childs)) {
+                        case 'Array':
+                            vdata.childs.forEach((child) => {
+                                if (child instanceof HTMLElement) {
+                                    RenderDOM.appendChild(child);
+                                }
+                                else if (getType(child) == 'string') {
+                                    RenderDOM.insertAdjacentHTML('beforeend', child);
+                                }
+                                else {
+                                    RenderDOM.appendChild(sourceRender(child));
+                                }
+                            });
+                            break;
+                        case 'String':
+                            RenderDOM.insertAdjacentHTML('beforeend', vdata.childs);
+                            break;
+                        default:
+                            RenderDOM.appendChild(sourceRender(vdata.childs));
+                            break;
                     }
                     break;
                 case 'parent':
@@ -61,12 +71,14 @@
                     else {
                         RenderDOM[item] = vdata[item];
                     }
+                    break;
             }
         }
+        return RenderDOM;
     }
     function reactRender(vdata, index) {
         let VirtualDOM;
-        if (vdata.nodeType != undefined) {
+        if (vdata != null && vdata.nodeType != undefined) {
             VirtualDOM = { type: vdata.nodeType };
             delete vdata.nodeType;
             if (vdata.childs != undefined) {
@@ -74,26 +86,29 @@
                     VirtualDOM.children = [];
                 if (vdata.childs instanceof Array) {
                     //VirtualDOM.children = vdata.childs.map((item: any, index: any) => reactRender(item,index))
-                    VirtualDOM.children = React.Children.toArray(vdata.childs.map((item) => reactRender(item)));
+                    let test = vdata.childs.map((item) => reactRender(item));
+                    if (Object.prototype.isPrototypeOf(test[0]) && Object.keys(test[0]).length === 0)
+                        debugger;
+                    VirtualDOM.children = React.Children.toArray(test);
                 }
                 else {
                     VirtualDOM.children.push(reactRender(vdata.childs));
                 }
                 delete vdata.childs;
             }
+            if (VirtualDOM.props == undefined)
+                VirtualDOM.props = {};
             if (vdata.className != undefined) {
-                VirtualDOM.props = Object.assign({ className: vdata.className }, VirtualDOM.props || {});
+                VirtualDOM.props = Object.assign({ className: vdata.className }, VirtualDOM.props);
                 delete vdata.className;
             }
             if (vdata.attribute != undefined) {
-                VirtualDOM.props = Object.assign(vdata.attribute, VirtualDOM.props || {});
+                VirtualDOM.props = Object.assign(vdata.attribute, VirtualDOM.props);
                 delete vdata.attribute;
             }
             if (index != undefined)
-                VirtualDOM.props = Object.assign({ key: index }, VirtualDOM.props || {});
+                VirtualDOM.props = Object.assign({ key: index }, VirtualDOM.props);
             for (const key in vdata) {
-                if (VirtualDOM.props == undefined)
-                    VirtualDOM.props = {};
                 VirtualDOM.props[key] = vdata[key];
                 delete vdata[key];
             }
@@ -101,7 +116,7 @@
         else {
             return vdata;
         }
-        console.log(VirtualDOM);
+        //console.log(VirtualDOM)
         return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || null);
     }
     async function get(url, parameter = [], referrer, headers = {}) {
@@ -233,6 +248,13 @@
         DownloadType[DownloadType["default"] = 1] = "default";
         DownloadType[DownloadType["others"] = 2] = "others";
     })(DownloadType || (DownloadType = {}));
+    let TipsType;
+    (function (TipsType) {
+        TipsType[TipsType["Info"] = 0] = "Info";
+        TipsType[TipsType["Warning"] = 1] = "Warning";
+        TipsType[TipsType["Success"] = 2] = "Success";
+        TipsType[TipsType["Progress"] = 3] = "Progress";
+    })(TipsType || (TipsType = {}));
     class Queue {
         queue;
         push;
@@ -262,68 +284,30 @@
             };
         }
     }
-    class tips extends React.Component {
-        type;
-        id;
-        constructor(props) {
-            super(props);
-            this.type = {
-                Info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-                Warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
-                Success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
-                Progress: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
-            };
-            this.id = this.props["id"];
-        }
-        render() {
-            let classData = ' tips' + this.props["type"];
-            if (this.props["wait"]) {
-                classData += ' tipsWait';
-            }
-            else {
-                classData += ' tipsActive';
-            }
-            return (reactRender({
-                nodeType: 'div',
-                className: 'tips' + classData,
-                childs: [{
-                        nodeType: 'div',
-                        className: 'tipsIcon',
-                        attribute: {
-                            dangerouslySetInnerHTML: { __html: this.type[this.props["type"]] }
-                        }
-                    }, {
-                        nodeType: 'div',
-                        className: 'tipsContent',
-                        childs: [{
-                                nodeType: 'h2',
-                                childs: this.props["title"]
-                            }, {
-                                nodeType: 'p',
-                                childs: this.props["content"]
-                            }]
-                    }]
-            }));
-        }
-    }
-    class pluginTips extends React.Component {
+    class pluginTips {
         WaitingQueue;
         DownloadingQueue;
-        constructor(props) {
-            super(props);
+        static typeIcon = {
+            Info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+            Warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+            Success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+            Progress: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
+        };
+        static Container = sourceRender({
+            nodeType: 'section',
+            attribute: {
+                id: 'PluginTips'
+            },
+            className: 'tipsContainer',
+            parent: document.body
+        });
+        constructor() {
             this.DownloadingQueue = new Queue();
             this.WaitingQueue = new Queue();
-            this.state = {
-                TipsList: Array()
-            };
         }
-        downloadComplete(id) {
+        downloadComplete(id, name) {
             this.DownloadingQueue.remove(id);
-            this.setState({
-                TipsList: this.state.TipsList.filter((element) => {
-                    return element.props.id != id;
-                })
-            });
+            pluginTips.Container.children.namedItem(id).remove();
             if (this.WaitingQueue.length() > 0) {
                 let downloadTask = this.WaitingQueue.pop();
                 if (GM_info.downloadMode == 'native') {
@@ -337,88 +321,99 @@
             }
         }
         downloading(id, value) {
-            this.setState({
-                TipsList: this.state.TipsList.filter((element) => {
-                    return element.props.id != id;
-                }).concat(React.createElement(tips, {
-                    wait: true,
-                    id: id,
-                    title: '下载中...',
-                    content: [{
-                            nodeType: 'div',
-                            className: 'Progress',
-                            childs: [{
-                                    nodeType: 'div',
-                                    className: 'value',
-                                    attribute: {
-                                        value: value.toFixed(2),
-                                        style: { width: value + '%' }
-                                    }
-                                }]
-                        }],
-                    type: 'Progress'
-                }))
-            });
+            let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.tipsProgress .value');
+            downloadTask.setAttribute('value', value.toFixed(2));
+            downloadTask.style.width = value.toFixed(2) + '%';
         }
         info(title, content, wait = false) {
-            this.setState({
-                TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                    title: title,
-                    content: content,
-                    type: 'Info',
-                    wait: wait
-                }))
-            });
+            new tips(TipsType.Info, title, content, wait);
         }
         warning(title, content, wait = false) {
-            this.setState({
-                TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                    title: title,
-                    content: content,
-                    type: 'Warning',
-                    wait: wait
-                }))
-            });
+            new tips(TipsType.Warning, title, content, wait);
         }
         success(title, content, wait = false) {
-            this.setState({
-                TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                    title: title,
-                    content: content,
-                    type: 'Success',
-                    wait: wait
-                }))
-            });
+            new tips(TipsType.Success, title, content, wait);
         }
         progress(title, content) {
-            if (!this.state.TipsList.some((element) => { return element.props.id == content.id; })) {
-                this.setState({
-                    TipsList: this.state.TipsList.concat(React.createElement(tips, {
-                        title: title,
-                        id: content.id,
-                        wait: true,
-                        content: [{
-                                nodeType: 'div',
-                                className: 'Progress',
-                                childs: [{
-                                        nodeType: 'div',
-                                        className: 'value',
-                                        attribute: {
-                                            value: 0
-                                        }
-                                    }]
-                            }],
-                        type: 'Progress'
-                    }))
-                });
-            }
+            new tips(TipsType.Progress, title, {
+                nodeType: 'div',
+                className: 'Progress',
+                childs: [{
+                        nodeType: 'div',
+                        className: 'value',
+                        attribute: {
+                            value: 0
+                        }
+                    }]
+            }, true, content.id);
         }
-        render() {
-            return (reactRender({
-                nodeType: 'section',
-                className: 'tipsContainer',
-                childs: React.Children.toArray(this.state.TipsList)
-            }));
+    }
+    class tips {
+        id;
+        type;
+        wait;
+        constructor(type, title, content, wait = false, id = null) {
+            this.type = type;
+            this.id = id;
+            this.wait = wait;
+            sourceRender(Object.assign({
+                nodeType: 'div',
+                childs: [{
+                        nodeType: 'div',
+                        className: 'tipsIcon',
+                        innerHTML: pluginTips.typeIcon[TipsType[type]]
+                    }, {
+                        nodeType: 'div',
+                        className: 'tipsContent',
+                        childs: [{
+                                nodeType: 'h2',
+                                childs: title
+                            }, {
+                                nodeType: 'p',
+                                childs: content
+                            }]
+                    }],
+                parent: pluginTips.Container
+            }, this.style(), this.attribute(), this.event()));
+        }
+        event() {
+            return {
+                onclick: (e) => {
+                    if (this.wait) {
+                        if (this.type != TipsType.Progress) {
+                            e.currentTarget.remove();
+                        }
+                    }
+                    else {
+                        e.currentTarget.remove();
+                    }
+                }
+            };
+        }
+        style() {
+            let style = {
+                className: ['tips']
+            };
+            style.className.push('tips' + TipsType[this.type]);
+            if (this.wait) {
+                style.className.push('tipsWait');
+            }
+            else {
+                style.className.push('tipsActive');
+            }
+            return style;
+        }
+        attribute() {
+            if (this.id != null) {
+                return {
+                    attribute: {
+                        id: this.id
+                    }
+                };
+            }
+            else {
+                return {};
+            }
         }
     }
     class VideoInfo {
@@ -461,16 +456,14 @@
                     }
                     return null;
                 };
-                this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source[this.getDownloadQuality()].uri); };
+                this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
                 this.getDownloadFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
                 this.getComment = function () {
                     let comment = '';
                     try {
-                        let commentArea = this.Page.getElementsByClassName('node-info')[0].getElementsByClassName('field-type-text-with-summary field-label-hidden')[0].getElementsByClassName('field-item even');
-                        for (let index = 0; index < commentArea.length; index++) {
-                            const element = commentArea[index];
-                            comment += element.innerText.toLowerCase();
-                        }
+                        this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary field-label-hidden').querySelectorAll('.field-item even').forEach((element) => {
+                            comment += element.innerText + '\n';
+                        });
                     }
                     catch (error) {
                         comment += error.toString();
@@ -482,21 +475,40 @@
         }
     }
     class pluginUI extends React.Component {
+        showCondition;
         constructor(props) {
             super(props);
+            this.showCondition = false;
             this.state = {
-                style: {},
+                style: {
+                    base: { cursor: 'pointer' },
+                    disable: { display: 'none' }
+                },
                 main: 'btn-group',
+                downloadAllEnable: false,
+                downloadSelectedEnable: false
             };
         }
         show() {
+            this.showCondition = true;
             this.setState({
                 main: 'btn-group open'
             });
         }
         hide() {
+            this.showCondition = false;
             this.setState({
                 main: 'btn-group'
+            });
+        }
+        downloadAllEnable() {
+            this.setState({
+                downloadAllEnable: true
+            });
+        }
+        downloadSelectedEnable() {
+            this.setState({
+                downloadSelectedEnable: true
             });
         }
         render() {
@@ -514,11 +526,13 @@
                         childs: [{
                                 nodeType: 'span',
                                 className: 'glyphicon glyphicon-download-alt'
-                            }, {
-                                nodeType: 'text',
-                                childs: '批量下载工具'
-                            }],
-                        onClick: () => { this.show(); }
+                            }, '批量下载工具'],
+                        onClick: () => { if (this.showCondition) {
+                            this.hide();
+                        }
+                        else {
+                            this.show();
+                        } }
                     },
                     {
                         nodeType: 'ul',
@@ -526,55 +540,51 @@
                         attribute: {
                             role: 'menu'
                         },
-                        childs: [{
+                        childs: [
+                            this.state.downloadAllEnable ? {
                                 nodeType: 'li',
                                 attribute: {
-                                    role: 'menu',
-                                    style: { cursor: 'pointer' },
-                                    id: 'DownloadSelected',
-                                    dangerouslySetInnerHTML: { __html: '<a><span class="glyphicon glyphicon-check"></span>下载所选</a>' }
-                                },
-                                onClick: () => {
-                                    this.hide();
-                                    DownloadSelected();
-                                }
-                            },
-                            {
-                                nodeType: 'li',
-                                attribute: {
-                                    style: { display: 'none', cursor: 'pointer' },
-                                    id: 'DownloadAll',
+                                    style: this.state.style.base,
                                     dangerouslySetInnerHTML: { __html: '<a><span class="glyphicon glyphicon-save"></span>下载所有</a>' }
                                 },
                                 onClick: () => {
                                     this.hide();
                                     DownloadAll();
                                 }
-                            },
+                            } : null,
+                            this.state.downloadSelectedEnable ? {
+                                nodeType: 'li',
+                                attribute: {
+                                    style: this.state.style.base,
+                                    dangerouslySetInnerHTML: { __html: '<a><span class="glyphicon glyphicon-check"></span>下载所选</a>' }
+                                },
+                                onClick: () => {
+                                    this.hide();
+                                    DownloadSelected();
+                                }
+                            } : null,
                             {
                                 nodeType: 'li',
                                 attribute: {
-                                    style: { cursor: 'pointer' },
-                                    id: 'ManualDownload',
+                                    style: this.state.style.base,
                                     dangerouslySetInnerHTML: { __html: '<a><span class="glyphicon glyphicon-edit"></span>手动下载</a>' }
                                 },
                                 onClick: () => {
                                     this.hide();
                                     ManualParseDownloadAddress();
                                 }
-                            },
-                            {
+                            }, {
                                 nodeType: 'li',
                                 attribute: {
-                                    style: { cursor: 'pointer' },
-                                    id: 'pluginSet',
+                                    style: this.state.style.base,
                                     dangerouslySetInnerHTML: { __html: '<a><span class="glyphicon glyphicon-cog"></span>设置</a>' }
                                 },
                                 onClick: () => {
                                     this.hide();
                                     PluginControlPanel.show();
                                 }
-                            }]
+                            }
+                        ]
                     }]
             }));
         }
@@ -1156,42 +1166,11 @@
                 id: 'PluginControlPanel'
             },
             parent: document.body
-        }, {
-            nodeType: 'div',
-            attribute: {
-                id: 'PluginTips'
-            },
-            parent: document.body
         }]);
     // 初始化插件
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
-    let PluginTips = ReactDOM.render(React.createElement(pluginTips), document.getElementById('PluginTips'));
-    if (!PluginControlPanel.state.Initialize) {
-        PluginControlPanel.show();
-    }
-    document.querySelectorAll('.node-video').forEach((video) => {
-        video.ondblclick = () => {
-            video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
-        };
-        video.setAttribute('linkData', video.querySelector('a').href);
-        video.querySelector('a').removeAttribute('href');
-        video.setAttribute('checked', 'false');
-        video.classList.add('selectButton');
-    });
-    switch (PluginControlPanel.state.DownloadType) {
-        case DownloadType.aria2:
-            PluginControlPanel.ConnectionWebSocket();
-            break;
-        case DownloadType.default:
-            PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！', true);
-            break;
-        case DownloadType.others:
-            break;
-        default:
-            console.log('未知的下载模式!');
-            break;
-    }
+    let PluginTips = new pluginTips();
     let DownloadLinkCharacteristics = [
         '/s/',
         'mega.nz/file/',
@@ -1199,7 +1178,8 @@
         '高画質' //自定义
     ];
     function ParseVideoID(data) {
-        return data.querySelector('.selectButton').getAttribute('linkData').split('?')[0].split('/')[4].toLowerCase();
+        console.log(data);
+        return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
     }
     async function ManualParseDownloadAddress() {
         let ID = prompt('请输入需要下载的视频ID', '');
@@ -1211,14 +1191,9 @@
     }
     async function DownloadSelected() {
         PluginTips.info('下载', '开始解析...');
-        for (let index = 0; index < document.getElementsByClassName('node-video').length; index++) {
-            const element = document.getElementsByClassName('node-video')[index];
-            if (!element.classList.contains('node-full')) {
-                if (element.getElementsByClassName('selectButton')[0].getAttribute('checked') === 'true') {
-                    await ParseDownloadAddress(ParseVideoID(element));
-                }
-            }
-        }
+        document.querySelectorAll('.selectButton[checked="true"]').forEach(async (element) => {
+            await ParseDownloadAddress(ParseVideoID(element));
+        });
         PluginTips.success('下载', '已全部解析完成!');
     }
     async function DownloadAll() {
@@ -1342,56 +1317,102 @@
         PluginTips.info('提示', '已将 ' + Info.getName() + ' 的下载地址推送到Aria2!');
     }
     async function SendDownloadRequest(Info, Cookie) {
-        switch (PluginControlPanel.state.DownloadType) {
-            case DownloadType.aria2:
+        switch (DownloadType[PluginControlPanel.state.DownloadType]) {
+            case DownloadType[DownloadType.aria2]:
                 aria2Download(Info, Cookie);
                 break;
-            case DownloadType.default:
+            case DownloadType[DownloadType.default]:
                 //PluginTips.warning('警告', '默认下载方式存在问题，暂时停止使用。<br>已调用其他方式下载！')
                 defaultDownload(Info);
                 break;
-            case DownloadType.others:
+            case DownloadType[DownloadType.others]:
+            default:
                 PluginTips.info('提示', '已将下载请求提交给浏览器!');
                 GM_openInTab(Info.getDownloadUrl(), { active: true, insert: true, setParent: true });
                 break;
-            default:
-                PluginTips.warning('配置错误', '未知的下载模式!');
-                break;
         }
     }
-    PluginTips.info('测试3', '插件加载成功!', true);
-    PluginTips.warning('测试4', '插件加载成功!', true);
-    PluginTips.success('测试5', '插件加载成功!', true);
-    PluginTips.progress('测试6', { id: 'test' });
-    PluginTips.progress('测试7', { id: 'test2' });
+    if (!PluginControlPanel.state.Initialize) {
+        PluginControlPanel.show();
+    }
+    if (document.querySelectorAll('.node-video').length > 0) {
+        PluginUI.downloadSelectedEnable();
+    }
+    if (window.location.href.indexOf('/users/') > -1) {
+        PluginUI.downloadAllEnable();
+    }
+    document.querySelectorAll('.node-video').forEach((video) => {
+        video.ondblclick = () => {
+            video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
+        };
+        video.setAttribute('linkdata', video.querySelector('a').href);
+        video.querySelector('a').removeAttribute('href');
+        video.setAttribute('checked', 'false');
+        video.classList.add('selectButton');
+    });
+    switch (PluginControlPanel.state.DownloadType) {
+        case DownloadType.aria2:
+            PluginControlPanel.ConnectionWebSocket();
+            break;
+        case DownloadType.default:
+            PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！', true);
+            break;
+        case DownloadType.others:
+            break;
+        default:
+            console.log('未知的下载模式!');
+            break;
+    }
+    /*
+    
+    
+    PluginTips.info('测试1', '插件加载成功!')
+    PluginTips.warning('测试2', '插件加载成功!')
+    PluginTips.success('测试3', '插件加载成功!')
+    PluginTips.info('测试3', '插件加载成功!', true)
+    PluginTips.warning('测试4', '插件加载成功!', true)
+    PluginTips.success('测试5', '插件加载成功!', true)
+    PluginTips.progress('测试6', { id: 'test' })
+    PluginTips.progress('测试7', { id: 'test2' })
     setTimeout(() => {
-        PluginTips.downloading('test', 10);
+        PluginTips.downloading('test', 10)
+        
+
         setTimeout(() => {
-            PluginTips.downloading('test', 20);
+            PluginTips.downloading('test2', 10)
             setTimeout(() => {
-                PluginTips.downloading('test', 40);
+                PluginTips.downloading('test2', 20)
                 setTimeout(() => {
-                    PluginTips.downloading('test2', 10);
+                    PluginTips.downloading('test2', 40)
                     setTimeout(() => {
-                        PluginTips.downloading('test2', 20);
+                        PluginTips.downloading('test2', 80)
                         setTimeout(() => {
-                            PluginTips.downloading('test2', 40);
-                            setTimeout(() => {
-                                PluginTips.downloading('test2', 80);
-                                setTimeout(() => {
-                                    PluginTips.downloadComplete('test2');
-                                }, 1000);
-                            }, 1000);
+                            PluginTips.downloadComplete('test2')
                         }, 1000);
                     }, 1000);
                 }, 1000);
+            }, 1000);
+        }, 1000);
+
+
+
+        setTimeout(() => {
+            PluginTips.downloading('test', 20)
+            setTimeout(() => {
+                PluginTips.downloading('test', 40)
                 setTimeout(() => {
-                    PluginTips.downloading('test', 80);
+                    PluginTips.downloading('test', 80)
                     setTimeout(() => {
-                        PluginTips.downloadComplete('test');
+                        PluginTips.downloadComplete('test')
                     }, 1000);
                 }, 1000);
             }, 1000);
         }, 1000);
     }, 1000);
+
+    
+    
+    
+    
+    */
 })();
