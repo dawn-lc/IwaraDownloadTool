@@ -1,32 +1,32 @@
 // ==UserScript==
-// @name                  Iwara 批量下载工具
-// @name:en               Iwara Download Tool 
-// @name:ja               Iwara バッチダウンローダー
-// @description           批量下载 Iwara 视频
-// @description:en        Download videos from iwara.tv
-// @description:ja        Iwara 動画バッチをダウンロード
-// @namespace             https://github.com/dawn-lc/user.js
-// @icon                  https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version               2.0.1
-// @author                dawn-lc
-// @license               Apache-2.0
-// @connect               iwara.tv
-// @match                 *://*.iwara.tv/*
-// @grant                 GM_getValue
-// @grant                 GM_setValue
-// @grant                 GM_listValues
-// @grant                 GM_deleteValue
-// @grant                 GM_addValueChangeListener
-// @grant                 GM_removeValueChangeListener
-// @grant                 GM_addStyle
-// @grant                 GM_getResourceText
-// @grant                 GM_download
-// @grant                 GM_xmlhttpRequest
-// @grant                 GM_openInTab
-// @grant                 GM_info
-// @grant                 unsafeWindow
-// @require               https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/16.13.1/umd/react.production.min.js
-// @require               https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/16.13.1/umd/react-dom.production.min.js
+// @name           Iwara 批量下载工具
+// @name:en        Iwara Download Tool
+// @name:ja        Iwara バッチダウンローダー
+// @description    批量下载 Iwara 视频
+// @description:en Download videos from iwara.tv
+// @description:ja Iwara 動画バッチをダウンロード
+// @namespace      https://github.com/dawn-lc/user.js
+// @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
+// @version        2.0.1
+// @author         dawn-lc
+// @license        Apache-2.0
+// @connect        iwara.tv
+// @match          *://*.iwara.tv/*
+// @grant          GM_getValue
+// @grant          GM_setValue
+// @grant          GM_listValues
+// @grant          GM_deleteValue
+// @grant          GM_addValueChangeListener
+// @grant          GM_removeValueChangeListener
+// @grant          GM_addStyle
+// @grant          GM_getResourceText
+// @grant          GM_download
+// @grant          GM_xmlhttpRequest
+// @grant          GM_openInTab
+// @grant          GM_info
+// @grant          unsafeWindow
+// @require        https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/16.13.1/umd/react.production.min.js
+// @require        https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/16.13.1/umd/react-dom.production.min.js
 // ==/UserScript==
 (async function () {
     function UUID() {
@@ -101,7 +101,7 @@
     }
     function reactRender(vdata: RenderCode | any, index?: any) {
         let VirtualDOM: RenderData;
-        if (vdata!=null && vdata.nodeType != undefined) {
+        if (vdata != null && vdata.nodeType != undefined) {
             VirtualDOM = { type: vdata.nodeType }
             delete vdata.nodeType
             if (vdata.childs != undefined) {
@@ -439,7 +439,7 @@
         getDownloadUrl: () => string
         getDownloadFileName: () => string
         getComment: () => string
-        getLock: () => boolean 
+        getLock: () => boolean
         constructor(videoID: string) {
             this.ID = videoID.toLowerCase()
             this.Url = 'https://ecchi.iwara.tv/videos/' + this.ID
@@ -1147,14 +1147,14 @@
             id: 'PluginControlPanel'
         },
         parent: document.body
-        }, {
-            nodeType: 'div',
-            attribute: {
-                id: 'PluginUI',
-                style: 'display: inline-block;'
-            },
-            parent: document.querySelector('#user-links')
-        }])
+    }, {
+        nodeType: 'div',
+        attribute: {
+            id: 'PluginUI',
+            style: 'display: inline-block;'
+        },
+        parent: document.querySelector('#user-links')
+    }])
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'))
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'))
     let PluginTips = new pluginTips()
