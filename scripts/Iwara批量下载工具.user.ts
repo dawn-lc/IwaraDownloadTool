@@ -1,10 +1,8 @@
 // ==UserScript==
-// @name                  Iwara Download Tool
-// @name:zh-HK            Iwara 批量下載工具
+// @name:en               Iwara Download Tool
 // @name:zh-CN            Iwara 批量下载工具
 // @name:ja               Iwara バッチダウンローダー
-// @description           Download videos from iwara.tv
-// @description:zh-HK     批量下載 Iwara 影片
+// @description:en        Download videos from iwara.tv
 // @description:zh-CN     批量下载 Iwara 视频
 // @description:ja        Iwara 動画バッチをダウンロード
 // @namespace             https://github.com/dawn-lc/user.js
