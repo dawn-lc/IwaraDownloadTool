@@ -1,6 +1,37 @@
 "use strict";
+// ==UserScript==
+// @name                  Iwara Download Tool
+// @name:zh-HK            Iwara 批量下載工具
+// @name:zh-CN            Iwara 批量下载工具
+// @name:ja               Iwara バッチダウンローダー
+// @description           Download videos from iwara.tv
+// @description:zh-HK     批量下載 Iwara 影片
+// @description:zh-CN     批量下载 Iwara 视频
+// @description:ja        Iwara 動画バッチをダウンロード
+// @namespace             https://github.com/dawn-lc/user.js
+// @icon                  https://iwara.tv/sites/all/themes/main/img/logo.png
+// @version               2.0.1
+// @author                dawn-lc
+// @license               Apache-2.0
+// @connect               iwara.tv
+// @match                 *://*.iwara.tv/*
+// @grant                 GM_getValue
+// @grant                 GM_setValue
+// @grant                 GM_listValues
+// @grant                 GM_deleteValue
+// @grant                 GM_addValueChangeListener
+// @grant                 GM_removeValueChangeListener
+// @grant                 GM_addStyle
+// @grant                 GM_getResourceText
+// @grant                 GM_download
+// @grant                 GM_xmlhttpRequest
+// @grant                 GM_openInTab
+// @grant                 GM_info
+// @grant                 unsafeWindow
+// @require               https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/16.13.1/umd/react.production.min.js
+// @require               https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/16.13.1/umd/react-dom.production.min.js
+// ==/UserScript==
 (async function () {
-    // 自定义函数
     function UUID() {
         let UUID = '';
         for (let index = 0; index < 8; index++) {
@@ -85,7 +116,6 @@
                 if (VirtualDOM.children == undefined)
                     VirtualDOM.children = [];
                 if (vdata.childs instanceof Array) {
-                    //VirtualDOM.children = vdata.childs.map((item: any, index: any) => reactRender(item,index))
                     let test = vdata.childs.map((item) => reactRender(item));
                     if (Object.prototype.isPrototypeOf(test[0]) && Object.keys(test[0]).length === 0)
                         debugger;
@@ -116,7 +146,6 @@
         else {
             return vdata;
         }
-        //console.log(VirtualDOM)
         return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || null);
     }
     async function get(url, parameter = [], referrer, headers = {}) {
@@ -241,7 +270,6 @@
         }
         return '';
     }
-    // 自定义类型
     let DownloadType;
     (function (DownloadType) {
         DownloadType[DownloadType["aria2"] = 0] = "aria2";
@@ -321,7 +349,7 @@
             }
         }
         downloading(id, value) {
-            let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.tipsProgress .value');
+            let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.tipsProgress.value');
             downloadTask.setAttribute('value', value.toFixed(2));
             downloadTask.style.width = value.toFixed(2) + '%';
         }
@@ -387,6 +415,16 @@
                     else {
                         e.currentTarget.remove();
                     }
+                },
+                onanimationend: (e) => {
+                    if (this.wait) {
+                        if (this.type != TipsType.Progress) {
+                            e.currentTarget.remove();
+                        }
+                    }
+                    else {
+                        e.currentTarget.remove();
+                    }
                 }
             };
         }
@@ -428,50 +466,51 @@
         getDownloadUrl;
         getDownloadFileName;
         getComment;
-        getLock() {
-            if (this.Page.querySelector('.well') != null)
-                return true;
-            return false;
-        }
+        getLock;
         constructor(videoID) {
-            return (async () => {
-                this.ID = videoID.toLowerCase();
-                this.Url = 'https://ecchi.iwara.tv/videos/' + this.ID;
-                this.Page = parseDom(await get(this.Url, null, window.location.href));
-                this.Lock = this.getLock();
-                this.getAuthor = function () {
-                    if (this.Lock)
-                        return this.Page.querySelector('a.username').innerText;
-                    return this.Page.querySelector('.submitted').querySelector('a.username').innerText;
-                };
-                this.getName = function () {
-                    if (this.Lock)
-                        return this.Page.querySelector('.title').querySelector('a').innerText;
-                    return this.Page.querySelector('.submitted').querySelector('h1.title').innerText;
-                };
-                this.Source = await get('https://ecchi.iwara.tv/api/video/' + this.ID, null, this.Url);
-                this.getDownloadQuality = function () {
-                    if (this.Source.length != 0) {
-                        return this.Source[0].resolution;
-                    }
-                    return null;
-                };
-                this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
-                this.getDownloadFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
-                this.getComment = function () {
-                    let comment = '';
-                    try {
-                        this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary field-label-hidden').querySelectorAll('.field-item even').forEach((element) => {
-                            comment += element.innerText + '\n';
-                        });
-                    }
-                    catch (error) {
-                        comment += error.toString();
-                    }
-                    return comment;
-                };
-                return this;
-            })();
+            this.ID = videoID.toLowerCase();
+            this.Url = 'https://ecchi.iwara.tv/videos/' + this.ID;
+            return this;
+        }
+        async init() {
+            this.Page = parseDom(await get(this.Url, null, window.location.href));
+            console.log('视频页面获取完成!');
+            this.Source = await get('https://ecchi.iwara.tv/api/video/' + this.ID, null, this.Url);
+            console.log('视频源获取完成!');
+            if (this.Page.querySelector('.well') != null) {
+                this.Lock = true;
+            }
+            else {
+                this.Lock = false;
+            }
+            this.getAuthor = function () {
+                if (this.Lock)
+                    return this.Page.querySelector('a.username').innerText;
+                return this.Page.querySelector('.submitted').querySelector('a.username').innerText;
+            };
+            this.getName = function () {
+                if (this.Lock)
+                    return this.Page.querySelector('.title').querySelector('a').innerText;
+                return this.Page.querySelector('.submitted').querySelector('h1.title').innerText;
+            };
+            this.getDownloadQuality = function () {
+                if (this.Source.length != 0) {
+                    return this.Source[0].resolution;
+                }
+                return null;
+            };
+            this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
+            this.getDownloadFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
+            this.getComment = function () {
+                let comment = '';
+                let commentNode = this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even');
+                if (commentNode != null) {
+                    commentNode.forEach((element) => {
+                        comment += element.innerText + '\n';
+                    });
+                }
+                return comment;
+            };
         }
     }
     class pluginUI extends React.Component {
@@ -501,12 +540,12 @@
                 main: 'btn-group'
             });
         }
-        downloadAllEnable() {
+        downloadAllEnabled() {
             this.setState({
                 downloadAllEnable: true
             });
         }
-        downloadSelectedEnable() {
+        downloadSelectedEnabled() {
             this.setState({
                 downloadSelectedEnable: true
             });
@@ -854,26 +893,6 @@
             }));
         }
     }
-    // 初始化
-    if (window.location.hostname == '127.0.0.1') {
-        sourceRender({
-            nodeType: 'div',
-            attribute: {
-                id: 'PluginUI'
-            },
-            parent: document.body
-        });
-    }
-    else {
-        sourceRender({
-            nodeType: 'div',
-            attribute: {
-                id: 'PluginUI',
-                style: 'display: inline-block;'
-            },
-            parent: document.querySelector('#user-links')
-        });
-    }
     sourceRender([{
             nodeType: 'style',
             innerHTML: `
@@ -1166,19 +1185,23 @@
                 id: 'PluginControlPanel'
             },
             parent: document.body
+        }, {
+            nodeType: 'div',
+            attribute: {
+                id: 'PluginUI',
+                style: 'display: inline-block;'
+            },
+            parent: document.querySelector('#user-links')
         }]);
-    // 初始化插件
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
     let DownloadLinkCharacteristics = [
         '/s/',
         'mega.nz/file/',
-        'drive.google.com',
-        '高画質' //自定义
+        'drive.google.com', //Google Drive
     ];
     function ParseVideoID(data) {
-        console.log(data);
         return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
     }
     async function ManualParseDownloadAddress() {
@@ -1233,8 +1256,9 @@
         return false;
     }
     async function ParseDownloadAddress(Data) {
-        let videoInfo = await new VideoInfo(Data);
-        if (videoInfo.getLock()) {
+        let videoInfo = new VideoInfo(Data);
+        await videoInfo.init();
+        if (videoInfo.Lock) {
             PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 该视频已锁定! <br />请等待作者同意您的添加好友申请后再重试!');
         }
         else {
@@ -1305,7 +1329,7 @@
                     'header': [
                         'Cookie:' + Cookie
                     ],
-                    'out': '![' + Info.getID() + ']' + Info.getName().replace(/[\\\\/:*?\"<>|]/g, '') + '.mp4',
+                    'out': '![' + Info.ID + ']' + Info.getName().replace(/[\\\\/:*?\"<>|]/g, '') + '.mp4',
                     'dir': PluginControlPanel.state.DownloadDir + Info.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '')
                 }
             ]
@@ -1316,13 +1340,12 @@
         PluginControlPanel.Aria2WebSocket.send(JSON.stringify(Action));
         PluginTips.info('提示', '已将 ' + Info.getName() + ' 的下载地址推送到Aria2!');
     }
-    async function SendDownloadRequest(Info, Cookie) {
+    function SendDownloadRequest(Info, Cookie) {
         switch (DownloadType[PluginControlPanel.state.DownloadType]) {
             case DownloadType[DownloadType.aria2]:
                 aria2Download(Info, Cookie);
                 break;
             case DownloadType[DownloadType.default]:
-                //PluginTips.warning('警告', '默认下载方式存在问题，暂时停止使用。<br>已调用其他方式下载！')
                 defaultDownload(Info);
                 break;
             case DownloadType[DownloadType.others]:
@@ -1335,21 +1358,23 @@
     if (!PluginControlPanel.state.Initialize) {
         PluginControlPanel.show();
     }
-    if (document.querySelectorAll('.node-video').length > 0) {
-        PluginUI.downloadSelectedEnable();
-    }
-    if (window.location.href.indexOf('/users/') > -1) {
-        PluginUI.downloadAllEnable();
-    }
     document.querySelectorAll('.node-video').forEach((video) => {
-        video.ondblclick = () => {
-            video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
-        };
-        video.setAttribute('linkdata', video.querySelector('a').href);
-        video.querySelector('a').removeAttribute('href');
-        video.setAttribute('checked', 'false');
-        video.classList.add('selectButton');
+        if (!video.classList.contains('node-full')) {
+            video.ondblclick = () => {
+                video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
+            };
+            video.setAttribute('linkdata', video.querySelector('a').href);
+            video.querySelector('a').removeAttribute('href');
+            video.setAttribute('checked', 'false');
+            video.classList.add('selectButton');
+        }
     });
+    if (document.querySelectorAll('.selectButton').length > 0) {
+        PluginUI.downloadSelectedEnabled();
+        if (window.location.href.indexOf('/users/') > -1) {
+            PluginUI.downloadAllEnabled();
+        }
+    }
     switch (PluginControlPanel.state.DownloadType) {
         case DownloadType.aria2:
             PluginControlPanel.ConnectionWebSocket();
@@ -1363,56 +1388,5 @@
             console.log('未知的下载模式!');
             break;
     }
-    /*
-    
-    
-    PluginTips.info('测试1', '插件加载成功!')
-    PluginTips.warning('测试2', '插件加载成功!')
-    PluginTips.success('测试3', '插件加载成功!')
-    PluginTips.info('测试3', '插件加载成功!', true)
-    PluginTips.warning('测试4', '插件加载成功!', true)
-    PluginTips.success('测试5', '插件加载成功!', true)
-    PluginTips.progress('测试6', { id: 'test' })
-    PluginTips.progress('测试7', { id: 'test2' })
-    setTimeout(() => {
-        PluginTips.downloading('test', 10)
-        
-
-        setTimeout(() => {
-            PluginTips.downloading('test2', 10)
-            setTimeout(() => {
-                PluginTips.downloading('test2', 20)
-                setTimeout(() => {
-                    PluginTips.downloading('test2', 40)
-                    setTimeout(() => {
-                        PluginTips.downloading('test2', 80)
-                        setTimeout(() => {
-                            PluginTips.downloadComplete('test2')
-                        }, 1000);
-                    }, 1000);
-                }, 1000);
-            }, 1000);
-        }, 1000);
-
-
-
-        setTimeout(() => {
-            PluginTips.downloading('test', 20)
-            setTimeout(() => {
-                PluginTips.downloading('test', 40)
-                setTimeout(() => {
-                    PluginTips.downloading('test', 80)
-                    setTimeout(() => {
-                        PluginTips.downloadComplete('test')
-                    }, 1000);
-                }, 1000);
-            }, 1000);
-        }, 1000);
-    }, 1000);
-
-    
-    
-    
-    
-    */
+    PluginTips.success('Iwara批量下载工具', '加载完成!');
 })();
