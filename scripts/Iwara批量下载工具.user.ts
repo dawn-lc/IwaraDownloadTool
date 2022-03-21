@@ -134,7 +134,7 @@
         } else {
             return vdata
         }
-        return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || null);
+        return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || undefined);
     }
     async function get(url: string, parameter: string[] = [], referrer: string, headers: object = {}) {
         referrer = referrer || url
@@ -420,7 +420,7 @@
             return style
         }
         attribute() {
-            if (this.id != null) {
+            if (this.id != undefined) {
                 return {
                     attribute: {
                         id: this.id
@@ -454,7 +454,7 @@
             console.log('视频页面获取完成!')
             this.Source = await get('https://ecchi.iwara.tv/api/video/' + this.ID, null, this.Url)
             console.log('视频源获取完成!')
-            if (this.Page.querySelector('.well') != null) {
+            if (this.Page.querySelector('.well') != undefined) {
                 this.Lock = true
             } else {
                 this.Lock = false
@@ -663,10 +663,10 @@
                     if (remote && (new_value != this.state[name])) {
                         this.setState({ [name]: new_value })
                         if (name == 'DownloadType' && this.state[name] == DownloadType.aria2 && /((((ws|wss):(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/.test(this.state['WebSocketAddress'])) {
-                            if (this.Aria2WebSocket != null) {
+                            if (this.Aria2WebSocket != undefined) {
                                 this.Aria2WebSocket.close()
-                                this.ConnectionWebSocket()
                             }
+                            this.ConnectionWebSocket()
                         }
                     }
                 }))
@@ -703,10 +703,10 @@
         configChange(e: any) {
             this.setState({ [e.name]: e.value })
             if (e.name == 'DownloadType' && e.value == DownloadType.aria2 && /((((ws|wss):(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/.test(this.state['WebSocketAddress'])) {
-                if (this.Aria2WebSocket != null) {
+                if (this.Aria2WebSocket != undefined) {
                     this.Aria2WebSocket.close()
-                    this.ConnectionWebSocket()
                 }
+                this.ConnectionWebSocket()
             }
             GM_setValue(e.name, e.value)
         }
@@ -723,7 +723,7 @@
                     childs: [{
                         nodeType: 'span',
                         className: 'controlPanelClose',
-                        childs: 'X',
+                        childs: '❌',
                         onClick: () => {
                             this.hide()
                         }
@@ -1186,30 +1186,24 @@
         PluginTips.success('下载', '已全部解析完成!')
     }
     async function DownloadAll() {
-        PluginTips.info('下载', '开始解析...')
-        if (document.getElementById('block-views-videos-block-2')!.getElementsByClassName('more-link').length == 0) {
+        PluginTips.info('下载', '正在解析...')
+        if (document.getElementById('block-views-videos-block-2').querySelector('more-link') != undefined) {
             let videoListPage = parseDom(await get(window.location.href, undefined, window.location.href))
-            let videosList = videoListPage.querySelector('#block-views-videos-block-2')!.querySelectorAll('.node-video')
-            for (let index = 0; index < videosList.length; index++) {
-                const element = videosList[index]
+            videoListPage.querySelector('#block-views-videos-block-2')!.querySelectorAll('.node-video').forEach(async (element: Element) => {
                 await ParseDownloadAddress(ParseVideoID(element))
-            }
-            PluginTips.success('下载', '已全部解析完成!')
+            })
         } else {
-            await GetAllData(document.querySelector('div.more-link')!.querySelector('a')!.href, [], window.location.href)
+            await GetAllData(document.querySelector('div.more-link').querySelector('a').href, [], window.location.href)
         }
     }
     async function GetAllData(videoListUrl: string, data: string[], referrer: string) {
         let videoListPage = parseDom(await get(videoListUrl, data, referrer))
-        let videosList = videoListPage.querySelector('.view-videos')!.querySelectorAll('.node-video')
-        for (let index = 0; index < videosList.length; index++) {
-            const element = videosList[index]
+        videoListPage.querySelector('.view-videos')!.querySelectorAll('.node-video').forEach(async (element: Element) => {
             await ParseDownloadAddress(ParseVideoID(element))
+        })
+        if (videoListPage.querySelectorAll('pager-next').length != 0) {
+            await GetAllData(videoListPage.querySelector('pager-next').querySelector('a').href, data, referrer)
         }
-        if (videoListPage.getElementsByClassName('pager-next').length != 0) {
-            await GetAllData(videoListPage.getElementsByClassName('pager-next')[0].querySelector('a').href, data, referrer)
-        }
-        PluginTips.success('下载', '已全部解析完成!')
     }
     function CheckIsHaveDownloadLink(comment: string) {
         if (comment == null) return false
