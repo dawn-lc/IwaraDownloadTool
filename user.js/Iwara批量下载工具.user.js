@@ -8,7 +8,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.0.1
+// @version        2.0.3
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -352,6 +352,8 @@
             new tips(TipsType.Info, title, content, wait);
         }
         warning(title, content, wait = false) {
+            console.warn(title, content);
+            debugger;
             new tips(TipsType.Warning, title, content, wait);
         }
         success(title, content, wait = false) {
@@ -412,12 +414,7 @@
                     }
                 },
                 onanimationend: (e) => {
-                    if (this.wait) {
-                        if (this.type != TipsType.Progress) {
-                            e.currentTarget.remove();
-                        }
-                    }
-                    else {
+                    if (!this.wait) {
                         e.currentTarget.remove();
                     }
                 }
@@ -472,7 +469,7 @@
             console.log('视频页面获取完成!');
             this.Source = await get('https://ecchi.iwara.tv/api/video/' + this.ID, null, this.Url);
             console.log('视频源获取完成!');
-            if (this.Page.querySelector('.well') != undefined) {
+            if (this.Page.querySelector('.well') != null) {
                 this.Lock = true;
             }
             else {
@@ -1216,7 +1213,7 @@
     }
     async function DownloadAll() {
         PluginTips.info('下载', '正在解析...');
-        if (document.getElementById('block-views-videos-block-2').querySelector('more-link') != undefined) {
+        if (document.getElementById('block-views-videos-block-2').querySelector('more-link') != null) {
             let videoListPage = parseDom(await get(window.location.href, undefined, window.location.href));
             videoListPage.querySelector('#block-views-videos-block-2').querySelectorAll('.node-video').forEach(async (element) => {
                 await ParseDownloadAddress(ParseVideoID(element));
@@ -1248,7 +1245,7 @@
         let videoInfo = new VideoInfo(Data);
         await videoInfo.init();
         if (videoInfo.Lock) {
-            PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 该视频已锁定! <br />请等待作者同意您的添加好友申请后再重试!');
+            PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 该视频已锁定! <br />请等待作者同意您的添加好友申请后再重试!', true);
         }
         else {
             if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
@@ -1305,29 +1302,28 @@
             }
         }(Info.ID, Info.getName(), Info.getDownloadUrl()));
     }
-    function aria2Download(Info, Cookie) {
-        let Action = {
-            'jsonrpc': '2.0',
-            'method': 'aria2.addUri',
-            'id': PluginControlPanel.state.WebSocketID,
-            'params': [
-                'token:' + PluginControlPanel.state.WebSocketToken,
-                [Info.getDownloadUrl()],
-                {
-                    'referer': 'https://ecchi.iwara.tv/',
-                    'header': [
-                        'Cookie:' + Cookie
-                    ],
-                    'out': '![' + Info.ID + ']' + Info.getName().replace(/[\\\\/:*?\"<>|]/g, '') + '.mp4',
-                    'dir': PluginControlPanel.state.DownloadDir + Info.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '')
-                }
-            ]
-        };
-        if (PluginControlPanel.state.DownloadProxy != '') {
-            Action.params[Action.params.length - 1]['all-proxy'] = PluginControlPanel.state.DownloadProxy;
-        }
-        PluginControlPanel.Aria2WebSocket.send(JSON.stringify(Action));
-        PluginTips.info('提示', '已将 ' + Info.getName() + ' 的下载地址推送到Aria2!');
+    function aria2Download(Info, Cookies) {
+        (function (ID, Name, Author, Cookie, DownloadUrl) {
+            PluginControlPanel.Aria2WebSocket.send(JSON.stringify({
+                'jsonrpc': '2.0',
+                'method': 'aria2.addUri',
+                'id': PluginControlPanel.state.WebSocketID,
+                'params': [
+                    'token:' + PluginControlPanel.state.WebSocketToken,
+                    [DownloadUrl],
+                    {
+                        'referer': 'https://ecchi.iwara.tv/',
+                        'header': [
+                            'Cookie:' + Cookie
+                        ],
+                        'out': Name.replace(/[\\\\/:*?\"<>|]/g, '_') + '[' + ID + '].mp4',
+                        'dir': PluginControlPanel.state.DownloadDir + Author.replace(/[\\\\/:*?\"<>|.]/g, '_'),
+                        'all-proxy': PluginControlPanel.state.DownloadProxy
+                    }
+                ]
+            }));
+            PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!');
+        }(Info.ID, Info.getName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()));
     }
     function SendDownloadRequest(Info, Cookie) {
         switch (DownloadType[PluginControlPanel.state.DownloadType]) {
