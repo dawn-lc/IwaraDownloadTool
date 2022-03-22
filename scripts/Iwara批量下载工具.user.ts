@@ -331,14 +331,15 @@
             downloadTask.style.width = value.toFixed(2) + '%'
         }
         info(title: string, content: string, wait: boolean = false) {
+            console.info('Iwara 批量下载工具', content)
             new tips(TipsType.Info, title, content, wait)
         }
         warning(title: string, content: string, wait: boolean = false) {
-            console.warn(title, content)
-            debugger
+            console.warn('Iwara 批量下载工具', content)
             new tips(TipsType.Warning, title, content, wait)
         }
         success(title: string, content: string, wait: boolean = false) {
+            console.log('Iwara 批量下载工具', content)
             new tips(TipsType.Success, title, content, wait)
         }
         progress(title: string, content: any) {
