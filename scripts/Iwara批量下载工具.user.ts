@@ -248,7 +248,7 @@
             let pair = vars[i].split('=')
             if (pair[0] == variable) { return pair[1]; }
         }
-        return ''
+        return null
     }
     enum DownloadType {
         aria2,
@@ -326,7 +326,7 @@
             }
         }
         downloading(id: string, value: number) {
-            let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.tipsProgress.value') as HTMLElement
+            let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.value') as HTMLElement
             downloadTask.setAttribute('value', value.toFixed(2))
             downloadTask.style.width = value.toFixed(2) + '%'
         }
@@ -436,9 +436,10 @@
         getName: () => string
         getDownloadQuality: () => string
         getDownloadUrl: () => string
-        getDownloadFileName: () => string
+        getSourceFileName: () => string | null
         getComment: () => string
         getLock: () => boolean
+        getFileName: () => string;
         constructor(videoID: string) {
             this.ID = videoID.toLowerCase()
             this.Url = 'https://ecchi.iwara.tv/videos/' + this.ID
@@ -462,6 +463,10 @@
                 if (this.Lock) return (this.Page.querySelector('.title').querySelector('a') as HTMLElement).innerText
                 return (this.Page.querySelector('.submitted').querySelector('h1.title') as HTMLElement).innerText
             }
+            this.getFileName = function () {
+                if (!this.Lock) return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#SOURCE_NAME#%', this.getSourceFileName())
+                return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID)
+            }
             this.getDownloadQuality = function () {
                 if (this.Source.length != 0) {
                     return this.Source[0].resolution
@@ -469,16 +474,16 @@
                 return null
             }
             this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri) }
-            this.getDownloadFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3] }
+            this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3] }
             this.getComment = function () {
-                let comment = ''
-                let commentNode = this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even')
-                if (commentNode != null) {
-                    commentNode.forEach((element: Element) => {
-                        comment += (element as HTMLElement).innerText + '\n'
-                    })
+                if (this.Lock) return ''
+                let commentNode : Array<any>
+                try {
+                    commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'))
+                } catch (error) {
+                    return ''
                 }
-                return comment
+                return commentNode.map((element: Element) => (element as HTMLElement).innerText).join('\n')
             }
         }
     }
@@ -602,11 +607,12 @@
             this.state = {
                 Initialize: GM_getValue('Initialize', false),
                 DownloadType: Number(GM_getValue('DownloadType', DownloadType.others)),
-                DownloadDir: GM_getValue('DownloadDir', ''),
+                DownloadDir: GM_getValue('DownloadDir', '/%#AUTHOR#%'),
                 DownloadProxy: GM_getValue('DownloadProxy', ''),
-                WebSocketAddress: GM_getValue('WebSocketAddress', 'ws://127.0.0.1:6800/'),
+                WebSocketAddress: GM_getValue('WebSocketAddress', 'wss://127.0.0.1:6800/'),
                 WebSocketToken: GM_getValue('WebSocketToken', ''),
                 WebSocketID: GM_getValue('WebSocketID', UUID()),
+                FileName: GM_getValue('FileName', '%#TITLE#%[%#ID#%].mp4'),
                 style: {
                     radioLabel: { margin: '0px 20px 0px 0px' },
                     Line: { margin: '10px 0px' },
@@ -769,7 +775,8 @@
                                 style: this.state.style.radioLabel,
                                 childs: '其他下载器'
                             }].map((item: any) => { if (item.value == this.state.DownloadType) { item.checked = true } return item })
-                        }, {
+                        }, , 
+                        this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
@@ -785,7 +792,8 @@
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
                             ]
-                        }, {
+                        } : null,
+                        this.state.DownloadType == DownloadType.aria2 ?  {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
@@ -801,7 +809,8 @@
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
                             ]
-                        }, {
+                        }: null,
+                        this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
@@ -817,7 +826,8 @@
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
                             ]
-                        }, {
+                        } : null,
+                        this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
@@ -834,7 +844,25 @@
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
                             ]
-                        }, {
+                        } : null,
+                        this.state.DownloadType != DownloadType.others ? {
+                            nodeType: 'div',
+                            style: this.state.style.Line,
+                            childs: [{
+                                nodeType: 'label',
+                                style: this.state.style.inputLabel,
+                                childs: '自定义文件名:',
+                            },
+                            {
+                                nodeType: 'input',
+                                name: 'FileName',
+                                type: 'text',
+                                value: this.state.FileName,
+                                style: this.state.style.input,
+                                onChange: ({ target }: any) => this.configChange(target)
+                            }
+                            ]
+                        } : null, {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
@@ -1225,10 +1253,10 @@
         }
     }
     function defaultDownload(Info: VideoInfo) {
-        (function (ID, Name, DownloadUrl) {
+        (function (ID, Name, FileName, DownloadUrl) {
             let Task = {
                 url: DownloadUrl,
-                name: Name.replace(/[\\\\/:*?\"<>|]/g, '') + '[' + ID + '].mp4',
+                name: FileName,
                 saveAs: false,
                 onload: function () {
                     PluginTips.downloadComplete(ID)
@@ -1261,10 +1289,10 @@
             } else {
                 PluginTips.WaitingQueue.push({ id: ID, name: Name, task: Task })
             }
-        }(Info.ID, Info.getName(), Info.getDownloadUrl()))
+        }(Info.ID, Info.getName(), Info.getFileName(), Info.getDownloadUrl()))
     }
-    function aria2Download(Info: any, Cookies: string) {
-        (function (ID, Name, Author, Cookie, DownloadUrl) {
+    function aria2Download(Info: VideoInfo, Cookies: string) {
+        (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
             PluginControlPanel.Aria2WebSocket.send(JSON.stringify({
                 'jsonrpc': '2.0',
                 'method': 'aria2.addUri',
@@ -1277,15 +1305,15 @@
                         'header': [
                             'Cookie:' + Cookie
                         ],
-                        'out': Name.replace(/[\\\\/:*?\"<>|]/g, '_') + '[' + ID + '].mp4',
-                        'dir': PluginControlPanel.state.DownloadDir + Author.replace(/[\\\\/:*?\"<>|.]/g, '_'),
+                        'out': FileName,
+                        'dir': PluginControlPanel.state.DownloadDir.replace('%#AUTHOR#%',Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
 
                 ]
             }));
             PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!');
-        }(Info.ID, Info.getName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()));
+        }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()));
     }
     function SendDownloadRequest(Info: VideoInfo, Cookie: string) {
         switch (DownloadType[PluginControlPanel.state.DownloadType]) {
