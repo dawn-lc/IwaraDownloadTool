@@ -464,8 +464,8 @@
                 return (this.Page.querySelector('.submitted').querySelector('h1.title') as HTMLElement).innerText
             }
             this.getFileName = function () {
-                if (!this.Lock) return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#SOURCE_NAME#%', this.getSourceFileName())
-                return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID)
+                if (!this.Lock) return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_')).replace('%#SOURCE_NAME#%', this.getSourceFileName())
+                return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%',this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_'))
             }
             this.getDownloadQuality = function () {
                 if (this.Source.length != 0) {
@@ -615,9 +615,19 @@
                 FileName: GM_getValue('FileName', '%#TITLE#%[%#ID#%].mp4'),
                 style: {
                     radioLabel: { margin: '0px 20px 0px 0px' },
-                    Line: { margin: '10px 0px' },
-                    inputLabel: { margin: '5px' },
-                    input: { width: '100%' },
+                    Line: { margin: '10px 0px', display: 'flex', alignItems: 'center' },
+                    inputLabel: {
+                        marginRight: '8px',
+                        marginBottom: '0px',
+                        verticalAlign: 'middle',
+                        lineHeight: '1'
+                    },
+                    input: {
+                        flex: 1,
+                        minWidth: 0,
+                        font: 'menu',
+                        verticalAlign: 'middle'
+                    },
                     main: { display: 'none' }
                 }
             }
@@ -647,13 +657,13 @@
                             this.configChange({ name: 'Initialize', value: true })
                             this.hide()
                         }
-                        break;
+                        break
                     case DownloadType.default:
                     case DownloadType.others:
                     default:
                         this.configChange({ name: 'Initialize', value: true })
                         this.hide()
-                        break;
+                        break
                 }
             }
         }
@@ -775,7 +785,25 @@
                                 style: this.state.style.radioLabel,
                                 childs: '其他下载器'
                             }].map((item: any) => { if (item.value == this.state.DownloadType) { item.checked = true } return item })
-                        }, , 
+                        },
+                        this.state.DownloadType != DownloadType.others ? {
+                            nodeType: 'div',
+                            style: this.state.style.Line,
+                            childs: [{
+                                nodeType: 'label',
+                                style: this.state.style.inputLabel,
+                                childs: '重命名:',
+                            },
+                            {
+                                nodeType: 'input',
+                                name: 'FileName',
+                                type: 'text',
+                                value: this.state.FileName,
+                                style: this.state.style.input,
+                                onChange: ({ target }: any) => this.configChange(target)
+                            }
+                            ]
+                        } : null,  
                         this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
@@ -799,7 +827,7 @@
                             childs: [{
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
-                                childs: '代理服务器:',
+                                childs: '代理服务器(可选):',
                             },
                             {
                                 nodeType: 'input',
@@ -816,7 +844,7 @@
                             childs: [{
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
-                                childs: 'Aria2 RPC WebSocket 地址:',
+                                childs: 'Aria2 RPC WebSocket:',
                             },
                             {
                                 nodeType: 'input',
@@ -845,30 +873,16 @@
                             }
                             ]
                         } : null,
-                        this.state.DownloadType != DownloadType.others ? {
-                            nodeType: 'div',
-                            style: this.state.style.Line,
-                            childs: [{
-                                nodeType: 'label',
-                                style: this.state.style.inputLabel,
-                                childs: '自定义文件名:',
-                            },
-                            {
-                                nodeType: 'input',
-                                name: 'FileName',
-                                type: 'text',
-                                value: this.state.FileName,
-                                style: this.state.style.input,
-                                onChange: ({ target }: any) => this.configChange(target)
-                            }
-                            ]
-                        } : null, {
+                        {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
                                 childs: [
+                                    '全局可用变量： %#Y#% | %#M#% | %#D#% | %#h#% | %#m#%| %#s#%', { nodeType: 'br' },
+                                    '重命名可用变量： %#TITLE#% | %#ID#% | %#AUTHOR#% | %#SOURCE_NAME#%', { nodeType: 'br' },
+                                    '下载目录可用变量： %#AUTHOR#%', { nodeType: 'br' },
                                     '双击视频选中，再次双击取消选中。选中仅在本页面有效！', { nodeType: 'br' },
                                     '在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。', { nodeType: 'br' },
                                     '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。', { nodeType: 'br' },
@@ -905,7 +919,10 @@
         }
         .controlPanel-content {
             background-color: #fefefe;
-            margin: 15% auto;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
             padding: 20px;
             border: 1px solid #888;
             width: 60%;
@@ -1191,7 +1208,7 @@
         'drive.google.com',//Google Drive
     ]
     function ParseVideoID(data: Element) {
-        return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
+        return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase()
     }
     async function ManualParseDownloadAddress() {
         let ID = prompt('请输入需要下载的视频ID', '')
@@ -1266,7 +1283,7 @@
                     PluginTips.downloadComplete(ID)
                     PluginTips.warning('下载', Name + ' 下载失败! <br />错误报告: ' + JSON.stringify(error))
                 },
-                onprogress: function (progress: { lengthComputable: any; position: number; totalSize: number; }) {
+                onprogress: function (progress: { lengthComputable: any, position: number, totalSize: number }) {
                     if (progress.lengthComputable) {
                         PluginTips.downloading(ID, progress.position / progress.totalSize * 100)
                     }
@@ -1306,14 +1323,14 @@
                             'Cookie:' + Cookie
                         ],
                         'out': FileName,
-                        'dir': PluginControlPanel.state.DownloadDir.replace('%#AUTHOR#%',Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
+                        'dir': replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%',Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
 
                 ]
-            }));
-            PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!');
-        }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()));
+            }))
+            PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!')
+        }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()))
     }
     function SendDownloadRequest(Info: VideoInfo, Cookie: string) {
         switch (DownloadType[PluginControlPanel.state.DownloadType]) {
@@ -1330,6 +1347,24 @@
                 break
         }
     }
+
+    function replaceVar(data:string) {
+        let gVar = [
+            { 'Y': new Date().getFullYear() },
+            { 'M': new Date().getMonth() },
+            { 'D': new Date().getDay() },
+            { 'h': new Date().getHours() },
+            { 'm': new Date().getMinutes() },
+            { 's': new Date().getSeconds() }
+        ]
+        gVar.forEach((item) => {
+            for (const d in item) {
+                data.replace('%#'+d+'#%',item[d]) 
+            }
+        })
+        return data
+    }
+
     if (!PluginControlPanel.state.Initialize) {
         PluginControlPanel.show()
     }
@@ -1364,4 +1399,4 @@
             break
     }
     PluginTips.success('Iwara批量下载工具', '加载完成!')
-})();
+})()

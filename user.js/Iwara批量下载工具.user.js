@@ -489,8 +489,8 @@
             };
             this.getFileName = function () {
                 if (!this.Lock)
-                    return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#SOURCE_NAME#%', this.getSourceFileName());
-                return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID);
+                    return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_')).replace('%#SOURCE_NAME#%', this.getSourceFileName());
+                return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_'));
             };
             this.getDownloadQuality = function () {
                 if (this.Source.length != 0) {
@@ -646,9 +646,19 @@
                 FileName: GM_getValue('FileName', '%#TITLE#%[%#ID#%].mp4'),
                 style: {
                     radioLabel: { margin: '0px 20px 0px 0px' },
-                    Line: { margin: '10px 0px' },
-                    inputLabel: { margin: '5px' },
-                    input: { width: '100%' },
+                    Line: { margin: '10px 0px', display: 'flex', alignItems: 'center' },
+                    inputLabel: {
+                        marginRight: '8px',
+                        marginBottom: '0px',
+                        verticalAlign: 'middle',
+                        lineHeight: '1'
+                    },
+                    input: {
+                        flex: 1,
+                        minWidth: 0,
+                        font: 'menu',
+                        verticalAlign: 'middle'
+                    },
                     main: { display: 'none' }
                 }
             };
@@ -810,7 +820,25 @@
                                             }].map((item) => { if (item.value == this.state.DownloadType) {
                                             item.checked = true;
                                         } return item; })
-                                    }, ,
+                                    },
+                                    this.state.DownloadType != DownloadType.others ? {
+                                        nodeType: 'div',
+                                        style: this.state.style.Line,
+                                        childs: [{
+                                                nodeType: 'label',
+                                                style: this.state.style.inputLabel,
+                                                childs: '重命名:',
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'FileName',
+                                                type: 'text',
+                                                value: this.state.FileName,
+                                                style: this.state.style.input,
+                                                onChange: ({ target }) => this.configChange(target)
+                                            }
+                                        ]
+                                    } : null,
                                     this.state.DownloadType == DownloadType.aria2 ? {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
@@ -834,7 +862,7 @@
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
-                                                childs: '代理服务器:',
+                                                childs: '代理服务器(可选):',
                                             },
                                             {
                                                 nodeType: 'input',
@@ -851,7 +879,7 @@
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
-                                                childs: 'Aria2 RPC WebSocket 地址:',
+                                                childs: 'Aria2 RPC WebSocket:',
                                             },
                                             {
                                                 nodeType: 'input',
@@ -880,30 +908,16 @@
                                             }
                                         ]
                                     } : null,
-                                    this.state.DownloadType != DownloadType.others ? {
-                                        nodeType: 'div',
-                                        style: this.state.style.Line,
-                                        childs: [{
-                                                nodeType: 'label',
-                                                style: this.state.style.inputLabel,
-                                                childs: '自定义文件名:',
-                                            },
-                                            {
-                                                nodeType: 'input',
-                                                name: 'FileName',
-                                                type: 'text',
-                                                value: this.state.FileName,
-                                                style: this.state.style.input,
-                                                onChange: ({ target }) => this.configChange(target)
-                                            }
-                                        ]
-                                    } : null, {
+                                    {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
                                                 childs: [
+                                                    '全局可用变量： %#Y#% | %#M#% | %#D#% | %#h#% | %#m#%| %#s#%', { nodeType: 'br' },
+                                                    '重命名可用变量： %#TITLE#% | %#ID#% | %#AUTHOR#% | %#SOURCE_NAME#%', { nodeType: 'br' },
+                                                    '下载目录可用变量： %#AUTHOR#%', { nodeType: 'br' },
                                                     '双击视频选中，再次双击取消选中。选中仅在本页面有效！', { nodeType: 'br' },
                                                     '在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。', { nodeType: 'br' },
                                                     '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。', { nodeType: 'br' },
@@ -940,7 +954,10 @@
         }
         .controlPanel-content {
             background-color: #fefefe;
-            margin: 15% auto;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
             padding: 20px;
             border: 1px solid #888;
             width: 60%;
@@ -1349,7 +1366,7 @@
                             'Cookie:' + Cookie
                         ],
                         'out': FileName,
-                        'dir': PluginControlPanel.state.DownloadDir.replace('%#AUTHOR#%', Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
+                        'dir': replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%', Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
                 ]
@@ -1371,6 +1388,22 @@
                 GM_openInTab(Info.getDownloadUrl(), { active: true, insert: true, setParent: true });
                 break;
         }
+    }
+    function replaceVar(data) {
+        let gVar = [
+            { 'Y': new Date().getFullYear() },
+            { 'M': new Date().getMonth() },
+            { 'D': new Date().getDay() },
+            { 'h': new Date().getHours() },
+            { 'm': new Date().getMinutes() },
+            { 's': new Date().getSeconds() }
+        ];
+        gVar.forEach((item) => {
+            for (const d in item) {
+                data.replace('%#' + d + '#%', item[d]);
+            }
+        });
+        return data;
     }
     if (!PluginControlPanel.state.Initialize) {
         PluginControlPanel.show();
