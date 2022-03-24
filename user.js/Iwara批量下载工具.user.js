@@ -263,7 +263,7 @@
                 return pair[1];
             }
         }
-        return '';
+        return null;
     }
     let DownloadType;
     (function (DownloadType) {
@@ -344,7 +344,7 @@
             }
         }
         downloading(id, value) {
-            let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.tipsProgress.value');
+            let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.value');
             downloadTask.setAttribute('value', value.toFixed(2));
             downloadTask.style.width = value.toFixed(2) + '%';
         }
@@ -457,9 +457,10 @@
         getName;
         getDownloadQuality;
         getDownloadUrl;
-        getDownloadFileName;
+        getSourceFileName;
         getComment;
         getLock;
+        getFileName;
         constructor(videoID) {
             this.ID = videoID.toLowerCase();
             this.Url = 'https://ecchi.iwara.tv/videos/' + this.ID;
@@ -486,6 +487,11 @@
                     return this.Page.querySelector('.title').querySelector('a').innerText;
                 return this.Page.querySelector('.submitted').querySelector('h1.title').innerText;
             };
+            this.getFileName = function () {
+                if (!this.Lock)
+                    return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#SOURCE_NAME#%', this.getSourceFileName());
+                return PluginControlPanel.state.FileName.replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID);
+            };
             this.getDownloadQuality = function () {
                 if (this.Source.length != 0) {
                     return this.Source[0].resolution;
@@ -493,16 +499,18 @@
                 return null;
             };
             this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
-            this.getDownloadFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
+            this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
             this.getComment = function () {
-                let comment = '';
-                let commentNode = this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even');
-                if (commentNode != null) {
-                    commentNode.forEach((element) => {
-                        comment += element.innerText + '\n';
-                    });
+                if (this.Lock)
+                    return '';
+                let commentNode;
+                try {
+                    commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'));
                 }
-                return comment;
+                catch (error) {
+                    return '';
+                }
+                return commentNode.map((element) => element.innerText).join('\n');
             };
         }
     }
@@ -630,11 +638,12 @@
             this.state = {
                 Initialize: GM_getValue('Initialize', false),
                 DownloadType: Number(GM_getValue('DownloadType', DownloadType.others)),
-                DownloadDir: GM_getValue('DownloadDir', ''),
+                DownloadDir: GM_getValue('DownloadDir', '/%#AUTHOR#%'),
                 DownloadProxy: GM_getValue('DownloadProxy', ''),
-                WebSocketAddress: GM_getValue('WebSocketAddress', 'ws://127.0.0.1:6800/'),
+                WebSocketAddress: GM_getValue('WebSocketAddress', 'wss://127.0.0.1:6800/'),
                 WebSocketToken: GM_getValue('WebSocketToken', ''),
                 WebSocketID: GM_getValue('WebSocketID', UUID()),
+                FileName: GM_getValue('FileName', '%#TITLE#%[%#ID#%].mp4'),
                 style: {
                     radioLabel: { margin: '0px 20px 0px 0px' },
                     Line: { margin: '10px 0px' },
@@ -801,7 +810,8 @@
                                             }].map((item) => { if (item.value == this.state.DownloadType) {
                                             item.checked = true;
                                         } return item; })
-                                    }, {
+                                    }, ,
+                                    this.state.DownloadType == DownloadType.aria2 ? {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
@@ -817,7 +827,8 @@
                                                 onChange: ({ target }) => this.configChange(target)
                                             }
                                         ]
-                                    }, {
+                                    } : null,
+                                    this.state.DownloadType == DownloadType.aria2 ? {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
@@ -833,7 +844,8 @@
                                                 onChange: ({ target }) => this.configChange(target)
                                             }
                                         ]
-                                    }, {
+                                    } : null,
+                                    this.state.DownloadType == DownloadType.aria2 ? {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
@@ -849,7 +861,8 @@
                                                 onChange: ({ target }) => this.configChange(target)
                                             }
                                         ]
-                                    }, {
+                                    } : null,
+                                    this.state.DownloadType == DownloadType.aria2 ? {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
@@ -866,7 +879,25 @@
                                                 onChange: ({ target }) => this.configChange(target)
                                             }
                                         ]
-                                    }, {
+                                    } : null,
+                                    this.state.DownloadType != DownloadType.others ? {
+                                        nodeType: 'div',
+                                        style: this.state.style.Line,
+                                        childs: [{
+                                                nodeType: 'label',
+                                                style: this.state.style.inputLabel,
+                                                childs: '自定义文件名:',
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'FileName',
+                                                type: 'text',
+                                                value: this.state.FileName,
+                                                style: this.state.style.input,
+                                                onChange: ({ target }) => this.configChange(target)
+                                            }
+                                        ]
+                                    } : null, {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
@@ -1263,10 +1294,10 @@
         }
     }
     function defaultDownload(Info) {
-        (function (ID, Name, DownloadUrl) {
+        (function (ID, Name, FileName, DownloadUrl) {
             let Task = {
                 url: DownloadUrl,
-                name: Name.replace(/[\\\\/:*?\"<>|]/g, '') + '[' + ID + '].mp4',
+                name: FileName,
                 saveAs: false,
                 onload: function () {
                     PluginTips.downloadComplete(ID);
@@ -1301,10 +1332,10 @@
             else {
                 PluginTips.WaitingQueue.push({ id: ID, name: Name, task: Task });
             }
-        }(Info.ID, Info.getName(), Info.getDownloadUrl()));
+        }(Info.ID, Info.getName(), Info.getFileName(), Info.getDownloadUrl()));
     }
     function aria2Download(Info, Cookies) {
-        (function (ID, Name, Author, Cookie, DownloadUrl) {
+        (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
             PluginControlPanel.Aria2WebSocket.send(JSON.stringify({
                 'jsonrpc': '2.0',
                 'method': 'aria2.addUri',
@@ -1317,14 +1348,14 @@
                         'header': [
                             'Cookie:' + Cookie
                         ],
-                        'out': Name.replace(/[\\\\/:*?\"<>|]/g, '_') + '[' + ID + '].mp4',
-                        'dir': PluginControlPanel.state.DownloadDir + Author.replace(/[\\\\/:*?\"<>|.]/g, '_'),
+                        'out': FileName,
+                        'dir': PluginControlPanel.state.DownloadDir.replace('%#AUTHOR#%', Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
                 ]
             }));
             PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!');
-        }(Info.ID, Info.getName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()));
+        }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()));
     }
     function SendDownloadRequest(Info, Cookie) {
         switch (DownloadType[PluginControlPanel.state.DownloadType]) {
