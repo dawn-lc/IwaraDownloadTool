@@ -561,12 +561,12 @@
                         attribute: {
                             type: 'button',
                             id: 'PluginUIStartUp',
-                            title: '批量下载工具'
+                            title: '批量下载'
                         },
                         childs: [{
                                 nodeType: 'span',
                                 className: 'glyphicon glyphicon-download-alt'
-                            }, '批量下载工具'],
+                            }, '批量下载'],
                         onClick: () => { if (this.showCondition) {
                             this.hide();
                         }
@@ -581,17 +581,6 @@
                             role: 'menu'
                         },
                         childs: [
-                            this.state.downloadAllEnable ? {
-                                nodeType: 'li',
-                                attribute: {
-                                    style: this.state.style.base,
-                                    dangerouslySetInnerHTML: { __html: '<a><span class="glyphicon glyphicon-save"></span>下载所有</a>' }
-                                },
-                                onClick: () => {
-                                    this.hide();
-                                    DownloadAll();
-                                }
-                            } : null,
                             this.state.downloadSelectedEnable ? {
                                 nodeType: 'li',
                                 attribute: {
@@ -601,6 +590,17 @@
                                 onClick: () => {
                                     this.hide();
                                     DownloadSelected();
+                                }
+                            } : null,
+                            this.state.downloadAllEnable ? {
+                                nodeType: 'li',
+                                attribute: {
+                                    style: this.state.style.base,
+                                    dangerouslySetInnerHTML: { __html: '<a><span class="glyphicon glyphicon-save"></span>下载所有</a>' }
+                                },
+                                onClick: () => {
+                                    this.hide();
+                                    DownloadAll();
                                 }
                             } : null,
                             {
