@@ -7,7 +7,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.0.7
+// @version        2.0.8
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -698,7 +698,6 @@
                 this.Aria2WebSocket.onclose = wsclose
             } catch (err) {
                 this.state.Initialize = false
-                this.Aria2WebSocket.close()
                 PluginTips.warning('Aria2 RPC', '连接 Aria2 RPC 时出现错误! <br />请检查Aria2 RPC WebSocket地址是否正确(尽量使用wss而非ws) <br />' + err)
             }
             function wsopen() {
@@ -708,7 +707,7 @@
                 //todo 接收信息
             }
             function wsclose() {
-                PluginTips.warning('Aria2 RPC', '已断开连接！')
+                PluginTips.warning('Aria2 RPC', '连接断开! <br />请检查Aria2 RPC WebSocket地址是否正确(尽量使用wss而非ws)')
             }
         }
         configChange(e: any) {
@@ -880,9 +879,9 @@
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
                                 childs: [
-                                    '全局可用变量： %#Y#% | %#M#% | %#D#% | %#h#% | %#m#%| %#s#%', { nodeType: 'br' },
-                                    '重命名可用变量： %#TITLE#% | %#ID#% | %#AUTHOR#% | %#SOURCE_NAME#%', { nodeType: 'br' },
-                                    '下载目录可用变量： %#AUTHOR#%', { nodeType: 'br' },
+                                    '全局可用变量： %#Y#% (年) | %#M#% (月) | %#D#% (日) | %#h#% (时) | %#m#% (分) | %#s#% (秒)', { nodeType: 'br' },
+                                    '重命名可用变量： %#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#SOURCE_NAME#% (原文件名)', { nodeType: 'br' },
+                                    '下载目录可用变量： %#AUTHOR#% (作者)', { nodeType: 'br' },
                                     '双击视频选中，再次双击取消选中。选中仅在本页面有效！', { nodeType: 'br' },
                                     '在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。', { nodeType: 'br' },
                                     '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。', { nodeType: 'br' },
