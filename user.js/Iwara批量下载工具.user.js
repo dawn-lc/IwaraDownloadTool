@@ -8,7 +8,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.0.8
+// @version        2.0.9
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
