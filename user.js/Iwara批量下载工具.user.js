@@ -976,10 +976,10 @@
         }
         .selectButton {
             border-style: solid;
-            border-color: #ff5081;
+            border-color: #ff8c26;
         }
         .selectButton[checked=true] {
-            border-color: #e7ff4b;
+            border-color: #ff8c26;
         }
         .selectButton[checked=true]:before {
             z-index: 2147483640;
@@ -1271,17 +1271,21 @@
     }
     async function DownloadSelected() {
         PluginTips.info('下载', '开始解析...');
-        document.querySelectorAll('.selectButton[checked="true"]').forEach(async (element) => {
+        let videoList = document.querySelectorAll('.selectButton[checked="true"]');
+        videoList.forEach(async (element, index) => {
             await ParseDownloadAddress(ParseVideoID(element));
+            if (index == videoList.length - 1)
+                PluginTips.success('下载', '已全部解析完成!');
         });
-        PluginTips.success('下载', '已全部解析完成!');
     }
     async function DownloadAll() {
         PluginTips.info('下载', '正在解析...');
         if (document.getElementById('block-views-videos-block-2').querySelector('more-link') != null) {
-            let videoListPage = parseDom(await get(window.location.href, undefined, window.location.href));
-            videoListPage.querySelector('#block-views-videos-block-2').querySelectorAll('.node-video').forEach(async (element) => {
+            let videoList = parseDom(await get(window.location.href, undefined, window.location.href)).querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
+            videoList.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
+                if (index == videoList.length - 1)
+                    PluginTips.success('下载', '已全部解析完成!');
             });
         }
         else {
@@ -1290,12 +1294,18 @@
     }
     async function GetAllData(videoListUrl, data, referrer) {
         let videoListPage = parseDom(await get(videoListUrl, data, referrer));
-        videoListPage.querySelector('.view-videos').querySelectorAll('.node-video').forEach(async (element) => {
+        let videoList = videoListPage.querySelector('.view-videos').querySelectorAll('.node-video');
+        videoList.forEach(async (element, index) => {
             await ParseDownloadAddress(ParseVideoID(element));
+            if (index == videoList.length - 1) {
+                if (videoListPage.querySelectorAll('pager-next').length != 0) {
+                    await GetAllData(videoListPage.querySelector('pager-next').querySelector('a').href, data, referrer);
+                }
+                else {
+                    PluginTips.success('下载', '已全部解析完成!');
+                }
+            }
         });
-        if (videoListPage.querySelectorAll('pager-next').length != 0) {
-            await GetAllData(videoListPage.querySelector('pager-next').querySelector('a').href, data, referrer);
-        }
     }
     function CheckIsHaveDownloadLink(comment) {
         if (comment == null)
@@ -1314,14 +1324,14 @@
         }
         else {
             if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
-                PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 发现疑似第三方高画质下载链接,请手动处理!', true);
+                PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />发现疑似第三方高画质下载链接,请手动处理!', true);
             }
             else {
                 if (videoInfo.getDownloadQuality() == 'Source') {
                     SendDownloadRequest(videoInfo, document.cookie);
                 }
                 else {
-                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 没有解析到原画下载地址,请手动处理!', true);
+                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />没有解析到原画下载地址,请手动处理!', true);
                 }
             }
         }
