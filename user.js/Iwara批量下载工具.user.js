@@ -1237,9 +1237,26 @@
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
     let DownloadLinkCharacteristics = [
+        '高画質',
         '/s/',
-        'mega.nz/file/',
-        'drive.google.com', //Google Drive
+        'mega.nz/',
+        'drive.google.com',
+        'aliyundrive',
+        'uploadgig',
+        'katfile',
+        'storex',
+        'subyshare',
+        'rapidgator',
+        'filebe',
+        'filespace',
+        'mexa.sh',
+        'mexashare',
+        'mx-sh.net',
+        'uploaded',
+        'icerbox',
+        'alfafile',
+        'drv.ms',
+        'onedrive'
     ];
     function ParseVideoID(data) {
         return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
