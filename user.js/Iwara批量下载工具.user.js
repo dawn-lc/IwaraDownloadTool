@@ -465,42 +465,47 @@
             return this;
         }
         async init(cooike = {}) {
-            this.Page = parseDom(await get(this.Url, [], window.location.href, cooike));
-            if (this.Page.querySelector('.well') == null) {
-                this.Private = false;
-            }
-            else {
-                if (cooike['cooike'] == undefined)
-                    await this.init({ 'cooike': Cookies });
-                return;
-            }
-            this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
-            this.getAuthor = function () {
-                return this.Page.querySelector('.submitted').querySelector('a.username').innerText;
-            };
-            this.getName = function () {
-                return this.Page.querySelector('.submitted').querySelector('h1.title').innerText;
-            };
-            this.getFileName = function () {
-                return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_')).replace('%#SOURCE_NAME#%', this.getSourceFileName());
-            };
-            this.getDownloadQuality = function () {
-                if (this.Source.length == 0)
-                    return 'null';
-                return this.Source[0].resolution;
-            };
-            this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
-            this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
-            this.getComment = function () {
-                let commentNode;
-                try {
-                    commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'));
+            try {
+                this.Page = parseDom(await get(this.Url, [], window.location.href, cooike));
+                if (this.Page.querySelector('.well') == null) {
+                    this.Private = false;
                 }
-                catch (error) {
-                    return '';
+                else {
+                    if (cooike['cooike'] == undefined)
+                        await this.init({ 'cooike': Cookies });
+                    return;
                 }
-                return commentNode.map((element) => element.innerText).join('\n');
-            };
+                this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
+                this.getAuthor = function () {
+                    return this.Page.querySelector('.submitted').querySelector('a.username').innerText;
+                };
+                this.getName = function () {
+                    return this.Page.querySelector('.submitted').querySelector('h1.title').innerText;
+                };
+                this.getFileName = function () {
+                    return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_')).replace('%#SOURCE_NAME#%', this.getSourceFileName());
+                };
+                this.getDownloadQuality = function () {
+                    if (this.Source.length == 0)
+                        return 'null';
+                    return this.Source[0].resolution;
+                };
+                this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
+                this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
+                this.getComment = function () {
+                    let commentNode;
+                    try {
+                        commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'));
+                    }
+                    catch (error) {
+                        return '';
+                    }
+                    return commentNode.map((element) => element.innerText).join('\n');
+                };
+            }
+            catch (error) {
+                PluginTips.warning('解析模块', '视频信息解析失败：' + error.toString(), true);
+            }
         }
     }
     class pluginUI extends React.Component {
