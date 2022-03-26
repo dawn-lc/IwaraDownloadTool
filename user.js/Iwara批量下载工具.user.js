@@ -8,7 +8,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.1.1
+// @version        2.1.3
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -1264,7 +1264,12 @@
         'onedrive'
     ];
     function ParseVideoID(data) {
-        return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
+        if (data.getAttribute('linkdata') != null) {
+            return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
+        }
+        else {
+            return data.querySelector('h3.title').querySelector('a').href.toLowerCase();
+        }
     }
     async function ManualParseDownloadAddress() {
         let ID = prompt('请输入需要下载的视频ID', '');
