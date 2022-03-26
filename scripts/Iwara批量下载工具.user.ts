@@ -7,7 +7,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.1.3
+// @version        2.1.4
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -468,7 +468,7 @@
             this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri) }
             this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3] }
             this.getComment = function () {
-                let commentNode : Array<any>
+                let commentNode: Array<any>
                 try {
                     commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'))
                 } catch (error) {
@@ -793,7 +793,7 @@
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
                             ]
-                        } : null,  
+                        } : null,
                         this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
@@ -811,7 +811,7 @@
                             }
                             ]
                         } : null,
-                        this.state.DownloadType == DownloadType.aria2 ?  {
+                        this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
@@ -827,7 +827,7 @@
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
                             ]
-                        }: null,
+                        } : null,
                         this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
@@ -1188,6 +1188,7 @@
         },
         parent: document.querySelector('#user-links')
         }])
+    let Async = false
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'))
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'))
     let PluginTips = new pluginTips()
@@ -1233,7 +1234,7 @@
         } else {
             return data.querySelector('h3.title').querySelector('a').href.toLowerCase()
         }
-        
+
     }
     async function ManualParseDownloadAddress() {
         let ID = prompt('请输入需要下载的视频ID', '')
@@ -1245,11 +1246,18 @@
     }
     async function DownloadSelected() {
         PluginTips.info('下载', '开始解析...')
-        let videoList =  document.querySelectorAll('.selectButton[checked="true"]')
-        videoList.forEach(async (element: Element, index: number) => {
-            await ParseDownloadAddress(ParseVideoID(element))
-            if (index == videoList.length - 1) PluginTips.success('下载', '已全部解析完成!')
-        })
+        let videoList = document.querySelectorAll('.selectButton[checked="true"]')
+        if (Async) {
+            videoList.forEach(async (element: Element, index: number) => {
+                await ParseDownloadAddress(ParseVideoID(element))
+                if (index == videoList.length - 1) PluginTips.success('下载', '已全部解析完成!')
+            })
+        } else {
+            for (let index = 0; index < videoList.length; index++) {
+                await ParseDownloadAddress(ParseVideoID(videoList[index]))
+            }
+            PluginTips.success('下载', '已全部解析完成!')
+        }
     }
     async function DownloadAll() {
         PluginTips.info('下载', '正在解析...')
@@ -1258,10 +1266,17 @@
                 await GetAllData(document.querySelector('.more-link').querySelector('a').href, [], window.location.href)
             } else {
                 let videoList = document.querySelector('#block-views-videos-block-2').querySelectorAll('.node-video')
-                videoList.forEach(async (element: Element, index: number) => {
-                    await ParseDownloadAddress(ParseVideoID(element))
-                    if (index == videoList.length - 1) PluginTips.success('下载', '已全部解析完成!')
-                })
+                if (Async) {
+                    videoList.forEach(async (element: Element, index: number) => {
+                        await ParseDownloadAddress(ParseVideoID(element))
+                        if (index == videoList.length - 1) PluginTips.success('下载', '已全部解析完成!')
+                    })
+                } else {
+                    for (let index = 0; index < videoList.length; index++) {
+                        await ParseDownloadAddress(ParseVideoID(videoList[index]))
+                    }
+                    PluginTips.success('下载', '已全部解析完成!')
+                }
             }
         } else {
             await GetAllData(window.location.href, [], window.location.href)
@@ -1270,16 +1285,27 @@
     async function GetAllData(videoListUrl: string, data: string[], referrer: string) {
         let videoListPage = parseDom(await get(videoListUrl, data, referrer))
         let videoList = videoListPage.querySelector('.view-videos').querySelectorAll('.node-video')
-        videoList.forEach(async (element: Element, index: number) => {
-            await ParseDownloadAddress(ParseVideoID(element))
-            if (index == videoList.length - 1) {
-                if (videoListPage.querySelectorAll('.pager-next').length != 0) {
-                    await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer)
-                } else {
-                    PluginTips.success('下载', '已全部解析完成!')
+        if (Async) {
+            videoList.forEach(async (element: Element, index: number) => {
+                await ParseDownloadAddress(ParseVideoID(element))
+                if (index == videoList.length - 1) {
+                    if (videoListPage.querySelectorAll('.pager-next').length != 0) {
+                        await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer)
+                    } else {
+                        PluginTips.success('下载', '已全部解析完成!')
+                    }
                 }
-            } 
-        })
+            })
+        } else {
+            for (let i = 0; i < videoList.length; i++) {
+                await ParseDownloadAddress(ParseVideoID(videoList[i]))
+            }
+            if (videoListPage.querySelectorAll('.pager-next').length != 0) {
+                await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer)
+            } else {
+                PluginTips.success('下载', '已全部解析完成!')
+            }
+        }
     }
     function CheckIsHaveDownloadLink(comment: string) {
         if (comment == null) return false
@@ -1365,7 +1391,7 @@
                             'Cookie:' + Cookie
                         ],
                         'out': FileName,
-                        'dir': replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%',Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
+                        'dir': replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%', Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
 
@@ -1389,8 +1415,7 @@
                 break
         }
     }
-
-    function replaceVar(data:string) {
+    function replaceVar(data: string) {
         let gVar = [
             { 'Y': new Date().getFullYear() },
             { 'M': new Date().getMonth() },
@@ -1401,7 +1426,7 @@
         ]
         gVar.forEach((item) => {
             for (const d in item) {
-                data.replace('%#'+d+'#%',item[d]) 
+                data.replace('%#' + d + '#%', item[d])
             }
         })
         return data

@@ -8,7 +8,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.1.3
+// @version        2.1.4
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -1221,6 +1221,7 @@
             },
             parent: document.querySelector('#user-links')
         }]);
+    let Async = false;
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
@@ -1282,11 +1283,19 @@
     async function DownloadSelected() {
         PluginTips.info('下载', '开始解析...');
         let videoList = document.querySelectorAll('.selectButton[checked="true"]');
-        videoList.forEach(async (element, index) => {
-            await ParseDownloadAddress(ParseVideoID(element));
-            if (index == videoList.length - 1)
-                PluginTips.success('下载', '已全部解析完成!');
-        });
+        if (Async) {
+            videoList.forEach(async (element, index) => {
+                await ParseDownloadAddress(ParseVideoID(element));
+                if (index == videoList.length - 1)
+                    PluginTips.success('下载', '已全部解析完成!');
+            });
+        }
+        else {
+            for (let index = 0; index < videoList.length; index++) {
+                await ParseDownloadAddress(ParseVideoID(videoList[index]));
+            }
+            PluginTips.success('下载', '已全部解析完成!');
+        }
     }
     async function DownloadAll() {
         PluginTips.info('下载', '正在解析...');
@@ -1296,11 +1305,19 @@
             }
             else {
                 let videoList = document.querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
-                videoList.forEach(async (element, index) => {
-                    await ParseDownloadAddress(ParseVideoID(element));
-                    if (index == videoList.length - 1)
-                        PluginTips.success('下载', '已全部解析完成!');
-                });
+                if (Async) {
+                    videoList.forEach(async (element, index) => {
+                        await ParseDownloadAddress(ParseVideoID(element));
+                        if (index == videoList.length - 1)
+                            PluginTips.success('下载', '已全部解析完成!');
+                    });
+                }
+                else {
+                    for (let index = 0; index < videoList.length; index++) {
+                        await ParseDownloadAddress(ParseVideoID(videoList[index]));
+                    }
+                    PluginTips.success('下载', '已全部解析完成!');
+                }
             }
         }
         else {
@@ -1310,17 +1327,30 @@
     async function GetAllData(videoListUrl, data, referrer) {
         let videoListPage = parseDom(await get(videoListUrl, data, referrer));
         let videoList = videoListPage.querySelector('.view-videos').querySelectorAll('.node-video');
-        videoList.forEach(async (element, index) => {
-            await ParseDownloadAddress(ParseVideoID(element));
-            if (index == videoList.length - 1) {
-                if (videoListPage.querySelectorAll('.pager-next').length != 0) {
-                    await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer);
+        if (Async) {
+            videoList.forEach(async (element, index) => {
+                await ParseDownloadAddress(ParseVideoID(element));
+                if (index == videoList.length - 1) {
+                    if (videoListPage.querySelectorAll('.pager-next').length != 0) {
+                        await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer);
+                    }
+                    else {
+                        PluginTips.success('下载', '已全部解析完成!');
+                    }
                 }
-                else {
-                    PluginTips.success('下载', '已全部解析完成!');
-                }
+            });
+        }
+        else {
+            for (let i = 0; i < videoList.length; i++) {
+                await ParseDownloadAddress(ParseVideoID(videoList[i]));
             }
-        });
+            if (videoListPage.querySelectorAll('.pager-next').length != 0) {
+                await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer);
+            }
+            else {
+                PluginTips.success('下载', '已全部解析完成!');
+            }
+        }
     }
     function CheckIsHaveDownloadLink(comment) {
         if (comment == null)
