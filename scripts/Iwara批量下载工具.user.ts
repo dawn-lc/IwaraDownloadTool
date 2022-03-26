@@ -7,7 +7,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.1.9
+// @version        2.1.10
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -808,7 +808,7 @@
                                     attribute: {
                                         switch: this.state.Async ? 'on' : 'off'
                                     },
-                                    value: this.state.Async ? '同步' : '异步',
+                                    value: this.state.Async ? '异步' : '同步',
                                     className: 'switchButton',
                                     onClick: () => this.configChange({ name: 'Async', value: !this.state.Async })
                                 }
@@ -970,10 +970,10 @@
             cursor: pointer;
         }
         .switchButton {
-            background-color: #43a047;
+            background-color: #bf360c;
         }
         .switchButton[switch=off] {
-            background-color: #bf360c;
+            background-color: #43a047;
         }
         .selectButton {
             border-style: solid;
