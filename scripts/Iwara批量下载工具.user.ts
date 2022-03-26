@@ -7,7 +7,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.1.10
+// @version        2.1.15
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -1275,7 +1275,7 @@
         if (data.getAttribute('linkdata') != null) {
             return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase()
         } else {
-            return data.querySelector('h3.title').querySelector('a').href.toLowerCase()
+            return data.querySelector('h3.title').querySelector('a').href.toLowerCase().split('?')[0].split('/')[4].toLowerCase()
         }
 
     }
@@ -1421,7 +1421,8 @@
     }
     function aria2Download(Info: VideoInfo, Cookies: string) {
         (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
-            PluginControlPanel.Aria2WebSocket.send(JSON.stringify({
+            //PluginControlPanel.Aria2WebSocket.send()
+            let test = JSON.stringify({
                 'jsonrpc': '2.0',
                 'method': 'aria2.addUri',
                 'id': PluginControlPanel.state.WebSocketID,
@@ -1439,7 +1440,7 @@
                     }
 
                 ]
-            }))
+            })
             PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!')
         }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()))
     }
