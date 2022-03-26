@@ -8,7 +8,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.0.18
+// @version        2.0.19
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -1286,15 +1286,15 @@
     async function DownloadAll() {
         PluginTips.info('下载', '正在解析...');
         if (document.querySelector('#block-views-videos-block-2').querySelector('.more-link') != null) {
-            let videoList = parseDom(await get(window.location.href, [], window.location.href)).querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
+            await GetAllData(document.querySelector('.more-link').querySelector('a').href, [], window.location.href);
+        }
+        else {
+            let videoList = document.querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
             videoList.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
                 if (index == videoList.length - 1)
                     PluginTips.success('下载', '已全部解析完成!');
             });
-        }
-        else {
-            await GetAllData(document.querySelector('div.more-link').querySelector('a').href, [], window.location.href);
         }
     }
     async function GetAllData(videoListUrl, data, referrer) {
