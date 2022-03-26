@@ -1224,7 +1224,23 @@
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
-    let Cookies = getCookies();
+    let Cookies = document.cookie;
+    try {
+        GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
+            if (error) {
+                PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />错误：' + error.toString(), true);
+            }
+            else {
+                list.forEach(Cookie => {
+                    if (Cookie.httpOnly == true)
+                        Cookies += Cookie.name + '=' + Cookie.value + '; ';
+                });
+            }
+        });
+    }
+    catch (error) {
+        PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。', true);
+    }
     let DownloadLinkCharacteristics = [
         'http',
         '/s/',
@@ -1247,21 +1263,6 @@
         'drv.ms',
         'onedrive'
     ];
-    function getCookies() {
-        let cookies = '';
-        try {
-            GM_cookie('list', { domain: window.location.hostname }, (list) => {
-                list.forEach((item) => {
-                    cookies += item.name + '=' + item.value + '; ';
-                });
-            });
-        }
-        catch (error) {
-            PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。', true);
-            cookies = document.cookie;
-        }
-        return cookies;
-    }
     function ParseVideoID(data) {
         return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
     }
