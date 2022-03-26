@@ -1228,7 +1228,12 @@
         'onedrive'
     ]
     function ParseVideoID(data: Element) {
-        return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase()
+        if (data.getAttribute('linkdata') != null) {
+            return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase()
+        } else {
+            return data.querySelector('h3.title').querySelector('a').href.toLowerCase()
+        }
+        
     }
     async function ManualParseDownloadAddress() {
         let ID = prompt('请输入需要下载的视频ID', '')
