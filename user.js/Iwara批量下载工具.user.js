@@ -8,7 +8,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.0.9
+// @version        2.0.13
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -25,6 +25,7 @@
 // @grant          GM_xmlhttpRequest
 // @grant          GM_openInTab
 // @grant          GM_info
+// @grant          GM_cookie
 // @grant          unsafeWindow
 // @require        https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/16.13.1/umd/react.production.min.js
 // @require        https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/16.13.1/umd/react-dom.production.min.js
@@ -143,10 +144,7 @@
         }
         return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || undefined);
     }
-    async function get(url, parameter = [], referrer, headers = {}) {
-        referrer = referrer || url;
-        parameter = parameter || [];
-        headers = headers || {};
+    async function get(url, parameter = [], referrer = window.location.hostname, headers = {}) {
         if (parameter.length != 0) {
             url += '?';
             for (var key in parameter) {
@@ -452,7 +450,7 @@
         ID;
         Page;
         Source;
-        Lock;
+        Private = true;
         getAuthor;
         getName;
         getDownloadQuality;
@@ -463,46 +461,37 @@
         getFileName;
         constructor(videoID) {
             this.ID = videoID.toLowerCase();
-            this.Url = 'https://ecchi.iwara.tv/videos/' + this.ID;
+            this.Url = 'https://' + window.location.hostname + '/videos/' + this.ID;
             return this;
         }
-        async init() {
-            this.Page = parseDom(await get(this.Url, null, window.location.href));
-            console.log('视频页面获取完成!');
-            this.Source = await get('https://ecchi.iwara.tv/api/video/' + this.ID, null, this.Url);
-            console.log('视频源获取完成!');
-            if (this.Page.querySelector('.well') != null) {
-                this.Lock = true;
+        async init(cooike = {}) {
+            this.Page = parseDom(await get(this.Url, [], window.location.href, cooike));
+            if (this.Page.querySelector('.well') == null) {
+                this.Private = false;
             }
             else {
-                this.Lock = false;
+                if (cooike['cooike'] == undefined)
+                    await this.init({ 'cooike': Cookies });
+                return;
             }
+            this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
             this.getAuthor = function () {
-                if (this.Lock)
-                    return this.Page.querySelector('a.username').innerText;
                 return this.Page.querySelector('.submitted').querySelector('a.username').innerText;
             };
             this.getName = function () {
-                if (this.Lock)
-                    return this.Page.querySelector('.title').querySelector('a').innerText;
                 return this.Page.querySelector('.submitted').querySelector('h1.title').innerText;
             };
             this.getFileName = function () {
-                if (!this.Lock)
-                    return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_')).replace('%#SOURCE_NAME#%', this.getSourceFileName());
-                return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_'));
+                return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_')).replace('%#SOURCE_NAME#%', this.getSourceFileName());
             };
             this.getDownloadQuality = function () {
-                if (this.Source.length != 0) {
-                    return this.Source[0].resolution;
-                }
-                return null;
+                if (this.Source.length == 0)
+                    return 'null';
+                return this.Source[0].resolution;
             };
             this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
             this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
             this.getComment = function () {
-                if (this.Lock)
-                    return '';
                 let commentNode;
                 try {
                     commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'));
@@ -999,7 +988,6 @@
         }
         .tips {
             letter-spacing:3px;
-            cursor: pointer;
             box-sizing: border-box;
             display: none;
             width: 100%;
@@ -1236,8 +1224,9 @@
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
+    let Cookies = getCookies();
     let DownloadLinkCharacteristics = [
-        '高画質',
+        'http',
         '/s/',
         'mega.nz/',
         'drive.google.com',
@@ -1258,6 +1247,21 @@
         'drv.ms',
         'onedrive'
     ];
+    function getCookies() {
+        let cookies = '';
+        try {
+            GM_cookie('list', { domain: window.location.hostname }, (list) => {
+                list.forEach((item) => {
+                    cookies += item.name + '=' + item.value + '; ';
+                });
+            });
+        }
+        catch (error) {
+            PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。', true);
+            cookies = document.cookie;
+        }
+        return cookies;
+    }
     function ParseVideoID(data) {
         return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
     }
@@ -1281,7 +1285,7 @@
     async function DownloadAll() {
         PluginTips.info('下载', '正在解析...');
         if (document.getElementById('block-views-videos-block-2').querySelector('more-link') != null) {
-            let videoList = parseDom(await get(window.location.href, undefined, window.location.href)).querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
+            let videoList = parseDom(await get(window.location.href, [], window.location.href)).querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
             videoList.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
                 if (index == videoList.length - 1)
@@ -1319,19 +1323,26 @@
     async function ParseDownloadAddress(Data) {
         let videoInfo = new VideoInfo(Data);
         await videoInfo.init();
-        if (videoInfo.Lock) {
-            PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> 该视频已锁定! <br />请等待作者同意您的添加好友申请后再重试!', true);
+        if (videoInfo.Private) {
+            let TipsText = '检测到无权限访问的私有(上锁)视频! <br />';
+            if (document.querySelector('.btn.btn-info.btn-sm.user') == null) {
+                TipsText += '请<a href="https://' + window.location.hostname + '/user/login" target="_blank" >登录</a>或<a href="https://' + window.location.hostname + '/user/register" target="_blank">注册</a>后进入视频页面与作者成为好友获得访问权限。<br />';
+            }
+            else {
+                TipsText += '请进入视频页面与作者成为好友获得访问权限。<br />';
+            }
+            PluginTips.warning('警告', TipsText + '<a href="' + videoInfo.Url + '" target="_blank" > → 点击此处，进入视频页面 ← </a>', true);
         }
         else {
             if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
                 PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />发现疑似第三方高画质下载链接,请手动处理!', true);
             }
             else {
-                if (videoInfo.getDownloadQuality() == 'Source') {
-                    SendDownloadRequest(videoInfo, document.cookie);
+                if (videoInfo.getDownloadQuality() != 'Source') {
+                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />没有解析到原画下载地址,请手动处理!', true);
                 }
                 else {
-                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />没有解析到原画下载地址,请手动处理!', true);
+                    SendDownloadRequest(videoInfo, Cookies);
                 }
             }
         }
