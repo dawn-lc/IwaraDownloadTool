@@ -8,7 +8,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.1.4
+// @version        2.1.8
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -619,13 +619,15 @@
         }
     }
     class pluginControlPanel extends React.Component {
+        Initialize;
         synclistener;
         Aria2WebSocket;
         constructor(props) {
             super(props);
+            this.Initialize = GM_getValue('Initialize', false);
             this.synclistener = [];
             this.state = {
-                Initialize: GM_getValue('Initialize', false),
+                Async: GM_getValue('Async', false),
                 DownloadType: Number(GM_getValue('DownloadType', DownloadType.others)),
                 DownloadDir: GM_getValue('DownloadDir', '/%#AUTHOR#%'),
                 DownloadProxy: GM_getValue('DownloadProxy', ''),
@@ -651,6 +653,15 @@
                     main: { display: 'none' }
                 }
             };
+            if (!this.Initialize) {
+                for (const key in this.state) {
+                    if (key != 'style') {
+                        GM_setValue(key, this.state[key]);
+                    }
+                }
+                this.Initialize = true;
+                GM_setValue('Initialize', this.Initialize);
+            }
         }
         show() {
             this.setState((state) => {
@@ -662,30 +673,29 @@
             });
         }
         hide() {
-            if (this.state.Initialize) {
-                this.setState((state) => {
-                    return {
-                        style: Object.assign(state.style, {
-                            main: { display: 'none' }
-                        })
-                    };
-                });
-            }
-            else {
-                switch (this.state.DownloadType) {
-                    case DownloadType.aria2:
-                        if (/((((ws|wss):(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/.test(this.state.WebSocketAddress) && this.state.WebSocketToken != '') {
-                            this.configChange({ name: 'Initialize', value: true });
-                            this.hide();
-                        }
-                        break;
-                    case DownloadType.default:
-                    case DownloadType.others:
-                    default:
-                        this.configChange({ name: 'Initialize', value: true });
-                        this.hide();
-                        break;
-                }
+            switch (this.state.DownloadType) {
+                case DownloadType.aria2:
+                    if (this.Aria2WebSocket != undefined) {
+                        this.Aria2WebSocket.close();
+                    }
+                    this.ConnectionWebSocket();
+                    this.setState((state) => {
+                        return {
+                            style: Object.assign(state.style, {
+                                main: { display: 'none' }
+                            })
+                        };
+                    });
+                    break;
+                default:
+                    this.setState((state) => {
+                        return {
+                            style: Object.assign(state.style, {
+                                main: { display: 'none' }
+                            })
+                        };
+                    });
+                    break;
             }
         }
         componentDidMount() {
@@ -694,7 +704,7 @@
                 this.synclistener.push(GM_addValueChangeListener(values[index], (name, old_value, new_value, remote) => {
                     if (remote && (new_value != this.state[name])) {
                         this.setState({ [name]: new_value });
-                        if (name == 'DownloadType' && this.state[name] == DownloadType.aria2 && /((((ws|wss):(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/.test(this.state['WebSocketAddress'])) {
+                        if (name == 'DownloadType' && this.state[name] == DownloadType.aria2) {
                             if (this.Aria2WebSocket != undefined) {
                                 this.Aria2WebSocket.close();
                             }
@@ -734,7 +744,7 @@
         }
         configChange(e) {
             this.setState({ [e.name]: e.value });
-            if (e.name == 'DownloadType' && e.value == DownloadType.aria2 && /((((ws|wss):(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/.test(this.state['WebSocketAddress'])) {
+            if (e.name == 'DownloadType' && e.value == DownloadType.aria2) {
                 if (this.Aria2WebSocket != undefined) {
                     this.Aria2WebSocket.close();
                 }
@@ -809,13 +819,36 @@
                                             item.checked = true;
                                         } return item; })
                                     },
+                                    {
+                                        nodeType: 'div',
+                                        style: this.state.style.Line,
+                                        childs: [{
+                                                nodeType: 'label',
+                                                style: this.state.style.inputLabel,
+                                                childs: '解析模式[推荐同步模式]：',
+                                                title: '异步解析可能会因为解析速度过快导致服务器拒绝回应'
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'Async',
+                                                type: 'button',
+                                                style: this.state.style.input,
+                                                attribute: {
+                                                    switch: this.state.Async ? 'on' : 'off'
+                                                },
+                                                value: this.state.Async ? '异步' : '同步',
+                                                className: 'switchButton',
+                                                onClick: () => this.configChange({ name: 'Async', value: !this.state.Async })
+                                            }
+                                        ]
+                                    },
                                     this.state.DownloadType != DownloadType.others ? {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
-                                                childs: '重命名:',
+                                                childs: '重命名:'
                                             },
                                             {
                                                 nodeType: 'input',
@@ -833,7 +866,7 @@
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
-                                                childs: '下载到:',
+                                                childs: '下载到:'
                                             },
                                             {
                                                 nodeType: 'input',
@@ -850,7 +883,7 @@
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
-                                                childs: '代理服务器(可选):',
+                                                childs: '代理服务器(可选):'
                                             },
                                             {
                                                 nodeType: 'input',
@@ -867,10 +900,11 @@
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
-                                                childs: 'Aria2 RPC WebSocket:',
+                                                childs: 'Aria2 RPC WebSocket:'
                                             },
                                             {
                                                 nodeType: 'input',
+                                                pattern: '^(ws|wss)://.*$',
                                                 name: 'WebSocketAddress',
                                                 value: this.state.WebSocketAddress,
                                                 style: this.state.style.input,
@@ -884,7 +918,7 @@
                                         childs: [{
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
-                                                childs: 'Aria2 RPC Token(密钥):',
+                                                childs: 'Aria2 RPC Token(密钥):'
                                             },
                                             {
                                                 nodeType: 'input',
@@ -962,6 +996,12 @@
             color: black;
             text-decoration: none;
             cursor: pointer;
+        }
+        .switchButton {
+            background-color: #43a047;
+        }
+        .switchButton[switch=off] {
+            background-color: #bf360c;
         }
         .selectButton {
             border-style: solid;
@@ -1221,7 +1261,6 @@
             },
             parent: document.querySelector('#user-links')
         }]);
-    let Async = false;
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
@@ -1243,7 +1282,6 @@
         PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。', true);
     }
     let DownloadLinkCharacteristics = [
-        'http',
         '/s/',
         'mega.nz/',
         'drive.google.com',
@@ -1283,7 +1321,7 @@
     async function DownloadSelected() {
         PluginTips.info('下载', '开始解析...');
         let videoList = document.querySelectorAll('.selectButton[checked="true"]');
-        if (Async) {
+        if (PluginControlPanel.state.Async) {
             videoList.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
                 if (index == videoList.length - 1)
@@ -1305,7 +1343,7 @@
             }
             else {
                 let videoList = document.querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
-                if (Async) {
+                if (PluginControlPanel.state.Async) {
                     videoList.forEach(async (element, index) => {
                         await ParseDownloadAddress(ParseVideoID(element));
                         if (index == videoList.length - 1)
@@ -1327,7 +1365,7 @@
     async function GetAllData(videoListUrl, data, referrer) {
         let videoListPage = parseDom(await get(videoListUrl, data, referrer));
         let videoList = videoListPage.querySelector('.view-videos').querySelectorAll('.node-video');
-        if (Async) {
+        if (PluginControlPanel.state.Async) {
             videoList.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
                 if (index == videoList.length - 1) {
@@ -1483,7 +1521,7 @@
         });
         return data;
     }
-    if (!PluginControlPanel.state.Initialize) {
+    if (!PluginControlPanel.Initialize) {
         PluginControlPanel.show();
     }
     document.querySelectorAll('.node-video').forEach((video) => {
@@ -1491,10 +1529,10 @@
             video.ondblclick = () => {
                 video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
             };
-            video.setAttribute('linkdata', video.querySelector('a').href);
-            video.querySelector('a').removeAttribute('href');
             video.setAttribute('checked', 'false');
             video.classList.add('selectButton');
+            video.setAttribute('linkdata', video.querySelector('a').href);
+            video.querySelector('a').removeAttribute('href');
         }
     });
     if (document.querySelectorAll('.selectButton').length > 0) {
@@ -1508,7 +1546,7 @@
             PluginControlPanel.ConnectionWebSocket();
             break;
         case DownloadType.default:
-            PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！', true);
+            PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！');
             break;
         case DownloadType.others:
             break;
