@@ -7,7 +7,7 @@
 // @description:ja Iwara 動画バッチをダウンロード
 // @namespace      https://github.com/dawn-lc/user.js
 // @icon           https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version        2.1.15
+// @version        2.1.16
 // @author         dawn-lc
 // @license        Apache-2.0
 // @connect        iwara.tv
@@ -478,7 +478,7 @@
                     return commentNode.map((element: Element) => (element as HTMLElement).innerText).join('\n')
                 }
             } catch (error) {
-                PluginTips.warning('解析模块','视频信息解析失败：' + error.toString(), true)
+                PluginTips.warning('解析模块', '视频信息解析失败：' + error.toString(), true)
             }
         }
     }
@@ -679,7 +679,7 @@
                 this.synclistener.push(GM_addValueChangeListener(values[index], (name: string, old_value: any, new_value: any, remote: boolean) => {
                     if (remote && (new_value != this.state[name])) {
                         this.setState({ [name]: new_value })
-                        if (name == 'DownloadType' && this.state[name] == DownloadType.aria2 ) {
+                        if (name == 'DownloadType' && this.state[name] == DownloadType.aria2) {
                             if (this.Aria2WebSocket != undefined) {
                                 this.Aria2WebSocket.close()
                             }
@@ -800,18 +800,18 @@
                                 childs: '解析模式[推荐同步模式]：',
                                 title: '异步解析可能会因为解析速度过快导致服务器拒绝回应'
                             },
-                                {
-                                    nodeType: 'input',
-                                    name: 'Async',
-                                    type: 'button',
-                                    style: this.state.style.input,
-                                    attribute: {
-                                        switch: this.state.Async ? 'on' : 'off'
-                                    },
-                                    value: this.state.Async ? '异步' : '同步',
-                                    className: 'switchButton',
-                                    onClick: () => this.configChange({ name: 'Async', value: !this.state.Async })
-                                }
+                            {
+                                nodeType: 'input',
+                                name: 'Async',
+                                type: 'button',
+                                style: this.state.style.input,
+                                attribute: {
+                                    switch: this.state.Async ? 'on' : 'off'
+                                },
+                                value: this.state.Async ? '异步' : '同步',
+                                className: 'switchButton',
+                                onClick: () => this.configChange({ name: 'Async', value: !this.state.Async })
+                            }
                             ]
                         },
                         this.state.DownloadType != DownloadType.others ? {
@@ -1421,8 +1421,7 @@
     }
     function aria2Download(Info: VideoInfo, Cookies: string) {
         (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
-            //PluginControlPanel.Aria2WebSocket.send()
-            let test = JSON.stringify({
+            PluginControlPanel.Aria2WebSocket.send(JSON.stringify({
                 'jsonrpc': '2.0',
                 'method': 'aria2.addUri',
                 'id': PluginControlPanel.state.WebSocketID,
@@ -1438,9 +1437,8 @@
                         'dir': replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%', Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
-
                 ]
-            })
+            }))
             PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!')
         }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()))
     }
@@ -1475,7 +1473,6 @@
         })
         return data
     }
-
     if (!PluginControlPanel.Initialize) {
         PluginControlPanel.show()
     }
