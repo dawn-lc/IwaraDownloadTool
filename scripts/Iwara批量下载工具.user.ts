@@ -1248,7 +1248,7 @@
     }
     async function DownloadAll() {
         PluginTips.info('下载', '正在解析...')
-        if (document.getElementById('block-views-videos-block-2').querySelector('more-link') != null) {
+        if (document.querySelector('#block-views-videos-block-2').querySelector('.more-link') != null) {
             let videoList = parseDom(await get(window.location.href, [], window.location.href)).querySelector('#block-views-videos-block-2').querySelectorAll('.node-video')
             videoList.forEach(async (element: Element, index: number) => {
                 await ParseDownloadAddress(ParseVideoID(element))
@@ -1264,8 +1264,8 @@
         videoList.forEach(async (element: Element, index: number) => {
             await ParseDownloadAddress(ParseVideoID(element))
             if (index == videoList.length - 1) {
-                if (videoListPage.querySelectorAll('pager-next').length != 0) {
-                    await GetAllData(videoListPage.querySelector('pager-next').querySelector('a').href, data, referrer)
+                if (videoListPage.querySelectorAll('.pager-next').length != 0) {
+                    await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer)
                 } else {
                     PluginTips.success('下载', '已全部解析完成!')
                 }
