@@ -6,13 +6,16 @@
 // @description:ja    Iwara 動画バッチをダウンロード
 // @name:zh-CN        Iwara 批量下载工具
 // @description:zh-CN 批量下载 Iwara 视频
-// @namespace         https://github.com/dawn-lc/user.js
-// @source            https://github.com/dawn-lc/user.js
-// @supportURL        https://github.com/dawn-lc/user.js/issues
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version           2.1.20
+// @namespace         https://github.com/dawn-lc/user.js
+// @version           2.1.25
 // @author            dawn-lc
 // @license           Apache-2.0
+// @copyright         2022, Dawnlc (https://dawnlc.me/)
+// @source            https://github.com/dawn-lc/user.js
+// @supportURL        https://github.com/dawn-lc/user.js/issues
+// @updateURL         https://github.com/dawn-lc/user.js/raw/master/user.js/Iwara%E6%89%B9%E9%87%8F%E4%B8%8B%E8%BD%BD%E5%B7%A5%E5%85%B7.user.js 
+// @downloadURL       https://github.com/dawn-lc/user.js/raw/master/user.js/Iwara%E6%89%B9%E9%87%8F%E4%B8%8B%E8%BD%BD%E5%B7%A5%E5%85%B7.user.js 
 // @connect           iwara.tv
 // @match             *://*.iwara.tv/*
 // @grant             GM_getValue
