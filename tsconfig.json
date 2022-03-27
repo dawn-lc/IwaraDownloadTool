@@ -1,14 +1,19 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "system",
     "esModuleInterop": true, 
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
     "suppressImplicitAnyIndexErrors": true,
-    "outDir": "./user.js",
+    "sourceMap": true,
+    "outFile": "./dist/IwaraDownloadTool.user.js"
   },
-  "include": ["**/*.ts", "**/*.d.ts"]
+  "include": ["./scripts/*.ts", "./utils/*.d.ts"],
+  "files": [
+    "./scripts/IwaraDownloadTool.mata.ts",
+    "./scripts/IwaraDownloadTool.user.ts"
+  ]
 }
