@@ -1,0 +1,38 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Mata Build",
+			"group": "build",
+			"type": "shell",
+			"command": "copy",
+			"args": [
+				"${workspaceFolder}\\scripts\\IwaraDownloadTool.mata.ts",
+				"${workspaceFolder}\\dist\\IwaraDownloadTool.mata.js"
+			]
+		},
+		{
+			"label": "Main Build",
+			"group": "build",
+			"type": "shell",
+			"command": "tsc",
+			"args": [
+				"--project",
+				"${workspaceFolder}"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "Build",
+			"dependsOn": [
+				"Mata Build",
+				"Main Build"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}
+	]
+}
