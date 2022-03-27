@@ -10,7 +10,7 @@
 // @source            https://github.com/dawn-lc/user.js
 // @supportURL        https://github.com/dawn-lc/user.js/issues
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version           2.1.18
+// @version           2.1.19
 // @author            dawn-lc
 // @license           Apache-2.0
 // @connect           iwara.tv
@@ -26,7 +26,6 @@
 // @grant             GM_download
 // @grant             GM_xmlhttpRequest
 // @grant             GM_openInTab
-// @grant             GM_info
 // @grant             GM_cookie
 // @grant             unsafeWindow
 // @require           https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/16.13.1/umd/react.production.min.js
@@ -1272,22 +1271,6 @@
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
     let Cookies = document.cookie;
-    try {
-        GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
-            if (error) {
-                PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />错误：' + error.toString(), true);
-            }
-            else {
-                list.forEach(Cookie => {
-                    if (Cookie.httpOnly == true)
-                        Cookies += '; ' + Cookie.name + '=' + Cookie.value;
-                });
-            }
-        });
-    }
-    catch (error) {
-        PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。', true);
-    }
     let DownloadLinkCharacteristics = [
         '/s/',
         'mega.nz/',
@@ -1530,6 +1513,23 @@
     }
     if (!PluginControlPanel.Initialize) {
         PluginControlPanel.show();
+    }
+    try {
+        GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
+            if (error) {
+                PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />错误：' + error.toString(), true);
+            }
+            else {
+                for (let index = 0; index < list.length; index++) {
+                    const Cookie = list[index];
+                    if (Cookie.httpOnly == true)
+                        Cookies += '; ' + Cookie.name + '=' + Cookie.value;
+                }
+            }
+        });
+    }
+    catch (error) {
+        PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。', true);
     }
     document.querySelectorAll('.node-video').forEach((video) => {
         if (!video.classList.contains('node-full')) {
