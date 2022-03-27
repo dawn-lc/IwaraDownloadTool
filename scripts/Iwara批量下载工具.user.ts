@@ -9,7 +9,7 @@
 // @source            https://github.com/dawn-lc/user.js
 // @supportURL        https://github.com/dawn-lc/user.js/issues
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
-// @version           2.1.19
+// @version           2.1.20
 // @author            dawn-lc
 // @license           Apache-2.0
 // @connect           iwara.tv
@@ -1454,11 +1454,11 @@
             { 'm': new Date().getMinutes() },
             { 's': new Date().getSeconds() }
         ]
-        gVar.forEach((item) => {
-            for (const d in item) {
-                data.replace('%#' + d + '#%', item[d])
+        for (let i = 0; i < gVar.length; i++) {
+            for (const d in gVar[i]) {
+                data.replace('%#' + d + '#%', gVar[i][d])
             }
-        })
+        }
         return data
     }
     if (!PluginControlPanel.Initialize) {
@@ -1467,7 +1467,7 @@
     try {
         GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
             if (error) {
-                PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />错误：' + error.toString(), true)
+                PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString(), true)
             } else {
                 for (let index = 0; index < list.length; index++) {
                     const Cookie = list[index];
@@ -1476,7 +1476,7 @@
             }
         })
     } catch (error) {
-        PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。', true)
+        PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString(), true)
     }
     document.querySelectorAll('.node-video').forEach((video) => {
         if (!video.classList.contains('node-full')) {
