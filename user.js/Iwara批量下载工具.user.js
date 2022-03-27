@@ -1278,7 +1278,7 @@
             else {
                 list.forEach(Cookie => {
                     if (Cookie.httpOnly == true)
-                        Cookies += Cookie.name + '=' + Cookie.value + '; ';
+                        Cookies += '; ' + Cookie.name + '=' + Cookie.value;
                 });
             }
         });

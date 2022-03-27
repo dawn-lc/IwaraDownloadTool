@@ -1243,7 +1243,7 @@
                 PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />错误：' + error.toString(), true)
             } else {
                 list.forEach(Cookie => {
-                    if (Cookie.httpOnly == true) Cookies += Cookie.name + '=' + Cookie.value + '; '
+                    if (Cookie.httpOnly == true) Cookies += '; '+ Cookie.name + '=' + Cookie.value
                 })
             }
         })
