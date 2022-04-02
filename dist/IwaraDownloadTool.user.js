@@ -481,13 +481,13 @@
                 }
                 this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
                 this.getAuthor = function () {
-                    return this.Page.querySelector('.submitted').querySelector('a.username').innerText;
+                    return this.Page.querySelector('.submitted').querySelector('a.username').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
                 };
                 this.getName = function () {
-                    return this.Page.querySelector('.submitted').querySelector('h1.title').innerText;
+                    return this.Page.querySelector('.submitted').querySelector('h1.title').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
                 };
                 this.getFileName = function () {
-                    return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor().replace(/[\\\\/:*?\"<>|.]/g, '_')).replace('%#SOURCE_NAME#%', this.getSourceFileName());
+                    return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName());
                 };
                 this.getDownloadQuality = function () {
                     if (this.Source.length == 0)
@@ -1475,7 +1475,7 @@
                             'Cookie:' + Cookie
                         ],
                         'out': FileName,
-                        'dir': replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%', Author.replace(/[\\\\/:*?\"<>|.]/g, '_')),
+                        'dir': replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%', Author),
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
                 ]
