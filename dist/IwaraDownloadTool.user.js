@@ -1,4 +1,3 @@
-"use strict";
 // ==UserScript==
 // @name              Iwara Download Tool
 // @description       Download videos from iwara.tv
@@ -8,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.26
+// @version           2.1.28
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -149,13 +148,11 @@
         return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || undefined);
     }
     async function get(url, parameter = [], referrer = window.location.hostname, headers = {}) {
-        if (parameter.length != 0) {
-            url += '?';
-            for (var key in parameter) {
-                url += key + '=' + parameter[key] + '&';
-            }
-            url = url.substring(0, url.length - 1);
+        url += '?';
+        for (var key in parameter) {
+            url += key + '=' + parameter[key] + '&';
         }
+        url = url.substring(0, url.length - 1);
         let responseData;
         if (url.split('//')[1].split('/')[0] == window.location.hostname) {
             responseData = await fetch(url, {
@@ -218,8 +215,7 @@
             }
         }
     }
-    async function post(url, parameter, referrer) {
-        referrer = referrer || window.location.href;
+    async function post(url, parameter, referrer = window.location.href) {
         if (typeof parameter == 'object')
             parameter = JSON.stringify(parameter);
         let responseData = await fetch(url, {
@@ -629,14 +625,17 @@
     }
     class pluginControlPanel extends React.Component {
         Initialize;
+        Cookies;
         synclistener;
         Aria2WebSocket;
         constructor(props) {
             super(props);
+            this.Cookies = GM_getValue('Cookies', null);
             this.Initialize = GM_getValue('Initialize', false);
             this.synclistener = [];
             this.state = {
                 Async: GM_getValue('Async', false),
+                AutoRefresh: GM_getValue('AutoRefresh', false),
                 DownloadType: Number(GM_getValue('DownloadType', DownloadType.others)),
                 DownloadDir: GM_getValue('DownloadDir', '/%#AUTHOR#%'),
                 DownloadProxy: GM_getValue('DownloadProxy', ''),
@@ -651,7 +650,7 @@
                         marginRight: '8px',
                         marginBottom: '0px',
                         verticalAlign: 'middle',
-                        lineHeight: '1'
+                        lineHeight: '1.2'
                     },
                     input: {
                         flex: 1,
@@ -670,6 +669,33 @@
                 }
                 this.Initialize = true;
                 GM_setValue('Initialize', this.Initialize);
+            }
+            if (document.querySelector('.user-btn') != null || this.Cookies == null) {
+                this.getCookies();
+            }
+        }
+        getCookies() {
+            try {
+                GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
+                    let newCookies = document.cookie;
+                    if (error) {
+                        PluginTips.warning('注意', '获取账号信息失败！<br />请检查脚本加载器配置！<br />错误：' + error.toString(), true);
+                    }
+                    else {
+                        for (let index = 0; index < list.length; index++) {
+                            const Cookie = list[index];
+                            if (Cookie.httpOnly == true)
+                                newCookies += '; ' + Cookie.name + '=' + Cookie.value;
+                        }
+                        if (newCookies != this.Cookies) {
+                            this.Cookies = newCookies;
+                            GM_setValue('Cookies', this.Cookies);
+                        }
+                    }
+                });
+            }
+            catch (error) {
+                PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString());
             }
         }
         show() {
@@ -711,13 +737,20 @@
             let values = GM_listValues();
             for (let index = 0; index < values.length; index++) {
                 this.synclistener.push(GM_addValueChangeListener(values[index], (name, old_value, new_value, remote) => {
-                    if (remote && (new_value != this.state[name])) {
-                        this.setState({ [name]: new_value });
-                        if (name == 'DownloadType' && this.state[name] == DownloadType.aria2) {
-                            if (this.Aria2WebSocket != undefined) {
-                                this.Aria2WebSocket.close();
+                    if (remote) {
+                        if (this[name] != undefined && this[name] != new_value) {
+                            this[name] = new_value;
+                        }
+                        else {
+                            if (new_value != this.state[name]) {
+                                this.setState({ [name]: new_value });
+                                if (name == 'DownloadType' && this.state[name] == DownloadType.aria2) {
+                                    if (this.Aria2WebSocket != undefined) {
+                                        this.Aria2WebSocket.close();
+                                    }
+                                    this.ConnectionWebSocket();
+                                }
                             }
-                            this.ConnectionWebSocket();
                         }
                     }
                 }));
@@ -738,7 +771,7 @@
                 this.Aria2WebSocket.onclose = wsclose;
             }
             catch (err) {
-                this.state.Initialize = false;
+                this.Initialize = false;
                 PluginTips.warning('Aria2 RPC', '连接 Aria2 RPC 时出现错误! <br />请检查Aria2 RPC WebSocket地址是否正确(尽量使用wss而非ws) <br />' + err);
             }
             function wsopen() {
@@ -848,6 +881,28 @@
                                                 value: this.state.Async ? '异步' : '同步',
                                                 className: 'switchButton',
                                                 onClick: () => this.configChange({ name: 'Async', value: !this.state.Async })
+                                            }
+                                        ]
+                                    }, {
+                                        nodeType: 'div',
+                                        style: this.state.style.Line,
+                                        childs: [{
+                                                nodeType: 'label',
+                                                style: this.state.style.inputLabel,
+                                                childs: '列表页未加载自动刷新：',
+                                                title: '可能会因为自动刷新导致服务器拒绝回应'
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'AutoRefresh',
+                                                type: 'button',
+                                                style: this.state.style.input,
+                                                attribute: {
+                                                    switch: this.state.AutoRefresh ? 'on' : 'off'
+                                                },
+                                                value: this.state.AutoRefresh ? '开启' : '关闭',
+                                                className: 'switchButton',
+                                                onClick: () => this.configChange({ name: 'AutoRefresh', value: !this.state.AutoRefresh })
                                             }
                                         ]
                                     },
@@ -1517,53 +1572,46 @@
     if (!PluginControlPanel.Initialize) {
         PluginControlPanel.show();
     }
-    try {
-        GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
-            if (error) {
-                PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString(), true);
-            }
-            else {
-                for (let index = 0; index < list.length; index++) {
-                    const Cookie = list[index];
-                    if (Cookie.httpOnly == true)
-                        Cookies += '; ' + Cookie.name + '=' + Cookie.value;
-                }
-            }
-        });
-    }
-    catch (error) {
-        PluginTips.warning('警告', '获取HttpOnly Cookie失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString(), true);
-    }
-    document.querySelectorAll('.node-video').forEach((video) => {
+    let videoList = document.querySelectorAll('.node-video');
+    for (let index = 0; index < videoList.length; index++) {
+        const video = videoList[index];
         if (!video.classList.contains('node-full')) {
             video.ondblclick = () => {
                 video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
             };
             video.setAttribute('checked', 'false');
             video.classList.add('selectButton');
-            video.setAttribute('linkdata', video.querySelector('a').href);
-            video.querySelector('a').removeAttribute('href');
+            video.setAttribute('linkdata', video.querySelector('div').querySelector('a').href);
+            video.querySelector('div').querySelector('a').removeAttribute('href');
         }
-    });
+    }
     if (document.querySelectorAll('.selectButton').length > 0) {
         PluginUI.downloadSelectedEnabled();
         if (window.location.href.indexOf('/users/') > -1) {
             PluginUI.downloadAllEnabled();
         }
+        switch (PluginControlPanel.state.DownloadType) {
+            case DownloadType.aria2:
+                PluginControlPanel.ConnectionWebSocket();
+                break;
+            case DownloadType.default:
+                PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！');
+                break;
+            case DownloadType.others:
+                break;
+            default:
+                console.log('未知的下载模式!');
+                break;
+        }
+        PluginTips.success('Iwara批量下载工具', '加载完成!');
     }
-    switch (PluginControlPanel.state.DownloadType) {
-        case DownloadType.aria2:
-            PluginControlPanel.ConnectionWebSocket();
-            break;
-        case DownloadType.default:
-            PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！');
-            break;
-        case DownloadType.others:
-            break;
-        default:
-            console.log('未知的下载模式!');
-            break;
+    else {
+        if (window.location.href.indexOf('iwara.tv/videos') > -1 && PluginControlPanel.state.AutoRefresh) {
+            PluginTips.warning('Iwara批量下载工具', '未找到可供下载的视频，10秒后尝试重新加载页面...(本功能可在设置中关闭或开启)', true);
+            setTimeout(() => {
+                window.location.reload();
+            }, 10000);
+        }
     }
-    PluginTips.success('Iwara批量下载工具', '加载完成!');
 })();
 //# sourceMappingURL=IwaraDownloadTool.user.js.map
