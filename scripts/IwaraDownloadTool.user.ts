@@ -1500,14 +1500,19 @@
     let videoList = document.querySelectorAll('.node-video')
     for (let index = 0; index < videoList.length; index++) {
         const video = videoList[index];
-        if (!video.classList.contains('node-full')) {
+        if (!video.classList.contains('node-full') && !video.classList.contains('field-name-field-video-url')) {
             (video as HTMLElement).ondblclick = () => {
                 video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false')
             }
             video.setAttribute('checked', 'false')
             video.classList.add('selectButton')
-            video.setAttribute('linkdata', video.querySelector('div').querySelector('a').href)
-            video.querySelector('div').querySelector('a').removeAttribute('href')
+            let videoLink = video.querySelector('div').querySelector('a')
+            if (videoLink != null) {
+                video.setAttribute('linkdata', videoLink.href)
+                videoLink.removeAttribute('href')
+            } else {
+                PluginTips.warning('Iwara批量下载工具', video.getAttribute('data-original-title') + ' 非Iwara视频源!')
+            }
         }
     }
 

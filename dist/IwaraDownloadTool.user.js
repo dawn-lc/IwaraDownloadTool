@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.28
+// @version           2.1.29
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -1575,14 +1575,20 @@
     let videoList = document.querySelectorAll('.node-video');
     for (let index = 0; index < videoList.length; index++) {
         const video = videoList[index];
-        if (!video.classList.contains('node-full')) {
+        if (!video.classList.contains('node-full') && !video.classList.contains('field-name-field-video-url')) {
             video.ondblclick = () => {
                 video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
             };
             video.setAttribute('checked', 'false');
             video.classList.add('selectButton');
-            video.setAttribute('linkdata', video.querySelector('div').querySelector('a').href);
-            video.querySelector('div').querySelector('a').removeAttribute('href');
+            let videoLink = video.querySelector('div').querySelector('a');
+            if (videoLink != null) {
+                video.setAttribute('linkdata', videoLink.href);
+                videoLink.removeAttribute('href');
+            }
+            else {
+                PluginTips.warning('Iwara批量下载工具', video.getAttribute('data-original-title') + ' 非Iwara视频源!');
+            }
         }
     }
     if (document.querySelectorAll('.selectButton').length > 0) {
