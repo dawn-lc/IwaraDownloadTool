@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "system",
+    "alwaysStrict": false,
     "esModuleInterop": true, 
     "forceConsistentCasingInFileNames": true,
     "strict": true,

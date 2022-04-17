@@ -14,7 +14,7 @@
 // @grant        GM_setValue
 // ==/UserScript==
 
-(function () {
+(async function () {
     const element = {
         createElement(detailedList) {
             if (detailedList instanceof Array) {
