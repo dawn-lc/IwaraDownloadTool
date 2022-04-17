@@ -1586,9 +1586,9 @@
                 video.setAttribute('linkdata', videoLink.href);
                 videoLink.removeAttribute('href');
             }
-            else {
-                PluginTips.warning('Iwara批量下载工具', video.getAttribute('data-original-title') + ' 非Iwara视频源!');
-            }
+        }
+        else {
+            PluginTips.warning('Iwara批量下载工具', video.getAttribute('data-original-title') + ' 无法解析视频源，可能不是Iwara视频源!');
         }
     }
     if (document.querySelectorAll('.selectButton').length > 0) {
