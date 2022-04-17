@@ -1500,15 +1500,20 @@
     let videoList = document.querySelectorAll('.node-video')
     for (let index = 0; index < videoList.length; index++) {
         const video = videoList[index];
-        if (!video.classList.contains('node-full')) {
+        if (video.querySelector('.field-name-field-video-url') != null) {
+            console.log('跳过视频: ' + video.getAttribute('data-original-title'))
+        } else if (!video.classList.contains('node-full')) {
             (video as HTMLElement).ondblclick = () => {
                 video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false')
             }
             video.setAttribute('checked', 'false')
             video.classList.add('selectButton')
-            video.setAttribute('linkdata', video.querySelector('div').querySelector('a').href)
-            video.querySelector('div').querySelector('a').removeAttribute('href')
-        }
+            let videoLink = video.querySelector('div').querySelector('a')
+            if (videoLink != null) {
+                video.setAttribute('linkdata', videoLink.href)
+                videoLink.removeAttribute('href')
+            }
+        }  
     }
 
     if (document.querySelectorAll('.selectButton').length > 0) {
