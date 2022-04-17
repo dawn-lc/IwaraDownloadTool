@@ -1575,7 +1575,11 @@
     let videoList = document.querySelectorAll('.node-video');
     for (let index = 0; index < videoList.length; index++) {
         const video = videoList[index];
-        if (!video.classList.contains('node-full')) {
+        if (video.querySelector('.field-name-field-video-url') != null) {
+            console.log('跳过视频: ' + video.getAttribute('data-original-title'));
+            PluginTips.warning('Iwara批量下载工具', video.getAttribute('data-original-title') + ' 无法解析视频源，可能不是Iwara视频源!');
+        }
+        else if (!video.classList.contains('node-full')) {
             video.ondblclick = () => {
                 video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
             };
@@ -1586,10 +1590,6 @@
                 video.setAttribute('linkdata', videoLink.href);
                 videoLink.removeAttribute('href');
             }
-        }
-        else if (video.querySelector('.field-name-field-video-url') != null) {
-            console.log('跳过视频: ' + video.getAttribute('data-original-title'));
-            PluginTips.warning('Iwara批量下载工具', video.getAttribute('data-original-title') + ' 无法解析视频源，可能不是Iwara视频源!');
         }
     }
     if (document.querySelectorAll('.selectButton').length > 0) {
