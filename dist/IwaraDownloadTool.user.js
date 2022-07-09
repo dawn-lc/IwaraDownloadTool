@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.30
+// @version           2.1.32
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -472,7 +472,7 @@
                 }
                 else {
                     if (cooike['cooike'] == undefined)
-                        await this.init({ 'cooike': Cookies });
+                        await this.init({ 'cooike': PluginControlPanel.Cookies });
                     return;
                 }
                 this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
@@ -630,7 +630,7 @@
         Aria2WebSocket;
         constructor(props) {
             super(props);
-            this.Cookies = GM_getValue('Cookies', null);
+            this.Cookies = GM_getValue('Cookies', document.cookie);
             this.Initialize = GM_getValue('Initialize', false);
             this.synclistener = [];
             this.state = {
@@ -1328,7 +1328,6 @@
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
-    let Cookies = document.cookie;
     let DownloadLinkCharacteristics = [
         '/s/',
         'mega.nz/',
@@ -1364,7 +1363,6 @@
             ID = ID.split('_')[1];
         }
         await ParseDownloadAddress(ID);
-        PluginTips.success('下载', '解析完成!');
     }
     async function DownloadSelected() {
         PluginTips.info('下载', '开始解析...');
@@ -1380,7 +1378,7 @@
             for (let index = 0; index < videoList.length; index++) {
                 await ParseDownloadAddress(ParseVideoID(videoList[index]));
             }
-            PluginTips.success('下载', '已全部解析完成!');
+            PluginTips.success('下载', '已全部解析完成!', true);
         }
     }
     async function DownloadAll() {
@@ -1402,7 +1400,7 @@
                     for (let index = 0; index < videoList.length; index++) {
                         await ParseDownloadAddress(ParseVideoID(videoList[index]));
                     }
-                    PluginTips.success('下载', '已全部解析完成!');
+                    PluginTips.success('下载', '已全部解析完成!', true);
                 }
             }
         }
@@ -1434,7 +1432,7 @@
                 await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer);
             }
             else {
-                PluginTips.success('下载', '已全部解析完成!');
+                PluginTips.success('下载', '已全部解析完成!', true);
             }
         }
     }
@@ -1469,7 +1467,7 @@
                     PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />没有解析到原画下载地址,请手动处理!', true);
                 }
                 else {
-                    SendDownloadRequest(videoInfo, Cookies);
+                    SendDownloadRequest(videoInfo, PluginControlPanel.Cookies);
                 }
             }
         }
@@ -1564,7 +1562,7 @@
         ];
         for (let i = 0; i < gVar.length; i++) {
             for (const d in gVar[i]) {
-                data.replace('%#' + d + '#%', gVar[i][d]);
+                data = data.replace(new RegExp('%#' + d + '#%', 'g'), gVar[i][d]);
             }
         }
         return data;
