@@ -1485,7 +1485,7 @@
         ]
         for (let i = 0; i < gVar.length; i++) {
             for (const d in gVar[i]) {
-                data.replace('%#' + d + '#%', gVar[i][d])
+                data = data.replace(new RegExp('%#' + d + '#%', 'g'), gVar[i][d])
             }
         }
         return data
