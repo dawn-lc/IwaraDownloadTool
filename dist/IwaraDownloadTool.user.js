@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.32
+// @version           2.1.33
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -1001,9 +1001,12 @@
                                                 nodeType: 'label',
                                                 style: this.state.style.inputLabel,
                                                 childs: [
+                                                    '!!!必读!!!', { nodeType: 'br' },
                                                     '全局可用变量： %#Y#% (年) | %#M#% (月) | %#D#% (日) | %#h#% (时) | %#m#% (分) | %#s#% (秒)', { nodeType: 'br' },
                                                     '重命名可用变量： %#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#SOURCE_NAME#% (原文件名)', { nodeType: 'br' },
                                                     '下载目录可用变量： %#AUTHOR#% (作者)', { nodeType: 'br' },
+                                                    '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4', { nodeType: 'br' },
+                                                    '结果: ' + replaceVar('%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4').replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), { nodeType: 'br' },
                                                     '双击视频选中，再次双击取消选中。选中仅在本页面有效！', { nodeType: 'br' },
                                                     '在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。', { nodeType: 'br' },
                                                     '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。', { nodeType: 'br' },
@@ -1371,7 +1374,7 @@
             videoList.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
                 if (index == videoList.length - 1)
-                    PluginTips.success('下载', '已全部解析完成!');
+                    PluginTips.success('下载', '已全部解析完成!', true);
             });
         }
         else {
@@ -1393,7 +1396,7 @@
                     videoList.forEach(async (element, index) => {
                         await ParseDownloadAddress(ParseVideoID(element));
                         if (index == videoList.length - 1)
-                            PluginTips.success('下载', '已全部解析完成!');
+                            PluginTips.success('下载', '已全部解析完成!', true);
                     });
                 }
                 else {
@@ -1419,7 +1422,7 @@
                         await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer);
                     }
                     else {
-                        PluginTips.success('下载', '已全部解析完成!');
+                        PluginTips.success('下载', '已全部解析完成!', true);
                     }
                 }
             });
