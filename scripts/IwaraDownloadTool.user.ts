@@ -113,7 +113,6 @@
             responseData = await fetch(url, {
                 'headers': Object.assign({
                     'accept': 'application/json, text/plain, */*',
-                    'cache-control': 'no-cache',
                     'content-type': 'application/x-www-form-urlencoded',
                 }, headers),
                 'referrer': referrer,
@@ -146,9 +145,8 @@
                     method: 'GET',
                     url: url,
                     headers: Object.assign({
-                        'accept': 'application/json, text/plain, */*',
-                        'cache-control': 'no-cache',
-                        'content-type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json, text/plain, */*',
+                        'Content-Type': 'application/x-www-form-urlencoded',
                     }, headers),
                     onload: function (response: any) {
                         resolve(response)
@@ -171,36 +169,65 @@
     }
     async function post(url: string, parameter: any, referrer: string = window.location.href) {
         if (typeof parameter == 'object') parameter = JSON.stringify(parameter)
-        let responseData = await fetch(url, {
-            'headers': {
-                'accept': 'application/json, text/plain, */*',
-                'cache-control': 'no-cache',
-                'content-type': 'application/x-www-form-urlencoded',
-            },
-            'referrer': referrer,
-            'body': parameter,
-            'method': 'POST',
-            'mode': 'cors',
-            'redirect': 'follow',
-            'credentials': 'include'
-        })
-        if (responseData.status >= 200 && responseData.status < 300) {
-            const contentType = responseData.headers.get('Content-Type')
-            if (contentType != null) {
-                if (contentType.indexOf('text') > -1) {
-                    return await responseData.text()
+        let responseData: any
+        if (url.split('//')[1].split('/')[0] == window.location.hostname) {
+            responseData = await fetch(url, {
+                'headers': {
+                    'accept': 'application/json, text/plain, */*',
+                    'content-type': 'application/json;charset=UTF-8'
+                },
+                'referrer': referrer,
+                'body': parameter,
+                'method': 'POST',
+                'mode': 'cors',
+                'redirect': 'follow',
+                'credentials': 'include'
+            })
+            if (responseData.status >= 200 && responseData.status < 300) {
+                const contentType = responseData.headers.get('Content-Type')
+                if (contentType != null) {
+                    if (contentType.indexOf('text') > -1) {
+                        return await responseData.text()
+                    }
+                    if (contentType.indexOf('form') > -1) {
+                        return await responseData.formData()
+                    }
+                    if (contentType.indexOf('video') > -1) {
+                        return await responseData.blob()
+                    }
+                    if (contentType.indexOf('json') > -1) {
+                        return await responseData.json()
+                    }
                 }
-                if (contentType.indexOf('form') > -1) {
-                    return await responseData.formData()
-                }
-                if (contentType.indexOf('video') > -1) {
-                    return await responseData.blob()
-                }
-                if (contentType.indexOf('json') > -1) {
-                    return await responseData.json()
-                }
+                return responseData.text()
             }
-            return responseData.text()
+        } else {
+            responseData = await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: url,
+                    headers: {
+                        'Accept': 'application/json, text/plain, */*',
+                        'Content-Type': 'application/json'
+                    },
+                    data: parameter,
+                    onload: function (response: any) {
+                        resolve(response)
+                    },
+                    onerror: function (error: any) {
+                        reject(error)
+                    }
+                })
+            })
+            if (responseData.status >= 200 && responseData.status < 300) {
+                if (responseData.responseHeaders.indexOf('json') > -1) {
+                    return JSON.parse(responseData.responseText)
+                } else {
+                    return responseData.response
+                }
+            } else {
+                return responseData
+            }
         }
     }
     function parseDom(dom: string) {
@@ -218,6 +245,12 @@
         aria2,
         default,
         others
+    }
+    enum APIType {
+        http,
+        ws,
+        https,
+        wss
     }
     enum TipsType {
         Info,
@@ -449,8 +482,15 @@
         }
     }
     class pluginUI extends React.Component {
-        declare state: any
         showCondition: boolean
+        declare state: {
+            style: any
+            main: string
+            downloadEnable: boolean
+            downloadManualParseEnable: boolean
+            downloadAllEnable: boolean
+            downloadSelectedEnable: boolean
+        }
         constructor(props: any) {
             super(props)
             this.showCondition = false
@@ -460,6 +500,8 @@
                     disable: { display: 'none' }
                 },
                 main: 'btn-group',
+                downloadEnable: false,
+                downloadManualParseEnable: false,
                 downloadAllEnable: false,
                 downloadSelectedEnable: false
             }
@@ -469,6 +511,13 @@
             this.setState({
                 main: 'btn-group open'
             })
+            this.downloadManualParseSwitch(true)
+            if (document.querySelectorAll('.selectButton').length > 0) {
+                this.downloadSelectedSwitch(true)
+            }
+            if (window.location.href.indexOf('/users/') > -1) {
+                this.downloadAllSwitch(true)
+            }
         }
         hide() {
             this.showCondition = false
@@ -476,15 +525,52 @@
                 main: 'btn-group'
             })
         }
-        downloadAllEnabled() {
-            this.setState({
-                downloadAllEnable: true
-            })
+        downloadSwitch(p: boolean = undefined) {
+            if (p != undefined) {
+                this.setState({
+                    downloadEnable: p
+                })
+            } else {
+                this.setState({
+                    downloadEnable: this.state.downloadEnable ? true : false
+                })
+            }
+            this.downloadManualParseSwitch(this.state.downloadManualParseEnable)
+            this.downloadAllSwitch(this.state.downloadAllEnable)
+            this.downloadSelectedSwitch(this.state.downloadSelectedEnable)
         }
-        downloadSelectedEnabled() {
-            this.setState({
-                downloadSelectedEnable: true
-            })
+        downloadManualParseSwitch(p: boolean = undefined) {
+            if (p != undefined) {
+                this.setState({
+                    downloadManualParseEnable: this.state.downloadEnable && p
+                })
+            } else {
+                this.setState({
+                    downloadManualParseEnable: this.state.downloadManualParseEnable ? this.state.downloadEnable && true : false
+                })
+            }
+        }
+        downloadAllSwitch(p: boolean = undefined) {
+            if (p != undefined) {
+                this.setState({
+                    downloadAllEnable: this.state.downloadEnable && p
+                })
+            } else {
+                this.setState({
+                    downloadAllEnable: this.state.downloadAllEnable ? this.state.downloadEnable && true : false
+                })
+            }
+        }
+        downloadSelectedSwitch(p: boolean = undefined) {
+            if (p != undefined) {
+                this.setState({
+                    downloadSelectedEnable: this.state.downloadEnable && p
+                })
+            } else {
+                this.setState({
+                    downloadSelectedEnable: this.state.downloadSelectedEnable ? this.state.downloadEnable && true : false
+                })
+            }
         }
         render() {
             return (reactRender({
@@ -533,7 +619,7 @@
                                 DownloadAll()
                             }
                         } : null,
-                        {
+                        this.state.downloadManualParseEnable ? {
                             nodeType: 'li',
                             attribute: {
                                 style: this.state.style.base,
@@ -543,7 +629,8 @@
                                 this.hide()
                                 ManualParseDownloadAddress()
                             }
-                        }, {
+                        } : null,
+                        {
                             nodeType: 'li',
                             attribute: {
                                 style: this.state.style.base,
@@ -566,12 +653,14 @@
         declare state: {
             Async: boolean,
             AutoRefresh: boolean,
+            Version: string,
             DownloadType: DownloadType,
             DownloadDir: string,
             DownloadProxy: string,
-            WebSocketAddress: string,
-            WebSocketToken: string,
-            WebSocketID: string,
+            Aria2Type: APIType,
+            Aria2Path: string,
+            Aria2Token: string,
+            Aria2ID: string,
             FileName: string,
             style: any
         }
@@ -583,12 +672,14 @@
             this.state = {
                 Async: GM_getValue('Async', false),
                 AutoRefresh: GM_getValue('AutoRefresh', false),
+                Version: GM_getValue('Version', null),
                 DownloadType: Number(GM_getValue('DownloadType', DownloadType.others)),
-                DownloadDir: GM_getValue('DownloadDir', '/%#AUTHOR#%'),
+                DownloadDir: GM_getValue('DownloadDir', 'iwara/%#AUTHOR#%'),
                 DownloadProxy: GM_getValue('DownloadProxy', ''),
-                WebSocketAddress: GM_getValue('WebSocketAddress', 'wss://127.0.0.1:6800/'),
-                WebSocketToken: GM_getValue('WebSocketToken', ''),
-                WebSocketID: GM_getValue('WebSocketID', UUID()),
+                Aria2Type: Number(GM_getValue('Aria2Type', APIType.ws)),
+                Aria2Path: GM_getValue('Aria2Path', '127.0.0.1:6800'),
+                Aria2Token: GM_getValue('Aria2Token', ''),
+                Aria2ID: GM_getValue('Aria2ID', UUID()),
                 FileName: GM_getValue('FileName', '%#TITLE#%[%#ID#%].mp4'),
                 style: {
                     radioLabel: { margin: '0px 20px 0px 0px' },
@@ -617,7 +708,7 @@
                 this.Initialize = true
                 GM_setValue('Initialize', this.Initialize)
             }
-            if (document.querySelector('.user-btn')!=null || this.Cookies == null) {
+            if (document.querySelector('.user-btn') != null || this.Cookies == null) {
                 this.getCookies()
             }
         }
@@ -626,7 +717,7 @@
                 GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
                     let newCookies = document.cookie
                     if (error) {
-                        PluginTips.warning('注意', '获取账号信息失败！<br />请检查脚本加载器配置！<br />错误：' + error.toString(), true)
+                        PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString())
                     } else {
                         for (let index = 0; index < list.length; index++) {
                             const Cookie = list[index];
@@ -639,7 +730,7 @@
                     }
                 })
             } catch (error) {
-                PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString())
+                PluginTips.warning('注意', '获取账号信息失败！<br />请检查脚本加载器是否支持获取Cookies！<br /> <a href="https://www.tampermonkey.net/documentation.php"> 参考文档 <a/> <br />错误：' + error.toString(), true)
             }
         }
         show() {
@@ -654,10 +745,6 @@
         hide() {
             switch (this.state.DownloadType) {
                 case DownloadType.aria2:
-                    if (this.Aria2WebSocket != undefined) {
-                        this.Aria2WebSocket.close()
-                    }
-                    this.ConnectionWebSocket()
                     this.setState((state: any) => {
                         return {
                             style: Object.assign(state.style, {
@@ -665,6 +752,7 @@
                             })
                         }
                     })
+                    this.ConnectionAria2(this.state.Aria2Type)
                     break
                 default:
                     this.setState((state: any) => {
@@ -682,17 +770,11 @@
             for (let index = 0; index < values.length; index++) {
                 this.synclistener.push(GM_addValueChangeListener(values[index], (name: string, old_value: any, new_value: any, remote: boolean) => {
                     if (remote) {
-                        if (this[name] != undefined && this[name] != new_value ) {
+                        if (this[name] != undefined && this[name] != new_value) {
                             this[name] = new_value
                         } else {
                             if (new_value != this.state[name]) {
-                                this.setState({ [name]: new_value })
-                                if (name == 'DownloadType' && this.state[name] == DownloadType.aria2) {
-                                    if (this.Aria2WebSocket != undefined) {
-                                        this.Aria2WebSocket.close()
-                                    }
-                                    this.ConnectionWebSocket()
-                                }
+                                this.configChange({ name: name, value: new_value })
                             }
                         }
                     }
@@ -705,36 +787,63 @@
                 GM_removeValueChangeListener(this.synclistener[index])
             }
         }
-        ConnectionWebSocket() {
+        async ConnectionAria2(type: APIType) {
+            let url = APIType[type] + '://' + this.state.Aria2Path + '/jsonrpc'
+            PluginTips.info('Aria2', '正在连接...')
             try {
-                PluginTips.info('Aria2 RPC', '正在连接...')
-                this.Aria2WebSocket = new WebSocket(this.state.WebSocketAddress + 'jsonrpc')
-                this.Aria2WebSocket.onopen = wsopen
-                this.Aria2WebSocket.onmessage = wsmessage
-                this.Aria2WebSocket.onclose = wsclose
+                switch (APIType[type]) {
+                    case APIType[APIType.http]:
+                    case APIType[APIType.https]:
+                        if (this.Aria2WebSocket != null) {
+                            this.Aria2WebSocket.close()
+                            this.Aria2WebSocket = null
+                        }
+                        let response = await post(url, JSON.stringify({
+                            'jsonrpc': '2.0',
+                            'method': 'aria2.getGlobalStat',
+                            'id': PluginControlPanel.state.Aria2ID,
+                            'params': [
+                                'token:' + PluginControlPanel.state.Aria2Token
+                            ]
+                        }))
+                        if (response['result'] != null) {
+                            PluginTips.success('Aria2', '连接成功!')
+                            PluginUI.downloadSwitch(true)
+                        }
+                        break
+                    case APIType[APIType.ws]:
+                    case APIType[APIType.wss]:
+                        this.Aria2WebSocket = new WebSocket(url)
+                        this.Aria2WebSocket.onopen = wsopen
+                        this.Aria2WebSocket.onmessage = wsmessage
+                        this.Aria2WebSocket.onclose = wsclose
+                        function wsopen() {
+                            PluginTips.success('Aria2', '连接成功!')
+                            PluginUI.downloadSwitch(true)
+                        }
+                        function wsmessage() {
+                            //todo 接收信息
+                        }
+                        function wsclose() {
+                            PluginControlPanel.Aria2WebSocket = null
+                            throw new Error('Aria2 连接断开! ')
+                        }
+                        break
+                    default:
+                        throw new Error('未知的下载模式!')
+                }
             } catch (err) {
-                this.Initialize = false
-                PluginTips.warning('Aria2 RPC', '连接 Aria2 RPC 时出现错误! <br />请检查Aria2 RPC WebSocket地址是否正确(尽量使用wss而非ws) <br />' + err)
-            }
-            function wsopen() {
-                PluginTips.success('Aria2 RPC', '连接成功!')
-            }
-            function wsmessage() {
-                //todo 接收信息
-            }
-            function wsclose() {
-                PluginTips.warning('Aria2 RPC', '连接断开! <br />请检查Aria2 RPC WebSocket地址是否正确(尽量使用wss而非ws)')
+                PluginTips.warning('Aria2', '连接 Aria2 时出现错误! <br />请检查Aria2 有关配置是否正确! <br />' + err)
             }
         }
         configChange(e: any) {
             this.setState({ [e.name]: e.value })
-            if (e.name == 'DownloadType' && e.value == DownloadType.aria2) {
-                if (this.Aria2WebSocket != undefined) {
-                    this.Aria2WebSocket.close()
-                }
-                this.ConnectionWebSocket()
+            if ((e.name == 'DownloadType' && e.value == DownloadType.aria2) || e.name == 'Aria2Type') {
+                this.ConnectionAria2(e.value)
             }
-            GM_setValue(e.name, e.value)
+            if (e.value != GM_getValue(e.name)) {
+                GM_setValue(e.name, e.value)
+            }
         }
         render() {
             return (reactRender({
@@ -823,29 +932,29 @@
                                 onClick: () => this.configChange({ name: 'Async', value: !this.state.Async })
                             }
                             ]
-                            }, {
-                                nodeType: 'div',
-                                style: this.state.style.Line,
-                                childs: [{
-                                    nodeType: 'label',
-                                    style: this.state.style.inputLabel,
-                                    childs: '列表页未加载自动刷新：',
-                                    title: '可能会因为自动刷新导致服务器拒绝回应'
-                                },
-                                {
-                                    nodeType: 'input',
-                                    name: 'AutoRefresh',
-                                    type: 'button',
-                                    style: this.state.style.input,
-                                    attribute: {
-                                        switch: this.state.AutoRefresh ? 'on' : 'off'
-                                    },
-                                    value: this.state.AutoRefresh ? '开启' : '关闭',
-                                    className: 'switchButton',
-                                    onClick: () => this.configChange({ name: 'AutoRefresh', value: !this.state.AutoRefresh })
-                                }
-                                ]
+                        }, {
+                            nodeType: 'div',
+                            style: this.state.style.Line,
+                            childs: [{
+                                nodeType: 'label',
+                                style: this.state.style.inputLabel,
+                                childs: '列表页未加载自动刷新：',
+                                title: '可能会因为自动刷新导致服务器拒绝回应'
                             },
+                            {
+                                nodeType: 'input',
+                                name: 'AutoRefresh',
+                                type: 'button',
+                                style: this.state.style.input,
+                                attribute: {
+                                    switch: this.state.AutoRefresh ? 'on' : 'off'
+                                },
+                                value: this.state.AutoRefresh ? '开启' : '关闭',
+                                className: 'switchButton',
+                                onClick: () => this.configChange({ name: 'AutoRefresh', value: !this.state.AutoRefresh })
+                            }
+                            ]
+                        },
                         this.state.DownloadType != DownloadType.others ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
@@ -901,16 +1010,73 @@
                         this.state.DownloadType == DownloadType.aria2 ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
+                            childs: [
+                                {
+                                    nodeType: 'label',
+                                    style: this.state.style.radioLabel,
+                                    childs: 'Aria2 RPC 连接方式:'
+                                },
+                                {
+                                    nodeType: 'input',
+                                    name: 'Aria2Type',
+                                    type: 'radio',
+                                    value: APIType.http,
+                                    onChange: ({ target }: any) => this.configChange(target)
+                                },
+                                {
+                                    nodeType: 'label',
+                                    style: this.state.style.radioLabel,
+                                    childs: 'http'
+                                },
+                                {
+                                    nodeType: 'input',
+                                    name: 'Aria2Type',
+                                    type: 'radio',
+                                    value: APIType.https,
+                                    onChange: ({ target }: any) => this.configChange(target)
+                                },
+                                {
+                                    nodeType: 'label',
+                                    style: this.state.style.radioLabel,
+                                    childs: 'https'
+                                },
+                                {
+                                    nodeType: 'input',
+                                    name: 'Aria2Type',
+                                    type: 'radio',
+                                    value: APIType.ws,
+                                    onChange: ({ target }: any) => this.configChange(target)
+                                },
+                                {
+                                    nodeType: 'label',
+                                    style: this.state.style.radioLabel,
+                                    childs: 'ws'
+                                },
+                                {
+                                    nodeType: 'input',
+                                    name: 'Aria2Type',
+                                    type: 'radio',
+                                    value: APIType.wss,
+                                    onChange: ({ target }: any) => this.configChange(target)
+                                },
+                                {
+                                    nodeType: 'label',
+                                    style: this.state.style.radioLabel,
+                                    childs: 'wss'
+                                }].map((item: any) => { if (item.value == this.state.Aria2Type) { item.checked = true } return item })
+                        } : null,
+                        this.state.DownloadType == DownloadType.aria2 ? {
+                            nodeType: 'div',
+                            style: this.state.style.Line,
                             childs: [{
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
-                                childs: 'Aria2 RPC WebSocket:'
+                                childs: 'Aria2 地址:'
                             },
                             {
                                 nodeType: 'input',
-                                pattern: '^(ws|wss)://.*$',
-                                name: 'WebSocketAddress',
-                                value: this.state.WebSocketAddress,
+                                name: 'Aria2Path',
+                                value: this.state.Aria2Path,
                                 style: this.state.style.input,
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
@@ -922,13 +1088,13 @@
                             childs: [{
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
-                                childs: 'Aria2 RPC Token(密钥):'
+                                childs: 'Aria2 Token(密钥):'
                             },
                             {
                                 nodeType: 'input',
-                                name: 'WebSocketToken',
+                                name: 'Aria2Token',
                                 type: 'Password',
-                                value: this.state.WebSocketToken,
+                                value: this.state.Aria2Token,
                                 style: this.state.style.input,
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
@@ -1308,22 +1474,22 @@
         await ParseDownloadAddress(ID!)
     }
     async function DownloadSelected() {
-        PluginTips.info('下载', '开始解析...')
+        PluginTips.info('Iwara批量下载工具', '开始解析...')
         let videoList = document.querySelectorAll('.selectButton[checked="true"]')
         if (PluginControlPanel.state.Async) {
             videoList.forEach(async (element: Element, index: number) => {
                 await ParseDownloadAddress(ParseVideoID(element))
-                if (index == videoList.length - 1) PluginTips.success('下载', '已全部解析完成!', true)
+                if (index == videoList.length - 1) PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
             })
         } else {
             for (let index = 0; index < videoList.length; index++) {
                 await ParseDownloadAddress(ParseVideoID(videoList[index]))
             }
-            PluginTips.success('下载', '已全部解析完成!', true)
+            PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
         }
     }
     async function DownloadAll() {
-        PluginTips.info('下载', '正在解析...')
+        PluginTips.info('Iwara批量下载工具', '正在解析...')
         if (document.querySelector('#block-views-videos-block-2') != null) {
             if (document.querySelector('#block-views-videos-block-2').querySelector('.more-link') != null) {
                 await GetAllData(document.querySelector('.more-link').querySelector('a').href, [], window.location.href)
@@ -1332,13 +1498,13 @@
                 if (PluginControlPanel.state.Async) {
                     videoList.forEach(async (element: Element, index: number) => {
                         await ParseDownloadAddress(ParseVideoID(element))
-                        if (index == videoList.length - 1) PluginTips.success('下载', '已全部解析完成!', true)
+                        if (index == videoList.length - 1) PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
                     })
                 } else {
                     for (let index = 0; index < videoList.length; index++) {
                         await ParseDownloadAddress(ParseVideoID(videoList[index]))
                     }
-                    PluginTips.success('下载', '已全部解析完成!', true)
+                    PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
                 }
             }
         } else {
@@ -1355,7 +1521,7 @@
                     if (videoListPage.querySelectorAll('.pager-next').length != 0) {
                         await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer)
                     } else {
-                        PluginTips.success('下载', '已全部解析完成!', true)
+                        PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
                     }
                 }
             })
@@ -1366,7 +1532,7 @@
             if (videoListPage.querySelectorAll('.pager-next').length != 0) {
                 await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer)
             } else {
-                PluginTips.success('下载', '已全部解析完成!', true)
+                PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
             }
         }
     }
@@ -1408,11 +1574,11 @@
                 saveAs: false,
                 onload: function () {
                     PluginTips.downloadComplete(ID)
-                    PluginTips.success('下载', Name + ' 下载完成!')
+                    PluginTips.success('Iwara批量下载工具', Name + ' 下载完成!')
                 },
                 onerror: function (error: any) {
                     PluginTips.downloadComplete(ID)
-                    PluginTips.warning('下载', Name + ' 下载失败! <br />错误报告: ' + JSON.stringify(error))
+                    PluginTips.warning('警告', Name + ' 下载失败! <br />错误报告: ' + JSON.stringify(error))
                 },
                 onprogress: function (progress: { lengthComputable: any, position: number, totalSize: number }) {
                     if (progress.lengthComputable) {
@@ -1421,7 +1587,7 @@
                 },
                 ontimeout: function () {
                     PluginTips.downloadComplete(ID)
-                    PluginTips.warning('下载', Name + ' 下载超时! ')
+                    PluginTips.warning('警告', Name + ' 下载超时! ')
                 }
             }
             if (PluginTips.DownloadingQueue.length() < 4) {
@@ -1432,7 +1598,7 @@
                         id: ID
                     })
                 } else {
-                    PluginTips.info('下载', Name + ' 已开始下载!')
+                    PluginTips.info('Iwara批量下载工具', Name + ' 已开始下载!')
                 }
             } else {
                 PluginTips.WaitingQueue.push({ id: ID, name: Name, task: Task })
@@ -1441,12 +1607,12 @@
     }
     function aria2Download(Info: VideoInfo, Cookies: string) {
         (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
-            PluginControlPanel.Aria2WebSocket.send(JSON.stringify({
+            let json = JSON.stringify({
                 'jsonrpc': '2.0',
                 'method': 'aria2.addUri',
-                'id': PluginControlPanel.state.WebSocketID,
+                'id': PluginControlPanel.state.Aria2ID,
                 'params': [
-                    'token:' + PluginControlPanel.state.WebSocketToken,
+                    'token:' + PluginControlPanel.state.Aria2Token,
                     [DownloadUrl],
                     {
                         'referer': 'https://ecchi.iwara.tv/',
@@ -1458,8 +1624,18 @@
                         'all-proxy': PluginControlPanel.state.DownloadProxy
                     }
                 ]
-            }))
-            PluginTips.info('提示', '已将 ' + Name + ' 的下载地址推送到Aria2!')
+            })
+            switch (APIType[PluginControlPanel.state.Aria2Type]) {
+                case APIType[APIType.http]:
+                case APIType[APIType.https]:
+                    post(APIType[PluginControlPanel.state.Aria2Type] + '://' + PluginControlPanel.state.Aria2Path + '/jsonrpc', json)
+                    break;
+                case APIType[APIType.ws]:
+                case APIType[APIType.wss]:
+                    PluginControlPanel.Aria2WebSocket.send(json)
+                    break;
+            }
+            PluginTips.info('Iwara批量下载工具', '已将 ' + Name + ' 的下载地址推送到Aria2!')
         }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()))
     }
     function SendDownloadRequest(Info: VideoInfo, Cookie: string) {
@@ -1472,7 +1648,7 @@
                 break
             case DownloadType[DownloadType.others]:
             default:
-                PluginTips.info('提示', '已将下载请求提交给浏览器!')
+                PluginTips.info('Iwara批量下载工具', '已将下载请求提交给浏览器!')
                 GM_openInTab(Info.getDownloadUrl(), { active: true, insert: true, setParent: true })
                 break
         }
@@ -1497,12 +1673,12 @@
     if (!PluginControlPanel.Initialize) {
         PluginControlPanel.show()
     }
-    
+
     let videoList = document.querySelectorAll('.node-video')
     for (let index = 0; index < videoList.length; index++) {
         const video = videoList[index];
         if (video.querySelector('.field-name-field-video-url') != null) {
-            console.log('跳过视频: ' + video.getAttribute('data-original-title'))
+            PluginTips.warning('Iwara批量下载工具', '因视频非本站源跳过该视频: ' + video.getAttribute('data-original-title'))
         } else if (!video.classList.contains('node-full')) {
             (video as HTMLElement).ondblclick = () => {
                 video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false')
@@ -1513,31 +1689,35 @@
             if (videoLink != null) {
                 video.setAttribute('linkdata', videoLink.href)
                 videoLink.removeAttribute('href')
+                if (video.querySelector('img[src*="/"]') == null) {
+                    videoLink.append(Object.assign(document.createElement('img'), { src: "https://oreno3d.com/storage/img/noimage.png" }))
+                }
             }
-        }  
+        }
     }
 
     if (document.querySelectorAll('.selectButton').length > 0) {
-        PluginUI.downloadSelectedEnabled()
-        if (window.location.href.indexOf('/users/') > -1) {
-            PluginUI.downloadAllEnabled()
+        try {
+            switch (PluginControlPanel.state.DownloadType) {
+                case DownloadType.aria2:
+                    PluginControlPanel.ConnectionAria2(PluginControlPanel.state.Aria2Type)
+                    break
+                case DownloadType.default:
+                    PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！')
+                    break
+                case DownloadType.others:
+                    break
+                default:
+                    throw new Error('未知的下载模式!')
+            }
+            PluginUI.downloadSwitch(true)
+            PluginTips.success('Iwara批量下载工具', '加载完成!')
         }
-        switch (PluginControlPanel.state.DownloadType) {
-            case DownloadType.aria2:
-                PluginControlPanel.ConnectionWebSocket()
-                break
-            case DownloadType.default:
-                PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！')
-                break
-            case DownloadType.others:
-                break
-            default:
-                console.log('未知的下载模式!')
-                break
+        catch (error) {
+            PluginTips.warning('Iwara批量下载工具', '加载失败! <br /> 错误信息: ' + error)
         }
-        PluginTips.success('Iwara批量下载工具', '加载完成!')
     } else {
-        if (window.location.href.indexOf('iwara.tv/videos') > -1 && PluginControlPanel.state.AutoRefresh) { 
+        if (window.location.href.indexOf('iwara.tv/videos') > -1 && PluginControlPanel.state.AutoRefresh) {
             PluginTips.warning('Iwara批量下载工具', '未找到可供下载的视频，10秒后尝试重新加载页面...(本功能可在设置中关闭或开启)', true)
             setTimeout(() => {
                 window.location.reload();
