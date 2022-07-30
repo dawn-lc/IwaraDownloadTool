@@ -809,6 +809,9 @@
                         if (response['result'] != null) {
                             PluginTips.success('Aria2', '连接成功!')
                             PluginUI.downloadSwitch(true)
+                        } else {
+                            PluginTips.success('Aria2', '连接失败, 请检查是否授权脚本访问Aria2RPC地址, 或者是否已经启动Aria2。<br />以及Aria2配置是否正确!' , true)
+                            PluginUI.downloadSwitch(false)
                         }
                         break
                     case APIType[APIType.ws]:
@@ -826,14 +829,14 @@
                         }
                         function wsclose() {
                             PluginControlPanel.Aria2WebSocket = null
-                            throw new Error('Aria2 连接断开! ')
+                            PluginTips.warning('Aria2', 'Aria2 连接断开! <br />请检查Aria2 有关配置是否正确!', true)
                         }
                         break
                     default:
                         throw new Error('未知的下载模式!')
                 }
             } catch (err) {
-                PluginTips.warning('Aria2', '连接 Aria2 时出现错误! <br />请检查Aria2 有关配置是否正确! <br />' + err)
+                PluginTips.warning('Aria2', '连接 Aria2 时出现错误! <br />请检查Aria2 有关配置是否正确! <br />' + err, true)
             }
         }
         configChange(e: any) {
