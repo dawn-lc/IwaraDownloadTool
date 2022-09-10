@@ -60,7 +60,6 @@
                 default:
                     if (vdata[item] instanceof Object && RenderDOM[item]) {
                         Object.entries(vdata[item]).forEach(([k, v]) => {
-                            console.log(item, vdata[item], k, v)
                             RenderDOM[item][k] = v
                         })
                     } else {
