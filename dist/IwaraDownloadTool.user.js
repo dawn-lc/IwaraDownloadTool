@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.43
+// @version           2.1.49
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -46,8 +46,6 @@
     }
     function sourceRender(vdata) {
         let RenderDOM;
-        if (vdata instanceof Array)
-            return vdata.map((item) => sourceRender(item));
         for (const item in vdata) {
             switch (item) {
                 case 'nodeType':
@@ -84,8 +82,10 @@
                         case 'String':
                             RenderDOM.insertAdjacentHTML('beforeend', vdata.childs);
                             break;
-                        default:
+                        case 'Object':
                             RenderDOM.appendChild(sourceRender(vdata.childs));
+                            break;
+                        default:
                             break;
                     }
                     break;
@@ -486,8 +486,9 @@
         Url;
         ID;
         Page;
-        Source;
+        Exist = true;
         Private = true;
+        Source;
         getAuthor;
         getName;
         getDownloadQuality;
@@ -504,41 +505,44 @@
         async init(cooike = {}) {
             try {
                 this.Page = parseDom(await get(this.Url, [], window.location.href, cooike));
-                if (this.Page.querySelector('.well') == null) {
-                    this.Private = false;
-                }
-                else {
-                    if (cooike['cooike'] == undefined)
-                        await this.init({ 'cooike': PluginControlPanel.Cookies });
-                    return;
-                }
-                this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
-                this.getAuthor = function () {
-                    return this.Page.querySelector('.submitted').querySelector('a.username').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
-                };
-                this.getName = function () {
-                    return this.Page.querySelector('.submitted').querySelector('h1.title').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
-                };
-                this.getFileName = function () {
-                    return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName());
-                };
-                this.getDownloadQuality = function () {
-                    if (this.Source.length == 0)
-                        return 'null';
-                    return this.Source[0].resolution;
-                };
-                this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
-                this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
-                this.getComment = function () {
-                    let commentNode;
-                    try {
-                        commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'));
+                this.Exist = this.Page.querySelector('video') != null;
+                if (this.Exist) {
+                    if (this.Page.querySelector('.well') == null) {
+                        this.Private = false;
                     }
-                    catch (error) {
-                        return '';
+                    else {
+                        if (cooike['cooike'] == undefined)
+                            await this.init({ 'cooike': PluginControlPanel.Cookies });
+                        return;
                     }
-                    return commentNode.map((element) => element.innerText).join('\n');
-                };
+                    this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
+                    this.getAuthor = function () {
+                        return this.Page.querySelector('.submitted').querySelector('a.username').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
+                    };
+                    this.getName = function () {
+                        return this.Page.querySelector('.submitted').querySelector('h1.title').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
+                    };
+                    this.getFileName = function () {
+                        return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName());
+                    };
+                    this.getDownloadQuality = function () {
+                        if (this.Source.length == 0)
+                            return 'null';
+                        return this.Source[0].resolution;
+                    };
+                    this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
+                    this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
+                    this.getComment = function () {
+                        let commentNode;
+                        try {
+                            commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'));
+                        }
+                        catch (error) {
+                            return '';
+                        }
+                        return commentNode.map((element) => element.innerText).join('\n');
+                    };
+                }
             }
             catch (error) {
                 PluginTips.warning('解析模块', '视频信息解析失败：' + error.toString(), true);
@@ -1192,9 +1196,9 @@
             }));
         }
     }
-    sourceRender([{
-            nodeType: 'style',
-            innerHTML: `
+    sourceRender({
+        nodeType: 'style',
+        innerHTML: `
         .controlPanel {
                 display: none;
                 position: fixed;
@@ -1483,23 +1487,30 @@
                         transform: translateY(100%);
             }
         }
+        h6.stitle{
+            white-space: nowrap;
+            text-overflow:ellipsis;
+            overflow: hidden;
+            margin: 0px;
+        }
         `,
-            parent: document.head
+        parent: document.head
+    });
+    sourceRender({
+        nodeType: 'div',
+        attribute: {
+            id: 'PluginControlPanel'
         },
-        {
-            nodeType: 'div',
-            attribute: {
-                id: 'PluginControlPanel'
-            },
-            parent: document.body
-        }, {
-            nodeType: 'div',
-            attribute: {
-                id: 'PluginUI',
-                style: 'display: inline-block;'
-            },
-            parent: document.querySelector('#user-links')
-        }]);
+        parent: document.body
+    });
+    sourceRender({
+        nodeType: 'div',
+        attribute: {
+            id: 'PluginUI',
+            style: 'display: inline-block;'
+        },
+        parent: document.querySelector('#user-links')
+    });
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
@@ -1623,28 +1634,33 @@
     async function ParseDownloadAddress(Data) {
         let videoInfo = new VideoInfo(Data);
         await videoInfo.init();
-        if (videoInfo.Private) {
-            let TipsText = '检测到无权限访问的私有(上锁)视频! <br />';
-            if (document.querySelector('.btn.btn-info.btn-sm.user') == null) {
-                TipsText += '请<a href="https://' + window.location.hostname + '/user/login" target="_blank" >登录</a>或<a href="https://' + window.location.hostname + '/user/register" target="_blank">注册</a>后进入视频页面与作者成为好友获得访问权限。<br />';
-            }
-            else {
-                TipsText += '请进入视频页面与作者成为好友获得访问权限。<br />';
-            }
-            PluginTips.warning('警告', TipsText + '<a href="' + videoInfo.Url + '" target="_blank" > → 点击此处，进入视频页面 ← </a>', true);
-        }
-        else {
-            if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
-                PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />发现疑似第三方高画质下载链接,请手动处理!', true);
-            }
-            else {
-                if (videoInfo.getDownloadQuality() != 'Source') {
-                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />没有解析到原画下载地址,请手动处理!', true);
+        if (videoInfo.Exist) {
+            if (videoInfo.Private) {
+                let TipsText = '检测到无权限访问的私有(上锁)视频! <br />';
+                if (document.querySelector('.btn.btn-info.btn-sm.user') == null) {
+                    TipsText += '请<a href="https://' + window.location.hostname + '/user/login" target="_blank" >登录</a>或<a href="https://' + window.location.hostname + '/user/register" target="_blank">注册</a>后进入视频页面与作者成为好友获得访问权限。<br />';
                 }
                 else {
-                    SendDownloadRequest(videoInfo, PluginControlPanel.Cookies);
+                    TipsText += '请进入视频页面与作者成为好友获得访问权限。<br />';
+                }
+                PluginTips.warning('警告', TipsText + '<a href="' + videoInfo.Url + '" target="_blank" > → 点击此处，进入视频页面 ← </a>', true);
+            }
+            else {
+                if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
+                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />发现疑似第三方高画质下载链接,请手动处理!', true);
+                }
+                else {
+                    if (videoInfo.getDownloadQuality() != 'Source') {
+                        PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />没有解析到原画下载地址,请手动处理!', true);
+                    }
+                    else {
+                        SendDownloadRequest(videoInfo, PluginControlPanel.Cookies);
+                    }
                 }
             }
+        }
+        else {
+            PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />未能获取到相关信息，请检查视频是否存在。', true);
         }
     }
     function defaultDownload(Info) {
@@ -1758,22 +1774,43 @@
     let videoList = document.querySelectorAll('.node-video');
     for (let index = 0; index < videoList.length; index++) {
         const video = videoList[index];
-        if (video.querySelector('.field-name-field-video-url') != null) {
-            PluginTips.warning('Iwara批量下载工具', '因视频非本站源跳过该视频: ' + video.getAttribute('data-original-title'));
-        }
-        else if (!video.classList.contains('node-full')) {
-            video.ondblclick = () => {
-                video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
-            };
-            video.setAttribute('checked', 'false');
-            video.classList.add('selectButton');
-            let videoLink = video.querySelector('div').querySelector('a');
+        if (!video.classList.contains('node-full')) {
+            let videoLink = video.querySelector('.even').querySelector('a');
             if (videoLink != null) {
                 video.setAttribute('linkdata', videoLink.href);
                 videoLink.removeAttribute('href');
                 if (video.querySelector('img[src*="/"]') == null) {
-                    videoLink.append(Object.assign(document.createElement('img'), { src: "https://oreno3d.com/storage/img/noimage.png" }));
+                    videoLink.append(sourceRender({
+                        nodeType: 'img',
+                        attribute: {
+                            src: "https://oreno3d.com/storage/img/noimage.png"
+                        }
+                    }));
                 }
+                if (video.querySelector('.title') == null) {
+                    sourceRender({
+                        nodeType: 'h6',
+                        className: 'stitle',
+                        childs: {
+                            nodeType: 'a',
+                            attribute: {
+                                href: video.getAttribute('linkdata')
+                            },
+                            innerText: video.getAttribute('title') == '' ? video.getAttribute('data-original-title') : video.getAttribute('title')
+                        },
+                        parent: video
+                    });
+                }
+            }
+            if (video.querySelector('.field-name-field-video-url') != null) {
+                PluginTips.warning('Iwara批量下载工具', '因视频非本站源跳过该视频: ' + video.getAttribute('title') == '' ? video.getAttribute('data-original-title') : video.getAttribute('title'));
+            }
+            else {
+                video.ondblclick = () => {
+                    video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false');
+                };
+                video.setAttribute('checked', 'false');
+                video.classList.add('selectButton');
             }
         }
     }
