@@ -1,10 +1,10 @@
-interface RenderCode { 
+interface RenderCode {
     nodeType: string;
-    childs?: any;
+    childs?: RenderCode | RenderCode[] | HTMLElement | HTMLElement[] | string | string[];
     className?: string | Array<string>;
     attribute?: object;
-    parent?: any;
-    before?: any;
+    parent?: HTMLElement;
+    before?: HTMLElement;
     innerHTML?: string;
 }
 interface RenderData { 
