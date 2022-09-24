@@ -1675,8 +1675,8 @@
     function replaceVar(data: string) {
         let gVar = [
             { 'Y': new Date().getFullYear() },
-            { 'M': new Date().getMonth() },
-            { 'D': new Date().getDay() },
+            { 'M': new Date().getMonth()+1 },
+            { 'D': new Date().getDate() },
             { 'h': new Date().getHours() },
             { 'm': new Date().getMinutes() },
             { 's': new Date().getSeconds() }

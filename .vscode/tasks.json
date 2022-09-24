@@ -2,14 +2,32 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "Add Version",
+			"group": "build",
+			"type": "shell",
+			"command": "bash ${workspaceFolder}/build/VersionManage.sh",
+			"presentation": {
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"close": true
+			},
+			"windows": {
+				"command": "cmd /c 'cd ${workspaceFolder}\\build && VersionManage.cmd'"
+			}
+		},
+		{
 			"label": "Mata Build",
 			"group": "build",
 			"type": "shell",
-			"command": "copy",
-			"args": [
-				"${workspaceFolder}\\scripts\\IwaraDownloadTool.mata.ts",
-				"${workspaceFolder}\\dist\\IwaraDownloadTool.mata.js"
-			]
+			"command": "cp ${workspaceFolder}/scripts/IwaraDownloadTool.mata.ts ${workspaceFolder}/dist/IwaraDownloadTool.mata.js",
+			"presentation": {
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"close": true
+			},
+			"windows": {
+				"command": "copy ${workspaceFolder}\\scripts\\IwaraDownloadTool.mata.ts ${workspaceFolder}\\dist\\IwaraDownloadTool.mata.js"
+			}
 		},
 		{
 			"label": "Main Build",
@@ -20,14 +38,26 @@
 				"--project",
 				"${workspaceFolder}"
 			],
+			"presentation": {
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"close": true
+			},
 			"problemMatcher": []
 		},
 		{
 			"label": "Build",
+			"dependsOrder": "sequence",
 			"dependsOn": [
+				"Add Version",
 				"Mata Build",
 				"Main Build"
 			],
+			"presentation": {
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"close": true
+			},
 			"problemMatcher": [],
 			"group": {
 				"kind": "build",
