@@ -428,8 +428,10 @@
         Url: string
         ID: string
         Page: Document
-        Exist: boolean = true
-        Private: boolean = true
+        Name: string | null
+        Author: string | null
+        Exist: boolean = false
+        Private: boolean = false
         Source: Array<any>
         getAuthor: () => string
         getName: () => string
@@ -439,46 +441,50 @@
         getComment: () => string
         getLock: () => boolean
         getFileName: () => string;
-        constructor(videoID: string) {
-            this.ID = videoID.toLowerCase()
+        constructor(ID: string, Name?: string , Author?: string) {
+            this.ID = ID.toLowerCase()
+            this.Name = Name
+            this.Author = Author
             this.Url = 'https://' + window.location.hostname + '/videos/' + this.ID
             return this;
         }
         async init(cooike: object = {}) {
             try {
                 this.Page = parseDom(await get(this.Url, [], window.location.href, cooike))
-                this.Exist = this.Page.querySelector('video') != null
-                if (this.Exist) {
-                    if (this.Page.querySelector('.well') == null) {
-                        this.Private = false
-                    } else {
-                        if (cooike['cooike'] == undefined) await this.init({ 'cooike': PluginControlPanel.Cookies })
-                        return
+                this.getAuthor = function () {
+                    return this.Author ?? (this.Page.querySelector('.submitted').querySelector('a.username') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_')
+                }
+                this.getName = function () {
+                    return this.Name ?? (this.Page.querySelector('.submitted').querySelector('h1.title') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_')
+                }
+                if (this.Page.querySelector('.well') != null) {
+                    this.Private = true
+                    this.Exist = true
+                    if (cooike['cooike'] == undefined) {
+                        await this.init({ 'cooike': PluginControlPanel.Cookies })
                     }
-                    this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike)
-                    this.getAuthor = function () {
-                        return (this.Page.querySelector('.submitted').querySelector('a.username') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_')
-                    }
-                    this.getName = function () {
-                        return (this.Page.querySelector('.submitted').querySelector('h1.title') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_')
-                    }
-                    this.getFileName = function () {
-                        return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName())
-                    }
-                    this.getDownloadQuality = function () {
-                        if (this.Source.length == 0) return 'null'
-                        return this.Source[0].resolution
-                    }
-                    this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri) }
-                    this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3] }
-                    this.getComment = function () {
-                        let commentNode: Array<any>
-                        try {
-                            commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'))
-                        } catch (error) {
-                            return ''
+                } else {
+                    this.Exist = this.Page.querySelector('video') != null
+                    if (this.Exist) {
+                        this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike)
+                        this.getFileName = function () {
+                            return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName())
                         }
-                        return commentNode.map((element: Element) => (element as HTMLElement).innerText).join('\n')
+                        this.getDownloadQuality = function () {
+                            if (this.Source.length == 0) return 'null'
+                            return this.Source[0].resolution
+                        }
+                        this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri) }
+                        this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3] }
+                        this.getComment = function () {
+                            let commentNode: Array<any>
+                            try {
+                                commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'))
+                            } catch (error) {
+                                return ''
+                            }
+                            return commentNode.map((element: Element) => (element as HTMLElement).innerText).join('\n')
+                        }
                     }
                 }
             } catch (error) {
@@ -1449,6 +1455,7 @@
         },
         parent: document.querySelector('#user-links')
     })
+    let VideoList = document.querySelectorAll('.node-video')
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'))
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'))
     let PluginTips = new pluginTips()
@@ -1560,6 +1567,12 @@
     }
     async function ParseDownloadAddress(Data: string) {
         let videoInfo = new VideoInfo(Data)
+        for (const item of VideoList) {
+            if (item.getAttribute('linkdata').indexOf(Data) != -1) {
+                videoInfo = new VideoInfo(Data, item.getAttribute('title') == '' ? item.getAttribute('data-original-title') : item.getAttribute('title'), item.querySelector('.username') ? (item.querySelector('.username') as HTMLElement).innerText : null)
+                break
+            }
+        }
         await videoInfo.init()
         if (videoInfo.Exist) {
             if (videoInfo.Private) {
@@ -1693,9 +1706,8 @@
         PluginControlPanel.show()
     }
 
-    let videoList = document.querySelectorAll('.node-video')
-    for (let index = 0; index < videoList.length; index++) {
-        const video = videoList[index];
+    for (let index = 0; index < VideoList.length; index++) {
+        const video = VideoList[index];
         if (!video.classList.contains('node-full')) {
             let videoLink = video.querySelector('.even').querySelector('a')
             if (videoLink != null) {
