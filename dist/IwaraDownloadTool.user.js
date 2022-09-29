@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.72
+// @version           2.1.73
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -501,8 +501,8 @@
         getFileName;
         constructor(ID, Name, Author) {
             this.ID = ID.toLowerCase();
-            this.Name = Name;
-            this.Author = Author;
+            this.Name = Name ?? '视频标题获取失败';
+            this.Author = Author ?? '视频作者获取失败';
             this.Url = 'https://' + window.location.hostname + '/videos/' + this.ID;
             return this;
         }
@@ -510,10 +510,10 @@
             try {
                 this.Page = parseDom(await get(this.Url, [], window.location.href, cooike));
                 this.getAuthor = function () {
-                    return this.Author ?? this.Page.querySelector('.submitted').querySelector('a.username').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
+                    return this.Page.querySelector('.submitted').querySelector('a.username').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_') ?? this.Author;
                 };
                 this.getName = function () {
-                    return this.Name ?? this.Page.querySelector('.submitted').querySelector('h1.title').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
+                    return this.Page.querySelector('.submitted').querySelector('h1.title').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_') ?? this.Name;
                 };
                 if (this.Page.querySelector('.well') != null) {
                     this.Private = true;

@@ -443,8 +443,8 @@
         getFileName: () => string;
         constructor(ID: string, Name?: string , Author?: string) {
             this.ID = ID.toLowerCase()
-            this.Name = Name
-            this.Author = Author
+            this.Name = Name ?? '视频标题获取失败'
+            this.Author = Author ?? '视频作者获取失败'
             this.Url = 'https://' + window.location.hostname + '/videos/' + this.ID
             return this;
         }
@@ -452,10 +452,10 @@
             try {
                 this.Page = parseDom(await get(this.Url, [], window.location.href, cooike))
                 this.getAuthor = function () {
-                    return this.Author ?? (this.Page.querySelector('.submitted').querySelector('a.username') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_')
+                    return (this.Page.querySelector('.submitted').querySelector('a.username') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_') ?? this.Author 
                 }
                 this.getName = function () {
-                    return this.Name ?? (this.Page.querySelector('.submitted').querySelector('h1.title') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_')
+                    return (this.Page.querySelector('.submitted').querySelector('h1.title') as HTMLElement).innerText.replace(/[\\\\/:*?\"<>|.]/g, '_') ?? this.Name
                 }
                 if (this.Page.querySelector('.well') != null) {
                     this.Private = true
