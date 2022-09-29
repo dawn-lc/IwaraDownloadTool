@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.70
+// @version           2.1.85
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -486,8 +486,10 @@
         Url;
         ID;
         Page;
-        Exist = true;
-        Private = true;
+        Name;
+        Author;
+        Exist;
+        Private;
         Source;
         getAuthor;
         getName;
@@ -497,51 +499,58 @@
         getComment;
         getLock;
         getFileName;
-        constructor(videoID) {
-            this.ID = videoID.toLowerCase();
+        constructor(ID, Name, Author) {
+            this.ID = ID.toLowerCase();
+            this.Name = Name ?? '视频标题获取失败';
+            this.Author = Author ?? '视频作者获取失败';
             this.Url = 'https://' + window.location.hostname + '/videos/' + this.ID;
+            this.Exist = false;
+            this.Private = false;
             return this;
         }
         async init(cooike = {}) {
             try {
+                this.getAuthor = function () {
+                    return this.Author;
+                };
+                this.getName = function () {
+                    return this.Name;
+                };
                 this.Page = parseDom(await get(this.Url, [], window.location.href, cooike));
+                this.Private = this.Page.querySelector('.well') != null;
                 this.Exist = this.Page.querySelector('video') != null;
-                if (this.Exist) {
-                    if (this.Page.querySelector('.well') == null) {
-                        this.Private = false;
-                    }
-                    else {
-                        if (cooike['cooike'] == undefined)
-                            await this.init({ 'cooike': PluginControlPanel.Cookies });
+                if (this.Private) {
+                    if (cooike['cooike'] == undefined) {
+                        await this.init({ 'cooike': PluginControlPanel.Cookies });
                         return;
                     }
-                    this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
-                    this.getAuthor = function () {
-                        return this.Page.querySelector('.submitted').querySelector('a.username').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
-                    };
-                    this.getName = function () {
-                        return this.Page.querySelector('.submitted').querySelector('h1.title').innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
-                    };
-                    this.getFileName = function () {
-                        return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName());
-                    };
-                    this.getDownloadQuality = function () {
-                        if (this.Source.length == 0)
-                            return 'null';
-                        return this.Source[0].resolution;
-                    };
-                    this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
-                    this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
-                    this.getComment = function () {
-                        let commentNode;
-                        try {
-                            commentNode = Array.from(this.Page.querySelector('.node-info').querySelector('.field-type-text-with-summary.field-label-hidden').querySelectorAll('.field-item.even'));
-                        }
-                        catch (error) {
-                            return '';
-                        }
-                        return commentNode.map((element) => element.innerText).join('\n');
-                    };
+                }
+                else {
+                    if (this.Exist) {
+                        this.Author = this.Page.querySelector('.submitted')?.querySelector('a.username')?.innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
+                        this.Name = this.Page.querySelector('.submitted')?.querySelector('h1.title')?.innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
+                        this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
+                        this.getFileName = function () {
+                            return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName());
+                        };
+                        this.getDownloadQuality = function () {
+                            if (this.Source.length == 0)
+                                return 'null';
+                            return this.Source[0].resolution;
+                        };
+                        this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
+                        this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
+                        this.getComment = function () {
+                            let commentNode;
+                            try {
+                                commentNode = Array.from(this.Page.querySelector('.node-info')?.querySelector('.field-type-text-with-summary.field-label-hidden')?.querySelectorAll('.field-item.even'));
+                            }
+                            catch (error) {
+                                return '';
+                            }
+                            return commentNode.map((element) => element.innerText).join('\n');
+                        };
+                    }
                 }
             }
             catch (error) {
@@ -728,6 +737,7 @@
             this.state = {
                 Async: GM_getValue('Async', false),
                 AutoRefresh: GM_getValue('AutoRefresh', false),
+                CheckDownloadLink: GM_getValue('CheckDownloadLink', true),
                 Version: GM_getValue('Version', null),
                 DownloadType: Number(GM_getValue('DownloadType', DownloadType.others)),
                 DownloadDir: GM_getValue('DownloadDir', 'iwara/%#AUTHOR#%'),
@@ -1019,6 +1029,28 @@
                                                 value: this.state.AutoRefresh ? '开启' : '关闭',
                                                 className: 'switchButton',
                                                 onClick: () => this.configChange({ name: 'AutoRefresh', value: !this.state.AutoRefresh })
+                                            }
+                                        ]
+                                    }, {
+                                        nodeType: 'div',
+                                        style: this.state.style.Line,
+                                        childs: [{
+                                                nodeType: 'label',
+                                                style: this.state.style.inputLabel,
+                                                childs: '检查是否存在可能的高画质下载链接：',
+                                                title: '有一定概率误判'
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'CheckDownloadLink',
+                                                type: 'button',
+                                                style: this.state.style.input,
+                                                attribute: {
+                                                    switch: this.state.CheckDownloadLink ? 'off' : 'on'
+                                                },
+                                                value: this.state.CheckDownloadLink ? '开启' : '关闭',
+                                                className: 'switchButton',
+                                                onClick: () => this.configChange({ name: 'CheckDownloadLink', value: !this.state.CheckDownloadLink })
                                             }
                                         ]
                                     },
@@ -1511,13 +1543,14 @@
         },
         parent: document.querySelector('#user-links')
     });
+    let VideoList = document.querySelectorAll('.node-video');
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'));
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
     let DownloadLinkCharacteristics = [
-        '/s/',
-        'mega.nz/',
-        'drive.google.com',
+        '\/s\/',
+        'mega\.nz',
+        'drive\.google\.com',
         'aliyundrive',
         'uploadgig',
         'katfile',
@@ -1526,21 +1559,21 @@
         'rapidgator',
         'filebe',
         'filespace',
-        'mexa.sh',
+        'mexa\.sh',
         'mexashare',
-        'mx-sh.net',
-        'uploaded',
+        'mx-sh\.net',
+        'uploaded\.',
         'icerbox',
         'alfafile',
-        'drv.ms',
+        'drv\.ms',
         'onedrive'
     ];
     function ParseVideoID(data) {
         if (data.getAttribute('linkdata') != null) {
-            return data.getAttribute('linkdata').split('?')[0].split('/')[4].toLowerCase();
+            return data.getAttribute('linkdata').split('?')[0].split('/').pop().toLowerCase();
         }
         else {
-            return data.querySelector('h3.title').querySelector('a').href.toLowerCase().split('?')[0].split('/')[4].toLowerCase();
+            return data.querySelector('.title>a')?.href.toLowerCase().split('?')[0].split('/').pop().toLowerCase();
         }
     }
     async function ManualParseDownloadAddress() {
@@ -1552,17 +1585,17 @@
     }
     async function DownloadSelected() {
         PluginTips.info('Iwara批量下载工具', '开始解析...');
-        let videoList = document.querySelectorAll('.selectButton[checked="true"]');
+        let List = document.querySelectorAll('.selectButton[checked="true"]');
         if (PluginControlPanel.state.Async) {
-            videoList.forEach(async (element, index) => {
+            List.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
-                if (index == videoList.length - 1)
+                if (index == List.length - 1)
                     PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true);
             });
         }
         else {
-            for (let index = 0; index < videoList.length; index++) {
-                await ParseDownloadAddress(ParseVideoID(videoList[index]));
+            for (let index = 0; index < List.length; index++) {
+                await ParseDownloadAddress(ParseVideoID(List[index]));
             }
             PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true);
         }
@@ -1623,16 +1656,26 @@
         }
     }
     function CheckIsHaveDownloadLink(comment) {
-        if (comment == null)
-            return false;
-        for (let index = 0; index < DownloadLinkCharacteristics.length; index++) {
-            if (comment.indexOf(DownloadLinkCharacteristics[index]) != -1)
-                return true;
+        if (PluginControlPanel.state.CheckDownloadLink) {
+            if (comment == null) {
+                return false;
+            }
+            for (let index = 0; index < DownloadLinkCharacteristics.length; index++) {
+                if (comment.indexOf(DownloadLinkCharacteristics[index]) != -1) {
+                    return true;
+                }
+            }
         }
         return false;
     }
     async function ParseDownloadAddress(Data) {
         let videoInfo = new VideoInfo(Data);
+        for (const item of VideoList) {
+            if (item.getAttribute('linkdata').indexOf(Data) != -1) {
+                videoInfo = new VideoInfo(Data, item.querySelector('.title>a')?.innerText ?? item.querySelector('.stitle>a')?.innerText ?? item.getAttribute('data-original-title'), item.querySelector('.username')?.innerText);
+                break;
+            }
+        }
         await videoInfo.init();
         if (videoInfo.Exist) {
             if (videoInfo.Private) {
@@ -1771,13 +1814,12 @@
     if (!PluginControlPanel.Initialize) {
         PluginControlPanel.show();
     }
-    let videoList = document.querySelectorAll('.node-video');
-    for (let index = 0; index < videoList.length; index++) {
-        const video = videoList[index];
+    for (let index = 0; index < VideoList.length; index++) {
+        const video = VideoList[index];
         if (!video.classList.contains('node-full')) {
-            let videoLink = video.querySelector('.even').querySelector('a');
+            let videoLink = video.querySelector('.even>a');
             if (videoLink != null) {
-                video.setAttribute('linkdata', videoLink.href);
+                video.setAttribute('linkdata', videoLink.getAttribute('href') ?? video.querySelector('.title>a')?.getAttribute('href'));
                 videoLink.removeAttribute('href');
                 if (video.querySelector('img[src*="/"]') == null) {
                     videoLink.append(sourceRender({
@@ -1803,7 +1845,7 @@
                 }
             }
             if (video.querySelector('.field-name-field-video-url') != null) {
-                PluginTips.warning('Iwara批量下载工具', '因视频非本站源跳过该视频: ' + video.getAttribute('title') == '' ? video.getAttribute('data-original-title') : video.getAttribute('title'));
+                PluginTips.warning('Iwara批量下载工具', '因视频非本站源跳过该视频: ' + video.querySelector('.title>a')?.innerText ?? video.querySelector('.stitle>a')?.innerText ?? video.getAttribute('data-original-title'));
             }
             else {
                 video.ondblclick = () => {
