@@ -466,6 +466,7 @@
                         await this.init({ 'cooike': PluginControlPanel.Cookies })
                         return
                     }
+                    this.Exist = true
                 } else {
                     if (this.Exist) {
                         this.Author = (this.Page.querySelector('.submitted')?.querySelector('a.username') as HTMLElement)?.innerText.replace(/[\\\\/:*?\"<>|.]/g, '_')
