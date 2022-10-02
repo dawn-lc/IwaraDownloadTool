@@ -1603,7 +1603,7 @@
     async function ParseDownloadAddress(Data: string) {
         let videoInfo = new VideoInfo(Data)
         for (const item of VideoList) {
-            if (item.getAttribute('linkdata').indexOf(Data) != -1) {
+            if (item?.getAttribute('linkdata')?.indexOf(Data) != -1) {
                 videoInfo = new VideoInfo(Data, (item.querySelector('.title>a') as HTMLElement)?.innerText ?? (item.querySelector('.stitle>a') as HTMLElement)?.innerText ?? item.getAttribute('data-original-title'), (item.querySelector('.username') as HTMLElement)?.innerText)
                 break
             }

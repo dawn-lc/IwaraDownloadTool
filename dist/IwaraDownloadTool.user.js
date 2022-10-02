@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.86
+// @version           2.1.87
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -1672,7 +1672,7 @@
     async function ParseDownloadAddress(Data) {
         let videoInfo = new VideoInfo(Data);
         for (const item of VideoList) {
-            if (item.getAttribute('linkdata').indexOf(Data) != -1) {
+            if (item?.getAttribute('linkdata')?.indexOf(Data) != -1) {
                 videoInfo = new VideoInfo(Data, item.querySelector('.title>a')?.innerText ?? item.querySelector('.stitle>a')?.innerText ?? item.getAttribute('data-original-title'), item.querySelector('.username')?.innerText);
                 break;
             }
