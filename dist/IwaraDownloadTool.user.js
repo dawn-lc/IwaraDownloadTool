@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.87
+// @version           2.1.105
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -510,12 +510,6 @@
         }
         async init(cooike = {}) {
             try {
-                this.getAuthor = function () {
-                    return this.Author;
-                };
-                this.getName = function () {
-                    return this.Name;
-                };
                 this.Page = parseDom(await get(this.Url, [], window.location.href, cooike));
                 this.Private = this.Page.querySelector('.well') != null;
                 this.Exist = this.Page.querySelector('video') != null;
@@ -528,8 +522,8 @@
                 }
                 else {
                     if (this.Exist) {
-                        this.Author = this.Page.querySelector('.submitted')?.querySelector('a.username')?.innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
-                        this.Name = this.Page.querySelector('.submitted')?.querySelector('h1.title')?.innerText.replace(/[\\\\/:*?\"<>|.]/g, '_');
+                        this.Author = this.Page.querySelector('.submitted > a.username')?.innerText;
+                        this.Name = this.Page.querySelector('.submitted > h1.title')?.innerText;
                         this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike);
                         this.getFileName = function () {
                             return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName());
@@ -542,17 +536,29 @@
                         this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri); };
                         this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3]; };
                         this.getComment = function () {
-                            let commentNode;
+                            let commentsNode;
                             try {
-                                commentNode = Array.from(this.Page.querySelector('.node-info')?.querySelector('.field-type-text-with-summary.field-label-hidden')?.querySelectorAll('.field-item.even'));
+                                commentsNode = Array.from(this.Page.querySelectorAll(".node-video.node-full > .content > .node-info > .field > .field-items > .field-item"));
+                                Array.from(this.Page.querySelector('#comments').querySelectorAll(".submitted")).map((node) => {
+                                    if (node.querySelector('a.username')?.innerText == this.Author) {
+                                        commentsNode = commentsNode.concat(Array.from(node.parentNode.querySelectorAll('.content > .field > .field-items > .field-item')));
+                                    }
+                                });
                             }
                             catch (error) {
+                                PluginTips.warning('解析模块', error.toString());
                                 return '';
                             }
-                            return commentNode.map((element) => element.innerText).join('\n');
+                            return commentsNode.map((element) => element.innerText).join('\n');
                         };
                     }
                 }
+                this.getAuthor = function () {
+                    return this.Author.trim().replace(/^\.|[\\\\/:*?\"<>|]/img, '_');
+                };
+                this.getName = function () {
+                    return this.Name.trim().replace(/^\.|[\\\\/:*?\"<>|]/img, '_');
+                };
             }
             catch (error) {
                 PluginTips.warning('解析模块', '视频信息解析失败：' + error.toString(), true);
@@ -1549,7 +1555,7 @@
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'));
     let PluginTips = new pluginTips();
     let DownloadLinkCharacteristics = [
-        '\/s\/',
+        'pan\.baidu',
         'mega\.nz',
         'drive\.google\.com',
         'aliyundrive',
@@ -1567,7 +1573,8 @@
         'icerbox',
         'alfafile',
         'drv\.ms',
-        'onedrive'
+        'onedrive',
+        'pixeldrain\.com'
     ];
     function ParseVideoID(data) {
         if (data.getAttribute('linkdata') != null) {
@@ -1578,11 +1585,14 @@
         }
     }
     async function ManualParseDownloadAddress() {
-        let ID = prompt('请输入需要下载的视频ID', '');
-        if (ID.split('_')[1] != undefined) {
-            ID = ID.split('_')[1];
+        let ID = prompt('请输入需要下载的视频ID', '').toLowerCase();
+        ID = ID?.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID?.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID;
+        if (ID != '' && (ID.length > 15 && ID.length < 19)) {
+            await ParseDownloadAddress(ID);
         }
-        await ParseDownloadAddress(ID);
+        else {
+            PluginTips.warning('Iwara批量下载工具', '无法解析出视频ID!');
+        }
     }
     async function DownloadSelected() {
         PluginTips.info('Iwara批量下载工具', '开始解析...');
@@ -1604,11 +1614,11 @@
     async function DownloadAll() {
         PluginTips.info('Iwara批量下载工具', '正在解析...');
         if (document.querySelector('#block-views-videos-block-2') != null) {
-            if (document.querySelector('#block-views-videos-block-2').querySelector('.more-link') != null) {
-                await GetAllData(document.querySelector('.more-link').querySelector('a').href, [], window.location.href);
+            if (document.querySelector('#block-views-videos-block-2>.more-link') != null) {
+                await GetAllData(document.querySelector('.more-link>a').getAttribute('href'), [], window.location.href);
             }
             else {
-                let videoList = document.querySelector('#block-views-videos-block-2').querySelectorAll('.node-video');
+                let videoList = document.querySelectorAll('#block-views-videos-block-2>.node-video');
                 if (PluginControlPanel.state.Async) {
                     videoList.forEach(async (element, index) => {
                         await ParseDownloadAddress(ParseVideoID(element));
@@ -1630,13 +1640,13 @@
     }
     async function GetAllData(videoListUrl, data, referrer) {
         let videoListPage = parseDom(await get(videoListUrl, data, referrer));
-        let videoList = videoListPage.querySelector('.view-videos').querySelectorAll('.node-video');
+        let videoList = videoListPage.querySelectorAll('.view-videos>.node-video');
         if (PluginControlPanel.state.Async) {
             videoList.forEach(async (element, index) => {
                 await ParseDownloadAddress(ParseVideoID(element));
                 if (index == videoList.length - 1) {
                     if (videoListPage.querySelectorAll('.pager-next').length != 0) {
-                        await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer);
+                        await GetAllData(videoListPage.querySelector('.pager-next>a').getAttribute('href'), data, referrer);
                     }
                     else {
                         PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true);
@@ -1649,7 +1659,7 @@
                 await ParseDownloadAddress(ParseVideoID(videoList[i]));
             }
             if (videoListPage.querySelectorAll('.pager-next').length != 0) {
-                await GetAllData(videoListPage.querySelector('.pager-next').querySelector('a').href, data, referrer);
+                await GetAllData(videoListPage.querySelector('.pager-next>a').getAttribute('href'), data, referrer);
             }
             else {
                 PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true);
