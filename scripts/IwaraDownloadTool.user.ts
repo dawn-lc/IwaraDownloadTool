@@ -741,7 +741,7 @@
                 GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
                     let newCookies = document.cookie
                     if (error) {
-                        PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用Tampermonkey Beta载入本脚本。<br />错误：' + error.toString())
+                        PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用 Tampermonkey Beta 或 任何支持获取HttpOnly Cookie的脚本加载器(注:支持GM_cookie函数) 载入本脚本。<br />错误：' + error.toString(), true)
                     } else {
                         for (let index = 0; index < list.length; index++) {
                             const Cookie = list[index];
@@ -1156,7 +1156,7 @@
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
                                 childs: [
-                                    '!!!必读!!!', { nodeType: 'br' },
+                                    { nodeType: 'h2', childs: '如需下载私有(上锁)视频，请尝试使用 Tampermonkey Beta 或 任何支持获取HttpOnly Cookie的脚本加载器(注:支持GM_cookie函数) 载入本脚本。' }, { nodeType: 'br' },
                                     '全局可用变量： %#Y#% (年) | %#M#% (月) | %#D#% (日) | %#h#% (时) | %#m#% (分) | %#s#% (秒)', { nodeType: 'br' },
                                     '重命名可用变量： %#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#SOURCE_NAME#% (原文件名)', { nodeType: 'br' },
                                     '下载目录可用变量： %#AUTHOR#% (作者)', { nodeType: 'br' },
