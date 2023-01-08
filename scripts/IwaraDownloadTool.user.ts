@@ -1520,7 +1520,7 @@
         if (data.getAttribute('linkdata') != null) {
             return data.getAttribute('linkdata').split('?')[0].split('/').pop().toLowerCase()
         } else {
-            return (data.querySelector('.title>a') as HTMLAnchorElement)?.href.toLowerCase().split('?')[0].split('/').pop().toLowerCase()
+            return (data.querySelector('.title>a') as HTMLLinkElement)?.href.toLowerCase().split('?')[0].split('/').pop().toLowerCase()
         }
 
     }
@@ -1551,10 +1551,10 @@
     async function DownloadAll() {
         PluginTips.info('Iwara批量下载工具', '正在解析...')
         if (document.querySelector('#block-views-videos-block-2') != null) {
-            if (document.querySelector('#block-views-videos-block-2>.more-link') != null) {
-                await GetAllData(document.querySelector('.more-link>a').getAttribute('href'), [], window.location.href)
+            if (document.querySelector('#block-views-videos-block-2 *.more-link') != null) {
+                await GetAllData((document.querySelector('.more-link>a') as HTMLLinkElement).href, [], window.location.href)
             } else {
-                let videoList = document.querySelectorAll('#block-views-videos-block-2>.node-video')
+                let videoList = document.querySelectorAll('#block-views-videos-block-2 *.node-video')
                 if (PluginControlPanel.state.Async) {
                     videoList.forEach(async (element: Element, index: number) => {
                         await ParseDownloadAddress(ParseVideoID(element))
@@ -1573,13 +1573,13 @@
     }
     async function GetAllData(videoListUrl: string, data: string[], referrer: string) {
         let videoListPage = parseDom(await get(videoListUrl, data, referrer))
-        let videoList = videoListPage.querySelectorAll('.view-videos>.node-video')
+        let videoList = videoListPage.querySelectorAll('.view-videos *.node-video')
         if (PluginControlPanel.state.Async) {
             videoList.forEach(async (element: Element, index: number) => {
                 await ParseDownloadAddress(ParseVideoID(element))
                 if (index == videoList.length - 1) {
                     if (videoListPage.querySelectorAll('.pager-next').length != 0) {
-                        await GetAllData(videoListPage.querySelector('.pager-next>a').getAttribute('href'), data, referrer)
+                        await GetAllData((videoListPage.querySelector('.pager-next>a') as HTMLLinkElement).href, data, referrer)
                     } else {
                         PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
                     }
@@ -1590,7 +1590,7 @@
                 await ParseDownloadAddress(ParseVideoID(videoList[i]))
             }
             if (videoListPage.querySelectorAll('.pager-next').length != 0) {
-                await GetAllData(videoListPage.querySelector('.pager-next>a').getAttribute('href'), data, referrer)
+                await GetAllData((videoListPage.querySelector('.pager-next>a') as HTMLLinkElement).href, data, referrer)
             } else {
                 PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
             }
@@ -1753,9 +1753,9 @@
     for (let index = 0; index < VideoList.length; index++) {
         const video = VideoList[index];
         if (!video.classList.contains('node-full')) {
-            let videoLink = video.querySelector('.even>a')
+            let videoLink = video.querySelector('.even>a') as HTMLLinkElement
             if (videoLink != null) {
-                video.setAttribute('linkdata', videoLink.getAttribute('href') ?? video.querySelector('.title>a')?.getAttribute('href'))
+                video.setAttribute('linkdata', videoLink.href ?? (video.querySelector('.title>a') as HTMLLinkElement).href)
                 videoLink.removeAttribute('href')
                 if (video.querySelector('img[src*="/"]') == null) {
                     videoLink.append(sourceRender({
