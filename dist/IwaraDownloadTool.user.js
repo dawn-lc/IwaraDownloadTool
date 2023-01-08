@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.110
+// @version           2.1.111
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2022, Dawnlc (https://dawnlc.me/)
@@ -790,7 +790,7 @@
                 GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
                     let newCookies = document.cookie;
                     if (error) {
-                        PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用 Tampermonkey Beta 或 任何支持获取HttpOnly Cookie的脚本加载器(注:支持GM_cookie函数) 载入本脚本。<br />错误：' + error.toString());
+                        PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用 Tampermonkey Beta 或 任何支持获取HttpOnly Cookie的脚本加载器(注:支持GM_cookie函数) 载入本脚本。<br />错误：' + error.toString(), true);
                     }
                     else {
                         for (let index = 0; index < list.length; index++) {
