@@ -481,6 +481,7 @@
         Url: string
         ID: string
         Page: Document
+        UploadTime: Date
         Name: string | null
         Author: string | null
         Exist: boolean
@@ -499,7 +500,7 @@
             this.ID = ID.toLowerCase()
             this.Name = Name ?? '视频标题获取失败'
             this.Author = Author ?? '视频作者获取失败'
-            this.Url = 'https://' + window.location.hostname + '/videos/' + this.ID
+            this.Url = `https://${window.location.hostname}/videos/${this.ID}?language=en`
             this.Exist = false
             this.Private = false
             this.getAuthor = function () {
@@ -523,11 +524,17 @@
                     this.Exist = true
                 } else {
                     if (this.Exist) {
-                        this.Author = (this.Page.querySelector('.submitted > a.username') as HTMLElement)?.innerText
-                        this.Name = (this.Page.querySelector('.submitted > h1.title') as HTMLElement)?.innerText
+                        let submitted = this.Page.querySelector('.submitted');
+                        this.Author = (submitted.querySelector('a.username') as HTMLElement)?.innerText
+                        this.Name = (submitted.querySelector('h1.title') as HTMLElement)?.innerText
+                        this.UploadTime = new Date(submitted.childNodes[submitted.childNodes.length - 1].textContent.replace('on', '').trim())
                         this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike)
                         this.getFileName = function () {
-                            return replaceVar(PluginControlPanel.state.FileName).replace('%#TITLE#%', this.getName()).replace('%#ID#%', this.ID).replace('%#AUTHOR#%', this.getAuthor()).replace('%#SOURCE_NAME#%', this.getSourceFileName())
+                            return replaceVar(PluginControlPanel.state.FileName, this.UploadTime)
+                                .replace('%#TITLE#%', this.getName())
+                                .replace('%#ID#%', this.ID)
+                                .replace('%#AUTHOR#%', this.getAuthor())
+                                .replace('%#SOURCE_NAME#%', this.getSourceFileName())
                         }
                         this.getDownloadQuality = function () {
                             if (this.Source.length == 0) return 'null'
@@ -1287,9 +1294,27 @@
                                 nodeType: 'label',
                                 style: this.state.style.inputLabel,
                                 childs: [
-                                    { nodeType: 'h2', childs: '如需下载私有(上锁)视频，请尝试使用 Tampermonkey Beta 或 任何支持获取HttpOnly Cookie的脚本加载器(注:支持GM_cookie函数) 载入本脚本。' }, { nodeType: 'br' },
-                                    '全局可用变量： %#Y#% (年) | %#M#% (月) | %#D#% (日) | %#h#% (时) | %#m#% (分) | %#s#% (秒)', { nodeType: 'br' },
-                                    '重命名可用变量： %#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#SOURCE_NAME#% (原文件名)', { nodeType: 'br' },
+                                    {
+                                        nodeType: 'h2',
+                                        childs: [
+                                            '下载私有(上锁)视频请使用',
+                                            { nodeType: 'br' },
+                                            {
+                                                nodeType: 'a',
+                                                href: 'https://docs.scriptcat.org/',
+                                                childs:'ScriptCat'
+                                            },
+                                            ' 或 ',
+                                            {
+                                                nodeType: 'a',
+                                                href: 'https://www.tampermonkey.net/index.php?#download_gcal',
+                                                childs: 'Tampermonkey Beta'
+                                            },
+                                            '载入本脚本。'
+                                        ]
+                                    }, { nodeType: 'br' },
+                                    '全局可用变量： %#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])', { nodeType: 'br' },
+                                    '重命名可用变量： %#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#SOURCE_NAME#% (原文件名) | %#UploadY#% (发布时间[年]) | %#UploadM#% (发布时间[月]) | %#UploadD#% (发布时间[日]) | %#Uploadh#% (发布时间[时]) | %#Uploadm#% (发布时间[分]) | %#Uploads#% (发布时间[秒])', { nodeType: 'br' },
                                     '下载目录可用变量： %#AUTHOR#% (作者)', { nodeType: 'br' },
                                     '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4', { nodeType: 'br' },
                                     '结果: ' + replaceVar('%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4').replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), { nodeType: 'br' },
@@ -1995,14 +2020,20 @@
             })
         }(Info.ID, `<a href="${Info.Url}" ${Info.getName() != null ? `title="${Info.getName()}"` : ''} target="_blank" >${Info.getName() ?? '→ 点击此处，进入视频页面 ←'}</a> <br />`, Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()))
     }
-    function replaceVar(data: string) {
+    function replaceVar(data: string, time: Date = new Date()) {
         let gVar = [
             { 'Y': new Date().getFullYear() },
             { 'M': new Date().getMonth() + 1 },
             { 'D': new Date().getDate() },
             { 'h': new Date().getHours() },
             { 'm': new Date().getMinutes() },
-            { 's': new Date().getSeconds() }
+            { 's': new Date().getSeconds() },
+            { 'UploadY': time.getFullYear() },
+            { 'UploadM': time.getMonth() + 1 },
+            { 'UploadD': time.getDate() },
+            { 'Uploadh': time.getHours() },
+            { 'Uploadm': time.getMinutes() },
+            { 'Uploads': time.getSeconds() }
         ]
         for (let i = 0; i < gVar.length; i++) {
             for (const d in gVar[i]) {
