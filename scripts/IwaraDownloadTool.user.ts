@@ -6,50 +6,51 @@
         }
         return UUID
     }
-    function getType(obj: any) {
-        return Object.prototype.toString.call(obj).split(' ')[1].slice(0, -1)
-    }
     function sourceRender(vdata: RenderCode): HTMLElement {
-        let RenderDOM: HTMLElement
+        if (vdata.nodeType == undefined) {
+            debugger
+        }
+        let RenderDOM: HTMLElement = document.createElement(vdata.nodeType as string)
         for (const item in vdata) {
             switch (item) {
                 case 'nodeType':
-                    RenderDOM = document.createElement(vdata.nodeType)
                     break
-                case 'attribute':
-                    for (const key in vdata.attribute) {
-                        RenderDOM.setAttribute(key, vdata.attribute[key])
+                case 'attributes':
+                    for (const key in vdata.attributes) {
+                        RenderDOM.setAttribute(key, vdata.attributes[key])
                     }
                     break
                 case 'className':
-                    if (getType(vdata.className) == 'Array') {
-                        RenderDOM.className = (vdata.className as Array<string>).join(' ')
+                    if (vdata.className instanceof Array) {
+                        RenderDOM.className = vdata.className.join(' ')
                     } else {
                         RenderDOM.className = vdata.className.toString()
                     }
                     break
                 case 'childs':
-                    switch (getType(vdata.childs)) {
-                        case 'Array':
-                            (vdata.childs as any[]).forEach((child: any) => {
-                                if (child instanceof HTMLElement) {
-                                    RenderDOM.appendChild(child)
-                                } else if (getType(child) == 'string') {
-                                    RenderDOM.insertAdjacentHTML('beforeend', child)
-                                } else {
-                                    RenderDOM.appendChild(sourceRender(child as RenderCode))
-                                }
-                            })
-                            break
-                        case 'String':
-                            RenderDOM.insertAdjacentHTML('beforeend', vdata.childs as string)
-                            break
-                        case 'Object':
-                            RenderDOM.appendChild(sourceRender(vdata.childs as RenderCode))
-                            break
-                        default:
-                            break
+                    if (vdata.childs instanceof Array) {
+                        vdata.childs.forEach((child: HTMLElement | String | RenderCode) => {
+                            if (child instanceof HTMLElement) {
+                                RenderDOM.appendChild(child)
+                                return
+                            }
+                            if (child instanceof String || typeof child == 'string') {
+                                RenderDOM.insertAdjacentHTML('beforeend', child as string)
+                                return
+                            }
+                            RenderDOM.appendChild(sourceRender(child))
+                        })
+                        break
                     }
+                    if (vdata.childs instanceof HTMLElement) {
+                        RenderDOM.appendChild(vdata.childs)
+                        break
+                    }
+                    if (vdata.childs instanceof String || typeof vdata.childs == 'string') {
+                        RenderDOM.insertAdjacentHTML('beforeend', vdata.childs as string)
+                        break
+                    }
+                    RenderDOM.appendChild(sourceRender(vdata.childs as RenderCode))
                     break
                 case 'parent':
                     vdata.parent.appendChild(RenderDOM)
@@ -71,37 +72,35 @@
         return RenderDOM
     }
     function reactRender(vdata: RenderCode | any, index?: any) {
-        let VirtualDOM: RenderData;
-        if (vdata != null && vdata.nodeType != undefined) {
-            VirtualDOM = { type: vdata.nodeType }
-            delete vdata.nodeType
-            if (vdata.childs != undefined) {
-                if (VirtualDOM.children == undefined) VirtualDOM.children = []
-                if (vdata.childs instanceof Array) {
-                    VirtualDOM.children = React.Children.toArray(vdata.childs.map((item: any) => reactRender(item)))
-                } else {
-                    VirtualDOM.children.push(reactRender(vdata.childs))
-                }
-                delete vdata.childs
-            }
-            if (VirtualDOM.props == undefined) VirtualDOM.props = {}
-            if (vdata.className != undefined) {
-                VirtualDOM.props = Object.assign({ className: vdata.className }, VirtualDOM.props);
-                delete vdata.className
-            }
-            if (vdata.attribute != undefined) {
-                VirtualDOM.props = Object.assign(vdata.attribute, VirtualDOM.props);
-                delete vdata.attribute
-            }
-            if (index != undefined) VirtualDOM.props = Object.assign({ key: index }, VirtualDOM.props)
-            for (const key in vdata) {
-                VirtualDOM.props[key] = vdata[key]
-                delete vdata[key]
-            }
-        } else {
+        if (vdata == null || vdata.nodeType == undefined) {
             return vdata
         }
-        return React.createElement(VirtualDOM.type, VirtualDOM.props, VirtualDOM.children || undefined);
+        let VirtualDOM: RenderData = { type: vdata.nodeType }
+        Reflect.deleteProperty(vdata, "nodeType")
+        VirtualDOM.props ??= {}
+        if (vdata.className != undefined) {
+            VirtualDOM.props = Object.assign({ className: vdata.className }, VirtualDOM.props);
+            Reflect.deleteProperty(vdata, "className")
+        }
+        if (vdata.attribute != undefined) {
+            VirtualDOM.props = Object.assign(vdata.attribute, VirtualDOM.props);
+            Reflect.deleteProperty(vdata, "attribute")
+        }
+        if (vdata.childs != undefined) {
+            VirtualDOM.children ??= []
+            if (vdata.childs instanceof Array) {
+                VirtualDOM.children = React.Children.toArray(vdata.childs.map((item: any) => reactRender(item)))
+            } else {
+                VirtualDOM.children.push(reactRender(vdata.childs))
+            }
+            Reflect.deleteProperty(vdata, "childs")
+        }
+        if (index != undefined) VirtualDOM.props = Object.assign({ key: index }, VirtualDOM.props)
+        for (const key in vdata) {
+            VirtualDOM.props[key] = vdata[key]
+            Reflect.deleteProperty(vdata, key)
+        }
+        return React.createElement(VirtualDOM.type as string, VirtualDOM.props, VirtualDOM.children || undefined);
     }
     async function get(url: string, parameter: string[] = [], referrer: string = window.location.hostname, headers: object = {}) {
         url += '?'
@@ -257,7 +256,8 @@
         Info,
         Warning,
         Success,
-        Progress
+        Progress,
+        Dialog
     }
     class Queue {
         queue: [];
@@ -291,6 +291,7 @@
     class pluginTips {
         WaitingQueue: Queue
         DownloadingQueue: Queue
+        static Title: RenderCode = { nodeType: 'h2', childs: 'Iwara批量下载工具' }
         static typeIcon: object = {
             Info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
             Warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
@@ -299,7 +300,7 @@
         }
         static Container: HTMLElement = sourceRender({
             nodeType: 'section',
-            attribute: {
+            attributes: {
                 id: 'PluginTips'
             },
             className: 'tipsContainer',
@@ -315,9 +316,20 @@
             if (this.WaitingQueue.length() > 0) {
                 let downloadTask = this.WaitingQueue.pop()
                 if (GM_info.downloadMode == 'native') {
-                    this.progress(downloadTask.name + ' 下载中...', { id: downloadTask.id })
+                    this.progress({
+                        title: {
+                            nodeType: 'h2',
+                            childs: `${downloadTask.name} 下载中...`
+                        },
+                        id: downloadTask.id
+                    })
                 } else {
-                    this.info('下载', downloadTask.name + ' 已开始下载!')
+                    this.info({
+                        content: {
+                            nodeType: 'p',
+                            childs: `${downloadTask.name} 已开始下载!`
+                        }
+                    })
                 }
                 this.DownloadingQueue.push(downloadTask.task)
                 GM_download(downloadTask.task)
@@ -328,69 +340,124 @@
             downloadTask.setAttribute('value', value.toFixed(2))
             downloadTask.style.width = value.toFixed(2) + '%'
         }
-        info(title: string, content: string, wait: boolean = false) {
-            console.info('Iwara 批量下载工具', content)
-            new tips(TipsType.Info, title, content, wait)
+        info(params: LogCode) {
+            let code = params
+            new tips(TipsType.Info, code.content, code.title, code.id, code.wait)
+            console.info(code.title?.childs ?? pluginTips.Title.childs, code.content.childs)
         }
-        warning(title: string, content: string, wait: boolean = false) {
-            console.warn('Iwara 批量下载工具', content)
-            new tips(TipsType.Warning, title, content, wait)
+        warning(params: LogCode) {
+            let code = params
+            new tips(TipsType.Warning, code.content, code.title, code.id, code.wait)
+            console.warn(code.title?.childs ?? pluginTips.Title.childs, code.content.childs)
         }
-        success(title: string, content: string, wait: boolean = false) {
-            console.log('Iwara 批量下载工具', content)
-            new tips(TipsType.Success, title, content, wait)
+        success(params: LogCode) {
+            let code = params
+            new tips(TipsType.Success, code.content, code.title, code.id, code.wait)
+            console.log(code.title?.childs ?? pluginTips.Title.childs, code.content.childs)
         }
-        progress(title: string, content: any) {
-            new tips(TipsType.Progress, title, {
+        progress(params: LogCode) {
+            if (pluginTips.Container.children.namedItem(params.id as string) != null) {
+                this.warning({
+                    content: {
+                        nodeType: 'p',
+                        childs: [
+                            params.content,
+                            '任务已存在。'
+                        ]
+                    }
+                })
+                return
+            }
+            new tips(TipsType.Progress, params.title, {
                 nodeType: 'div',
                 className: 'Progress',
                 childs: [{
                     nodeType: 'div',
                     className: 'value',
-                    attribute: {
+                    attributes: {
                         value: 0
                     }
                 }]
-            }, true, content.id)
+            }, params.id, true)
+        }
+        dialog(params: LogCode) {
+            params.content = 
+            {
+                nodeType: "div",
+                childs: [
+                    params.content, {
+                        nodeType: "button",
+                        className: "btn-primary tipsButton",
+                        childs: "取消下载",
+                        onclick() {
+                            pluginTips.Container.children.namedItem(params.id as string).remove()
+                        }
+                    }, {
+                        nodeType: "button",
+                        className: "btn-primary tipsButton",
+                        childs: "重新下载",
+                        attributes: {
+                            id: true
+                        },
+                        onclick() {
+                            ParseDownloadAddress(params.id as string, false)
+                            pluginTips.Container.children.namedItem(params.id as string).remove()
+                        }
+                    }
+                ]
+            }
+            new tips(TipsType.Dialog, params.content, params.title, params.id, true, TipsType.Warning)
         }
     }
     class tips {
-        id: string;
+        id: String;
         type: TipsType
+        show: TipsType
         wait: boolean
-        constructor(type: TipsType, title: string, content: string | RenderCode, wait: boolean = false, id: string = null) {
+        constructor(type: TipsType, content: RenderCode, title: RenderCode, id: String = null, wait: boolean = false, show: TipsType = null) {
             this.type = type
-            this.id = id
+            this.show = show ??= type
             this.wait = wait
+            switch (this.type) {
+                case TipsType.Progress:
+                    //todo 取消任务
+                    break;
+                case TipsType.Dialog:
+                    //todo 确认框
+                    break;
+                default:
+                    break;
+            }
             sourceRender(Object.assign({
                 nodeType: 'div',
                 childs: [{
                     nodeType: 'div',
                     className: 'tipsIcon',
-                    innerHTML: pluginTips.typeIcon[TipsType[type]]
+                    innerHTML: pluginTips.typeIcon[TipsType[show]]
                 }, {
                     nodeType: 'div',
                     className: 'tipsContent',
-                    childs: [{
-                        nodeType: 'h2',
-                        childs: title
-                    }, {
-                        nodeType: 'p',
-                        childs: content
-                    }]
+                    childs: [title ?? pluginTips.Title].concat(content)
                 }],
                 parent: pluginTips.Container
-            }, this.style(), this.attribute(), this.event()))
+            }, this.style(), this.event(), id != null ? {
+                attributes: {
+                    id: id
+                }
+            } : {}))
         }
         event() {
             return {
                 onclick: (e: any) => {
-                    if (this.wait) {
-                        if (this.type != TipsType.Progress) {
+                    switch (this.type) {
+                        case TipsType.Info:
+                        case TipsType.Success:
+                        case TipsType.Warning:
                             e.currentTarget.remove()
-                        }
-                    } else {
-                        e.currentTarget.remove()
+                            break;
+                        case TipsType.Dialog:
+                        default:
+                            break;
                     }
                 },
                 onanimationend: (e: any) => {
@@ -404,27 +471,13 @@
             let style = {
                 className: ['tips']
             }
-            style.className.push('tips' + TipsType[this.type])
-            if (this.wait) {
-                style.className.push('tipsWait')
-            } else {
-                style.className.push('tipsActive')
-            }
+            style.className.push('tips' + TipsType[this.show])
+            style.className.push(this.wait ? 'tipsWait' : 'tipsActive')
             return style
-        }
-        attribute() {
-            if (this.id != undefined) {
-                return {
-                    attribute: {
-                        id: this.id
-                    }
-                }
-            } else {
-                return {}
-            }
         }
     }
     class VideoInfo {
+        Title: RenderCode
         Url: string
         ID: string
         Page: Document
@@ -441,13 +494,20 @@
         getComment: () => string
         getLock: () => boolean
         getFileName: () => string;
-        constructor(ID: string, Name?: string , Author?: string) {
+        constructor(ID: string, Name?: string, Author?: string) {
+            this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-解析模块' }
             this.ID = ID.toLowerCase()
             this.Name = Name ?? '视频标题获取失败'
             this.Author = Author ?? '视频作者获取失败'
             this.Url = 'https://' + window.location.hostname + '/videos/' + this.ID
             this.Exist = false
             this.Private = false
+            this.getAuthor = function () {
+                return this.Author.trim().replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
+            }
+            this.getName = function () {
+                return this.Name.trim().replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
+            }
             return this;
         }
         async init(cooike: object = {}) {
@@ -485,25 +545,33 @@
                                     }
                                 })
                             } catch (error) {
-                                PluginTips.warning('解析模块', error.toString())
+                                PluginTips.warning({
+                                    title: this.Title,
+                                    content: {
+                                        nodeType: 'p',
+                                        childs: error.toString()
+                                    }
+                                })
                                 return ''
                             }
                             return commentsNode.map((element: Element) => (element as HTMLElement).innerText).join('\n')
                         }
                     }
                 }
-                this.getAuthor = function () {
-                    return this.Author.trim().replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
-                }
-                this.getName = function () {
-                    return this.Name.trim().replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
-                }
             } catch (error) {
-                PluginTips.warning('解析模块', '视频信息解析失败：' + error.toString(), true)
+                PluginTips.warning({
+                    title: this.Title,
+                    content: {
+                        nodeType: 'p',
+                        childs: `视频信息解析失败：${error.toString()}`
+                    },
+                    wait: true
+                })
             }
         }
     }
     class pluginUI extends React.Component {
+        Title: RenderCode
         showCondition: boolean
         declare state: {
             style: any
@@ -516,6 +584,7 @@
         constructor(props: any) {
             super(props)
             this.showCondition = false
+            this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-插件UI' }
             this.state = {
                 style: {
                     base: { cursor: 'pointer' },
@@ -669,6 +738,7 @@
     }
     class pluginControlPanel extends React.Component {
         Initialize: boolean
+        Title: RenderCode
         Cookies: string
         synclistener: Array<any>
         Aria2WebSocket: WebSocket
@@ -680,6 +750,7 @@
             DownloadType: DownloadType,
             DownloadDir: string,
             DownloadProxy: string,
+            Downloaded: Array<string>,
             Aria2Type: APIType,
             Aria2Path: string,
             Aria2Token: string,
@@ -689,10 +760,12 @@
         }
         constructor(props: any) {
             super(props)
+            this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-选项' }
             this.Cookies = GM_getValue('Cookies', document.cookie)
             this.Initialize = GM_getValue('Initialize', false)
             this.synclistener = []
             this.state = {
+                Downloaded: GM_getValue('Downloaded', []),
                 Async: GM_getValue('Async', false),
                 AutoRefresh: GM_getValue('AutoRefresh', false),
                 CheckDownloadLink: GM_getValue('CheckDownloadLink', true),
@@ -732,16 +805,25 @@
                 this.Initialize = true
                 GM_setValue('Initialize', this.Initialize)
             }
-            if (document.querySelector('.user-btn') != null || this.Cookies == null) {
+            if (document.querySelector('.user-btn') != null) {
                 this.getCookies()
             }
         }
         getCookies() {
             try {
                 GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
-                    let newCookies = document.cookie
+                    let newCookies = document.cookie.trim()
                     if (error) {
-                        PluginTips.warning('注意', '获取账号信息失败！<br />如需下载私有(上锁)视频，请尝试使用 Tampermonkey Beta 或 任何支持获取HttpOnly Cookie的脚本加载器(注:支持GM_cookie函数) 载入本脚本。<br />错误：' + error.toString(), true)
+                        PluginTips.warning({
+                            title: this.Title,
+                            content: {
+                                nodeType: 'p',
+                                childs: `获取账号信息失败！<br />
+                                如需下载私有(上锁)视频，需要使用 <a href="https://docs.scriptcat.org/">ScriptCat</a> 或 <a href="https://www.tampermonkey.net/index.php?#download_gcal">Tampermonkey Beta</a> 载入本脚本。<br />
+                                错误：${error}`
+                            },
+                            wait: true
+                        })
                     } else {
                         for (let index = 0; index < list.length; index++) {
                             const Cookie = list[index];
@@ -749,12 +831,22 @@
                         }
                         if (newCookies != this.Cookies) {
                             this.Cookies = newCookies
-                            GM_setValue('Cookies', this.Cookies)
+                            PluginControlPanel.configChange({ name: "Cookies", value: this.Cookies });
                         }
                     }
                 })
             } catch (error) {
-                PluginTips.warning('注意', '获取账号信息失败！<br />请检查脚本加载器是否支持获取Cookies！<br /> <a href="https://www.tampermonkey.net/documentation.php"> 参考文档 <a/> <br />错误：' + error.toString(), true)
+                PluginTips.warning({
+                    title: this.Title,
+                    content: {
+                        nodeType: 'p',
+                        childs: `获取账号信息失败！<br />
+                        请检查脚本加载器是否支持获取Cookies！<br />
+                        或使用 <a href="https://docs.scriptcat.org/">ScriptCat</a> 或 <a href="https://www.tampermonkey.net/index.php?#download_gcal">Tampermonkey Beta</a> 载入本脚本。 <br />
+                        错误：${error}`
+                    },
+                    wait: true
+                })
             }
         }
         show() {
@@ -813,7 +905,13 @@
         }
         async ConnectionAria2(type: APIType) {
             let url = APIType[type] + '://' + this.state.Aria2Path + '/jsonrpc'
-            PluginTips.info('Aria2', '正在连接...')
+            PluginTips.info({
+                title: this.Title,
+                content: {
+                    nodeType: 'p',
+                    childs: `正在连接Aria2...`
+                }
+            })
             try {
                 switch (APIType[type]) {
                     case APIType[APIType.http]:
@@ -831,10 +929,23 @@
                             ]
                         }))
                         if (response['result'] != null) {
-                            PluginTips.success('Aria2', '连接成功!')
+                            PluginTips.success({
+                                title: this.Title,
+                                content: {
+                                    nodeType: 'p',
+                                    childs: `Aria2连接成功!`
+                                }
+                            })
                             PluginUI.downloadSwitch(true)
                         } else {
-                            PluginTips.success('Aria2', '连接失败, 请检查是否授权脚本访问Aria2RPC地址, 或者是否已经启动Aria2。<br />以及Aria2配置是否正确!' , true)
+                            PluginTips.warning({
+                                title: this.Title,
+                                content: {
+                                    nodeType: 'p',
+                                    childs: `连接失败, 请检查是否授权脚本访问Aria2RPC地址, 或者是否已经启动Aria2。<br />以及Aria2配置是否正确!`
+                                },
+                                wait: true
+                            })
                             PluginUI.downloadSwitch(false)
                         }
                         break
@@ -845,7 +956,13 @@
                         this.Aria2WebSocket.onmessage = wsmessage
                         this.Aria2WebSocket.onclose = wsclose
                         function wsopen() {
-                            PluginTips.success('Aria2', '连接成功!')
+                            PluginTips.success({
+                                title: { nodeType: 'h2', childs: 'Iwara批量下载工具-选项' },
+                                content: {
+                                    nodeType: 'p',
+                                    childs: `Aria2连接成功!`
+                                }
+                            })
                             PluginUI.downloadSwitch(true)
                         }
                         function wsmessage() {
@@ -853,14 +970,28 @@
                         }
                         function wsclose() {
                             PluginControlPanel.Aria2WebSocket = null
-                            PluginTips.warning('Aria2', 'Aria2 连接断开! <br />请检查Aria2 有关配置是否正确!', true)
+                            PluginTips.warning({
+                                title: { nodeType: 'h2', childs: 'Iwara批量下载工具-选项' },
+                                content: {
+                                    nodeType: 'p',
+                                    childs: `连接失败, Aria2 连接断开! <br />请检查Aria2 有关配置是否正确!`
+                                },
+                                wait: true
+                            })
                         }
                         break
                     default:
                         throw new Error('未知的下载模式!')
                 }
             } catch (err) {
-                PluginTips.warning('Aria2', '连接 Aria2 时出现错误! <br />请检查Aria2 有关配置是否正确! <br />' + err, true)
+                PluginTips.warning({
+                    title: { nodeType: 'h2', childs: 'Iwara批量下载工具-选项' },
+                    content: {
+                        nodeType: 'p',
+                        childs: `连接失败, Aria2 连接断开! <br />请检查Aria2 有关配置是否正确!`
+                    },
+                    wait: true
+                })
             }
         }
         configChange(e: any) {
@@ -981,29 +1112,29 @@
                                 onClick: () => this.configChange({ name: 'AutoRefresh', value: !this.state.AutoRefresh })
                             }
                             ]
-                            }, {
-                                nodeType: 'div',
-                                style: this.state.style.Line,
-                                childs: [{
-                                    nodeType: 'label',
-                                    style: this.state.style.inputLabel,
-                                    childs: '检查是否存在可能的高画质下载链接：',
-                                    title: '有一定概率误判'
-                                },
-                                {
-                                    nodeType: 'input',
-                                    name: 'CheckDownloadLink',
-                                    type: 'button',
-                                    style: this.state.style.input,
-                                    attribute: {
-                                        switch: this.state.CheckDownloadLink ? 'off' : 'on'
-                                    },
-                                    value: this.state.CheckDownloadLink ? '开启' : '关闭',
-                                    className: 'switchButton',
-                                    onClick: () => this.configChange({ name: 'CheckDownloadLink', value: !this.state.CheckDownloadLink })
-                                }
-                                ]
+                        }, {
+                            nodeType: 'div',
+                            style: this.state.style.Line,
+                            childs: [{
+                                nodeType: 'label',
+                                style: this.state.style.inputLabel,
+                                childs: '检查是否存在可能的高画质下载链接：',
+                                title: '有一定概率误判'
                             },
+                            {
+                                nodeType: 'input',
+                                name: 'CheckDownloadLink',
+                                type: 'button',
+                                style: this.state.style.input,
+                                attribute: {
+                                    switch: this.state.CheckDownloadLink ? 'off' : 'on'
+                                },
+                                value: this.state.CheckDownloadLink ? '开启' : '关闭',
+                                className: 'switchButton',
+                                onClick: () => this.configChange({ name: 'CheckDownloadLink', value: !this.state.CheckDownloadLink })
+                            }
+                            ]
+                        },
                         this.state.DownloadType != DownloadType.others ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
@@ -1306,6 +1437,15 @@
         .Progress :after{
             content: attr(value)"%";
         }
+        .tipsButton {
+            border: none;
+            padding: 6px 18px;
+            margin: 2px 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            float: right;
+            transition: border 0.25s linear, color 0.25s linear, background-color 0.25s linear;
+        }
         .tipsActions {
             width: 100%;
             max-width: 768px;
@@ -1477,19 +1617,24 @@
     })
     sourceRender({
         nodeType: 'div',
-        attribute: {
+        attributes: {
             id: 'PluginControlPanel'
         },
         parent: document.body
     })
     sourceRender({
         nodeType: 'div',
-        attribute: {
+        attributes: {
             id: 'PluginUI',
             style: 'display: inline-block;'
         },
         parent: document.querySelector('#user-links')
     })
+
+    let site = `https://${window.location.hostname}`
+    let login = `<a href="${site}/user/login" target="_blank">登录</a>`
+    let signin = `<a href="${site}/user/register" target="_blank">注册</a>`
+
     let VideoList = document.querySelectorAll('.node-video')
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'))
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'))
@@ -1530,26 +1675,53 @@
         if (ID != '' && (ID.length > 15 && ID.length < 19)) {
             await ParseDownloadAddress(ID)
         } else {
-            PluginTips.warning('Iwara批量下载工具','无法解析出视频ID!')
+            PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: '无法解析出视频ID!'
+                }
+            })
         }
     }
     async function DownloadSelected() {
-        PluginTips.info('Iwara批量下载工具', '开始解析...')
+        PluginTips.info({
+            content: {
+                nodeType: 'p',
+                childs: '开始解析...'
+            }
+        })
         let List = document.querySelectorAll('.selectButton[checked="true"]')
         if (PluginControlPanel.state.Async) {
             List.forEach(async (element: Element, index: number) => {
                 await ParseDownloadAddress(ParseVideoID(element))
-                if (index == List.length - 1) PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
+                if (index == List.length - 1) PluginTips.success({
+                    content: {
+                        nodeType: 'p',
+                        childs: '已全部解析完成!'
+                    },
+                    wait: true
+                })
             })
         } else {
             for (let index = 0; index < List.length; index++) {
                 await ParseDownloadAddress(ParseVideoID(List[index]))
             }
-            PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
+            PluginTips.success({
+                content: {
+                    nodeType: 'p',
+                    childs: '已全部解析完成!'
+                },
+                wait: true
+            })
         }
     }
     async function DownloadAll() {
-        PluginTips.info('Iwara批量下载工具', '正在解析...')
+        PluginTips.info({
+            content: {
+                nodeType: 'p',
+                childs: '开始解析...'
+            }
+        })
         if (document.querySelector('#block-views-videos-block-2') != null) {
             if (document.querySelector('#block-views-videos-block-2 *.more-link') != null) {
                 await GetAllData((document.querySelector('.more-link>a') as HTMLLinkElement).href, [], window.location.href)
@@ -1558,13 +1730,25 @@
                 if (PluginControlPanel.state.Async) {
                     videoList.forEach(async (element: Element, index: number) => {
                         await ParseDownloadAddress(ParseVideoID(element))
-                        if (index == videoList.length - 1) PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
+                        if (index == videoList.length - 1) PluginTips.success({
+                            content: {
+                                nodeType: 'p',
+                                childs: '已全部解析完成!'
+                            },
+                            wait: true
+                        })
                     })
                 } else {
                     for (let index = 0; index < videoList.length; index++) {
                         await ParseDownloadAddress(ParseVideoID(videoList[index]))
                     }
-                    PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
+                    PluginTips.success({
+                        content: {
+                            nodeType: 'p',
+                            childs: '已全部解析完成!'
+                        },
+                        wait: true
+                    })
                 }
             }
         } else {
@@ -1581,7 +1765,13 @@
                     if (videoListPage.querySelectorAll('.pager-next').length != 0) {
                         await GetAllData((videoListPage.querySelector('.pager-next>a') as HTMLLinkElement).href, data, referrer)
                     } else {
-                        PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
+                        PluginTips.success({
+                            content: {
+                                nodeType: 'p',
+                                childs: '已全部解析完成!'
+                            },
+                            wait: true
+                        })
                     }
                 }
             })
@@ -1592,7 +1782,13 @@
             if (videoListPage.querySelectorAll('.pager-next').length != 0) {
                 await GetAllData((videoListPage.querySelector('.pager-next>a') as HTMLLinkElement).href, data, referrer)
             } else {
-                PluginTips.success('Iwara批量下载工具', '已全部解析完成!', true)
+                PluginTips.success({
+                    content: {
+                        nodeType: 'p',
+                        childs: '已全部解析完成!'
+                    },
+                    wait: true
+                })
             }
         }
     }
@@ -1609,7 +1805,7 @@
         }
         return false
     }
-    async function ParseDownloadAddress(Data: string) {
+    async function ParseDownloadAddress(Data: string, downloadedCheck: boolean = true) {
         let videoInfo = new VideoInfo(Data)
         for (const item of VideoList) {
             if (item?.getAttribute('linkdata')?.indexOf(Data) != -1) {
@@ -1617,29 +1813,89 @@
                 break
             }
         }
+
+        let videoLink = `<a href="${videoInfo.Url}" ${videoInfo.getName() != null ? `title="${videoInfo.getName()}"` : ''} target="_blank" >${videoInfo.getName() ?? '→ 点击此处，进入视频页面 ←'}</a> <br />`
+
+        if (downloadedCheck && PluginControlPanel.state.Downloaded.includes(videoInfo.ID)) {
+            return PluginTips.dialog({
+                content: {
+                    nodeType: 'p',
+                    childs: `${videoLink} 查询到下载记录, 是否重新下载?`
+                },
+                id: videoInfo.ID,
+                wait: true
+            })
+        }
+
         await videoInfo.init()
-        if (videoInfo.Exist) {
-            if (videoInfo.Private) {
-                let TipsText = '检测到无权限访问的私有(上锁)视频! <br />'
-                if (document.querySelector('.btn.btn-info.btn-sm.user') == null) {
-                    TipsText += '请<a href="https://' + window.location.hostname + '/user/login" target="_blank" >登录</a>或<a href="https://' + window.location.hostname + '/user/register" target="_blank">注册</a>后进入视频页面与作者成为好友获得访问权限。<br />'
-                } else {
-                    TipsText += '请进入视频页面与作者成为好友获得访问权限。<br />'
-                }
-                PluginTips.warning('警告', TipsText + '<a href="' + videoInfo.Url + '" target="_blank" > → 点击此处，进入视频页面 ← </a>', true)
-            } else {
-                if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
-                    PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />发现疑似第三方高画质下载链接,请手动处理!', true)
-                } else {
-                    if (videoInfo.getDownloadQuality() != 'Source') {
-                        PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />没有解析到原画下载地址,请手动处理!', true)
-                    } else {
-                        SendDownloadRequest(videoInfo, PluginControlPanel.Cookies)
+
+        videoLink = `<a href="${videoInfo.Url}" ${videoInfo.getName() != null ? `title="${videoInfo.getName()}"` : ''} target="_blank" >${videoInfo.getName() ?? '→ 点击此处，进入视频页面 ←'}</a> <br />`
+
+        if (!videoInfo.Exist) {
+            return PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: `${videoLink}未能获取到相关信息，请检查视频是否存在。`
+                },
+                wait: true
+            })
+        }
+
+        if (videoInfo.Private) {
+            return PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: `检测到无权限访问的私有(上锁)视频! <br />
+                    ${document.querySelector('.btn.btn-info.btn-sm.user') == null ? `请${login}或${signin}后进入视频页面与作者成为好友获得访问权限。<br />` : '请进入视频页面与作者成为好友获得访问权限。<br />'}
+                    ${videoLink}`
+                },
+                wait: true
+            })
+        }
+
+        if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
+            return PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: `${videoLink}发现疑似第三方高画质下载链接,请手动处理!`
+                },
+                wait: true
+            })
+        }
+
+        if (videoInfo.getDownloadQuality() != 'Source') {
+            return PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: `${videoLink} 没有解析到原画下载地址,请手动处理!`
+                },
+                wait: true
+            })
+        }
+
+
+
+        SendDownloadRequest(videoInfo, PluginControlPanel.Cookies)
+        PluginControlPanel.configChange({ name: "Downloaded", value: PluginControlPanel.state.Downloaded.concat([videoInfo.ID]) });
+    }
+    function SendDownloadRequest(Info: VideoInfo, Cookie: string) {
+        switch (DownloadType[PluginControlPanel.state.DownloadType]) {
+            case DownloadType[DownloadType.aria2]:
+                aria2Download(Info, Cookie)
+                break
+            case DownloadType[DownloadType.default]:
+                defaultDownload(Info)
+                break
+            case DownloadType[DownloadType.others]:
+            default:
+                PluginTips.info({
+                    content: {
+                        nodeType: 'p',
+                        childs: `<a href="${Info.Url}" ${Info.getName() != null ? `title="${Info.getName()}"` : ''} target="_blank" >${Info.getName() ?? '→ 点击此处，进入视频页面 ←'}</a> <br />下载请求已提交给浏览器!`
                     }
-                }
-            }
-        } else {
-            PluginTips.warning('警告', '<a href="' + videoInfo.Url + '" title="' + videoInfo.getName() + '" target="_blank" >' + videoInfo.getName() + '</a> <br />未能获取到相关信息，请检查视频是否存在。', true)
+                })
+                GM_openInTab(Info.getDownloadUrl(), { active: true, insert: true, setParent: true })
+                break
         }
     }
     function defaultDownload(Info: VideoInfo) {
@@ -1650,11 +1906,22 @@
                 saveAs: false,
                 onload: function () {
                     PluginTips.downloadComplete(ID)
-                    PluginTips.success('Iwara批量下载工具', Name + ' 下载完成!')
+                    PluginTips.success({
+                        content: {
+                            nodeType: 'p',
+                            childs: `${Name} 下载完成!`
+                        }
+                    })
                 },
                 onerror: function (error: any) {
                     PluginTips.downloadComplete(ID)
-                    PluginTips.warning('警告', Name + ' 下载失败! <br />错误报告: ' + JSON.stringify(error))
+                    return PluginTips.warning({
+                        content: {
+                            nodeType: 'p',
+                            childs: `${Name} 没下载失败! <br />错误报告: ${JSON.stringify(error)}`
+                        },
+                        wait: true
+                    })
                 },
                 onprogress: function (progress: { lengthComputable: any, position: number, totalSize: number }) {
                     if (progress.lengthComputable) {
@@ -1663,23 +1930,32 @@
                 },
                 ontimeout: function () {
                     PluginTips.downloadComplete(ID)
-                    PluginTips.warning('警告', Name + ' 下载超时! ')
+                    return PluginTips.warning({
+                        content: {
+                            nodeType: 'p',
+                            childs: `${Name} 下载超时! `
+                        },
+                        wait: true
+                    })
                 }
             }
             if (PluginTips.DownloadingQueue.length() < 4) {
                 PluginTips.DownloadingQueue.push({ id: ID, name: Name, task: Task })
                 GM_download(Task)
                 if (GM_info.downloadMode == 'native') {
-                    PluginTips.progress(Name + ' 下载中...', {
-                        id: ID
-                    })
+                    PluginTips.progress({ title: { nodeType: 'h2', childs: `${Name} 下载中...` }, id: ID })
                 } else {
-                    PluginTips.info('Iwara批量下载工具', Name + ' 已开始下载!')
+                    PluginTips.info({
+                        content: {
+                            nodeType: 'p',
+                            childs: `${Name} 已开始下载!`
+                        }
+                    })
                 }
             } else {
                 PluginTips.WaitingQueue.push({ id: ID, name: Name, task: Task })
             }
-        }(Info.ID, Info.getName(), Info.getFileName(), Info.getDownloadUrl()))
+        }(Info.ID, `<a href="${Info.Url}" ${Info.getName() != null ? `title="${Info.getName()}"` : ''} target="_blank" >${Info.getName() ?? '→ 点击此处，进入视频页面 ←'}</a>`, Info.getFileName(), Info.getDownloadUrl()))
     }
     function aria2Download(Info: VideoInfo, Cookies: string) {
         (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
@@ -1711,28 +1987,18 @@
                     PluginControlPanel.Aria2WebSocket.send(json)
                     break;
             }
-            PluginTips.info('Iwara批量下载工具', '已将 ' + Name + ' 的下载地址推送到Aria2!')
-        }(Info.ID, Info.getName(), Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()))
-    }
-    function SendDownloadRequest(Info: VideoInfo, Cookie: string) {
-        switch (DownloadType[PluginControlPanel.state.DownloadType]) {
-            case DownloadType[DownloadType.aria2]:
-                aria2Download(Info, Cookie)
-                break
-            case DownloadType[DownloadType.default]:
-                defaultDownload(Info)
-                break
-            case DownloadType[DownloadType.others]:
-            default:
-                PluginTips.info('Iwara批量下载工具', '已将下载请求提交给浏览器!')
-                GM_openInTab(Info.getDownloadUrl(), { active: true, insert: true, setParent: true })
-                break
-        }
+            PluginTips.info({
+                content: {
+                    nodeType: 'p',
+                    childs: `${Name} 下载任务已推送到Aria2!`
+                }
+            })
+        }(Info.ID, `<a href="${Info.Url}" ${Info.getName() != null ? `title="${Info.getName()}"` : ''} target="_blank" >${Info.getName() ?? '→ 点击此处，进入视频页面 ←'}</a> <br />`, Info.getFileName(), Info.getAuthor(), Cookies, Info.getDownloadUrl()))
     }
     function replaceVar(data: string) {
         let gVar = [
             { 'Y': new Date().getFullYear() },
-            { 'M': new Date().getMonth()+1 },
+            { 'M': new Date().getMonth() + 1 },
             { 'D': new Date().getDate() },
             { 'h': new Date().getHours() },
             { 'm': new Date().getMinutes() },
@@ -1752,73 +2018,99 @@
 
     for (let index = 0; index < VideoList.length; index++) {
         const video = VideoList[index];
-        if (!video.classList.contains('node-full')) {
-            let videoLink = video.querySelector('.even>a') as HTMLLinkElement
-            if (videoLink != null) {
-                video.setAttribute('linkdata', videoLink.href ?? (video.querySelector('.title>a') as HTMLLinkElement).href)
-                videoLink.removeAttribute('href')
-                if (video.querySelector('img[src*="/"]') == null) {
-                    videoLink.append(sourceRender({
-                        nodeType: 'img',
-                        attribute: {
-                            src: "https://oreno3d.com/storage/img/noimage.png"
-                        }
-                    }))
-                }
-                if (video.querySelector('.title') == null) {
-                    sourceRender({
-                        nodeType: 'h6',
-                        className: 'stitle',
-                        childs: {
-                            nodeType: 'a',
-                            attribute: {
-                                href: video.getAttribute('linkdata')
-                            },
-                            innerText: video.getAttribute('title') == '' ? video.getAttribute('data-original-title') : video.getAttribute('title')
-                        },
-                        parent: video as HTMLElement
-                    })
-                }
+        if (video.classList.contains('node-full')) {
+            continue;
+        }
+        let videoLink = (video.querySelector('.even>a') as HTMLLinkElement)
+        if (videoLink != null) {
+            video.setAttribute('linkdata', videoLink.href ?? (video.querySelector('.title>a') as HTMLLinkElement).href)
+            videoLink.removeAttribute('href')
+            if (video.querySelector('img[src*="/"]') == null) {
+                videoLink.append(sourceRender({
+                    nodeType: 'img',
+                    attributes: {
+                        src: "https://oreno3d.com/storage/img/noimage.png"
+                    }
+                }))
             }
-            if (video.querySelector('.field-name-field-video-url') != null) {
-                PluginTips.warning('Iwara批量下载工具', '因视频非本站源跳过该视频: ' + (video.querySelector('.title>a') as HTMLElement)?.innerText ?? (video.querySelector('.stitle>a') as HTMLElement)?.innerText ?? video.getAttribute('data-original-title'))
-            } else {
-                (video as HTMLElement).ondblclick = () => {
-                    video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false')
-                }
-                video.setAttribute('checked', 'false')
-                video.classList.add('selectButton')
-                
+            if (video.querySelector('.title') == null) {
+                sourceRender({
+                    nodeType: 'h6',
+                    className: 'stitle',
+                    childs: {
+                        nodeType: 'a',
+                        attributes: {
+                            href: video.getAttribute('linkdata')
+                        },
+                        innerText: video.getAttribute('title') == '' ? video.getAttribute('data-original-title') : video.getAttribute('title')
+                    },
+                    parent: video as HTMLElement
+                })
             }
         }
+        if (video.querySelector('.field-name-field-video-url') != null) {
+            PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: `因视频非本站源跳过该视频:${(video.querySelector('.title>a') as HTMLElement)?.innerText ?? (video.querySelector('.stitle>a') as HTMLElement)?.innerText ?? video.getAttribute('data-original-title')}`
+                }
+            })
+            continue
+        }
+
+        (video as HTMLElement).ondblclick = () => {
+            video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false')
+        }
+        video.setAttribute('checked', 'false')
+        video.classList.add('selectButton')
     }
 
-    if (document.querySelectorAll('.selectButton').length > 0) {
-        try {
-            switch (PluginControlPanel.state.DownloadType) {
-                case DownloadType.aria2:
-                    PluginControlPanel.ConnectionAria2(PluginControlPanel.state.Aria2Type)
-                    break
-                case DownloadType.default:
-                    PluginTips.warning('Iwara批量下载工具', '该下载模式为实验性模式，无法保证下载稳定性！')
-                    break
-                case DownloadType.others:
-                    break
-                default:
-                    throw new Error('未知的下载模式!')
+    if (document.querySelectorAll('.selectButton').length == 0 && window.location.href.search('iwara.tv/videos') != -1 && PluginControlPanel.state.AutoRefresh) {
+        PluginTips.warning({
+            content: {
+                nodeType: 'p',
+                childs: '未找到可供下载的视频，10秒后尝试重新加载页面...(本功能可在设置中关闭或开启)'
+            },
+            wait: true
+        })
+        setTimeout(() => {
+            window.location.reload();
+        }, 10000)
+    }
+
+    try {
+        switch (PluginControlPanel.state.DownloadType) {
+            case DownloadType.aria2:
+                PluginControlPanel.ConnectionAria2(PluginControlPanel.state.Aria2Type)
+                break
+            case DownloadType.default:
+
+                PluginTips.warning({
+                    content: {
+                        nodeType: 'p',
+                        childs: '该下载模式为实验性模式，无法保证下载稳定性！'
+                    }
+                })
+                break
+            case DownloadType.others:
+                break
+            default:
+                throw new Error('未知的下载模式!')
+        }
+        PluginUI.downloadSwitch(true)
+        PluginTips.success({
+            content: {
+                nodeType: 'p',
+                childs: '加载完成!'
             }
-            PluginUI.downloadSwitch(true)
-            PluginTips.success('Iwara批量下载工具', '加载完成!')
-        }
-        catch (error) {
-            PluginTips.warning('Iwara批量下载工具', '加载失败! <br /> 错误信息: ' + error)
-        }
-    } else {
-        if (window.location.href.indexOf('iwara.tv/videos') > -1 && PluginControlPanel.state.AutoRefresh) {
-            PluginTips.warning('Iwara批量下载工具', '未找到可供下载的视频，10秒后尝试重新加载页面...(本功能可在设置中关闭或开启)', true)
-            setTimeout(() => {
-                window.location.reload();
-            }, 10000)
-        }
+        })
+    }
+    catch (error) {
+        PluginTips.warning({
+            content: {
+                nodeType: 'p',
+                childs: `加载失败! <br /> 错误信息: ${error}`
+            }
+        })
     }
 })()

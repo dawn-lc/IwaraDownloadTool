@@ -7,10 +7,10 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.111
+// @version           2.1.141
 // @author            dawn-lc
 // @license           Apache-2.0
-// @copyright         2022, Dawnlc (https://dawnlc.me/)
+// @copyright         2023, Dawnlc (https://dawnlc.me/)
 // @source            https://github.com/dawn-lc/user.js
 // @supportURL        https://github.com/dawn-lc/user.js/issues
 // @updateURL         https://github.com/dawn-lc/user.js/raw/master/dist/IwaraDownloadTool.mata.js
