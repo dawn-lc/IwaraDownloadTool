@@ -1,14 +1,21 @@
 interface RenderCode {
-    nodeType: string;
-    childs?: RenderCode | RenderCode[] | HTMLElement | HTMLElement[] | string | string[];
-    className?: string | Array<string>;
-    attribute?: object;
+    nodeType: String;
+    childs?: RenderCode | RenderCode[] | HTMLElement | HTMLElement[] | String | String[] | object;
+    className?: String | String[];
+    attributes?: Object;
     parent?: HTMLElement;
     before?: HTMLElement;
-    innerHTML?: string;
+    innerHTML?: String;
 }
-interface RenderData { 
-    type: string;
+
+interface LogCode {
+    content?: RenderCode;
+    title?: RenderCode;
+    wait?:boolean;
+    id?:String;
+}
+interface RenderData {
+    type: String;
     children?: Array<any>;
     props?: any;
 }
