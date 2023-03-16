@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.150
+// @version           2.1.170
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -41,10 +41,18 @@
         }
         return UUID;
     }
-    function sourceRender(vdata) {
-        if (vdata.nodeType == undefined) {
-            debugger;
+    function sourceRenderChild(RenderDOM, child) {
+        if (child instanceof HTMLElement) {
+            RenderDOM.appendChild(child);
+            return;
         }
+        if (child instanceof String || typeof child == 'string') {
+            RenderDOM.insertAdjacentHTML('beforeend', child);
+            return;
+        }
+        RenderDOM.appendChild(sourceRender(child));
+    }
+    function sourceRender(vdata) {
         let RenderDOM = document.createElement(vdata.nodeType);
         for (const item in vdata) {
             switch (item) {
@@ -65,28 +73,11 @@
                     break;
                 case 'childs':
                     if (vdata.childs instanceof Array) {
-                        vdata.childs.forEach((child) => {
-                            if (child instanceof HTMLElement) {
-                                RenderDOM.appendChild(child);
-                                return;
-                            }
-                            if (child instanceof String || typeof child == 'string') {
-                                RenderDOM.insertAdjacentHTML('beforeend', child);
-                                return;
-                            }
-                            RenderDOM.appendChild(sourceRender(child));
-                        });
-                        break;
+                        vdata.childs.forEach((child) => { sourceRenderChild(RenderDOM, child); });
                     }
-                    if (vdata.childs instanceof HTMLElement) {
-                        RenderDOM.appendChild(vdata.childs);
-                        break;
+                    else {
+                        sourceRenderChild(RenderDOM, vdata.childs);
                     }
-                    if (vdata.childs instanceof String || typeof vdata.childs == 'string') {
-                        RenderDOM.insertAdjacentHTML('beforeend', vdata.childs);
-                        break;
-                    }
-                    RenderDOM.appendChild(sourceRender(vdata.childs));
                     break;
                 case 'parent':
                     vdata.parent.appendChild(RenderDOM);
@@ -291,7 +282,8 @@
     (function (DownloadType) {
         DownloadType[DownloadType["aria2"] = 0] = "aria2";
         DownloadType[DownloadType["default"] = 1] = "default";
-        DownloadType[DownloadType["others"] = 2] = "others";
+        DownloadType[DownloadType["iwaraDownloader"] = 2] = "iwaraDownloader";
+        DownloadType[DownloadType["others"] = 3] = "others";
     })(DownloadType || (DownloadType = {}));
     let APIType;
     (function (APIType) {
@@ -808,7 +800,7 @@
         constructor(props) {
             super(props);
             this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-选项' };
-            this.Cookies = GM_getValue('Cookies', document.cookie);
+            this.Cookies = GM_getValue('Cookies', []);
             this.Initialize = GM_getValue('Initialize', false);
             this.synclistener = [];
             this.state = {
@@ -823,6 +815,8 @@
                 Aria2Type: Number(GM_getValue('Aria2Type', APIType.ws)),
                 Aria2Path: GM_getValue('Aria2Path', '127.0.0.1:6800'),
                 Aria2Token: GM_getValue('Aria2Token', ''),
+                IwaraDownloaderPath: GM_getValue('IwaraDownloaderPath', 'https://127.0.0.1:6800'),
+                IwaraDownloaderToken: GM_getValue('IwaraDownloaderToken', ''),
                 Aria2ID: GM_getValue('Aria2ID', UUID()),
                 FileName: GM_getValue('FileName', '%#TITLE#%[%#ID#%].mp4'),
                 style: {
@@ -859,7 +853,6 @@
         getCookies() {
             try {
                 GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
-                    let newCookies = document.cookie.trim();
                     if (error) {
                         PluginTips.warning({
                             title: this.Title,
@@ -873,15 +866,8 @@
                         });
                     }
                     else {
-                        for (let index = 0; index < list.length; index++) {
-                            const Cookie = list[index];
-                            if (Cookie.httpOnly == true)
-                                newCookies += '; ' + Cookie.name + '=' + Cookie.value;
-                        }
-                        if (newCookies != this.Cookies) {
-                            this.Cookies = newCookies;
-                            PluginControlPanel.configChange({ name: "Cookies", value: this.Cookies });
-                        }
+                        this.Cookies = list;
+                        PluginControlPanel.configChange({ name: "Cookies", value: this.Cookies });
                     }
                 });
             }
@@ -1112,6 +1098,18 @@
                                                 nodeType: 'input',
                                                 name: 'DownloadType',
                                                 type: 'radio',
+                                                value: DownloadType.iwaraDownloader,
+                                                onChange: ({ target }) => this.configChange(target)
+                                            },
+                                            {
+                                                nodeType: 'label',
+                                                style: this.state.style.radioLabel,
+                                                childs: 'IwaraDownloader'
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'DownloadType',
+                                                type: 'radio',
                                                 value: DownloadType.others,
                                                 onChange: ({ target }) => this.configChange(target)
                                             },
@@ -1208,7 +1206,7 @@
                                             }
                                         ]
                                     } : null,
-                                    this.state.DownloadType == DownloadType.aria2 ? {
+                                    this.state.DownloadType == DownloadType.aria2 || this.state.DownloadType == DownloadType.iwaraDownloader ? {
                                         nodeType: 'div',
                                         style: this.state.style.Line,
                                         childs: [{
@@ -1333,6 +1331,41 @@
                                                 name: 'Aria2Token',
                                                 type: 'Password',
                                                 value: this.state.Aria2Token,
+                                                style: this.state.style.input,
+                                                onChange: ({ target }) => this.configChange(target)
+                                            }
+                                        ]
+                                    } : null,
+                                    this.state.DownloadType == DownloadType.iwaraDownloader ? {
+                                        nodeType: 'div',
+                                        style: this.state.style.Line,
+                                        childs: [{
+                                                nodeType: 'label',
+                                                style: this.state.style.inputLabel,
+                                                childs: 'IwaraDownloader 地址:'
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'IwaraDownloaderPath',
+                                                value: this.state.IwaraDownloaderPath,
+                                                style: this.state.style.input,
+                                                onChange: ({ target }) => this.configChange(target)
+                                            }
+                                        ]
+                                    } : null,
+                                    this.state.DownloadType == DownloadType.iwaraDownloader ? {
+                                        nodeType: 'div',
+                                        style: this.state.style.Line,
+                                        childs: [{
+                                                nodeType: 'label',
+                                                style: this.state.style.inputLabel,
+                                                childs: 'IwaraDownloader Token(密钥):'
+                                            },
+                                            {
+                                                nodeType: 'input',
+                                                name: 'IwaraDownloaderToken',
+                                                type: 'Password',
+                                                value: this.state.IwaraDownloaderToken,
                                                 style: this.state.style.input,
                                                 onChange: ({ target }) => this.configChange(target)
                                             }
@@ -1733,7 +1766,8 @@
         'alfafile',
         'drv\.ms',
         'onedrive',
-        'pixeldrain\.com'
+        'pixeldrain\.com',
+        'gigafile\.nu'
     ];
     function ParseVideoID(data) {
         if (data.getAttribute('linkdata') != null) {
@@ -1954,10 +1988,19 @@
     function SendDownloadRequest(Info, Cookie) {
         switch (DownloadType[PluginControlPanel.state.DownloadType]) {
             case DownloadType[DownloadType.aria2]:
-                aria2Download(Info, Cookie);
+                let Cookies = '';
+                for (let index = 0; index < Cookie.length; index++) {
+                    const c = Cookie[index];
+                    if (c.httpOnly == true)
+                        Cookies += '; ' + c.name + '=' + c.value;
+                }
+                aria2Download(Info, Cookies);
                 break;
             case DownloadType[DownloadType.default]:
                 defaultDownload(Info);
+                break;
+            case DownloadType[DownloadType.iwaraDownloader]:
+                iwaraDownloaderDownload(Info, Cookie);
                 break;
             case DownloadType[DownloadType.others]:
             default:
@@ -2031,6 +2074,44 @@
                 PluginTips.WaitingQueue.push({ id: ID, name: Name, task: Task });
             }
         }(Info.ID, `<a href="${Info.Url}" ${Info.getName() != null ? `title="${Info.getName()}"` : ''} target="_blank" >${Info.getName() ?? '→ 点击此处，进入视频页面 ←'}</a>`, Info.getFileName(), Info.getDownloadUrl()));
+    }
+    function iwaraDownloaderDownload(Info, Cookies) {
+        (async function (Url, ID, Author, Name, FileName, UploadTime, Info, Tag, DownloadUrl) {
+            let json = Object.assign({
+                'ver': 1,
+                'code': 'add',
+                'data': {
+                    'Source': ID,
+                    'author': Author,
+                    'name': Name,
+                    /*'path': `${replaceVar(PluginControlPanel.state.DownloadDir).replace('%#AUTHOR#%', Author)}/${FileName}`,*/
+                    'downloadTime': new Date(),
+                    'uploadTime': UploadTime,
+                    'downloadUrl': DownloadUrl,
+                    'downloadCookies': Cookies,
+                    'info': Info,
+                    'tag': Tag
+                }
+            }, PluginControlPanel.state.IwaraDownloaderToken.length != 0 ? { 'token': PluginControlPanel.state.IwaraDownloaderToken } : {});
+            console.log(json);
+            let r = await post(PluginControlPanel.state.IwaraDownloaderPath, JSON.stringify(json));
+            if (r.code == 'OK') {
+                PluginTips.info({
+                    content: {
+                        nodeType: 'p',
+                        childs: `<a href="${Url}" ${Name != null ? `title="${Name}"` : ''} target="_blank" >${Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br /> 下载任务已推送到IwaraDownloader`
+                    }
+                });
+            }
+            else {
+                PluginTips.warning({
+                    content: {
+                        nodeType: 'p',
+                        childs: `<a href="${Url}" ${Name != null ? `title="${Name}"` : ''} target="_blank" >${Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br /> 下载失败 ${r.msg} `
+                    }
+                });
+            }
+        }(Info.Url, Info.ID, Info.getAuthor(), Info.getName(), Info.getFileName(), Info.UploadTime, Info.getComment(), [], Info.getDownloadUrl()));
     }
     function aria2Download(Info, Cookies) {
         (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
@@ -2166,6 +2247,8 @@
                         childs: '该下载模式为实验性模式，无法保证下载稳定性！'
                     }
                 });
+                break;
+            case DownloadType.iwaraDownloader:
                 break;
             case DownloadType.others:
                 break;

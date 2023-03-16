@@ -1,4 +1,5 @@
 (async function () {
+
     function UUID() {
         let UUID = '';
         for (let index = 0; index < 8; index++) {
@@ -6,10 +7,18 @@
         }
         return UUID
     }
-    function sourceRender(vdata: RenderCode): HTMLElement {
-        if (vdata.nodeType == undefined) {
-            debugger
+    function sourceRenderChild (RenderDOM: HTMLElement,child: HTMLElement | String | RenderCode | object) {
+        if (child instanceof HTMLElement) {
+            RenderDOM.appendChild(child)
+            return
         }
+        if (child instanceof String || typeof child == 'string') {
+            RenderDOM.insertAdjacentHTML('beforeend', child as string)
+            return
+        }
+        RenderDOM.appendChild(sourceRender(child as RenderCode))
+    }
+    function sourceRender(vdata: RenderCode): HTMLElement {
         let RenderDOM: HTMLElement = document.createElement(vdata.nodeType as string)
         for (const item in vdata) {
             switch (item) {
@@ -29,28 +38,10 @@
                     break
                 case 'childs':
                     if (vdata.childs instanceof Array) {
-                        vdata.childs.forEach((child: HTMLElement | String | RenderCode) => {
-                            if (child instanceof HTMLElement) {
-                                RenderDOM.appendChild(child)
-                                return
-                            }
-                            if (child instanceof String || typeof child == 'string') {
-                                RenderDOM.insertAdjacentHTML('beforeend', child as string)
-                                return
-                            }
-                            RenderDOM.appendChild(sourceRender(child))
-                        })
-                        break
+                        vdata.childs.forEach((child)=>{sourceRenderChild(RenderDOM,child)})
+                    } else {
+                        sourceRenderChild(RenderDOM,vdata.childs)
                     }
-                    if (vdata.childs instanceof HTMLElement) {
-                        RenderDOM.appendChild(vdata.childs)
-                        break
-                    }
-                    if (vdata.childs instanceof String || typeof vdata.childs == 'string') {
-                        RenderDOM.insertAdjacentHTML('beforeend', vdata.childs as string)
-                        break
-                    }
-                    RenderDOM.appendChild(sourceRender(vdata.childs as RenderCode))
                     break
                 case 'parent':
                     vdata.parent.appendChild(RenderDOM)
@@ -102,51 +93,25 @@
         }
         return React.createElement(VirtualDOM.type as string, VirtualDOM.props, VirtualDOM.children || undefined);
     }
-    async function get(url: string, parameter: string[] = [], referrer: string = window.location.hostname, headers: object = {}) {
-        url += '?'
-        for (var key in parameter) {
-            url += key + '=' + parameter[key] + '&'
-        }
-        url = url.substring(0, url.length - 1)
-        let responseData: any
+    async function get(url: string, referrer: string = window.location.hostname, headers: object = {}) {
         if (url.split('//')[1].split('/')[0] == window.location.hostname) {
-            responseData = await fetch(url, {
+            return await (await fetch(url, {
                 'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*',
-                    'content-type': 'application/x-www-form-urlencoded',
+                    'accept': 'application/json, text/plain, */*'
                 }, headers),
                 'referrer': referrer,
                 'method': 'GET',
                 'mode': 'cors',
                 'redirect': 'follow',
                 'credentials': 'include'
-            })
-            if (responseData.status >= 200 && responseData.status < 300) {
-                const contentType = responseData.headers.get('Content-Type')
-                if (contentType != null) {
-                    if (contentType.indexOf('text') > -1) {
-                        return await responseData.text()
-                    }
-                    if (contentType.indexOf('form') > -1) {
-                        return await responseData.formData()
-                    }
-                    if (contentType.indexOf('video') > -1) {
-                        return await responseData.blob()
-                    }
-                    if (contentType.indexOf('json') > -1) {
-                        return await responseData.json()
-                    }
-                }
-                return responseData
-            }
+            })).text()
         } else {
-            responseData = await new Promise((resolve, reject) => {
+            let data : any = await new Promise((resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: url,
                     headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*',
-                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json, text/plain, */*'
                     }, headers),
                     onload: function (response: any) {
                         resolve(response)
@@ -155,16 +120,8 @@
                         reject(error)
                     }
                 })
-            })
-            if (responseData.status >= 200 && responseData.status < 300) {
-                let headers = new Map()
-                responseData.responseHeaders.split('\r\n').forEach((element: any) => {
-                    element = element.split(': ')
-                    headers.set(element[0], element[1])
-                })
-                responseData.headers = headers
-                return responseData
-            }
+            }) 
+            return data.responseText
         }
     }
     async function post(url: string, parameter: any, referrer: string = window.location.href) {
@@ -244,6 +201,7 @@
     enum DownloadType {
         aria2,
         default,
+        iwaraDownloader,
         others
     }
     enum APIType {
@@ -480,98 +438,50 @@
         Title: RenderCode
         Url: string
         ID: string
-        Page: Document
         UploadTime: Date
         Name: string | null
+        FileName: string
         Author: string | null
-        Exist: boolean
         Private: boolean
-        Source: Array<any>
-        getAuthor: () => string
-        getName: () => string
+        VideoInfoSource: VideoInfoAPIRawData
+        VideoFileSource: VideoFileAPIRawDataList
         getDownloadQuality: () => string
         getDownloadUrl: () => string
-        getSourceFileName: () => string | null
         getComment: () => string
-        getLock: () => boolean
-        getFileName: () => string;
-        constructor(ID: string, Name?: string, Author?: string) {
+        constructor(ID: string) {
             this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-解析模块' }
             this.ID = ID.toLowerCase()
-            this.Name = Name ?? '视频标题获取失败'
-            this.Author = Author ?? '视频作者获取失败'
-            this.Url = `https://${window.location.hostname}/videos/${this.ID}?language=en`
-            this.Exist = false
-            this.Private = false
-            this.getAuthor = function () {
-                return this.Author.trim().replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
-            }
-            this.getName = function () {
-                return this.Name.trim().replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
-            }
+            this.Url = `https://${window.location.hostname}/video/${this.ID}`
             return this;
         }
-        async init(cooike: object = {}) {
+        async init(Name: string) {
             try {
-                this.Page = parseDom(await get(this.Url, [], window.location.href, cooike))
-                this.Private = this.Page.querySelector('.well') != null
-                this.Exist = this.Page.querySelector('video') != null
-                if (this.Private) {
-                    if (cooike['cooike'] == undefined) {
-                        await this.init({ 'cooike': PluginControlPanel.Cookies })
-                        return
-                    }
-                    this.Exist = true
-                } else {
-                    if (this.Exist) {
-                        let submitted = this.Page.querySelector('.submitted');
-                        this.Author = (submitted.querySelector('a.username') as HTMLElement)?.innerText
-                        this.Name = (submitted.querySelector('h1.title') as HTMLElement)?.innerText
-                        this.UploadTime = new Date(submitted.childNodes[submitted.childNodes.length - 1].textContent.replace('on', '').trim())
-                        this.Source = await get('https://' + window.location.hostname + '/api/video/' + this.ID, [], this.Url, cooike)
-                        this.getFileName = function () {
-                            return replaceVar(PluginControlPanel.state.FileName, this.UploadTime)
-                                .replace('%#TITLE#%', this.getName())
-                                .replace('%#ID#%', this.ID)
-                                .replace('%#AUTHOR#%', this.getAuthor())
-                                .replace('%#SOURCE_NAME#%', this.getSourceFileName())
-                        }
-                        this.getDownloadQuality = function () {
-                            if (this.Source.length == 0) return 'null'
-                            return this.Source[0].resolution
-                        }
-                        this.getDownloadUrl = function () { return decodeURIComponent('https:' + this.Source.find(x => x.resolution == this.getDownloadQuality()).uri) }
-                        this.getSourceFileName = function () { return getQueryVariable(this.getDownloadUrl(), 'file').split('/')[3] }
-                        this.getComment = function () {
-                            let commentsNode: Array<any>
-                            try {
-                                commentsNode = Array.from(this.Page.querySelectorAll(".node-video.node-full > .content > .node-info > .field > .field-items > .field-item"))
-                                Array.from(this.Page.querySelector('#comments').querySelectorAll(".submitted")).map((node) => {
-                                    if ((node.querySelector('a.username') as HTMLElement)?.innerText == this.Author) {
-                                        commentsNode = commentsNode.concat(Array.from(node.parentNode.querySelectorAll('.content > .field > .field-items > .field-item')))
-                                    }
-                                })
-                            } catch (error) {
-                                PluginTips.warning({
-                                    title: this.Title,
-                                    content: {
-                                        nodeType: 'p',
-                                        childs: error.toString()
-                                    }
-                                })
-                                return ''
-                            }
-                            return commentsNode.map((element: Element) => (element as HTMLElement).innerText).join('\n')
-                        }
-                    }
+                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`))
+                this.Name = this.VideoInfoSource.title ?? Name
+                this.Author = this.VideoInfoSource.user.username
+                this.Private = this.VideoInfoSource.private
+                this.UploadTime = new Date(this.VideoInfoSource.createdAt)
+                this.FileName = this.VideoInfoSource.file.name
+                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl))
+                this.getDownloadQuality = function () {
+                    let priority = {
+                        'Source': 3,
+                        '540': 2,
+                        '360': 1
+                    };
+                    return this.VideoFileSource.sort((a,b)=> priority[a.name] - priority[b.name])[0].name
+                }
+                this.getDownloadUrl = function () {
+                    let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality())
+                    return decodeURIComponent('https:' + fileList[Math.floor(Math.random() * fileList.length)].src.download)
                 }
             } catch (error) {
-                PluginTips.warning({
-                    title: this.Title,
+                PluginTips.dialog({
                     content: {
                         nodeType: 'p',
-                        childs: `视频信息解析失败：${error.toString()}`
+                        childs: `<a href="${this.Url}" ${this.Name != null ? `title="${this.Name}"` : ''} target="_blank" >${this.Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br /> 查询到下载记录, 是否重新下载?`
                     },
+                    id: this.ID,
                     wait: true
                 })
             }
@@ -746,7 +656,7 @@
     class pluginControlPanel extends React.Component {
         Initialize: boolean
         Title: RenderCode
-        Cookies: string
+        Cookies: Array<any>
         synclistener: Array<any>
         Aria2WebSocket: WebSocket
         declare state: {
@@ -761,6 +671,8 @@
             Aria2Type: APIType,
             Aria2Path: string,
             Aria2Token: string,
+            IwaraDownloaderPath: string,
+            IwaraDownloaderToken: string,
             Aria2ID: string,
             FileName: string,
             style: any
@@ -768,7 +680,7 @@
         constructor(props: any) {
             super(props)
             this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-选项' }
-            this.Cookies = GM_getValue('Cookies', document.cookie)
+            this.Cookies = GM_getValue('Cookies', [])
             this.Initialize = GM_getValue('Initialize', false)
             this.synclistener = []
             this.state = {
@@ -783,6 +695,8 @@
                 Aria2Type: Number(GM_getValue('Aria2Type', APIType.ws)),
                 Aria2Path: GM_getValue('Aria2Path', '127.0.0.1:6800'),
                 Aria2Token: GM_getValue('Aria2Token', ''),
+                IwaraDownloaderPath: GM_getValue('IwaraDownloaderPath', 'https://127.0.0.1:6800'),
+                IwaraDownloaderToken: GM_getValue('IwaraDownloaderToken', ''),
                 Aria2ID: GM_getValue('Aria2ID', UUID()),
                 FileName: GM_getValue('FileName', '%#TITLE#%[%#ID#%].mp4'),
                 style: {
@@ -819,7 +733,6 @@
         getCookies() {
             try {
                 GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
-                    let newCookies = document.cookie.trim()
                     if (error) {
                         PluginTips.warning({
                             title: this.Title,
@@ -832,14 +745,8 @@
                             wait: true
                         })
                     } else {
-                        for (let index = 0; index < list.length; index++) {
-                            const Cookie = list[index];
-                            if (Cookie.httpOnly == true) newCookies += '; ' + Cookie.name + '=' + Cookie.value
-                        }
-                        if (newCookies != this.Cookies) {
-                            this.Cookies = newCookies
-                            PluginControlPanel.configChange({ name: "Cookies", value: this.Cookies });
-                        }
+                        this.Cookies = list;
+                        PluginControlPanel.configChange({ name: "Cookies", value: this.Cookies });
                     }
                 })
             } catch (error) {
@@ -1066,6 +973,18 @@
                                 nodeType: 'input',
                                 name: 'DownloadType',
                                 type: 'radio',
+                                value: DownloadType.iwaraDownloader,
+                                onChange: ({ target }: any) => this.configChange(target)
+                            },
+                            {
+                                nodeType: 'label',
+                                style: this.state.style.radioLabel,
+                                childs: 'IwaraDownloader'
+                            },
+                            {
+                                nodeType: 'input',
+                                name: 'DownloadType',
+                                type: 'radio',
                                 value: DownloadType.others,
                                 onChange: ({ target }: any) => this.configChange(target)
                             },
@@ -1142,7 +1061,7 @@
                             }
                             ]
                         },
-                        this.state.DownloadType != DownloadType.others ? {
+                        this.state.DownloadType == DownloadType.iwaraDownloader || this.state.DownloadType != DownloadType.others ? {
                             nodeType: 'div',
                             style: this.state.style.Line,
                             childs: [{
@@ -1282,6 +1201,41 @@
                                 name: 'Aria2Token',
                                 type: 'Password',
                                 value: this.state.Aria2Token,
+                                style: this.state.style.input,
+                                onChange: ({ target }: any) => this.configChange(target)
+                            }
+                            ]
+                        } : null,
+                        this.state.DownloadType == DownloadType.iwaraDownloader ? {
+                            nodeType: 'div',
+                            style: this.state.style.Line,
+                            childs: [{
+                                nodeType: 'label',
+                                style: this.state.style.inputLabel,
+                                childs: 'IwaraDownloader 地址:'
+                            },
+                            {
+                                nodeType: 'input',
+                                name: 'IwaraDownloaderPath',
+                                value: this.state.IwaraDownloaderPath,
+                                style: this.state.style.input,
+                                onChange: ({ target }: any) => this.configChange(target)
+                            }
+                            ]
+                        } : null,
+                        this.state.DownloadType == DownloadType.iwaraDownloader ? {
+                            nodeType: 'div',
+                            style: this.state.style.Line,
+                            childs: [{
+                                nodeType: 'label',
+                                style: this.state.style.inputLabel,
+                                childs: 'IwaraDownloader Token(密钥):'
+                            },
+                            {
+                                nodeType: 'input',
+                                name: 'IwaraDownloaderToken',
+                                type: 'Password',
+                                value: this.state.IwaraDownloaderToken,
                                 style: this.state.style.input,
                                 onChange: ({ target }: any) => this.configChange(target)
                             }
@@ -1660,7 +1614,7 @@
     let login = `<a href="${site}/user/login" target="_blank">登录</a>`
     let signin = `<a href="${site}/user/register" target="_blank">注册</a>`
 
-    let VideoList = document.querySelectorAll('.node-video')
+    let VideoList = document.querySelectorAll('.page-videoList__item')
     let PluginUI = ReactDOM.render(React.createElement(pluginUI), document.getElementById('PluginUI'))
     let PluginControlPanel = ReactDOM.render(React.createElement(pluginControlPanel), document.getElementById('PluginControlPanel'))
     let PluginTips = new pluginTips()
@@ -1684,7 +1638,8 @@
         'alfafile',
         'drv\.ms',
         'onedrive',
-        'pixeldrain\.com'
+        'pixeldrain\.com',
+        'gigafile\.nu'
     ]
     function ParseVideoID(data: Element) {
         if (data.getAttribute('linkdata') != null) {
@@ -1749,7 +1704,7 @@
         })
         if (document.querySelector('#block-views-videos-block-2') != null) {
             if (document.querySelector('#block-views-videos-block-2 *.more-link') != null) {
-                await GetAllData((document.querySelector('.more-link>a') as HTMLLinkElement).href, [], window.location.href)
+                await GetAllData((document.querySelector('.more-link>a') as HTMLLinkElement).href, window.location.href)
             } else {
                 let videoList = document.querySelectorAll('#block-views-videos-block-2 *.node-video')
                 if (PluginControlPanel.state.Async) {
@@ -1777,18 +1732,18 @@
                 }
             }
         } else {
-            await GetAllData(window.location.href, [], window.location.href)
+            await GetAllData(window.location.href, window.location.href)
         }
     }
-    async function GetAllData(videoListUrl: string, data: string[], referrer: string) {
-        let videoListPage = parseDom(await get(videoListUrl, data, referrer))
+    async function GetAllData(videoListUrl: string, referrer: string) {
+        let videoListPage = parseDom(await get(videoListUrl, referrer))
         let videoList = videoListPage.querySelectorAll('.view-videos *.node-video')
         if (PluginControlPanel.state.Async) {
             videoList.forEach(async (element: Element, index: number) => {
                 await ParseDownloadAddress(ParseVideoID(element))
                 if (index == videoList.length - 1) {
                     if (videoListPage.querySelectorAll('.pager-next').length != 0) {
-                        await GetAllData((videoListPage.querySelector('.pager-next>a') as HTMLLinkElement).href, data, referrer)
+                        await GetAllData((videoListPage.querySelector('.pager-next>a') as HTMLLinkElement).href, referrer)
                     } else {
                         PluginTips.success({
                             content: {
@@ -1834,11 +1789,12 @@
         let videoInfo = new VideoInfo(Data)
         for (const item of VideoList) {
             if (item?.getAttribute('linkdata')?.indexOf(Data) != -1) {
-                videoInfo = new VideoInfo(Data, (item.querySelector('.title>a') as HTMLElement)?.innerText ?? (item.querySelector('.stitle>a') as HTMLElement)?.innerText ?? item.getAttribute('data-original-title'), (item.querySelector('.username') as HTMLElement)?.innerText)
+                videoInfo = new VideoInfo(Data)
                 break
             }
         }
 
+        /*
         let videoLink = `<a href="${videoInfo.Url}" ${videoInfo.getName() != null ? `title="${videoInfo.getName()}"` : ''} target="_blank" >${videoInfo.getName() ?? '→ 点击此处，进入视频页面 ←'}</a> <br />`
 
         if (downloadedCheck && PluginControlPanel.state.Downloaded.includes(videoInfo.ID)) {
@@ -1851,11 +1807,11 @@
                 wait: true
             })
         }
-
+*/
         await videoInfo.init()
 
-        videoLink = `<a href="${videoInfo.Url}" ${videoInfo.getName() != null ? `title="${videoInfo.getName()}"` : ''} target="_blank" >${videoInfo.getName() ?? '→ 点击此处，进入视频页面 ←'}</a> <br />`
-
+        let videoLink = `<a href="${videoInfo.Url}" ${videoInfo.Name != null ? `title="${videoInfo.Name}"` : ''} target="_blank" >${videoInfo.Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br />`
+/*
         if (!videoInfo.Exist) {
             return PluginTips.warning({
                 content: {
@@ -1865,7 +1821,8 @@
                 wait: true
             })
         }
-
+*/
+/*
         if (videoInfo.Private) {
             return PluginTips.warning({
                 content: {
@@ -1877,7 +1834,7 @@
                 wait: true
             })
         }
-
+*/
         if (CheckIsHaveDownloadLink(videoInfo.getComment())) {
             return PluginTips.warning({
                 content: {
@@ -1897,19 +1854,25 @@
                 wait: true
             })
         }
-
-
-
         SendDownloadRequest(videoInfo, PluginControlPanel.Cookies)
         PluginControlPanel.configChange({ name: "Downloaded", value: PluginControlPanel.state.Downloaded.concat([videoInfo.ID]) });
     }
-    function SendDownloadRequest(Info: VideoInfo, Cookie: string) {
+    function SendDownloadRequest(Info: VideoInfo, Cookie: Array<any>) {
         switch (DownloadType[PluginControlPanel.state.DownloadType]) {
             case DownloadType[DownloadType.aria2]:
-                aria2Download(Info, Cookie)
+                let Cookies = ''
+                for (let index = 0; index < Cookie.length; index++) {
+                    const c = Cookie[index];
+                    if (c.httpOnly == true)
+                        Cookies += '; ' + c.name + '=' + c.value;
+                }
+                aria2Download(Info,Cookies)
                 break
             case DownloadType[DownloadType.default]:
                 defaultDownload(Info)
+                break
+            case DownloadType[DownloadType.iwaraDownloader]:
+                iwaraDownloaderDownload(Info, Cookie)
                 break
             case DownloadType[DownloadType.others]:
             default:
@@ -1982,6 +1945,43 @@
             }
         }(Info.ID, `<a href="${Info.Url}" ${Info.getName() != null ? `title="${Info.getName()}"` : ''} target="_blank" >${Info.getName() ?? '→ 点击此处，进入视频页面 ←'}</a>`, Info.getFileName(), Info.getDownloadUrl()))
     }
+    function iwaraDownloaderDownload(Info: VideoInfo, Cookies: Array<any>) {
+        (async function (Url: any, ID: any, Author: string, Name: any, FileName: string, UploadTime: any , Info: any, Tag: any, DownloadUrl: any) {
+            
+            let json = Object.assign({
+                'ver': 1,
+                'code': 'add',
+                'data': {
+                    'Source': ID,
+                    'author':Author,
+                    'name': Name,
+                    'downloadTime': new Date(),
+                    'uploadTime': UploadTime,
+                    'downloadUrl': DownloadUrl,
+                    'downloadCookies': Cookies,
+                    'info': Info,
+                    'tag': Tag
+                }
+            }, PluginControlPanel.state.IwaraDownloaderToken.length != 0 ? {'token': PluginControlPanel.state.IwaraDownloaderToken} : {})
+            console.log(json)
+            let r = await post(PluginControlPanel.state.IwaraDownloaderPath,JSON.stringify(json))
+            if(r.code == 'OK'){
+                PluginTips.info({
+                    content: {
+                        nodeType: 'p',
+                        childs: `<a href="${Url}" ${Name != null ? `title="${Name}"` : ''} target="_blank" >${Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br /> 下载任务已推送到IwaraDownloader`
+                    }
+                })
+            }else{
+                PluginTips.warning({
+                    content: {
+                        nodeType: 'p',
+                        childs: `<a href="${Url}" ${Name != null ? `title="${Name}"` : ''} target="_blank" >${Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br /> 下载失败 ${r.msg} `
+                    }
+                })
+            }
+        }(Info.Url ,Info.ID ,Info.getAuthor(), Info.getName(),Info.getFileName(), Info.UploadTime, Info.getComment(), [], Info.getDownloadUrl()))
+    }
     function aria2Download(Info: VideoInfo, Cookies: string) {
         (function (ID, Name, FileName, Author, Cookie, DownloadUrl) {
             let json = JSON.stringify({
@@ -2049,13 +2049,16 @@
 
     for (let index = 0; index < VideoList.length; index++) {
         const video = VideoList[index];
+/*
         if (video.classList.contains('node-full')) {
             continue;
         }
-        let videoLink = (video.querySelector('.even>a') as HTMLLinkElement)
+*/
+        let videoLink = (video.querySelector('.videoTeaser__thumbnail') as HTMLLinkElement)
         if (videoLink != null) {
-            video.setAttribute('linkdata', videoLink.href ?? (video.querySelector('.title>a') as HTMLLinkElement).href)
+            video.setAttribute('linkdata', videoLink.href ?? (video.querySelector('.videoTeaser__title') as HTMLLinkElement).href)
             videoLink.removeAttribute('href')
+/*
             if (video.querySelector('img[src*="/"]') == null) {
                 videoLink.append(sourceRender({
                     nodeType: 'img',
@@ -2063,7 +2066,9 @@
                         src: "https://oreno3d.com/storage/img/noimage.png"
                     }
                 }))
-            }
+            } 
+*/
+/*
             if (video.querySelector('.title') == null) {
                 sourceRender({
                     nodeType: 'h6',
@@ -2078,7 +2083,9 @@
                     parent: video as HTMLElement
                 })
             }
+*/
         }
+/*
         if (video.querySelector('.field-name-field-video-url') != null) {
             PluginTips.warning({
                 content: {
@@ -2088,14 +2095,14 @@
             })
             continue
         }
-
+*/
         (video as HTMLElement).ondblclick = () => {
             video.setAttribute('checked', video.getAttribute('checked') == 'false' ? 'true' : 'false')
         }
         video.setAttribute('checked', 'false')
         video.classList.add('selectButton')
     }
-
+/*
     if (document.querySelectorAll('.selectButton').length == 0 && window.location.href.search('iwara.tv/videos') != -1 && PluginControlPanel.state.AutoRefresh) {
         PluginTips.warning({
             content: {
@@ -2108,20 +2115,21 @@
             window.location.reload();
         }, 10000)
     }
-
+*/
     try {
         switch (PluginControlPanel.state.DownloadType) {
             case DownloadType.aria2:
                 PluginControlPanel.ConnectionAria2(PluginControlPanel.state.Aria2Type)
                 break
             case DownloadType.default:
-
                 PluginTips.warning({
                     content: {
                         nodeType: 'p',
                         childs: '该下载模式为实验性模式，无法保证下载稳定性！'
                     }
                 })
+                break
+            case DownloadType.iwaraDownloader:
                 break
             case DownloadType.others:
                 break
