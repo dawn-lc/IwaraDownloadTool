@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.202
+// @version           3.0.30
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -39,7 +39,7 @@
      * @param renderCode - RenderCode
      * @returns Node 节点
      */
-    function renderNode(renderCode) {
+    const renderNode = function (renderCode) {
         if (typeof renderCode === "string") {
             return document.createTextNode(renderCode);
         }
@@ -56,7 +56,7 @@
         (className !== undefined && className !== null && className.length > 0) && node.classList.add(...[].concat(className));
         (childs !== undefined && childs !== null) && node.append(...[].concat(childs).map(renderNode));
         return node;
-    }
+    };
     class Queue {
         items;
         constructor() {
@@ -128,7 +128,257 @@
             }
         }
     }
-    document.head.appendChild(renderNode({
+    let DownloadType;
+    (function (DownloadType) {
+        DownloadType[DownloadType["aria2"] = 0] = "aria2";
+        DownloadType[DownloadType["default"] = 1] = "default";
+        DownloadType[DownloadType["iwaraDownloader"] = 2] = "iwaraDownloader";
+        DownloadType[DownloadType["others"] = 3] = "others";
+    })(DownloadType || (DownloadType = {}));
+    let APIType;
+    (function (APIType) {
+        APIType[APIType["http"] = 0] = "http";
+        APIType[APIType["ws"] = 1] = "ws";
+        APIType[APIType["https"] = 2] = "https";
+        APIType[APIType["wss"] = 3] = "wss";
+    })(APIType || (APIType = {}));
+    let TipsType;
+    (function (TipsType) {
+        TipsType[TipsType["Info"] = 0] = "Info";
+        TipsType[TipsType["Warning"] = 1] = "Warning";
+        TipsType[TipsType["Success"] = 2] = "Success";
+        TipsType[TipsType["Progress"] = 3] = "Progress";
+        TipsType[TipsType["Dialog"] = 4] = "Dialog";
+    })(TipsType || (TipsType = {}));
+    class Config {
+        checkDownloadLink;
+        downloadType;
+        downloadPath;
+        downloadProxy;
+        aria2Type;
+        aria2Path;
+        aria2Token;
+        iwaraDownloaderPath;
+        iwaraDownloaderToken;
+        constructor() {
+            //初始化
+            this.checkDownloadLink = GM_getValue('CheckDownloadLink', true);
+            this.downloadType = Number(GM_getValue('DownloadType', DownloadType.others));
+            this.downloadPath = GM_getValue('DownloadDir', 'IwaraVideo/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4');
+            this.downloadProxy = GM_getValue('DownloadProxy', '');
+            this.aria2Type = Number(GM_getValue('Aria2Type', APIType.ws));
+            this.aria2Path = GM_getValue('Aria2Path', '127.0.0.1:6800');
+            this.aria2Token = GM_getValue('Aria2Token', '');
+            this.iwaraDownloaderPath = GM_getValue('IwaraDownloaderPath', 'http://127.0.0.1:6800');
+            this.iwaraDownloaderToken = GM_getValue('IwaraDownloaderToken', '');
+            //代理本页面的更改
+            let body = new Proxy(this, {
+                get: function (target, property) {
+                    console.log(`get ${property.toString()}`);
+                    return target[property];
+                },
+                set: function (target, property, value) {
+                    console.log(`set ${property.toString()} ${value}`);
+                    return target[property] = value;
+                }
+            });
+            //同步其他页面脚本的更改
+            GM_listValues().forEach((value) => {
+                GM_addValueChangeListener(value, (name, old_value, new_value, remote) => {
+                    if (remote && body[name] !== new_value) {
+                        body[name] = new_value;
+                    }
+                });
+            });
+            return body;
+        }
+    }
+    class VideoInfo {
+        Title;
+        Url;
+        ID;
+        UploadTime;
+        Name;
+        FileName;
+        Author;
+        Private;
+        VideoInfoSource;
+        VideoFileSource;
+        State;
+        getDownloadQuality;
+        getDownloadUrl;
+        getComment;
+        constructor(Name) {
+            this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-解析模块' };
+            this.Name = Name;
+            this.Url = `https://${window.location.hostname}/video/${this.ID}`;
+            return this;
+        }
+        async init(ID) {
+            try {
+                this.ID = ID;
+                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`));
+                if (this.VideoInfoSource.id === undefined) {
+                    throw new Error('获取视频信息失败');
+                }
+                this.Name = this.VideoInfoSource.title ?? this.Name;
+                this.Author = this.VideoInfoSource.user.username;
+                this.Private = this.VideoInfoSource.private;
+                this.UploadTime = new Date(this.VideoInfoSource.createdAt);
+                this.FileName = this.VideoInfoSource.file.name;
+                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl));
+                if (this.VideoFileSource.length == 0) {
+                    throw new Error('获取视频源失败');
+                }
+                this.getComment = () => {
+                    return this.VideoInfoSource.body;
+                };
+                this.getDownloadQuality = () => {
+                    let priority = {
+                        'Source': 3,
+                        '540': 2,
+                        '360': 1
+                    };
+                    return this.VideoFileSource.sort((a, b) => priority[a.name] - priority[b.name])[0].name;
+                };
+                this.getDownloadUrl = () => {
+                    let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality());
+                    return decodeURIComponent('https:' + fileList[Math.floor(Math.random() * fileList.length)].src.download);
+                };
+                this.State = true;
+                return this;
+            }
+            catch (error) {
+                console.log(this.VideoInfoSource);
+                console.log(this.VideoFileSource);
+                console.error(error);
+                this.State = false;
+                return this;
+                /*
+                PluginTips.dialog({
+                    content: {
+                        nodeType: 'p',
+                        childs: `<a href="${this.Url}" ${this.Name != null ? `title="${this.Name}"` : ''} target="_blank" >${this.Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br /> 获取视频信息失败,是否重试?`
+                    },
+                    id: this.ID,
+                    wait: true
+                })
+                */
+            }
+        }
+    }
+    async function get(url, referrer = window.location.hostname, headers = {}) {
+        if (url.split('//')[1].split('/')[0] == window.location.hostname) {
+            return await (await fetch(url, {
+                'headers': Object.assign({
+                    'accept': 'application/json, text/plain, */*'
+                }, headers),
+                'referrer': referrer,
+                'method': 'GET',
+                'mode': 'cors',
+                'redirect': 'follow',
+                'credentials': 'include'
+            })).text();
+        }
+        else {
+            let data = await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    headers: Object.assign({
+                        'Accept': 'application/json, text/plain, */*'
+                    }, headers),
+                    onload: function (response) {
+                        resolve(response);
+                    },
+                    onerror: function (error) {
+                        reject(error);
+                    }
+                });
+            });
+            return data.responseText;
+        }
+    }
+    /**
+      * 检查字符串中是否包含下载链接特征
+      * @param {string} comment - 待检查的字符串
+      * @returns {boolean} - 如果字符串中包含下载链接特征则返回 true，否则返回 false
+      */
+    function checkIsHaveDownloadLink(comment) {
+        if (!config.checkDownloadLink) {
+            return false;
+        }
+        if (comment == null) {
+            return false;
+        }
+        const downloadLinkCharacteristics = [
+            'pan\.baidu',
+            'mega\.nz',
+            'drive\.google\.com',
+            'aliyundrive',
+            'uploadgig',
+            'katfile',
+            'storex',
+            'subyshare',
+            'rapidgator',
+            'filebe',
+            'filespace',
+            'mexa\.sh',
+            'mexashare',
+            'mx-sh\.net',
+            'uploaded\.',
+            'icerbox',
+            'alfafile',
+            'drv\.ms',
+            'onedrive',
+            'pixeldrain\.com',
+            'gigafile\.nu'
+        ];
+        for (let index = 0; index < downloadLinkCharacteristics.length; index++) {
+            if (comment.indexOf(downloadLinkCharacteristics[index]) != -1) {
+                return true;
+            }
+        }
+        return false;
+    }
+    async function AnalyzeDownloadTask() {
+        for (const key in videoList.items) {
+            console.log(key);
+            let videoInfo = await (new VideoInfo(videoList[key])).init(key);
+            videoInfo.State && pustDownloadTask(videoInfo);
+        }
+        document.querySelectorAll('.selectButton').forEach((element) => {
+            let button = element;
+            button.checked && button.click();
+        });
+        videoList.clear();
+    }
+    async function pustDownloadTask(videoInfo) {
+        if (!checkIsHaveDownloadLink(videoInfo.getComment())) {
+            /*
+            return PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: `${videoLink} 没有解析到原画下载地址,请手动处理!`
+                },
+                wait: true
+            })*/
+        }
+        if (videoInfo.getDownloadQuality() != 'Source') {
+            /*
+            return PluginTips.warning({
+                content: {
+                    nodeType: 'p',
+                    childs: `${videoLink} 没有解析到原画下载地址,请手动处理!`
+                },
+                wait: true
+            })
+            */
+        }
+    }
+    let config = new Config();
+    let videoList = new Dictionary();
+    let style = renderNode({
         nodeType: "style",
         childs: `
         #pluginMenu {
@@ -152,6 +402,7 @@
         #pluginMenu li {
             padding: 5px 10px;
             cursor: pointer;
+            text-align: center;
             user-select: none;
         }
         #pluginMenu li:hover {
@@ -202,9 +453,8 @@
             right: 2px;
         }
         `
-    }));
-    let videoList = new Dictionary;
-    document.body.appendChild(renderNode({
+    });
+    let UI = renderNode({
         nodeType: "div",
         attributes: {
             id: "pluginMenu"
@@ -214,7 +464,7 @@
             childs: [
                 {
                     nodeType: "li",
-                    childs: "开启复选框",
+                    childs: "开关复选框",
                     events: {
                         click: () => {
                             if (!document.querySelector('.selectButton')) {
@@ -232,7 +482,9 @@
                                             },
                                             click: (event) => {
                                                 let target = event.target;
-                                                videoList.set(target.parentElement.getAttribute('href').trim().split('/')[2], target.checked);
+                                                let id = target.parentElement.getAttribute('href').trim().split('/')[2];
+                                                let name = target.parentElement.parentElement.querySelector('.videoTeaser__title').getAttribute('title');
+                                                target.checked ? videoList.set(id, name) : videoList.remove(id);
                                                 event.stopPropagation();
                                                 return false;
                                             }
@@ -253,16 +505,7 @@
                     childs: "下载所选",
                     events: {
                         click: (event) => {
-                            event.stopPropagation();
-                            return false;
-                        }
-                    }
-                },
-                {
-                    nodeType: "li",
-                    childs: "下载全部",
-                    events: {
-                        click: (event) => {
+                            AnalyzeDownloadTask();
                             event.stopPropagation();
                             return false;
                         }
@@ -314,6 +557,7 @@
                     childs: "打开设置",
                     events: {
                         click: (event) => {
+                            // todo 待移植
                             event.stopPropagation();
                             return false;
                         }
@@ -321,7 +565,9 @@
                 }
             ]
         }
-    }));
+    });
+    document.head.appendChild(style);
+    document.body.appendChild(UI);
     /*
         class pluginTips {
             WaitingQueue: Queue<DownloadTask>
@@ -521,49 +767,7 @@
     
     
     
-        class Config {
-            CheckDownloadLink: boolean
-            DownloadType: DownloadType
-            DownloadPath: string
-            DownloadProxy: string
-            Aria2Type: APIType
-            Aria2Path: string
-            Aria2Token: string
-            IwaraDownloaderPath: string
-            IwaraDownloaderToken: string
-            constructor() {
-                //初始化
-                this.CheckDownloadLink = GM_getValue('CheckDownloadLink', true)
-                this.DownloadType = Number(GM_getValue('DownloadType', DownloadType.others))
-                this.DownloadPath = GM_getValue('DownloadDir', 'iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
-                this.DownloadProxy = GM_getValue('DownloadProxy', '')
-                this.Aria2Type = Number(GM_getValue('Aria2Type', APIType.ws))
-                this.Aria2Path = GM_getValue('Aria2Path', '127.0.0.1:6800')
-                this.Aria2Token = GM_getValue('Aria2Token', '')
-                this.IwaraDownloaderPath = GM_getValue('IwaraDownloaderPath', 'http://127.0.0.1:6800')
-                this.IwaraDownloaderToken = GM_getValue('IwaraDownloaderToken', '')
-                //代理本页面的更改
-                let body = new Proxy(this, {
-                    get: function (target, property) {
-                        console.log(`get ${property.toString()}`)
-                        return target[property]
-                    },
-                    set: function (target, property, value) {
-                        console.log(`set ${property.toString()} ${value}`)
-                        return target[property] = value;
-                    }
-                })
-                //同步其他页面脚本的更改
-                GM_listValues().forEach((value) => {
-                    GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                        if (remote && body[name] !== new_value) {
-                            body[name] = new_value
-                        }
-                    })
-                })
-                return body
-            }
-        }
+        
         let sttt = {
             nodeType: "div",
             attributes: {

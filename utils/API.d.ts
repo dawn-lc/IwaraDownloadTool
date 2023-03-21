@@ -1,11 +1,3 @@
-interface Node {
-    insertBefore( target: Node): void;
-    insertAfter(target: Node): void;
-    insertAtStart( target: Node): void;
-    insertAtEnd(target: Node): void;
-    replaceNode(target: Node): void;
-}
-
 type RenderCode = string | Node |{
     nodeType: string;
     attributes?: Record<string, any>;
@@ -13,6 +5,7 @@ type RenderCode = string | Node |{
     className?: string | string[];
     childs?: RenderCode | RenderCode[];
 }
+
 interface DownloadTask {
     id: string;
     url: string;
@@ -22,6 +15,7 @@ interface DownloadTask {
     onprogress: (progress: { lengthComputable: any, position: number, totalSize: number }) => void;
     ontimeout: () => void;
 }
+
 interface QueueItem<T> {
     id: string;
     data: T;
@@ -32,31 +26,6 @@ interface LogCode {
     title?: RenderCode;
     wait?:boolean;
     id?:string;
-}
-interface RenderData {
-    type: String;
-    children?: Array<any>;
-    props?: any;
-}
-
-enum DownloadType {
-    aria2,
-    default,
-    iwaraDownloader,
-    others
-}
-enum APIType {
-    http,
-    ws,
-    https,
-    wss
-}
-enum TipsType {
-    Info,
-    Warning,
-    Success,
-    Progress,
-    Dialog
 }
 
 
