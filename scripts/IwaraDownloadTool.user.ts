@@ -175,12 +175,12 @@
         constructor(Name: string) {
             this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-解析模块' }
             this.Name = Name
-            this.Url = `https://${window.location.hostname}/video/${this.ID}`
             return this;
         }
         async init(ID: string) {
             try {
                 this.ID = ID
+                this.Url = `https://${window.location.hostname}/video/${this.ID}`
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`))
                 if (this.VideoInfoSource.id === undefined){
                     throw new Error('获取视频信息失败')
@@ -310,7 +310,6 @@
     async function AnalyzeDownloadTask(){
         for (const key in videoList.items) {
             console.log(key)
-
             let videoInfo = await (new VideoInfo(videoList[key])).init(key)
             videoInfo.State && pustDownloadTask(videoInfo)
         }
