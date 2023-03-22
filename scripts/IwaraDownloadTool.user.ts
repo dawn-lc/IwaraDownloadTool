@@ -167,7 +167,6 @@
     }
     class VideoInfo {
         Title: RenderCode
-        Url: string
         ID: string
         UploadTime: Date
         Name: string | null
@@ -189,7 +188,6 @@
         async init(ID: string) {
             try {
                 this.ID = ID
-                this.Url = `https://${window.location.hostname}/video/${this.ID}`
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`))
                 if (this.VideoInfoSource.id === undefined){
                     throw new Error('获取视频信息失败')
@@ -368,7 +366,7 @@
     }
 
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
-        (async function (Url: any, ID: any, Author: string, Name: any, UploadTime: any, Info: any, Tag: any, DownloadUrl: any) {
+        (async function (ID: any, Author: string, Name: any, UploadTime: any, Info: any, Tag: any, DownloadUrl: any) {
     
             let json = Object.assign({
                 'ver': 1,
@@ -392,7 +390,7 @@
             } else {
                 console.log("推送失败"+ID)
             }
-        }(videoInfo.Url, videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()))
+        }( videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
 

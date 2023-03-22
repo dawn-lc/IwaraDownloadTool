@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.34
+// @version           3.0.35
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)

@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.34
+// @version           3.0.35
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -204,7 +204,6 @@
     }
     class VideoInfo {
         Title;
-        Url;
         ID;
         UploadTime;
         Name;
@@ -226,7 +225,6 @@
         async init(ID) {
             try {
                 this.ID = ID;
-                this.Url = `https://${window.location.hostname}/video/${this.ID}`;
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`));
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败');
@@ -403,7 +401,7 @@
         iwaraDownloaderDownload(videoInfo);
     }
     function iwaraDownloaderDownload(videoInfo) {
-        (async function (Url, ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
+        (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
             let json = Object.assign({
                 'ver': 1,
                 'code': 'add',
@@ -427,7 +425,7 @@
             else {
                 console.log("推送失败" + ID);
             }
-        }(videoInfo.Url, videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     let config = new Config();
     let videoList = new Dictionary();
