@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.33
+// @version           3.0.34
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -400,9 +400,9 @@
             console.error("非原画" + videoInfo);
             return;
         }
-        iwaraDownloaderDownload(videoInfo, config.cookies);
+        iwaraDownloaderDownload(videoInfo);
     }
-    function iwaraDownloaderDownload(Info, Cookies) {
+    function iwaraDownloaderDownload(videoInfo) {
         (async function (Url, ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
             let json = Object.assign({
                 'ver': 1,
@@ -414,7 +414,7 @@
                     'downloadTime': new Date(),
                     'uploadTime': UploadTime,
                     'downloadUrl': DownloadUrl,
-                    'downloadCookies': Cookies,
+                    'downloadCookies': config.cookies,
                     'info': Info,
                     'tag': Tag
                 }
@@ -427,7 +427,7 @@
             else {
                 console.log("推送失败" + ID);
             }
-        }(Info.Url, Info.ID, Info.Author, Info.Name, Info.UploadTime, Info.getComment(), Info.Tags, Info.getDownloadUrl()));
+        }(videoInfo.Url, videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     let config = new Config();
     let videoList = new Dictionary();

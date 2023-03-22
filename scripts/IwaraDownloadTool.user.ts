@@ -364,10 +364,10 @@
             console.error("非原画"+ videoInfo)
             return
         }
-        iwaraDownloaderDownload(videoInfo,config.cookies)
+        iwaraDownloaderDownload(videoInfo)
     }
 
-    function iwaraDownloaderDownload(Info: VideoInfo, Cookies: Array<any>) {
+    function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (Url: any, ID: any, Author: string, Name: any, UploadTime: any, Info: any, Tag: any, DownloadUrl: any) {
     
             let json = Object.assign({
@@ -380,7 +380,7 @@
                     'downloadTime': new Date(),
                     'uploadTime': UploadTime,
                     'downloadUrl': DownloadUrl,
-                    'downloadCookies': Cookies,
+                    'downloadCookies': config.cookies,
                     'info': Info,
                     'tag': Tag
                 }
@@ -392,7 +392,7 @@
             } else {
                 console.log("推送失败"+ID)
             }
-        }(Info.Url, Info.ID, Info.Author, Info.Name, Info.UploadTime, Info.getComment(), Info.Tags, Info.getDownloadUrl()))
+        }(videoInfo.Url, videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
 
