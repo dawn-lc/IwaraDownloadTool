@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.31
+// @version           3.0.33
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -151,6 +151,7 @@
         TipsType[TipsType["Dialog"] = 4] = "Dialog";
     })(TipsType || (TipsType = {}));
     class Config {
+        cookies;
         checkDownloadLink;
         downloadType;
         downloadPath;
@@ -182,6 +183,14 @@
                     return target[property] = value;
                 }
             });
+            GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
+                if (error) {
+                    console.log(error);
+                }
+                else {
+                    body.cookies = list;
+                }
+            });
             //同步其他页面脚本的更改
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name, old_value, new_value, remote) => {
@@ -200,6 +209,7 @@
         UploadTime;
         Name;
         FileName;
+        Tags;
         Author;
         Private;
         VideoInfoSource;
@@ -225,6 +235,7 @@
                 this.Author = this.VideoInfoSource.user.username;
                 this.Private = this.VideoInfoSource.private;
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt);
+                this.Tags = this.VideoInfoSource.tags;
                 this.FileName = this.VideoInfoSource.file.name;
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl));
                 if (this.VideoFileSource.length == 0) {
@@ -254,16 +265,6 @@
                 console.error(error);
                 this.State = false;
                 return this;
-                /*
-                PluginTips.dialog({
-                    content: {
-                        nodeType: 'p',
-                        childs: `<a href="${this.Url}" ${this.Name != null ? `title="${this.Name}"` : ''} target="_blank" >${this.Name ?? '→ 点击此处，进入视频页面 ←'}</a> <br /> 获取视频信息失败,是否重试?`
-                    },
-                    id: this.ID,
-                    wait: true
-                })
-                */
             }
         }
     }
@@ -288,6 +289,43 @@
                     headers: Object.assign({
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
+                    onload: function (response) {
+                        resolve(response);
+                    },
+                    onerror: function (error) {
+                        reject(error);
+                    }
+                });
+            });
+            return data.responseText;
+        }
+    }
+    async function post(url, body, referrer = window.location.hostname, headers = {}) {
+        if (typeof body !== 'string')
+            body = JSON.stringify(body);
+        if (url.split('//')[1].split('/')[0] == window.location.hostname) {
+            return await (await fetch(url, {
+                'headers': Object.assign({
+                    'accept': 'application/json, text/plain, */*'
+                }, headers),
+                'referrer': referrer,
+                'body': body,
+                'method': 'POST',
+                'mode': 'cors',
+                'redirect': 'follow',
+                'credentials': 'include'
+            })).text();
+        }
+        else {
+            let data = await new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: url,
+                    headers: Object.assign({
+                        'Accept': 'application/json, text/plain, */*',
+                        'Content-Type': 'application/json'
+                    }, headers),
+                    data: body,
                     onload: function (response) {
                         resolve(response);
                     },
@@ -355,26 +393,41 @@
     }
     async function pustDownloadTask(videoInfo) {
         if (!checkIsHaveDownloadLink(videoInfo.getComment())) {
-            /*
-            return PluginTips.warning({
-                content: {
-                    nodeType: 'p',
-                    childs: `${videoLink} 没有解析到原画下载地址,请手动处理!`
-                },
-                wait: true
-            })*/
+            console.error("高画质" + videoInfo);
+            return;
         }
         if (videoInfo.getDownloadQuality() != 'Source') {
-            /*
-            return PluginTips.warning({
-                content: {
-                    nodeType: 'p',
-                    childs: `${videoLink} 没有解析到原画下载地址,请手动处理!`
-                },
-                wait: true
-            })
-            */
+            console.error("非原画" + videoInfo);
+            return;
         }
+        iwaraDownloaderDownload(videoInfo, config.cookies);
+    }
+    function iwaraDownloaderDownload(Info, Cookies) {
+        (async function (Url, ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
+            let json = Object.assign({
+                'ver': 1,
+                'code': 'add',
+                'data': {
+                    'Source': ID,
+                    'author': Author,
+                    'name': Name,
+                    'downloadTime': new Date(),
+                    'uploadTime': UploadTime,
+                    'downloadUrl': DownloadUrl,
+                    'downloadCookies': Cookies,
+                    'info': Info,
+                    'tag': Tag
+                }
+            }, config.iwaraDownloaderToken.length != 0 ? { 'token': config.iwaraDownloaderToken } : {});
+            console.log(json);
+            let r = JSON.parse(await post(config.iwaraDownloaderPath, json));
+            if (r.code == 0) {
+                console.log("已推送" + ID);
+            }
+            else {
+                console.log("推送失败" + ID);
+            }
+        }(Info.Url, Info.ID, Info.Author, Info.Name, Info.UploadTime, Info.getComment(), Info.Tags, Info.getDownloadUrl()));
     }
     let config = new Config();
     let videoList = new Dictionary();
@@ -464,7 +517,7 @@
             childs: [
                 {
                     nodeType: "li",
-                    childs: "开关复选框",
+                    childs: "开关选择",
                     events: {
                         click: () => {
                             if (!document.querySelector('.selectButton')) {
