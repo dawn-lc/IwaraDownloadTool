@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.59
+// @version           3.0.80
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -33,6 +33,22 @@
 // @run-at            document-start
 // ==/UserScript==
 (async function () {
+    /*
+    const originFetch = fetch;
+    const modifyFetch = (url: any, options: any) => {
+        console.log("Fetch "+url)
+        if (options.headers!==undefined){
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "x-version"){
+                    config.xVersion = options.headers[key]
+                }
+            }
+        }
+        return originFetch(url, options)
+    }
+    window.fetch = modifyFetch
+    window.unsafeWindow.fetch = modifyFetch
+    */
     /**
      * RenderCode 转换成 Node
      * @param renderCode - RenderCode
@@ -164,7 +180,7 @@
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
             this.downloadType = Number(GM_getValue('downloadType', DownloadType.others));
-            this.downloadPath = GM_getValue('downloadPath', 'IwaraVideo/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4');
+            this.downloadPath = GM_getValue('downloadPath', null);
             this.downloadProxy = GM_getValue('downloadProxy', '');
             this.aria2Type = Number(GM_getValue('aria2Type', APIType.ws));
             this.aria2Path = GM_getValue('aria2Path', '127.0.0.1:6800');
@@ -394,6 +410,32 @@
         }
         return false;
     }
+    String.prototype.isEmpty = function () {
+        return this == null || this.trim().length == 0;
+    };
+    String.prototype.replaceVariable = function (replacements) {
+        return Object.entries(replacements).reduce((str, [key, value]) => str.split(`%#${key}#%`).join(String(value)), this);
+    };
+    String.prototype.replaceNowTime = function () {
+        return this.replaceVariable({
+            Y: new Date().getFullYear(),
+            M: new Date().getMonth() + 1,
+            D: new Date().getDate(),
+            h: new Date().getHours(),
+            m: new Date().getMinutes(),
+            s: new Date().getSeconds()
+        });
+    };
+    String.prototype.replaceUploadTime = function (videoInfo) {
+        return this.replaceVariable({
+            UploadYear: videoInfo.UploadTime.getFullYear(),
+            UploadMonth: videoInfo.UploadTime.getMonth() + 1,
+            UploadDate: videoInfo.UploadTime.getDate(),
+            UploadHours: videoInfo.UploadTime.getHours(),
+            UploadMinutes: videoInfo.UploadTime.getMinutes(),
+            UploadSeconds: videoInfo.UploadTime.getSeconds()
+        });
+    };
     async function AnalyzeDownloadTask() {
         for (const key in videoList.items) {
             console.log(key);
@@ -419,10 +461,10 @@
     }
     function iwaraDownloaderDownload(videoInfo) {
         (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
-            let json = Object.assign({
+            let r = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
                 'ver': 1,
                 'code': 'add',
-                'data': {
+                'data': Object.assign({
                     'Source': ID,
                     'author': Author,
                     'name': Name,
@@ -432,10 +474,8 @@
                     'downloadCookies': config.cookies,
                     'info': Info,
                     'tag': Tag
-                }
-            }, config.iwaraDownloaderToken.length != 0 ? { 'token': config.iwaraDownloaderToken } : {});
-            console.log(json);
-            let r = JSON.parse(await post(config.iwaraDownloaderPath, json));
+                }, config.downloadPath.isEmpty() ? { 'path': config.downloadPath } : {})
+            }, config.downloadPath.isEmpty() ? { 'token': config.iwaraDownloaderToken } : {})));
             if (r.code == 0) {
                 console.log("已推送" + ID);
             }
@@ -444,24 +484,6 @@
             }
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
-    let config = new Config();
-    let videoList = new Dictionary();
-    /*
-    const originFetch = fetch;
-    const modifyFetch = (url: any, options: any) => {
-        console.log("Fetch "+url)
-        if (options.headers!==undefined){
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "x-version"){
-                    config.xVersion = options.headers[key]
-                }
-            }
-        }
-        return originFetch(url, options)
-    }
-    window.fetch = modifyFetch
-    window.unsafeWindow.fetch = modifyFetch
-    */
     let style = renderNode({
         nodeType: "style",
         childs: `
@@ -528,6 +550,61 @@
             transition-delay: 0.5s;
         }
 
+        .pluginOverlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(128, 128, 128, 0.8);
+			z-index: 8192; 
+			display: flex;
+            flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.pluginOverlayBody {
+            color: white;
+            font-size: 24px;
+            text-align: justify;
+            width: 60%;
+            background-color: rgb(64,64,64,0.7);
+            padding: 24px;
+        }
+        @media (max-width: 640px) {
+            .pluginOverlayBody {
+                width: 100%;
+            }
+        }
+
+		.pluginOverlayButton {
+			padding: 10px 20px;
+			color: white;
+			font-size: 18px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+        .pluginOverlayButton {
+			background-color: blue;
+        }
+        .pluginOverlayButton[disabled] {
+			background-color: darkgray;
+            cursor: not-allowed;
+		}
+
+		.checkbox-container {
+			display: flex;
+			align-items: center;
+		}
+
+		.checkbox-label {
+			color: white;
+			font-size: 18px;
+			margin-left: 10px;
+		}
+
         .selectButton {
             position: absolute;
             width: 32px;
@@ -537,6 +614,96 @@
         }
         `
     });
+    let config = new Config();
+    GM_setValue('isFirstRun', false);
+    // 检查是否是首次运行脚本
+    if (!GM_getValue('isFirstRun')) {
+        document.body.appendChild(renderNode({
+            nodeType: 'div',
+            className: 'pluginOverlay',
+            childs: [
+                {
+                    nodeType: 'p',
+                    className: 'pluginOverlayBody',
+                    childs: [
+                        {
+                            nodeType: 'h2',
+                            childs: [
+                                '下载私有(上锁)视频请使用',
+                                { nodeType: 'br' },
+                                {
+                                    nodeType: 'a',
+                                    attributes: {
+                                        href: 'https://docs.scriptcat.org/'
+                                    },
+                                    childs: 'ScriptCat'
+                                },
+                                ' 或 ',
+                                {
+                                    nodeType: 'a',
+                                    attributes: {
+                                        href: 'https://www.tampermonkey.net/index.php?#download_gcal'
+                                    },
+                                    childs: 'Tampermonkey Beta'
+                                },
+                                '载入本脚本。'
+                            ]
+                        },
+                        { nodeType: 'p', childs: '全局可用变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
+                        { nodeType: 'p', childs: '路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#SOURCE_NAME#% (原文件名) | %#UploadY#% (发布时间[年]) | %#UploadM#% (发布时间[月]) | %#UploadD#% (发布时间[日]) | %#Uploadh#% (发布时间[时]) | %#Uploadm#% (发布时间[分]) | %#Uploads#% (发布时间[秒])' },
+                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
+                        { nodeType: 'p', childs: '双击视频选中，再次双击取消选中。选中仅在本页面有效！' },
+                        { nodeType: 'p', childs: '在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
+                        { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
+                    ]
+                },
+                {
+                    nodeType: 'div',
+                    className: 'checkbox-container',
+                    childs: [
+                        {
+                            nodeType: 'input',
+                            className: 'checkbox',
+                            attributes: {
+                                type: 'checkbox',
+                                name: 'agree-checkbox'
+                            },
+                            events: {
+                                change: (event) => {
+                                    document.querySelector('.pluginOverlayButton').disabled = !event.target.checked;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: 'label',
+                            className: 'checkbox-label',
+                            attributes: {
+                                for: 'agree-checkbox'
+                            },
+                            childs: '我已知晓如何使用',
+                        },
+                    ],
+                },
+                {
+                    nodeType: 'button',
+                    className: 'pluginOverlayButton',
+                    attributes: {
+                        disabled: true
+                    },
+                    childs: '确定',
+                    events: {
+                        click: () => {
+                            document.querySelector('.pluginOverlay').remove();
+                            GM_setValue('isFirstRun', true);
+                        }
+                    }
+                }
+            ]
+        }));
+    }
+    let videoList = new Dictionary();
     let UI = renderNode({
         nodeType: "div",
         attributes: {

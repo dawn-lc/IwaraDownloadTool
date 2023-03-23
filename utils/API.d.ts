@@ -1,3 +1,10 @@
+interface String {
+    replaceVariable(replacements: Record<string, any>): String;
+    replaceNowTime(): String;
+    replaceUploadTime(videoInfo: VideoInfo): String;
+    isEmpty(): boolean;
+}
+
 type RenderCode = string | Node |{
     nodeType: string;
     attributes?: Record<string, any>;
