@@ -5,9 +5,9 @@
 // @description:ja    Iwara 動画バッチをダウンロード
 // @name:zh-CN        Iwara 批量下载工具
 // @description:zh-CN 批量下载 Iwara 视频
-// @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
+// @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.35
+// @version           3.0.59
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -30,8 +30,7 @@
 // @grant             GM_openInTab
 // @grant             GM_cookie
 // @grant             unsafeWindow
-// @require           https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/16.13.1/umd/react.production.min.js
-// @require           https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/16.13.1/umd/react-dom.production.min.js
+// @run-at            document-start
 // ==/UserScript==
 (async function () {
     /**
@@ -163,15 +162,15 @@
         iwaraDownloaderToken;
         constructor() {
             //初始化
-            this.checkDownloadLink = GM_getValue('CheckDownloadLink', true);
-            this.downloadType = Number(GM_getValue('DownloadType', DownloadType.others));
-            this.downloadPath = GM_getValue('DownloadDir', 'IwaraVideo/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4');
-            this.downloadProxy = GM_getValue('DownloadProxy', '');
-            this.aria2Type = Number(GM_getValue('Aria2Type', APIType.ws));
-            this.aria2Path = GM_getValue('Aria2Path', '127.0.0.1:6800');
-            this.aria2Token = GM_getValue('Aria2Token', '');
-            this.iwaraDownloaderPath = GM_getValue('IwaraDownloaderPath', 'http://127.0.0.1:6800');
-            this.iwaraDownloaderToken = GM_getValue('IwaraDownloaderToken', '');
+            this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
+            this.downloadType = Number(GM_getValue('downloadType', DownloadType.others));
+            this.downloadPath = GM_getValue('downloadPath', 'IwaraVideo/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4');
+            this.downloadProxy = GM_getValue('downloadProxy', '');
+            this.aria2Type = Number(GM_getValue('aria2Type', APIType.ws));
+            this.aria2Path = GM_getValue('aria2Path', '127.0.0.1:6800');
+            this.aria2Token = GM_getValue('aria2Token', '');
+            this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800');
+            this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '');
             //代理本页面的更改
             let body = new Proxy(this, {
                 get: function (target, property) {
@@ -179,8 +178,11 @@
                     return target[property];
                 },
                 set: function (target, property, value) {
-                    console.log(`set ${property.toString()} ${value}`);
-                    return target[property] = value;
+                    if (target[property] !== value) {
+                        console.log(`set ${property.toString()} ${value}`);
+                        GM_setValue(property.toString(), value);
+                        return target[property] = value;
+                    }
                 }
             });
             GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
@@ -244,11 +246,11 @@
                 };
                 this.getDownloadQuality = () => {
                     let priority = {
-                        'Source': 3,
+                        'Source': 100,
                         '540': 2,
                         '360': 1
                     };
-                    return this.VideoFileSource.sort((a, b) => priority[a.name] - priority[b.name])[0].name;
+                    return this.VideoFileSource.sort((a, b) => priority[b.name] - priority[a.name])[0].name;
                 };
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality());
@@ -266,26 +268,41 @@
             }
         }
     }
+    function parseSearchParams(searchParams, initialObject = {}) {
+        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
+    }
+    async function getXVersion(urlString) {
+        let url = new URL(urlString);
+        let params = parseSearchParams(url.searchParams);
+        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
+        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("");
+    }
     async function get(url, referrer = window.location.hostname, headers = {}) {
         if (url.split('//')[1].split('/')[0] == window.location.hostname) {
             return await (await fetch(url, {
                 'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
+                    'accept': 'application/json, text/plain, */*',
+                    'x-version': await getXVersion(url)
                 }, headers),
+                "referrerPolicy": "strict-origin-when-cross-origin",
                 'referrer': referrer,
                 'method': 'GET',
                 'mode': 'cors',
                 'redirect': 'follow',
-                'credentials': 'include'
+                'credentials': 'omit'
             })).text();
         }
         else {
-            let data = await new Promise((resolve, reject) => {
+            let data = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: url,
                     headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*'
+                        'Accept': 'application/json, text/plain, */*',
+                        'x-version': await getXVersion(url)
                     }, headers),
                     onload: function (response) {
                         resolve(response);
@@ -390,7 +407,7 @@
         videoList.clear();
     }
     async function pustDownloadTask(videoInfo) {
-        if (!checkIsHaveDownloadLink(videoInfo.getComment())) {
+        if (checkIsHaveDownloadLink(videoInfo.getComment())) {
             console.error("高画质" + videoInfo);
             return;
         }
@@ -429,6 +446,22 @@
     }
     let config = new Config();
     let videoList = new Dictionary();
+    /*
+    const originFetch = fetch;
+    const modifyFetch = (url: any, options: any) => {
+        console.log("Fetch "+url)
+        if (options.headers!==undefined){
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "x-version"){
+                    config.xVersion = options.headers[key]
+                }
+            }
+        }
+        return originFetch(url, options)
+    }
+    window.fetch = modifyFetch
+    window.unsafeWindow.fetch = modifyFetch
+    */
     let style = renderNode({
         nodeType: "style",
         childs: `
@@ -497,11 +530,10 @@
 
         .selectButton {
             position: absolute;
-            z-index: 1024;
-            width: 20px;
-            height: 20px;
-            bottom: 40%;
-            right: 2px;
+            width: 32px;
+            height: 32px;
+            bottom: 24px;
+            right: 0px;
         }
         `
     });
@@ -608,7 +640,6 @@
                     childs: "打开设置",
                     events: {
                         click: (event) => {
-                            // todo 待移植
                             event.stopPropagation();
                             return false;
                         }

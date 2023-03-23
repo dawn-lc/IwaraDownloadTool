@@ -1,4 +1,5 @@
 (async function () {
+
     /**
      * RenderCode 转换成 Node
      * @param renderCode - RenderCode
@@ -113,7 +114,7 @@
         Progress,
         Dialog
     }
-    
+
     class Config {
         cookies: Array<any>
         checkDownloadLink: boolean
@@ -127,15 +128,15 @@
         iwaraDownloaderToken: string
         constructor() {
             //初始化
-            this.checkDownloadLink = GM_getValue('CheckDownloadLink', true)
-            this.downloadType = Number(GM_getValue('DownloadType', DownloadType.others))
-            this.downloadPath = GM_getValue('DownloadDir', 'IwaraVideo/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
-            this.downloadProxy = GM_getValue('DownloadProxy', '')
-            this.aria2Type = Number(GM_getValue('Aria2Type', APIType.ws))
-            this.aria2Path = GM_getValue('Aria2Path', '127.0.0.1:6800')
-            this.aria2Token = GM_getValue('Aria2Token', '')
-            this.iwaraDownloaderPath = GM_getValue('IwaraDownloaderPath', 'http://127.0.0.1:6800')
-            this.iwaraDownloaderToken = GM_getValue('IwaraDownloaderToken', '')
+            this.checkDownloadLink = GM_getValue('checkDownloadLink', true)
+            this.downloadType = Number(GM_getValue('downloadType', DownloadType.others))
+            this.downloadPath = GM_getValue('downloadPath', 'IwaraVideo/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
+            this.downloadProxy = GM_getValue('downloadProxy', '')
+            this.aria2Type = Number(GM_getValue('aria2Type', APIType.ws))
+            this.aria2Path = GM_getValue('aria2Path', '127.0.0.1:6800')
+            this.aria2Token = GM_getValue('aria2Token', '')
+            this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800')
+            this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '')
             //代理本页面的更改
             let body = new Proxy(this, {
                 get: function (target, property) {
@@ -143,8 +144,11 @@
                     return target[property]
                 },
                 set: function (target, property, value) {
-                    console.log(`set ${property.toString()} ${value}`)
-                    return target[property] = value;
+                    if (target[property] !== value){
+                        console.log(`set ${property.toString()} ${value}`)
+                        GM_setValue(property.toString(), value)
+                        return target[property] = value;
+                    }
                 }
             })
             GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
@@ -176,7 +180,7 @@
         Private: boolean
         VideoInfoSource: VideoInfoAPIRawData
         VideoFileSource: VideoFileAPIRawDataList
-        State:boolean
+        State: boolean
         getDownloadQuality: () => string
         getDownloadUrl: () => string
         getComment: () => string
@@ -189,7 +193,7 @@
             try {
                 this.ID = ID
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`))
-                if (this.VideoInfoSource.id === undefined){
+                if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败')
                 }
                 this.Name = this.VideoInfoSource.title ?? this.Name
@@ -199,20 +203,19 @@
                 this.Tags = this.VideoInfoSource.tags
                 this.FileName = this.VideoInfoSource.file.name
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl))
-                if (this.VideoFileSource.length == 0){
+                if (this.VideoFileSource.length == 0) {
                     throw new Error('获取视频源失败')
                 }
                 this.getComment = () => {
                     return this.VideoInfoSource.body
                 }
                 this.getDownloadQuality = () => {
-                    
                     let priority = {
-                        'Source': 3,
+                        'Source': 100,
                         '540': 2,
                         '360': 1
                     }
-                    return this.VideoFileSource.sort((a, b) => priority[a.name] - priority[b.name])[0].name
+                    return this.VideoFileSource.sort((a, b) => priority[b.name] - priority[a.name])[0].name
                 }
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality())
@@ -229,25 +232,42 @@
             }
         }
     }
+
+    function parseSearchParams(searchParams: URLSearchParams , initialObject = {}):{} {
+        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
+    }
+    async function getXVersion(urlString: string): Promise<string> {
+        let url = new URL(urlString)
+        let params = parseSearchParams(url.searchParams)
+        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
+        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("");
+    }
+    
     async function get(url: string, referrer: string = window.location.hostname, headers: object = {}) {
         if (url.split('//')[1].split('/')[0] == window.location.hostname) {
             return await (await fetch(url, {
                 'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
+                    'accept': 'application/json, text/plain, */*',
+                    'x-version': await getXVersion(url)
                 }, headers),
+                "referrerPolicy": "strict-origin-when-cross-origin",
                 'referrer': referrer,
                 'method': 'GET',
                 'mode': 'cors',
                 'redirect': 'follow',
-                'credentials': 'include'
+                'credentials': 'omit'
             })).text()
         } else {
-            let data: any = await new Promise((resolve, reject) => {
+            let data: any = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: url,
                     headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*'
+                        'Accept': 'application/json, text/plain, */*',
+                        'x-version': await getXVersion(url)
                     }, headers),
                     onload: function (response: any) {
                         resolve(response)
@@ -340,7 +360,7 @@
 
 
 
-    async function AnalyzeDownloadTask(){
+    async function AnalyzeDownloadTask() {
         for (const key in videoList.items) {
             console.log(key)
             let videoInfo = await (new VideoInfo(videoList[key])).init(key)
@@ -353,13 +373,13 @@
         videoList.clear()
     }
 
-    async function pustDownloadTask(videoInfo: VideoInfo){
-        if (!checkIsHaveDownloadLink(videoInfo.getComment())){
-            console.error("高画质"+ videoInfo)
+    async function pustDownloadTask(videoInfo: VideoInfo) {
+        if (checkIsHaveDownloadLink(videoInfo.getComment())) {
+            console.error("高画质" + videoInfo)
             return
         }
         if (videoInfo.getDownloadQuality() != 'Source') {
-            console.error("非原画"+ videoInfo)
+            console.error("非原画" + videoInfo)
             return
         }
         iwaraDownloaderDownload(videoInfo)
@@ -367,7 +387,7 @@
 
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (ID: any, Author: string, Name: any, UploadTime: any, Info: any, Tag: any, DownloadUrl: any) {
-    
+
             let json = Object.assign({
                 'ver': 1,
                 'code': 'add',
@@ -386,17 +406,32 @@
             console.log(json)
             let r = JSON.parse(await post(config.iwaraDownloaderPath, json))
             if (r.code == 0) {
-                console.log("已推送"+ID)
+                console.log("已推送" + ID)
             } else {
-                console.log("推送失败"+ID)
+                console.log("推送失败" + ID)
             }
-        }( videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
-
 
     let config = new Config()
     let videoList = new Dictionary<string>();
 
+    /*
+    const originFetch = fetch;
+    const modifyFetch = (url: any, options: any) => {
+        console.log("Fetch "+url)
+        if (options.headers!==undefined){
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "x-version"){
+                    config.xVersion = options.headers[key]
+                }
+            }
+        }
+        return originFetch(url, options)
+    }
+    window.fetch = modifyFetch
+    window.unsafeWindow.fetch = modifyFetch
+    */
 
     let style = renderNode({
         nodeType: "style",
@@ -466,11 +501,10 @@
 
         .selectButton {
             position: absolute;
-            z-index: 1024;
-            width: 20px;
-            height: 20px;
-            bottom: 40%;
-            right: 2px;
+            width: 32px;
+            height: 32px;
+            bottom: 24px;
+            right: 0px;
         }
         `
     })
@@ -576,7 +610,6 @@
                     childs: "打开设置",
                     events: {
                         click: (event: Event) => {
-                            // todo 待移植
                             event.stopPropagation()
                             return false;
                         }
@@ -586,7 +619,7 @@
         }
     })
 
-    
+
 
     document.head.appendChild(style)
     document.body.appendChild(UI)
@@ -608,7 +641,7 @@
 
 
 
- 
+
 
 
 
@@ -877,3 +910,4 @@
         }
     */
 })()
+
