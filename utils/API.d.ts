@@ -74,7 +74,10 @@ interface VideoInfoAPIRawData {
         name: string;
         username: string;
     };
-    tags: string[];
+    tags: Array<{
+        id: string;
+        type: string;
+    }>;
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;

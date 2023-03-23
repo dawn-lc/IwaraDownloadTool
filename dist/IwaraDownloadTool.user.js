@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.80
+// @version           3.0.93
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -180,12 +180,12 @@
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
             this.downloadType = Number(GM_getValue('downloadType', DownloadType.others));
-            this.downloadPath = GM_getValue('downloadPath', null);
+            this.downloadPath = GM_getValue('downloadPath', '');
             this.downloadProxy = GM_getValue('downloadProxy', '');
             this.aria2Type = Number(GM_getValue('aria2Type', APIType.ws));
             this.aria2Path = GM_getValue('aria2Path', '127.0.0.1:6800');
             this.aria2Token = GM_getValue('aria2Token', '');
-            this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800');
+            this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800/jsonrpc');
             this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '');
             //代理本页面的更改
             let body = new Proxy(this, {
@@ -251,7 +251,7 @@
                 this.Author = this.VideoInfoSource.user.username;
                 this.Private = this.VideoInfoSource.private;
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt);
-                this.Tags = this.VideoInfoSource.tags;
+                this.Tags = this.VideoInfoSource.tags.map((i) => i.id);
                 this.FileName = this.VideoInfoSource.file.name;
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl));
                 if (this.VideoFileSource.length == 0) {
@@ -276,9 +276,9 @@
                 return this;
             }
             catch (error) {
+                console.error(`${this.Name}[${this.ID}] ${error}`);
                 console.log(this.VideoInfoSource);
                 console.log(this.VideoFileSource);
-                console.error(error);
                 this.State = false;
                 return this;
             }
@@ -450,11 +450,11 @@
     }
     async function pustDownloadTask(videoInfo) {
         if (checkIsHaveDownloadLink(videoInfo.getComment())) {
-            console.error("高画质" + videoInfo);
+            console.error(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接`);
             return;
         }
         if (videoInfo.getDownloadQuality() != 'Source') {
-            console.error("非原画" + videoInfo);
+            console.error(`${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载连接`);
             return;
         }
         iwaraDownloaderDownload(videoInfo);
@@ -474,8 +474,8 @@
                     'downloadCookies': config.cookies,
                     'info': Info,
                     'tag': Tag
-                }, config.downloadPath.isEmpty() ? { 'path': config.downloadPath } : {})
-            }, config.downloadPath.isEmpty() ? { 'token': config.iwaraDownloaderToken } : {})));
+                }, config.downloadPath.isEmpty() ? {} : { 'path': config.downloadPath })
+            }, config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken })));
             if (r.code == 0) {
                 console.log("已推送" + ID);
             }
@@ -571,6 +571,7 @@
             width: 60%;
             background-color: rgb(64,64,64,0.7);
             padding: 24px;
+            overflow-y: auto;
         }
         @media (max-width: 640px) {
             .pluginOverlayBody {
@@ -615,15 +616,17 @@
         `
     });
     let config = new Config();
-    GM_setValue('isFirstRun', false);
     // 检查是否是首次运行脚本
     if (!GM_getValue('isFirstRun')) {
+        for (const key in config) {
+            GM_deleteValue(key);
+        }
         document.body.appendChild(renderNode({
             nodeType: 'div',
             className: 'pluginOverlay',
             childs: [
                 {
-                    nodeType: 'p',
+                    nodeType: 'div',
                     className: 'pluginOverlayBody',
                     childs: [
                         {
