@@ -1,7 +1,7 @@
 interface String {
     replaceVariable(replacements: Record<string, any>): String;
     replaceNowTime(): String;
-    replaceUploadTime(videoInfo: VideoInfo): String;
+    replaceUploadTime(time: Date): String;
     isEmpty(): boolean;
 }
 

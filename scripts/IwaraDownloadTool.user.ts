@@ -1,5 +1,7 @@
 (async function () {
-
+    if (GM_getValue('isDebug')) {
+        debugger
+    }
     /*
     const originFetch = fetch;
     const modifyFetch = (url: any, options: any) => {
@@ -118,12 +120,6 @@
         iwaraDownloader,
         others
     }
-    enum APIType {
-        http,
-        ws,
-        https,
-        wss
-    }
     enum TipsType {
         Info,
         Warning,
@@ -138,7 +134,6 @@
         downloadType: DownloadType
         downloadPath: string
         downloadProxy: string
-        aria2Type: APIType
         aria2Path: string
         aria2Token: string
         iwaraDownloaderPath: string
@@ -149,8 +144,7 @@
             this.downloadType = Number(GM_getValue('downloadType', DownloadType.others))
             this.downloadPath = GM_getValue('downloadPath', '')
             this.downloadProxy = GM_getValue('downloadProxy', '')
-            this.aria2Type = Number(GM_getValue('aria2Type', APIType.ws))
-            this.aria2Path = GM_getValue('aria2Path', '127.0.0.1:6800')
+            this.aria2Path = GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc')
             this.aria2Token = GM_getValue('aria2Token', '')
             this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800/jsonrpc')
             this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '')
@@ -217,7 +211,7 @@
                 this.Author = this.VideoInfoSource.user.username
                 this.Private = this.VideoInfoSource.private
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt)
-                this.Tags = this.VideoInfoSource.tags.map((i)=>i.id)
+                this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
                 this.FileName = this.VideoInfoSource.file.name
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl))
                 if (this.VideoFileSource.length == 0) {
@@ -397,14 +391,14 @@
         })
     }
 
-    String.prototype.replaceUploadTime = function (videoInfo) {
+    String.prototype.replaceUploadTime = function (time) {
         return this.replaceVariable({
-            UploadYear: videoInfo.UploadTime.getFullYear(),
-            UploadMonth: videoInfo.UploadTime.getMonth() + 1,
-            UploadDate: videoInfo.UploadTime.getDate(),
-            UploadHours: videoInfo.UploadTime.getHours(),
-            UploadMinutes: videoInfo.UploadTime.getMinutes(),
-            UploadSeconds: videoInfo.UploadTime.getSeconds()
+            UploadYear    : time.getFullYear(),
+            UploadMonth   : time.getMonth() + 1,
+            UploadDate    : time.getDate(),
+            UploadHours   : time.getHours(),
+            UploadMinutes : time.getMinutes(),
+            UploadSeconds : time.getSeconds()
         })
     }
 
@@ -432,9 +426,40 @@
         }
         iwaraDownloaderDownload(videoInfo)
     }
+    function aria2Download(videoInfo: VideoInfo) {
+        (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<string>, downloadUrl: string) {
 
+            let json = JSON.stringify({
+                'jsonrpc': '2.0',
+                'method': 'aria2.addUri',
+                'params': [
+                    'token:' + config.aria2Token,
+                    [downloadUrl],
+                    Object.assign(
+                        config.downloadProxy.isEmpty() ? {} : { 'all-proxy': config.downloadProxy },
+                        config.downloadPath.isEmpty() ? {} : {
+                            'out': config.downloadPath.replaceNowTime().replaceUploadTime(uploadTime).replaceVariable(
+                                {
+                                    AUTHOR: author,
+                                    ID: id,
+                                    TITLE: name
+                                }
+                            )
+                        },
+                        {
+                            'referer': 'https://ecchi.iwara.tv/',
+                            'header': [
+                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
+                            ]
+                        }
+                    )
+                ]
+            })
+            post(config.aria2Path, json)
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
+    }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
-        (async function (ID: any, Author: string, Name: any, UploadTime: any, Info: any, Tag: any, DownloadUrl: any) {
+        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
             let r = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
                 'ver': 1,
                 'code': 'add',
@@ -449,7 +474,13 @@
                     'info': Info,
                     'tag': Tag
                 },
-                    config.downloadPath.isEmpty() ? {} : { 'path': config.downloadPath }
+                    config.downloadPath.isEmpty() ? {} : { 'path': config.downloadPath.replaceNowTime().replaceUploadTime(UploadTime).replaceVariable(
+                        {
+                            AUTHOR: Author,
+                            ID: ID,
+                            TITLE: Name
+                        }
+                    ) }
                 )
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
@@ -596,11 +627,11 @@
     })
 
     let config = new Config()
+    GM_deleteValue('isFirstRun');
     // 检查是否是首次运行脚本
-    if (!GM_getValue('isFirstRun')) {
-        for (const key in config) {
-            GM_deleteValue(key);
-        }
+    if (GM_getValue('isFirstRun', true)) {
+        GM_listValues().forEach(i=>GM_deleteValue(i))
+        config = new Config()
         document.body.appendChild(renderNode({
             nodeType: 'div',
             className: 'pluginOverlay',
@@ -616,7 +647,7 @@
                                 { nodeType: 'br' },
                                 {
                                     nodeType: 'a',
-                                    attributes:{
+                                    attributes: {
                                         href: 'https://docs.scriptcat.org/'
                                     },
                                     childs: 'ScriptCat'
@@ -624,7 +655,7 @@
                                 ' 或 ',
                                 {
                                     nodeType: 'a',
-                                    attributes:{
+                                    attributes: {
                                         href: 'https://www.tampermonkey.net/index.php?#download_gcal'
                                     },
                                     childs: 'Tampermonkey Beta'
@@ -632,14 +663,14 @@
                                 '载入本脚本。'
                             ]
                         },
-                        { nodeType: 'p', childs:'全局可用变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])'},
-                        { nodeType: 'p', childs:'路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#SOURCE_NAME#% (原文件名) | %#UploadY#% (发布时间[年]) | %#UploadM#% (发布时间[月]) | %#UploadD#% (发布时间[日]) | %#Uploadh#% (发布时间[时]) | %#Uploadm#% (发布时间[分]) | %#Uploads#% (发布时间[秒])'},
-                        { nodeType: 'p', childs:'例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'},
-                        { nodeType: 'p', childs:'结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'),},
-                        { nodeType: 'p', childs:'双击视频选中，再次双击取消选中。选中仅在本页面有效！'},
-                        { nodeType: 'p', childs:'在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。'},
-                        { nodeType: 'p', childs:'插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。'},
-                        { nodeType: 'p', childs:'手动下载需要您提供视频ID!'}
+                        { nodeType: 'p', childs: '全局可用变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
+                        { nodeType: 'p', childs: '路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
+                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
+                        { nodeType: 'p', childs: '点击侧边栏中“开关选择”开启下载复选框' },
+                        { nodeType: 'p', childs: '在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
+                        { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
                     ]
                 },
                 {
@@ -648,12 +679,12 @@
                     childs: [
                         {
                             nodeType: 'input',
-                            className:'checkbox',
+                            className: 'checkbox',
                             attributes: {
                                 type: 'checkbox',
-                                name:'agree-checkbox'
+                                name: 'agree-checkbox'
                             },
-                            events:{
+                            events: {
                                 change: (event: Event) => {
                                     (document.querySelector('.pluginOverlayButton') as HTMLButtonElement).disabled = !(event.target as HTMLInputElement).checked
                                 }
@@ -661,8 +692,8 @@
                         },
                         {
                             nodeType: 'label',
-                            className:'checkbox-label',
-                            attributes: { 
+                            className: 'checkbox-label',
+                            attributes: {
                                 for: 'agree-checkbox'
                             },
                             childs: '我已知晓如何使用',
@@ -676,10 +707,10 @@
                         disabled: true
                     },
                     childs: '确定',
-                    events:{
+                    events: {
                         click: () => {
                             document.querySelector('.pluginOverlay').remove()
-                            GM_setValue('isFirstRun', true)
+                            GM_setValue('isFirstRun', false)
                         }
                     }
                 }
@@ -707,9 +738,10 @@
                                 document.querySelectorAll('.page-videoList__item * .videoTeaser__thumbnail').forEach((element) => {
                                     element.appendChild(renderNode({
                                         nodeType: "input",
-                                        attributes: {
+                                        attributes: Object.assign(
+                                            videoList.has(element.getAttribute('href').trim().split('/')[2]) ? { checked: true } : {},{
                                             type: "checkbox"
-                                        },
+                                        }),
                                         className: 'selectButton',
                                         events: {
                                             input: (event: Event) => {
@@ -729,6 +761,7 @@
                                 })
                             } else {
                                 document.querySelectorAll('.selectButton').forEach((element) => {
+                                    videoList.remove(element.parentElement.getAttribute('href').trim().split('/')[2])
                                     element.remove()
                                 })
                             }
