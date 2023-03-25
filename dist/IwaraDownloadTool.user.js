@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.99
+// @version           3.0.135
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -148,10 +148,9 @@
     }
     let DownloadType;
     (function (DownloadType) {
-        DownloadType[DownloadType["aria2"] = 0] = "aria2";
-        DownloadType[DownloadType["default"] = 1] = "default";
-        DownloadType[DownloadType["iwaraDownloader"] = 2] = "iwaraDownloader";
-        DownloadType[DownloadType["others"] = 3] = "others";
+        DownloadType[DownloadType["Aria2"] = 0] = "Aria2";
+        DownloadType[DownloadType["IwaraDownloader"] = 1] = "IwaraDownloader";
+        DownloadType[DownloadType["Others"] = 2] = "Others";
     })(DownloadType || (DownloadType = {}));
     let TipsType;
     (function (TipsType) {
@@ -174,7 +173,7 @@
         constructor() {
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
-            this.downloadType = Number(GM_getValue('downloadType', DownloadType.others));
+            this.downloadType = GM_getValue('downloadType', DownloadType.Others);
             this.downloadPath = GM_getValue('downloadPath', '');
             this.downloadProxy = GM_getValue('downloadProxy', '');
             this.aria2Path = GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc');
@@ -188,12 +187,21 @@
                     return target[property];
                 },
                 set: function (target, property, value) {
-                    if (target[property] !== value) {
+                    if (target[property] !== value && !GM_getValue('isFirstRun', true)) {
                         console.log(`set ${property.toString()} ${value}`);
                         GM_setValue(property.toString(), value);
-                        return target[property] = value;
+                        return Reflect.set(target, property, value);
                     }
+                    return true;
                 }
+            });
+            //同步其他页面脚本的更改
+            GM_listValues().forEach((value) => {
+                GM_addValueChangeListener(value, (name, old_value, new_value, remote) => {
+                    if (remote && body[name] !== new_value && !GM_getValue('isFirstRun', true)) {
+                        body[name] = new_value;
+                    }
+                });
             });
             GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
                 if (error) {
@@ -203,15 +211,73 @@
                     body.cookies = list;
                 }
             });
-            //同步其他页面脚本的更改
-            GM_listValues().forEach((value) => {
-                GM_addValueChangeListener(value, (name, old_value, new_value, remote) => {
-                    if (remote && body[name] !== new_value) {
-                        body[name] = new_value;
+            return body;
+        }
+        downloadTypeItem(type) {
+            return {
+                nodeType: 'label',
+                childs: [
+                    DownloadType[type],
+                    {
+                        nodeType: 'input',
+                        attributes: Object.assign({
+                            name: 'DownloadType',
+                            type: 'radio',
+                            value: type
+                        }, config.downloadType == type ? { checked: true } : {}),
+                        events: {
+                            change: () => {
+                                config.downloadType = type;
+                            }
+                        }
+                    }
+                ]
+            };
+        }
+        edit() {
+            if (!document.querySelector('.pluginConfig')) {
+                let pluginConfigPage = renderNode({
+                    nodeType: 'p',
+                    attributes: {
+                        id: 'pluginConfigPage'
                     }
                 });
-            });
-            return body;
+                let editor = renderNode({
+                    nodeType: 'div',
+                    className: 'pluginConfig',
+                    childs: [
+                        {
+                            nodeType: 'div',
+                            className: 'main',
+                            childs: [
+                                {
+                                    nodeType: 'h2',
+                                    childs: 'Iwara 批量下载工具'
+                                },
+                                {
+                                    nodeType: 'p',
+                                    childs: [
+                                        '下载方式：',
+                                        ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
+                                    ]
+                                },
+                                pluginConfigPage
+                            ]
+                        },
+                        {
+                            nodeType: 'button',
+                            className: 'closeButton',
+                            childs: '关闭',
+                            events: {
+                                click: () => {
+                                    editor.remove();
+                                }
+                            }
+                        }
+                    ]
+                });
+                document.body.appendChild(editor);
+            }
         }
     }
     class VideoInfo {
@@ -451,7 +517,17 @@
             console.error(`${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载连接`);
             return;
         }
-        iwaraDownloaderDownload(videoInfo);
+        switch (config.downloadType) {
+            case DownloadType.Aria2:
+                aria2Download(videoInfo);
+                break;
+            case DownloadType.IwaraDownloader:
+                iwaraDownloaderDownload(videoInfo);
+                break;
+            default:
+                othersDownload(videoInfo);
+                break;
+        }
     }
     function aria2Download(videoInfo) {
         (async function (id, author, name, uploadTime, info, tag, downloadUrl) {
@@ -493,11 +569,13 @@
                     'downloadCookies': config.cookies,
                     'info': Info,
                     'tag': Tag
-                }, config.downloadPath.isEmpty() ? {} : { 'path': config.downloadPath.replaceNowTime().replaceUploadTime(UploadTime).replaceVariable({
+                }, config.downloadPath.isEmpty() ? {} : {
+                    'path': config.downloadPath.replaceNowTime().replaceUploadTime(UploadTime).replaceVariable({
                         AUTHOR: Author,
                         ID: ID,
                         TITLE: Name
-                    }) })
+                    })
+                })
             }, config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken })));
             if (r.code == 0) {
                 console.log("已推送" + ID);
@@ -505,6 +583,11 @@
             else {
                 console.log("推送失败" + ID);
             }
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
+    }
+    function othersDownload(videoInfo) {
+        (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
+            GM_openInTab(DownloadUrl, { active: true, insert: true, setParent: true });
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     let style = renderNode({
@@ -573,6 +656,53 @@
             transition-delay: 0.5s;
         }
 
+
+        .pluginConfig {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(128, 128, 128, 0.8);
+			z-index: 8192; 
+			display: flex;
+            flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+		.pluginConfig .main {
+            color: white;
+            width: 60%;
+            background-color: rgb(64,64,64,0.7);
+            padding: 24px;
+            margin: 10px;
+            overflow-y: auto;
+        }
+        @media (max-width: 640px) {
+            .pluginConfig .main {
+                width: 100%;
+            }
+        }
+        .pluginConfig button {
+			background-color: blue;
+			padding: 10px 20px;
+			color: white;
+			font-size: 18px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+        .pluginConfig p {
+			display: flex;
+			align-items: center;
+		}
+        .pluginConfig label {
+			display: flex;
+            align-items: center;
+            flex-direction: row-reverse;
+            margin-right: 10px;
+		}
+
         .pluginOverlay {
 			position: fixed;
 			top: 0;
@@ -590,10 +720,10 @@
 		.pluginOverlayBody {
             color: white;
             font-size: 24px;
-            text-align: justify;
             width: 60%;
             background-color: rgb(64,64,64,0.7);
             padding: 24px;
+            margin: 10px;
             overflow-y: auto;
         }
         @media (max-width: 640px) {
@@ -639,7 +769,6 @@
         `
     });
     let config = new Config();
-    GM_deleteValue('isFirstRun');
     // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i));
@@ -721,8 +850,9 @@
                     childs: '确定',
                     events: {
                         click: () => {
-                            document.querySelector('.pluginOverlay').remove();
                             GM_setValue('isFirstRun', false);
+                            document.querySelector('.pluginOverlay').remove();
+                            window.unsafeWindow.location.reload();
                         }
                     }
                 }
@@ -834,6 +964,7 @@
                     childs: "打开设置",
                     events: {
                         click: (event) => {
+                            config.edit();
                             event.stopPropagation();
                             return false;
                         }
