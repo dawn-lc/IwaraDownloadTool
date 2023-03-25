@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.135
+// @version           3.0.155
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -15,6 +15,8 @@
 // @supportURL        https://github.com/dawn-lc/user.js/issues
 // @updateURL         https://github.com/dawn-lc/user.js/raw/master/dist/IwaraDownloadTool.mata.js
 // @downloadURL       https://github.com/dawn-lc/user.js/raw/master/dist/IwaraDownloadTool.user.js
+// @require           https://scriptcat.org/lib/881/1.2.0/script-statistics.js
+// @antifeature       tracking
 // @connect           *
 // @match             *://*.iwara.tv/*
 // @grant             GM_getValue
@@ -36,22 +38,6 @@
     if (GM_getValue('isDebug')) {
         debugger;
     }
-    /*
-    const originFetch = fetch;
-    const modifyFetch = (url: any, options: any) => {
-        console.log("Fetch "+url)
-        if (options.headers!==undefined){
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "x-version"){
-                    config.xVersion = options.headers[key]
-                }
-            }
-        }
-        return originFetch(url, options)
-    }
-    window.fetch = modifyFetch
-    window.unsafeWindow.fetch = modifyFetch
-    */
     /**
      * RenderCode 转换成 Node
      * @param renderCode - RenderCode
@@ -188,9 +174,11 @@
                 },
                 set: function (target, property, value) {
                     if (target[property] !== value && !GM_getValue('isFirstRun', true)) {
-                        console.log(`set ${property.toString()} ${value}`);
+                        let setr = Reflect.set(target, property, value);
+                        console.log(`set ${property.toString()} ${value} ${setr}`);
                         GM_setValue(property.toString(), value);
-                        return Reflect.set(target, property, value);
+                        target.configChange(property.toString());
+                        return setr;
                     }
                     return true;
                 }
@@ -216,6 +204,7 @@
         downloadTypeItem(type) {
             return {
                 nodeType: 'label',
+                className: 'inputRadio',
                 childs: [
                     DownloadType[type],
                     {
@@ -234,17 +223,157 @@
                 ]
             };
         }
-        edit() {
-            if (!document.querySelector('.pluginConfig')) {
-                let pluginConfigPage = renderNode({
-                    nodeType: 'p',
-                    attributes: {
-                        id: 'pluginConfigPage'
+        configChange(item) {
+            switch (item) {
+                case 'downloadType':
+                    let page = document.querySelector('#pluginConfigPage');
+                    while (page.hasChildNodes()) {
+                        page.removeChild(page.firstChild);
                     }
-                });
+                    let downloadConfigInput = [
+                        renderNode({
+                            nodeType: 'label',
+                            childs: [
+                                '下载到：',
+                                {
+                                    nodeType: 'input',
+                                    attributes: Object.assign({
+                                        name: 'DownloadPath',
+                                        type: 'Text',
+                                        value: config.downloadPath
+                                    }),
+                                    events: {
+                                        change: (event) => {
+                                            config.downloadPath = event.target.value;
+                                        }
+                                    }
+                                }
+                            ]
+                        }),
+                        renderNode({
+                            nodeType: 'label',
+                            childs: [
+                                '下载代理：',
+                                {
+                                    nodeType: 'input',
+                                    attributes: Object.assign({
+                                        name: 'DownloadProxy',
+                                        type: 'Text',
+                                        value: config.downloadProxy
+                                    }),
+                                    events: {
+                                        change: (event) => {
+                                            config.downloadProxy = event.target.value;
+                                        }
+                                    }
+                                }
+                            ]
+                        })
+                    ];
+                    let aria2ConfigInput = [
+                        renderNode({
+                            nodeType: 'label',
+                            childs: [
+                                'Aria2 RPC：',
+                                {
+                                    nodeType: 'input',
+                                    attributes: Object.assign({
+                                        name: 'Aria2Path',
+                                        type: 'Text',
+                                        value: config.aria2Path
+                                    }),
+                                    events: {
+                                        change: (event) => {
+                                            config.aria2Path = event.target.value;
+                                        }
+                                    }
+                                }
+                            ]
+                        }),
+                        renderNode({
+                            nodeType: 'label',
+                            childs: [
+                                'Aria2 Token：',
+                                {
+                                    nodeType: 'input',
+                                    attributes: Object.assign({
+                                        name: 'Aria2Token',
+                                        type: 'Text',
+                                        value: config.aria2Token
+                                    }),
+                                    events: {
+                                        change: (event) => {
+                                            config.aria2Token = event.target.value;
+                                        }
+                                    }
+                                }
+                            ]
+                        })
+                    ];
+                    let iwaraDownloaderConfigInput = [
+                        renderNode({
+                            nodeType: 'label',
+                            childs: [
+                                'IwaraDownloader RPC：',
+                                {
+                                    nodeType: 'input',
+                                    attributes: Object.assign({
+                                        name: 'IwaraDownloaderPath',
+                                        type: 'Text',
+                                        value: config.iwaraDownloaderPath
+                                    }),
+                                    events: {
+                                        change: (event) => {
+                                            config.iwaraDownloaderPath = event.target.value;
+                                        }
+                                    }
+                                }
+                            ]
+                        }),
+                        renderNode({
+                            nodeType: 'label',
+                            childs: [
+                                'IwaraDownloader Token：',
+                                {
+                                    nodeType: 'input',
+                                    attributes: Object.assign({
+                                        name: 'IwaraDownloaderToken',
+                                        type: 'Text',
+                                        value: config.iwaraDownloaderToken
+                                    }),
+                                    events: {
+                                        change: (event) => {
+                                            config.downloadProxy = event.target.value;
+                                        }
+                                    }
+                                }
+                            ]
+                        })
+                    ];
+                    switch (config.downloadType) {
+                        case DownloadType.Aria2:
+                            downloadConfigInput.map(i => page.appendChild(i));
+                            aria2ConfigInput.map(i => page.appendChild(i));
+                            break;
+                        case DownloadType.IwaraDownloader:
+                            downloadConfigInput.map(i => page.appendChild(i));
+                            iwaraDownloaderConfigInput.map(i => page.appendChild(i));
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        edit() {
+            if (!document.querySelector('#pluginConfig')) {
                 let editor = renderNode({
                     nodeType: 'div',
-                    className: 'pluginConfig',
+                    attributes: {
+                        id: 'pluginConfig'
+                    },
                     childs: [
                         {
                             nodeType: 'div',
@@ -256,18 +385,24 @@
                                 },
                                 {
                                     nodeType: 'p',
+                                    className: 'inputRadioLine',
                                     childs: [
                                         '下载方式：',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
                                     ]
                                 },
-                                pluginConfigPage
+                                {
+                                    nodeType: 'p',
+                                    attributes: {
+                                        id: 'pluginConfigPage'
+                                    }
+                                }
                             ]
                         },
                         {
                             nodeType: 'button',
                             className: 'closeButton',
-                            childs: '关闭',
+                            childs: '保存',
                             events: {
                                 click: () => {
                                     editor.remove();
@@ -277,6 +412,7 @@
                     ]
                 });
                 document.body.appendChild(editor);
+                this.configChange('downloadType');
             }
         }
     }
@@ -308,11 +444,11 @@
                     throw new Error('获取视频信息失败');
                 }
                 this.Name = this.VideoInfoSource.title ?? this.Name;
-                this.Author = this.VideoInfoSource.user.username;
+                this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
                 this.Private = this.VideoInfoSource.private;
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt);
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id);
-                this.FileName = this.VideoInfoSource.file.name;
+                this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl));
                 if (this.VideoFileSource.length == 0) {
                     throw new Error('获取视频源失败');
@@ -498,7 +634,6 @@
     };
     async function AnalyzeDownloadTask() {
         for (const key in videoList.items) {
-            console.log(key);
             let videoInfo = await (new VideoInfo(videoList[key])).init(key);
             videoInfo.State && pustDownloadTask(videoInfo);
         }
@@ -529,20 +664,40 @@
                 break;
         }
     }
+    function analyzeLocalPath(path) {
+        let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/) || '';
+        return {
+            fullPath: matchPath[0],
+            drive: matchPath[1] || '',
+            directories: matchPath[2].split(/[\/\\]/),
+            filename: matchPath[3],
+            match: matchPath !== null
+        };
+    }
+    function UUID() {
+        let UUID = '';
+        for (let index = 0; index < 8; index++) {
+            UUID += (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+        }
+        return UUID;
+    }
     function aria2Download(videoInfo) {
         (async function (id, author, name, uploadTime, info, tag, downloadUrl) {
+            let localPath = analyzeLocalPath(config.downloadPath.replaceNowTime().replaceUploadTime(uploadTime).replaceVariable({
+                AUTHOR: author,
+                ID: id,
+                TITLE: name
+            }).trim());
             let json = JSON.stringify({
                 'jsonrpc': '2.0',
                 'method': 'aria2.addUri',
+                'id': UUID(),
                 'params': [
                     'token:' + config.aria2Token,
                     [downloadUrl],
                     Object.assign(config.downloadProxy.isEmpty() ? {} : { 'all-proxy': config.downloadProxy }, config.downloadPath.isEmpty() ? {} : {
-                        'out': config.downloadPath.replaceNowTime().replaceUploadTime(uploadTime).replaceVariable({
-                            AUTHOR: author,
-                            ID: id,
-                            TITLE: name
-                        })
+                        'out': localPath.filename,
+                        'dir': localPath.fullPath.replace(localPath.filename, '')
                     }, {
                         'referer': 'https://ecchi.iwara.tv/',
                         'header': [
@@ -551,7 +706,7 @@
                     })
                 ]
             });
-            post(config.aria2Path, json);
+            console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path, json)}`);
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     function iwaraDownloaderDownload(videoInfo) {
@@ -657,7 +812,7 @@
         }
 
 
-        .pluginConfig {
+        #pluginConfig {
 			position: fixed;
 			top: 0;
 			left: 0;
@@ -670,20 +825,19 @@
 			align-items: center;
 			justify-content: center;
 		}
-		.pluginConfig .main {
+		#pluginConfig .main {
             color: white;
-            width: 60%;
             background-color: rgb(64,64,64,0.7);
             padding: 24px;
             margin: 10px;
             overflow-y: auto;
         }
         @media (max-width: 640px) {
-            .pluginConfig .main {
+            #pluginConfig .main {
                 width: 100%;
             }
         }
-        .pluginConfig button {
+        #pluginConfig button {
 			background-color: blue;
 			padding: 10px 20px;
 			color: white;
@@ -692,18 +846,31 @@
 			border-radius: 4px;
 			cursor: pointer;
 		}
-        .pluginConfig p {
+        #pluginConfig p {
+			display: flex;
+            flex-direction: column;
+		}
+        #pluginConfig p label{
+			display: flex;
+		}
+        #pluginConfig p label input{
+			flex-grow: 1;
+            margin-left: 10px;
+		}
+        #pluginConfig .inputRadioLine {
 			display: flex;
 			align-items: center;
+            flex-direction: row;
+            margin-right: 10px;
 		}
-        .pluginConfig label {
+        #pluginConfig .inputRadio {
 			display: flex;
             align-items: center;
             flex-direction: row-reverse;
             margin-right: 10px;
 		}
 
-        .pluginOverlay {
+        #pluginOverlay {
 			position: fixed;
 			top: 0;
 			left: 0;
@@ -717,7 +884,7 @@
 			justify-content: center;
 		}
 
-		.pluginOverlayBody {
+		#pluginOverlay .main {
             color: white;
             font-size: 24px;
             width: 60%;
@@ -727,12 +894,12 @@
             overflow-y: auto;
         }
         @media (max-width: 640px) {
-            .pluginOverlayBody {
+            #pluginOverlay .main {
                 width: 100%;
             }
         }
 
-		.pluginOverlayButton {
+		#pluginOverlay button {
 			padding: 10px 20px;
 			color: white;
 			font-size: 18px;
@@ -740,20 +907,20 @@
 			border-radius: 4px;
 			cursor: pointer;
 		}
-        .pluginOverlayButton {
+        #pluginOverlay button {
 			background-color: blue;
         }
-        .pluginOverlayButton[disabled] {
+        #pluginOverlay button[disabled] {
 			background-color: darkgray;
             cursor: not-allowed;
 		}
 
-		.checkbox-container {
+		#pluginOverlay .checkbox-container {
 			display: flex;
 			align-items: center;
 		}
 
-		.checkbox-label {
+		#pluginOverlay .checkbox-label {
 			color: white;
 			font-size: 18px;
 			margin-left: 10px;
@@ -773,13 +940,29 @@
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i));
         config = new Config();
+        let confirmButton = renderNode({
+            nodeType: 'button',
+            attributes: {
+                disabled: true
+            },
+            childs: '确定',
+            events: {
+                click: () => {
+                    GM_setValue('isFirstRun', false);
+                    document.querySelector('#pluginOverlay').remove();
+                    window.unsafeWindow.location.reload();
+                }
+            }
+        });
         document.body.appendChild(renderNode({
             nodeType: 'div',
-            className: 'pluginOverlay',
+            attributes: {
+                id: 'pluginOverlay'
+            },
             childs: [
                 {
                     nodeType: 'div',
-                    className: 'pluginOverlayBody',
+                    className: 'main',
                     childs: [
                         {
                             nodeType: 'h2',
@@ -809,9 +992,9 @@
                         { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
                         { nodeType: 'p', childs: '点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
-                        { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
-                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
+                        { nodeType: 'p', childs: '[尚未在新版实现]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
+                        { nodeType: 'p', childs: '[尚未在新版实现]插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '[尚未在新版实现]手动下载需要您提供视频ID!' }
                     ]
                 },
                 {
@@ -827,7 +1010,7 @@
                             },
                             events: {
                                 change: (event) => {
-                                    document.querySelector('.pluginOverlayButton').disabled = !event.target.checked;
+                                    confirmButton.disabled = !event.target.checked;
                                 }
                             }
                         },
@@ -841,21 +1024,7 @@
                         },
                     ],
                 },
-                {
-                    nodeType: 'button',
-                    className: 'pluginOverlayButton',
-                    attributes: {
-                        disabled: true
-                    },
-                    childs: '确定',
-                    events: {
-                        click: () => {
-                            GM_setValue('isFirstRun', false);
-                            document.querySelector('.pluginOverlay').remove();
-                            window.unsafeWindow.location.reload();
-                        }
-                    }
-                }
+                confirmButton
             ]
         }));
     }

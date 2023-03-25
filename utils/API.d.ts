@@ -13,6 +13,15 @@ type RenderCode = string | Node |{
     childs?: RenderCode | RenderCode[];
 }
 
+interface LocalPath {
+    fullPath: string;
+    drive: string;
+    directories: string[];
+    filename: string;
+    match: boolean;
+}
+
+
 interface DownloadTask {
     id: string;
     url: string;
