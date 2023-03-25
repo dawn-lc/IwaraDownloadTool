@@ -5,9 +5,9 @@
 // @description:ja    Iwara 動画バッチをダウンロード
 // @name:zh-CN        Iwara 批量下载工具
 // @description:zh-CN 批量下载 Iwara 视频
-// @icon              https://iwara.tv/sites/all/themes/main/img/logo.png
+// @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           2.1.150
+// @version           3.0.135
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -30,6 +30,5 @@
 // @grant             GM_openInTab
 // @grant             GM_cookie
 // @grant             unsafeWindow
-// @require           https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/react/16.13.1/umd/react.production.min.js
-// @require           https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/react-dom/16.13.1/umd/react-dom.production.min.js
+// @run-at            document-start
 // ==/UserScript==
