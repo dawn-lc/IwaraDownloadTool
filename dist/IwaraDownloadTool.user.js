@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.169
+// @version           3.0.170
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -445,7 +445,7 @@
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败');
                 }
-                this.Name = this.VideoInfoSource.title ?? this.Name;
+                this.Name = (this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
                 this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty();
                 if (this.External) {
                     throw new Error('非i站源的视频');

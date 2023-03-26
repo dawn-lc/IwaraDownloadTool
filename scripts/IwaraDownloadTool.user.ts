@@ -422,7 +422,7 @@
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败')
                 }
-                this.Name = this.VideoInfoSource.title ?? this.Name
+                this.Name = (this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
                     throw new Error('非i站源的视频')
