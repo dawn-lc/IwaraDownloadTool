@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.194
+// @version           3.0.195
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -1098,8 +1098,8 @@
                         click: () => {
                             if (!document.querySelector('.selectButton')) {
                                 console.clear();
-                                console.log("开始注入复选框 预计注入" + document.querySelectorAll('.page-videoList__item * .videoTeaser__thumbnail').length + "个复选框");
-                                document.querySelectorAll('.page-videoList__item * .videoTeaser__thumbnail').forEach((element) => {
+                                console.log("开始注入复选框 预计注入" + document.querySelectorAll('.videoTeaser * .videoTeaser__thumbnail').length + "个复选框");
+                                document.querySelectorAll('.videoTeaser * .videoTeaser__thumbnail').forEach((element) => {
                                     element.appendChild(renderNode({
                                         nodeType: "input",
                                         attributes: Object.assign(videoList.has(element.getAttribute('href').trim().split('/')[2]) ? { checked: true } : {}, {
