@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.196
+// @version           3.0.197
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -34,6 +34,7 @@
 // @grant             GM_cookie
 // @grant             unsafeWindow
 // @run-at            document-start
+// @require           https://cdn.jsdelivr.net/npm/toastify-js
 // ==/UserScript==
 (async function () {
     if (GM_getValue('isDebug')) {
@@ -490,6 +491,19 @@
                 return this;
             }
             catch (error) {
+                Toastify({
+                    text: `${this.Name}[${this.ID}] 解析过程中出现问题 ${error}`,
+                    duration: -1,
+                    destination: `https://www.iwara.tv/video/${this.ID}`,
+                    newWindow: true,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    stopOnFocus: true,
+                    style: {
+                        background: "#FF0000",
+                    }
+                }).showToast();
                 console.error(`${this.Name}[${this.ID}] ${error}`);
                 console.log(this.VideoInfoSource);
                 console.log(this.VideoFileSource);
@@ -795,15 +809,54 @@
     }
     async function pustDownloadTask(videoInfo) {
         if (checkIsHaveDownloadLink(videoInfo.getComment())) {
-            console.error(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接 https://www.iwara.tv/video/${videoInfo.ID}`);
+            Toastify({
+                text: `${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接, 点击进入视频页面`,
+                duration: -1,
+                destination: `https://www.iwara.tv/video/${videoInfo.ID}`,
+                newWindow: true,
+                close: true,
+                gravity: "top",
+                position: "right",
+                stopOnFocus: true,
+                style: {
+                    background: "#FFA500",
+                }
+            }).showToast();
+            console.warn(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接, 点击进入视频页面 https://www.iwara.tv/video/${videoInfo.ID}`);
             return;
         }
         if (videoInfo.External) {
-            console.error(`${videoInfo.Name}[${videoInfo.ID}] 非本站视频,请手动处理!`);
+            Toastify({
+                text: `${videoInfo.Name}[${videoInfo.ID}] 非本站视频,请手动处理, 点击进入视频页面`,
+                duration: -1,
+                destination: `https://www.iwara.tv/video/${videoInfo.ID}`,
+                newWindow: true,
+                close: true,
+                gravity: "top",
+                position: "right",
+                stopOnFocus: true,
+                style: {
+                    background: "#FFA500",
+                }
+            }).showToast();
+            console.warn(`${videoInfo.Name}[${videoInfo.ID}] 非本站视频,请手动处理! https://www.iwara.tv/video/${videoInfo.ID}`);
             return;
         }
         if (videoInfo.getDownloadQuality() != 'Source') {
-            console.error(`${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载连接`);
+            Toastify({
+                text: `${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载地址, 点击进入视频页面`,
+                duration: -1,
+                destination: `https://www.iwara.tv/video/${videoInfo.ID}`,
+                newWindow: true,
+                close: true,
+                gravity: "top",
+                position: "right",
+                stopOnFocus: true,
+                style: {
+                    background: "#FFA500",
+                }
+            }).showToast();
+            console.warn(`${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载地址 https://www.iwara.tv/video/${videoInfo.ID}`);
             return;
         }
         switch (config.downloadType) {
@@ -855,6 +908,18 @@
                 ]
             });
             console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path, json)}`);
+            Toastify({
+                text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`,
+                duration: -1,
+                newWindow: true,
+                close: true,
+                gravity: "top",
+                position: "right",
+                stopOnFocus: true,
+                style: {
+                    background: "#1E90FF",
+                }
+            }).showToast();
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     function iwaraDownloaderDownload(videoInfo) {
@@ -882,6 +947,18 @@
             }, config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken })));
             if (r.code == 0) {
                 console.log("已推送" + ID);
+                Toastify({
+                    text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到IwaraDownloader`,
+                    duration: -1,
+                    newWindow: true,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    stopOnFocus: true,
+                    style: {
+                        background: "#1E90FF",
+                    }
+                }).showToast();
             }
             else {
                 console.log("推送失败" + ID);
@@ -893,6 +970,14 @@
             GM_openInTab(DownloadUrl, { active: true, insert: true, setParent: true });
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
+    document.head.appendChild(renderNode({
+        nodeType: 'link',
+        attributes: {
+            rel: 'stylesheet',
+            type: 'text/css',
+            href: 'https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css'
+        }
+    }));
     document.head.appendChild(renderNode({
         nodeType: "style",
         childs: `
