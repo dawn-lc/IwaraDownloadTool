@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.197
+// @version           3.0.202
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -496,7 +496,6 @@
                     duration: -1,
                     destination: `https://www.iwara.tv/video/${this.ID}`,
                     newWindow: true,
-                    close: true,
                     gravity: "top",
                     position: "right",
                     stopOnFocus: true,
@@ -814,7 +813,6 @@
                 duration: -1,
                 destination: `https://www.iwara.tv/video/${videoInfo.ID}`,
                 newWindow: true,
-                close: true,
                 gravity: "top",
                 position: "right",
                 stopOnFocus: true,
@@ -831,7 +829,6 @@
                 duration: -1,
                 destination: `https://www.iwara.tv/video/${videoInfo.ID}`,
                 newWindow: true,
-                close: true,
                 gravity: "top",
                 position: "right",
                 stopOnFocus: true,
@@ -848,7 +845,6 @@
                 duration: -1,
                 destination: `https://www.iwara.tv/video/${videoInfo.ID}`,
                 newWindow: true,
-                close: true,
                 gravity: "top",
                 position: "right",
                 stopOnFocus: true,
@@ -910,9 +906,8 @@
             console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path, json)}`);
             Toastify({
                 text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`,
-                duration: -1,
+                duration: 2000,
                 newWindow: true,
-                close: true,
                 gravity: "top",
                 position: "right",
                 stopOnFocus: true,
@@ -949,9 +944,8 @@
                 console.log("已推送" + ID);
                 Toastify({
                     text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到IwaraDownloader`,
-                    duration: -1,
+                    duration: 2000,
                     newWindow: true,
-                    close: true,
                     gravity: "top",
                     position: "right",
                     stopOnFocus: true,
@@ -983,6 +977,7 @@
         childs: `
         #pluginMenu {
             z-index: 4096;
+            color: white;
             position: fixed;
             top: 50%;
             right: 0px;
@@ -1007,6 +1002,7 @@
         }
         #pluginMenu li:hover {
             background-color: #000000cc;
+            border-radius: 3px;
         }
 
         #pluginMenu:hover {
@@ -1299,5 +1295,16 @@
             ]
         }
     }));
+    Toastify({
+        text: `Iwara 批量下载工具加载完成`,
+        duration: 10000,
+        newWindow: true,
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
+        style: {
+            background: "#1E90FF",
+        }
+    }).showToast();
 })();
 //# sourceMappingURL=IwaraDownloadTool.user.js.map
