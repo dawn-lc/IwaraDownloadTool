@@ -19,11 +19,20 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (attributes !== undefined && attributes !== null && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (events !== undefined && events !== null && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => node.addEventListener(eventName, eventHandler));
-        (className !== undefined && className !== null && className.length > 0) && node.classList.add(...[].concat(className));
-        (childs !== undefined && childs !== null) && node.append(...[].concat(childs).map(renderNode));
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => node.addEventListener(eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
         return node
+    }
+    const random =function (min: number, max: number) : number {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    const isNull =function (obj: any) : boolean {
+        return obj === undefined || obj === null
+    }
+    const notNull =function (obj: any) : boolean {
+        return obj !== undefined && obj !== null
     }
     class Queue<T> {
         private items: QueueItem<T>[];
@@ -138,20 +147,21 @@
                     return target[property]
                 },
                 set: function (target, property, value) {
-                    if (target[property] !== value && !GM_getValue('isFirstRun', true)) {
+                    if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
                         let setr = Reflect.set(target, property, value);
                         console.log(`set ${property.toString()} ${value} ${setr}`)
-                        GM_setValue(property.toString(), value)
+                        GM_getValue(property.toString()) !== value && GM_setValue(property.toString(), value)
                         target.configChange(property.toString())
                         return setr
+                    } else {
+                        return true;
                     }
-                    return true;
                 }
             })
             //同步其他页面脚本的更改
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                    if (remote && body[name] !== new_value && !GM_getValue('isFirstRun', true)) {
+                    if (remote && body[name] !== new_value && old_value !== new_value && !GM_getValue('isFirstRun', true)) {
                         body[name] = new_value
                     }
                 })
@@ -434,7 +444,7 @@
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl, window.location.href, await getAuth(this.VideoInfoSource.fileUrl)))
-                if (this.VideoFileSource.length == 0) {
+                if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败')
                 }
                 this.getComment = () => {
@@ -458,6 +468,9 @@
                 console.error(`${this.Name}[${this.ID}] ${error}`)
                 console.log(this.VideoInfoSource)
                 console.log(this.VideoFileSource)
+                let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                button && button.checked && button.click()
+                videoList.remove(this.ID)
                 this.State = false
                 return this
             }
@@ -648,10 +661,10 @@
                         { nodeType: 'p', childs: '路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
                         { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]手动下载需要您提供视频ID!' }
+                        { nodeType: 'p', childs: '打开i站后等待加载出视频后, 点击侧边栏中“开关选择”开启下载复选框' },
+                        { nodeType: 'p', childs: '[即将到来]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
+                        { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会在控制台提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
                     ]
                 },
                 {
@@ -714,15 +727,25 @@
         )
     }
 
-    async function AnalyzeDownloadTask() {
-        for (const key in videoList.items) {
-            await delay(1000)
-            let videoInfo = await (new VideoInfo(videoList[key])).init(key)
+
+
+    async function addDownloadTask() {
+        let IDListString = prompt('请输入需要下载的视频ID 用|分割', '').toLowerCase().split('|')
+        let IDList =  new Dictionary<string>();
+        IDListString.map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID =>IDList.set(ID,'手动解析'))
+        analyzeDownloadTask(IDList)
+    }
+
+
+    async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
+        for (const key in list.items) {
+            await delay(random(200,800))//脚本太快了,延迟一下防止被屏蔽
+            let videoInfo = await (new VideoInfo(list[key])).init(key)
             if ( videoInfo.State ) {
                 await pustDownloadTask(videoInfo)
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
-                videoList.remove(key) 
+                list.remove(key) 
             }
         }
     }
@@ -833,7 +856,8 @@
                         {
                             'referer': 'https://ecchi.iwara.tv/',
                             'header': [
-                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
+                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; '),
+                                'Authorization:' + config.authorization
                             ]
                         }
                     )
@@ -1077,6 +1101,12 @@
         }
         `
     }))
+
+
+
+    
+
+
     document.body.appendChild(renderNode({
         nodeType: "div",
         attributes: {
@@ -1136,7 +1166,7 @@
                     childs: "下载所选",
                     events: {
                         click: (event: Event) => {
-                            AnalyzeDownloadTask()
+                            analyzeDownloadTask()
                             event.stopPropagation()
                             return false;
                         }
@@ -1178,6 +1208,17 @@
                             document.querySelectorAll('.selectButton').forEach((element) => {
                                 (element as HTMLInputElement).click()
                             })
+                            event.stopPropagation()
+                            return false;
+                        }
+                    }
+                },
+                {
+                    nodeType: "li",
+                    childs: "手动下载",
+                    events: {
+                        click: (event: Event) => {
+                            addDownloadTask()
                             event.stopPropagation()
                             return false;
                         }
