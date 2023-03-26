@@ -5,6 +5,7 @@ interface String {
     isEmpty(): boolean;
 }
 
+
 type RenderCode = string | Node |{
     nodeType: string;
     attributes?: Record<string, any>;
