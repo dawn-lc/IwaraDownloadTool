@@ -423,9 +423,12 @@
                     throw new Error('获取视频信息失败')
                 }
                 this.Name = this.VideoInfoSource.title ?? this.Name
-                this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
-                this.Private = this.VideoInfoSource.private
                 this.External = !this.VideoInfoSource.embedUrl.isEmpty()
+                if (this.External) {
+                    throw new Error('非本站视频')
+                }
+                this.Private = this.VideoInfoSource.private
+                this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt)
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
