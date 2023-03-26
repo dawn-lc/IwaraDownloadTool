@@ -1122,8 +1122,8 @@
                         click: () => {
                             if (!document.querySelector('.selectButton')) {
                                 console.clear()
-                                console.log("开始注入复选框 预计注入"+document.querySelectorAll('.page-videoList__item * .videoTeaser__thumbnail').length+"个复选框")
-                                document.querySelectorAll('.page-videoList__item * .videoTeaser__thumbnail').forEach((element) => {
+                                console.log("开始注入复选框 预计注入"+document.querySelectorAll('.videoTeaser .videoTeaser__thumbnail').length+"个复选框")
+                                document.querySelectorAll('.videoTeaser .videoTeaser__thumbnail').forEach((element) => {
                                     element.appendChild(renderNode({
                                         nodeType: "input",
                                         attributes: Object.assign(
