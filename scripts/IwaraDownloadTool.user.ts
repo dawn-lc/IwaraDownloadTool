@@ -25,6 +25,9 @@
         (childs !== undefined && childs !== null) && node.append(...[].concat(childs).map(renderNode));
         return node
     }
+    const random =function (min: number, max: number) : number {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
     class Queue<T> {
         private items: QueueItem<T>[];
         constructor() {
@@ -648,10 +651,10 @@
                         { nodeType: 'p', childs: '路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
                         { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]手动下载需要您提供视频ID!' }
+                        { nodeType: 'p', childs: '打开i站后等待加载出视频后, 点击侧边栏中“开关选择”开启下载复选框' },
+                        { nodeType: 'p', childs: '[即将到来]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
+                        { nodeType: 'p', childs: '[即将到来]插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '[即将到来]手动下载需要您提供视频ID!' }
                     ]
                 },
                 {
@@ -716,7 +719,7 @@
 
     async function AnalyzeDownloadTask() {
         for (const key in videoList.items) {
-            await delay(1000)
+            await delay(random(200,800))//脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(videoList[key])).init(key)
             if ( videoInfo.State ) {
                 await pustDownloadTask(videoInfo)
