@@ -423,9 +423,9 @@
                     throw new Error('获取视频信息失败')
                 }
                 this.Name = this.VideoInfoSource.title ?? this.Name
-                this.External = !this.VideoInfoSource.embedUrl.isEmpty()
+                this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
-                    throw new Error('非本站视频')
+                    throw new Error('非i站源的视频')
                 }
                 this.Private = this.VideoInfoSource.private
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
@@ -589,7 +589,7 @@
     }
 
     String.prototype.isEmpty = function () {
-        return this == null || this.trim().length == 0;
+        return this.trim().length == 0;
     };
 
     String.prototype.replaceVariable = function (replacements) {
