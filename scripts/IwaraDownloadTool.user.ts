@@ -663,8 +663,8 @@
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
                         { nodeType: 'p', childs: '打开i站后等待加载出视频后, 点击侧边栏中“开关选择”开启下载复选框' },
                         { nodeType: 'p', childs: '[即将到来]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
-                        { nodeType: 'p', childs: '[即将到来]插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
-                        { nodeType: 'p', childs: '[即将到来]手动下载需要您提供视频ID!' }
+                        { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会在控制台提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
                     ]
                 },
                 {
@@ -727,15 +727,25 @@
         )
     }
 
-    async function AnalyzeDownloadTask() {
-        for (const key in videoList.items) {
+
+
+    async function addDownloadTask() {
+        let IDListString = prompt('请输入需要下载的视频ID 用|分割', '').toLowerCase().split('|')
+        let IDList =  new Dictionary<string>();
+        IDListString.map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID =>IDList.set(ID,'手动解析'))
+        analyzeDownloadTask(IDList)
+    }
+
+
+    async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
+        for (const key in list.items) {
             await delay(random(200,800))//脚本太快了,延迟一下防止被屏蔽
-            let videoInfo = await (new VideoInfo(videoList[key])).init(key)
+            let videoInfo = await (new VideoInfo(list[key])).init(key)
             if ( videoInfo.State ) {
                 await pustDownloadTask(videoInfo)
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
-                videoList.remove(key) 
+                list.remove(key) 
             }
         }
     }
@@ -846,7 +856,8 @@
                         {
                             'referer': 'https://ecchi.iwara.tv/',
                             'header': [
-                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
+                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; '),
+                                'Authorization:' + config.authorization
                             ]
                         }
                     )
@@ -1155,7 +1166,7 @@
                     childs: "下载所选",
                     events: {
                         click: (event: Event) => {
-                            AnalyzeDownloadTask()
+                            analyzeDownloadTask()
                             event.stopPropagation()
                             return false;
                         }
@@ -1197,6 +1208,17 @@
                             document.querySelectorAll('.selectButton').forEach((element) => {
                                 (element as HTMLInputElement).click()
                             })
+                            event.stopPropagation()
+                            return false;
+                        }
+                    }
+                },
+                {
+                    nodeType: "li",
+                    childs: "手动下载",
+                    events: {
+                        click: (event: Event) => {
+                            addDownloadTask()
                             event.stopPropagation()
                             return false;
                         }
