@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.161
+// @version           3.0.164
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -443,9 +443,9 @@
                     throw new Error('获取视频信息失败');
                 }
                 this.Name = this.VideoInfoSource.title ?? this.Name;
-                this.External = !this.VideoInfoSource.embedUrl.isEmpty();
+                this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty();
                 if (this.External) {
-                    throw new Error('非本站视频');
+                    throw new Error('非i站源的视频');
                 }
                 this.Private = this.VideoInfoSource.private;
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
@@ -610,7 +610,7 @@
         return false;
     }
     String.prototype.isEmpty = function () {
-        return this == null || this.trim().length == 0;
+        return this.trim().length == 0;
     };
     String.prototype.replaceVariable = function (replacements) {
         return Object.entries(replacements).reduce((str, [key, value]) => str.split(`%#${key}#%`).join(String(value)), this);
