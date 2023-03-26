@@ -133,7 +133,7 @@
             //代理本页面的更改
             let body = new Proxy(this, {
                 get: function (target, property) {
-                    console.log(`get ${property.toString()}`)
+                    GM_getValue('isDebug') && console.log(`get ${property.toString()}`)
                     return target[property]
                 },
                 set: function (target, property, value) {

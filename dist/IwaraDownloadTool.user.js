@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.170
+// @version           3.0.171
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -170,7 +170,7 @@
             //代理本页面的更改
             let body = new Proxy(this, {
                 get: function (target, property) {
-                    console.log(`get ${property.toString()}`);
+                    GM_getValue('isDebug') && console.log(`get ${property.toString()}`);
                     return target[property];
                 },
                 set: function (target, property, value) {
