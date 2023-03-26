@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.170
+// @version           3.0.179
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -157,6 +157,7 @@
         aria2Token;
         iwaraDownloaderPath;
         iwaraDownloaderToken;
+        authorization;
         constructor() {
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
@@ -170,7 +171,7 @@
             //代理本页面的更改
             let body = new Proxy(this, {
                 get: function (target, property) {
-                    console.log(`get ${property.toString()}`);
+                    GM_getValue('isDebug') && console.log(`get ${property.toString()}`);
                     return target[property];
                 },
                 set: function (target, property, value) {
@@ -441,7 +442,7 @@
         async init(ID) {
             try {
                 this.ID = ID;
-                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`));
+                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`, window.location.href, await getAuth()));
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败');
                 }
@@ -455,7 +456,7 @@
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt);
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id);
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
-                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl));
+                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl, window.location.href, await getAuth(this.VideoInfoSource.fileUrl)));
                 if (this.VideoFileSource.length == 0) {
                     throw new Error('获取视频源失败');
                 }
@@ -498,12 +499,11 @@
             .map(b => b.toString(16).padStart(2, "0"))
             .join("");
     }
-    async function get(url, referrer = window.location.hostname, headers = {}) {
+    async function get(url, referrer = window.location.href, headers = {}) {
         if (url.split('//')[1].split('/')[0] == window.location.hostname) {
             return await (await fetch(url, {
                 'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*',
-                    'x-version': await getXVersion(url)
+                    'accept': 'application/json, text/plain, */*'
                 }, headers),
                 "referrerPolicy": "strict-origin-when-cross-origin",
                 'referrer': referrer,
@@ -519,8 +519,7 @@
                     method: 'GET',
                     url: url,
                     headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*',
-                        'x-version': await getXVersion(url)
+                        'Accept': 'application/json, text/plain, */*'
                     }, headers),
                     onload: function (response) {
                         resolve(response);
@@ -570,6 +569,168 @@
             return data.responseText;
         }
     }
+    String.prototype.isEmpty = function () {
+        return this.trim().length == 0;
+    };
+    String.prototype.replaceVariable = function (replacements) {
+        return Object.entries(replacements).reduce((str, [key, value]) => str.split(`%#${key}#%`).join(String(value)), this);
+    };
+    String.prototype.replaceNowTime = function () {
+        return this.replaceVariable({
+            Y: new Date().getFullYear(),
+            M: new Date().getMonth() + 1,
+            D: new Date().getDate(),
+            h: new Date().getHours(),
+            m: new Date().getMinutes(),
+            s: new Date().getSeconds()
+        });
+    };
+    String.prototype.replaceUploadTime = function (time) {
+        return this.replaceVariable({
+            UploadYear: time.getFullYear(),
+            UploadMonth: time.getMonth() + 1,
+            UploadDate: time.getDate(),
+            UploadHours: time.getHours(),
+            UploadMinutes: time.getMinutes(),
+            UploadSeconds: time.getSeconds()
+        });
+    };
+    async function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    function UUID() {
+        let UUID = '';
+        for (let index = 0; index < 8; index++) {
+            UUID += (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+        }
+        return UUID;
+    }
+    let config = new Config();
+    // 检查是否是首次运行脚本
+    if (GM_getValue('isFirstRun', true)) {
+        GM_listValues().forEach(i => GM_deleteValue(i));
+        config = new Config();
+        let confirmButton = renderNode({
+            nodeType: 'button',
+            attributes: {
+                disabled: true
+            },
+            childs: '确定',
+            events: {
+                click: () => {
+                    GM_setValue('isFirstRun', false);
+                    document.querySelector('#pluginOverlay').remove();
+                    window.unsafeWindow.location.reload();
+                }
+            }
+        });
+        document.body.appendChild(renderNode({
+            nodeType: 'div',
+            attributes: {
+                id: 'pluginOverlay'
+            },
+            childs: [
+                {
+                    nodeType: 'div',
+                    className: 'main',
+                    childs: [
+                        {
+                            nodeType: 'h2',
+                            childs: [
+                                '下载私有(上锁)视频请使用',
+                                { nodeType: 'br' },
+                                {
+                                    nodeType: 'a',
+                                    attributes: {
+                                        href: 'https://docs.scriptcat.org/'
+                                    },
+                                    childs: 'ScriptCat'
+                                },
+                                ' 或 ',
+                                {
+                                    nodeType: 'a',
+                                    attributes: {
+                                        href: 'https://www.tampermonkey.net/index.php?#download_gcal'
+                                    },
+                                    childs: 'Tampermonkey Beta'
+                                },
+                                '载入本脚本。'
+                            ]
+                        },
+                        { nodeType: 'p', childs: '全局可用变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
+                        { nodeType: 'p', childs: '路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
+                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
+                        { nodeType: 'p', childs: '点击侧边栏中“开关选择”开启下载复选框' },
+                        { nodeType: 'p', childs: '[尚未在新版实现]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
+                        { nodeType: 'p', childs: '[尚未在新版实现]插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '[尚未在新版实现]手动下载需要您提供视频ID!' }
+                    ]
+                },
+                {
+                    nodeType: 'div',
+                    className: 'checkbox-container',
+                    childs: [
+                        {
+                            nodeType: 'input',
+                            className: 'checkbox',
+                            attributes: {
+                                type: 'checkbox',
+                                name: 'agree-checkbox'
+                            },
+                            events: {
+                                change: (event) => {
+                                    confirmButton.disabled = !event.target.checked;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: 'label',
+                            className: 'checkbox-label',
+                            attributes: {
+                                for: 'agree-checkbox'
+                            },
+                            childs: '我已知晓如何使用',
+                        },
+                    ],
+                },
+                confirmButton
+            ]
+        }));
+    }
+    const originFetch = fetch;
+    const modifyFetch = (url, options) => {
+        GM_getValue('isDebug') && console.log(`Fetch ${url}`);
+        if (options.headers !== undefined) {
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "authorization") {
+                    config.authorization = options.headers[key];
+                }
+            }
+        }
+        return originFetch(url, options);
+    };
+    window.fetch = modifyFetch;
+    window.unsafeWindow.fetch = modifyFetch;
+    let videoList = new Dictionary();
+    async function getAuth(url) {
+        return Object.assign({
+            'Cooike': config.cookies.map((i) => `${i.name}:${i.value}`).join('; '),
+            'Authorization': config.authorization
+        }, url !== undefined && url !== null && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {});
+    }
+    async function AnalyzeDownloadTask() {
+        for (const key in videoList.items) {
+            await delay(1000);
+            let videoInfo = await (new VideoInfo(videoList[key])).init(key);
+            if (videoInfo.State) {
+                await pustDownloadTask(videoInfo);
+                let button = document.querySelector(`.selectButton[videoid="${key}"]`);
+                button && button.checked && button.click();
+                videoList.remove(key);
+            }
+        }
+    }
     /**
       * 检查字符串中是否包含下载链接特征
       * @param {string} comment - 待检查的字符串
@@ -612,46 +773,9 @@
         }
         return false;
     }
-    String.prototype.isEmpty = function () {
-        return this.trim().length == 0;
-    };
-    String.prototype.replaceVariable = function (replacements) {
-        return Object.entries(replacements).reduce((str, [key, value]) => str.split(`%#${key}#%`).join(String(value)), this);
-    };
-    String.prototype.replaceNowTime = function () {
-        return this.replaceVariable({
-            Y: new Date().getFullYear(),
-            M: new Date().getMonth() + 1,
-            D: new Date().getDate(),
-            h: new Date().getHours(),
-            m: new Date().getMinutes(),
-            s: new Date().getSeconds()
-        });
-    };
-    String.prototype.replaceUploadTime = function (time) {
-        return this.replaceVariable({
-            UploadYear: time.getFullYear(),
-            UploadMonth: time.getMonth() + 1,
-            UploadDate: time.getDate(),
-            UploadHours: time.getHours(),
-            UploadMinutes: time.getMinutes(),
-            UploadSeconds: time.getSeconds()
-        });
-    };
-    async function AnalyzeDownloadTask() {
-        for (const key in videoList.items) {
-            let videoInfo = await (new VideoInfo(videoList[key])).init(key);
-            videoInfo.State && pustDownloadTask(videoInfo);
-        }
-        document.querySelectorAll('.selectButton').forEach((element) => {
-            let button = element;
-            button.checked && button.click();
-        });
-        videoList.clear();
-    }
     async function pustDownloadTask(videoInfo) {
         if (checkIsHaveDownloadLink(videoInfo.getComment())) {
-            console.error(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接`);
+            console.error(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接 https://www.iwara.tv/video/${videoInfo.ID}`);
             return;
         }
         if (videoInfo.External) {
@@ -683,13 +807,6 @@
             filename: matchPath[3],
             match: matchPath !== null
         };
-    }
-    function UUID() {
-        let UUID = '';
-        for (let index = 0; index < 8; index++) {
-            UUID += (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
-        }
-        return UUID;
     }
     function aria2Download(videoInfo) {
         (async function (id, author, name, uploadTime, info, tag, downloadUrl) {
@@ -755,7 +872,7 @@
             GM_openInTab(DownloadUrl, { active: true, insert: true, setParent: true });
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
-    let style = renderNode({
+    document.head.appendChild(renderNode({
         nodeType: "style",
         childs: `
         #pluginMenu {
@@ -944,102 +1061,8 @@
             right: 0px;
         }
         `
-    });
-    let config = new Config();
-    // 检查是否是首次运行脚本
-    if (GM_getValue('isFirstRun', true)) {
-        GM_listValues().forEach(i => GM_deleteValue(i));
-        config = new Config();
-        let confirmButton = renderNode({
-            nodeType: 'button',
-            attributes: {
-                disabled: true
-            },
-            childs: '确定',
-            events: {
-                click: () => {
-                    GM_setValue('isFirstRun', false);
-                    document.querySelector('#pluginOverlay').remove();
-                    window.unsafeWindow.location.reload();
-                }
-            }
-        });
-        document.body.appendChild(renderNode({
-            nodeType: 'div',
-            attributes: {
-                id: 'pluginOverlay'
-            },
-            childs: [
-                {
-                    nodeType: 'div',
-                    className: 'main',
-                    childs: [
-                        {
-                            nodeType: 'h2',
-                            childs: [
-                                '下载私有(上锁)视频请使用',
-                                { nodeType: 'br' },
-                                {
-                                    nodeType: 'a',
-                                    attributes: {
-                                        href: 'https://docs.scriptcat.org/'
-                                    },
-                                    childs: 'ScriptCat'
-                                },
-                                ' 或 ',
-                                {
-                                    nodeType: 'a',
-                                    attributes: {
-                                        href: 'https://www.tampermonkey.net/index.php?#download_gcal'
-                                    },
-                                    childs: 'Tampermonkey Beta'
-                                },
-                                '载入本脚本。'
-                            ]
-                        },
-                        { nodeType: 'p', childs: '全局可用变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                        { nodeType: 'p', childs: '路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
-                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会弹窗提示，您可以手动打开视频页面选择。' },
-                        { nodeType: 'p', childs: '[尚未在新版实现]手动下载需要您提供视频ID!' }
-                    ]
-                },
-                {
-                    nodeType: 'div',
-                    className: 'checkbox-container',
-                    childs: [
-                        {
-                            nodeType: 'input',
-                            className: 'checkbox',
-                            attributes: {
-                                type: 'checkbox',
-                                name: 'agree-checkbox'
-                            },
-                            events: {
-                                change: (event) => {
-                                    confirmButton.disabled = !event.target.checked;
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'label',
-                            className: 'checkbox-label',
-                            attributes: {
-                                for: 'agree-checkbox'
-                            },
-                            childs: '我已知晓如何使用',
-                        },
-                    ],
-                },
-                confirmButton
-            ]
-        }));
-    }
-    let videoList = new Dictionary();
-    let UI = renderNode({
+    }));
+    document.body.appendChild(renderNode({
         nodeType: "div",
         attributes: {
             id: "pluginMenu"
@@ -1059,7 +1082,8 @@
                                     element.appendChild(renderNode({
                                         nodeType: "input",
                                         attributes: Object.assign(videoList.has(element.getAttribute('href').trim().split('/')[2]) ? { checked: true } : {}, {
-                                            type: "checkbox"
+                                            type: "checkbox",
+                                            videoid: element.getAttribute('href').trim().split('/')[2]
                                         }),
                                         className: 'selectButton',
                                         events: {
@@ -1071,6 +1095,9 @@
                                                 let target = event.target;
                                                 let id = target.parentElement.getAttribute('href').trim().split('/')[2];
                                                 let name = target.parentElement.parentElement.querySelector('.videoTeaser__title').getAttribute('title');
+                                                if (name === undefined) {
+                                                    debugger;
+                                                }
                                                 target.checked ? videoList.set(id, name) : videoList.remove(id);
                                                 event.stopPropagation();
                                                 return false;
@@ -1154,8 +1181,6 @@
                 }
             ]
         }
-    });
-    document.head.appendChild(style);
-    document.body.appendChild(UI);
+    }));
 })();
 //# sourceMappingURL=IwaraDownloadTool.user.js.map
