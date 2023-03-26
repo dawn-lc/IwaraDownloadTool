@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.156
+// @version           3.0.160
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -15,7 +15,6 @@
 // @supportURL        https://github.com/dawn-lc/user.js/issues
 // @updateURL         https://github.com/dawn-lc/user.js/raw/master/dist/IwaraDownloadTool.mata.js
 // @downloadURL       https://github.com/dawn-lc/user.js/raw/master/dist/IwaraDownloadTool.user.js
-// @antifeature       tracking
 // @connect           *
 // @match             *://*.iwara.tv/*
 // @grant             GM_getValue
@@ -426,6 +425,7 @@
         Private;
         VideoInfoSource;
         VideoFileSource;
+        External;
         State;
         getDownloadQuality;
         getDownloadUrl;
@@ -445,6 +445,7 @@
                 this.Name = this.VideoInfoSource.title ?? this.Name;
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
                 this.Private = this.VideoInfoSource.private;
+                this.External = !this.VideoInfoSource.embedUrl.isEmpty();
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt);
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id);
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
@@ -645,6 +646,10 @@
     async function pustDownloadTask(videoInfo) {
         if (checkIsHaveDownloadLink(videoInfo.getComment())) {
             console.error(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接`);
+            return;
+        }
+        if (videoInfo.External) {
+            console.error(`${videoInfo.Name}[${videoInfo.ID}] 非本站视频,请手动处理!`);
             return;
         }
         if (videoInfo.getDownloadQuality() != 'Source') {
@@ -1042,6 +1047,7 @@
                     events: {
                         click: () => {
                             if (!document.querySelector('.selectButton')) {
+                                console.log("开始注入复选框 预计注入" + document.querySelectorAll('.page-videoList__item * .videoTeaser__thumbnail').length + "个复选框");
                                 document.querySelectorAll('.page-videoList__item * .videoTeaser__thumbnail').forEach((element) => {
                                     element.appendChild(renderNode({
                                         nodeType: "input",
@@ -1067,6 +1073,7 @@
                                 });
                             }
                             else {
+                                console.log("移除复选框");
                                 document.querySelectorAll('.selectButton').forEach((element) => {
                                     videoList.remove(element.parentElement.getAttribute('href').trim().split('/')[2]);
                                     element.remove();
@@ -1143,257 +1150,5 @@
     });
     document.head.appendChild(style);
     document.body.appendChild(UI);
-    /*
-        class pluginTips {
-            WaitingQueue: Queue<DownloadTask>
-            DownloadingQueue: Queue<DownloadTask>
-            static Title: RenderCode = { nodeType: 'h2', childs: 'Iwara批量下载工具' }
-            static typeIcon: object = {
-                Info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-                Warning: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
-                Success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
-                Progress: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>'
-            }
-            static Container: Element = renderNode({
-                nodeType: 'section',
-                attributes: {
-                    id: 'PluginTips'
-                },
-                className: 'tipsContainer'
-            }) as Element
-            constructor() {
-                this.DownloadingQueue = new Queue()
-                this.WaitingQueue = new Queue()
-                document.body.appendChild(pluginTips.Container);
-            }
-            downloadComplete(id: string) {
-                this.DownloadingQueue.remove(id)
-                pluginTips.Container.children.namedItem(id).remove()
-                if (this.WaitingQueue.size() > 0) {
-                    let downloadTask = this.WaitingQueue.dequeue()
-                    if (GM_info.downloadMode == 'native') {
-                        this.progress({
-                            title: {
-                                nodeType: 'h2',
-                                childs: `${downloadTask.data.name} 下载中...`
-                            },
-                            id: downloadTask.id
-                        })
-                    } else {
-                        this.info({
-                            content: {
-                                nodeType: 'p',
-                                childs: `${downloadTask.data.name} 已开始下载!`
-                            }
-                        })
-                    }
-                    this.DownloadingQueue.enqueue(downloadTask.id,downloadTask.data)
-                    GM_download(downloadTask.data)
-                }
-            }
-            downloading(id: string, value: number) {
-                let downloadTask = pluginTips.Container.children.namedItem(id).querySelector('.value') as HTMLElement
-                downloadTask.setAttribute('value', value.toFixed(2))
-                downloadTask.style.width = value.toFixed(2) + '%'
-            }
-            info(params: LogCode) {
-                let code = params
-                new tips(TipsType.Info, code.content, code.title, code.id, code.wait)
-                console.info(code)
-            }
-            warning(params: LogCode) {
-                let code = params
-                new tips(TipsType.Warning, code.content, code.title, code.id, code.wait)
-                console.warn(code)
-            }
-            success(params: LogCode) {
-                let code = params
-                new tips(TipsType.Success, code.content, code.title, code.id, code.wait)
-                console.log(code)
-            }
-            progress(params: LogCode) {
-                if (pluginTips.Container.children.namedItem(params.id as string) != null) {
-                    this.warning({
-                        content: {
-                            nodeType: 'p',
-                            childs: [
-                                params.content,
-                                '任务已存在。'
-                            ]
-                        }
-                    })
-                    return
-                }
-                new tips(TipsType.Progress, params.title, {
-                    nodeType: 'div',
-                    className: 'Progress',
-                    childs: [{
-                        nodeType: 'div',
-                        className: 'value',
-                        attributes: {
-                            value: 0
-                        }
-                    }]
-                }, params.id, true)
-            }
-            dialog(params: LogCode,) {
-                let s  = {
-                    childs: "取消下载",
-                    events:{
-                        click : () => {
-                            pluginTips.Container.children.namedItem(params.id).remove()
-                        }
-                    }
-                };
-                params.content =
-                {
-                    nodeType: "div",
-                    childs: [
-                        params.content, {
-                            nodeType: "button",
-                            className: "btn-primary tipsButton"
-                            
-                        }, {
-                            nodeType: "button",
-                            className: "btn-primary tipsButton",
-                            childs: "重新下载",
-                            attributes: {
-                                id: true
-                            },
-                            events:{
-                                click : () => {
-                                    //ParseDownloadAddress(params.id, false)
-                                    pluginTips.Container.children.namedItem(params.id).remove()
-                                }
-                            }
-                        }
-                    ]
-                }
-                new tips(TipsType.Dialog, params.content, params.title, params.id, true, TipsType.Warning)
-            }
-        }
-        class tips {
-            id: String;
-            type: TipsType
-            show: TipsType
-            wait: boolean
-            constructor(type: TipsType, content: RenderCode, title: RenderCode, id: String = null, wait: boolean = false, show: TipsType = null) {
-                this.type = type
-                this.show = show ??= type
-                this.wait = wait
-                switch (this.type) {
-                    case TipsType.Progress:
-                        //todo 取消任务
-                        break;
-                    case TipsType.Dialog:
-                        //todo 确认框
-                        break;
-                    default:
-                        break;
-                }
-                renderNode(Object.assign({
-                    nodeType: 'div',
-                    childs: [{
-                        nodeType: 'div',
-                        className: 'tipsIcon',
-                        childs: getRenderCode(pluginTips.typeIcon[TipsType[show]])
-                    }, {
-                        nodeType: 'div',
-                        className: 'tipsContent',
-                        childs: [title ?? pluginTips.Title].concat(content)
-                    }],
-                    parent: pluginTips.Container
-                }, this.style(), this.event(), id != null ? {
-                    attributes: {
-                        id: id
-                    }
-                } : {}))
-            }
-            event() {
-                return {
-                    onclick: (e: any) => {
-                        switch (this.type) {
-                            case TipsType.Info:
-                            case TipsType.Success:
-                            case TipsType.Warning:
-                                e.currentTarget.remove()
-                                break;
-                            case TipsType.Dialog:
-                            default:
-                                break;
-                        }
-                    },
-                    onanimationend: (e: any) => {
-                        if (!this.wait) {
-                            e.currentTarget.remove()
-                        }
-                    }
-                }
-            }
-            style() {
-                let style = {
-                    className: ['tips']
-                }
-                style.className.push('tips' + TipsType[this.show])
-                style.className.push(this.wait ? 'tipsWait' : 'tipsActive')
-                return style
-            }
-        }
-    
-    
-    
-        
-        let sttt = {
-            nodeType: "div",
-            attributes: {
-                style: "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);",
-            },
-            className: "float-window",
-            childs: {
-                nodeType: "div",
-                attributes: {
-                    style: "background-color: #fff; padding: 10px;"
-                },
-                className: "float-content",
-                childs: [
-                    {
-                        nodeType: "p",
-                        childs: "This is a floating window!"
-                    },
-                    {
-                        nodeType: "button",
-                        events: {
-                            click: () =>{}
-                        },
-                        childs: "Close"
-                    }
-                ]
-            }
-        }
-    
-        /*
-        class Plugin {
-            config: Config
-            
-            constructor(){
-               
-                this.config = new Config()
-            }
-        }
-    
-    
-        let  test : RenderCode =  {
-            nodeType: "input",
-            attributes: {
-                type: "checkbox"
-            },
-            className: 'selectButton',
-            events: {
-                click : (event: Event) => {
-                    (event.target as HTMLElement).parentElement.querySelector('a.videoTeaser__title').getAttribute('href').trim().split('/')[2]
-                }
-            }
-        }
-    */
 })();
 //# sourceMappingURL=IwaraDownloadTool.user.js.map
