@@ -19,14 +19,20 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (attributes !== undefined && attributes !== null && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (events !== undefined && events !== null && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => node.addEventListener(eventName, eventHandler));
-        (className !== undefined && className !== null && className.length > 0) && node.classList.add(...[].concat(className));
-        (childs !== undefined && childs !== null) && node.append(...[].concat(childs).map(renderNode));
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => node.addEventListener(eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
         return node
     }
     const random =function (min: number, max: number) : number {
         return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    const isNull =function (obj: any) : boolean {
+        return obj === undefined || obj === null
+    }
+    const notNull =function (obj: any) : boolean {
+        return obj !== undefined && obj !== null
     }
     class Queue<T> {
         private items: QueueItem<T>[];
@@ -141,20 +147,21 @@
                     return target[property]
                 },
                 set: function (target, property, value) {
-                    if (target[property] !== value && !GM_getValue('isFirstRun', true)) {
+                    if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
                         let setr = Reflect.set(target, property, value);
                         console.log(`set ${property.toString()} ${value} ${setr}`)
-                        GM_setValue(property.toString(), value)
+                        GM_getValue(property.toString()) !== value && GM_setValue(property.toString(), value)
                         target.configChange(property.toString())
                         return setr
+                    } else {
+                        return true;
                     }
-                    return true;
                 }
             })
             //同步其他页面脚本的更改
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                    if (remote && body[name] !== new_value && !GM_getValue('isFirstRun', true)) {
+                    if (remote && body[name] !== new_value && old_value !== new_value && !GM_getValue('isFirstRun', true)) {
                         body[name] = new_value
                     }
                 })
@@ -437,7 +444,7 @@
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl, window.location.href, await getAuth(this.VideoInfoSource.fileUrl)))
-                if (this.VideoFileSource.length == 0) {
+                if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败')
                 }
                 this.getComment = () => {
@@ -461,6 +468,9 @@
                 console.error(`${this.Name}[${this.ID}] ${error}`)
                 console.log(this.VideoInfoSource)
                 console.log(this.VideoFileSource)
+                let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                button && button.checked && button.click()
+                videoList.remove(this.ID)
                 this.State = false
                 return this
             }
@@ -1080,6 +1090,12 @@
         }
         `
     }))
+
+
+
+    
+
+
     document.body.appendChild(renderNode({
         nodeType: "div",
         attributes: {
