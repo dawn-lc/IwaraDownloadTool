@@ -2,38 +2,39 @@
     if (GM_getValue('isDebug')) {
         debugger
     }
-    /**
-     * RenderCode 转换成 Node
-     * @param renderCode - RenderCode
-     * @returns Node 节点
-     */
-    const renderNode = function (renderCode: RenderCode): Node | Element {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode)
-        }
-        if (renderCode instanceof Node) {
-            return renderCode
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments')
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode
-        const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => node.addEventListener(eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node
+
+    const originalAddEventListener = EventTarget.prototype.addEventListener
+    EventTarget.prototype.addEventListener = function (type, listener, options) {
+        originalAddEventListener.call(this, type, listener, options);
     }
-    const random =function (min: number, max: number) : number {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+    String.prototype.replaceVariable = function (replacements) {
+        return Object.entries(replacements).reduce(
+            (str, [key, value]) => str.split(`%#${key}#%`).join(String(value)),
+            this as string
+        )
     }
-    const isNull =function (obj: any) : boolean {
+    String.prototype.isEmpty = function () {
+        return this.trim().length == 0
+    }
+    Array.prototype.append = function (arr) {
+        this.push(...arr);
+    };
+    Array.prototype.any = function () {
+        return this.length > 0
+    }
+    const ceilDiv = function (dividend: number, divisor: number): number {
+        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
+    }
+    const random = function (min: number, max: number): number {
+        return Math.floor(Math.random() * (max - min + 1)) + min
+    }
+    const isNull = function (obj: any): boolean {
         return obj === undefined || obj === null
     }
-    const notNull =function (obj: any) : boolean {
+    const notNull = function (obj: any): boolean {
         return obj !== undefined && obj !== null
     }
+
     class Queue<T> {
         private items: QueueItem<T>[];
         constructor() {
@@ -66,8 +67,9 @@
     }
     class Dictionary<T> {
         public items: { [key: string]: T };
-        constructor() {
+        constructor(data: Array<{ key: string, value: T }> = []) {
             this.items = {};
+            data.map(i => this.set(i.key, i.value))
         }
         public set(key: string, value: T): void {
             this.items[key] = value;
@@ -106,17 +108,34 @@
         }
     }
 
+    /**
+     * RenderCode 转换成 Node
+     * @param renderCode - RenderCode
+     * @returns Node 节点
+     */
+    const renderNode = function (renderCode: RenderCode): Node | Element {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode)
+        }
+        if (renderCode instanceof Node) {
+            return renderCode
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments')
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode
+        const node: Element = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node
+    }
+
     enum DownloadType {
         Aria2,
         IwaraDownloader,
         Others
-    }
-    enum TipsType {
-        Info,
-        Warning,
-        Success,
-        Progress,
-        Dialog
     }
 
     class Config {
@@ -134,7 +153,7 @@
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true)
             this.downloadType = GM_getValue('downloadType', DownloadType.Others)
-            this.downloadPath = GM_getValue('downloadPath', '')
+            this.downloadPath = GM_getValue('downloadPath', '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
             this.downloadProxy = GM_getValue('downloadProxy', '')
             this.aria2Path = GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc')
             this.aria2Token = GM_getValue('aria2Token', '')
@@ -169,6 +188,7 @@
             GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
                 if (error) {
                     console.log(error)
+                    body.cookies = [];
                 } else {
                     body.cookies = list;
                 }
@@ -414,13 +434,13 @@
         Tags: string[]
         Author: string | null
         Private: boolean
-        VideoInfoSource: VideoInfoAPIRawData
+        VideoInfoSource: VideoAPIRawData
         VideoFileSource: VideoFileAPIRawDataList
         External: boolean
         State: boolean
+        Comments: string
         getDownloadQuality: () => string
         getDownloadUrl: () => string
-        getComment: () => string
         constructor(Name: string) {
             this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-解析模块' }
             this.Name = Name
@@ -436,7 +456,7 @@
                 this.Name = (this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
-                    throw new Error('非i站源的视频')
+                    throw new Error(`非本站视频 ${this.VideoInfoSource.embedUrl}`)
                 }
                 this.Private = this.VideoInfoSource.private
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
@@ -446,9 +466,6 @@
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl, window.location.href, await getAuth(this.VideoInfoSource.fileUrl)))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败')
-                }
-                this.getComment = () => {
-                    return this.VideoInfoSource.body
                 }
                 this.getDownloadQuality = () => {
                     let priority = {
@@ -462,10 +479,71 @@
                     let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality())
                     return decodeURIComponent('https:' + fileList[Math.floor(Math.random() * fileList.length)].src.download)
                 }
+                const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
+                    return JSON.parse(
+                        await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${notNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`,
+                            window.location.href,
+                            await getAuth()
+                        )
+                    ) as VideoCommentAPIRawData
+                }
+                const getCommentDatas = async (commentID:string = null): Promise<VideoCommentAPIRawData["results"]> => {
+                    let comments: VideoCommentAPIRawData["results"] = [];
+                    let base = await getCommentData(commentID)
+                    comments.append(base.results)
+                    for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
+                        comments.append((await getCommentData(commentID,page)).results)
+                    }
+                    let replies: VideoCommentAPIRawData["results"] = [];
+                    for (let index = 0; index < comments.length; index++) {
+                        const comment = comments[index];
+                        if (comment.numReplies>0){
+                            replies.append(await getCommentDatas(comment.id))
+                        }
+                    }
+                    comments.append(replies)
+                    return comments.filter(Boolean)
+                }
+                this.Comments = this.VideoInfoSource.body + (await getCommentDatas()).map(i => i.body).join('\n')
                 this.State = true
                 return this
             } catch (error) {
-                console.error(`${this.Name}[${this.ID}] ${error}`)
+                let toast = Toastify({
+                    node: renderNode({
+                        nodeType: 'div',
+                        childs: [
+                            {
+                                nodeType: 'h3',
+                                childs: `解析模块`
+                            },
+                            {
+                                nodeType: 'p',
+                                childs: [
+                                    `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
+                                    { nodeType: 'br' },
+                                    `错误信息: ${error.toString()}`,
+                                    { nodeType: 'br' },
+                                    `→ 点击此处重新解析 ←`
+                                ]
+                            }
+                        ]
+                    }),
+                    duration: -1,
+                    newWindow: true,
+                    gravity: "top",
+                    position: "right",
+                    stopOnFocus: true,
+                    style: {
+                        background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+
+                    },
+                    onClick: () =>{
+                        analyzeDownloadTask(new Dictionary<string>([{ key: this.ID, value: this.Name }]))
+                        toast.hideToast()
+                    } 
+                })
+                toast.showToast()
+                console.error(`${this.Name}[${this.ID}] ${error.toString()}`)
                 console.log(this.VideoInfoSource)
                 console.log(this.VideoFileSource)
                 let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
@@ -476,7 +554,7 @@
             }
         }
     }
-    
+
     function parseSearchParams(searchParams: URLSearchParams, initialObject = {}): {} {
         return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
     }
@@ -558,17 +636,6 @@
         }
     }
 
-    String.prototype.isEmpty = function () {
-        return this.trim().length == 0;
-    };
-
-    String.prototype.replaceVariable = function (replacements) {
-        return Object.entries(replacements).reduce(
-            (str, [key, value]) => str.split(`%#${key}#%`).join(String(value)),
-            this as string
-        );
-    };
-
     String.prototype.replaceNowTime = function () {
         return this.replaceVariable({
             Y: new Date().getFullYear(),
@@ -595,7 +662,6 @@
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-
     function UUID() {
         let UUID = '';
         for (let index = 0; index < 8; index++) {
@@ -605,7 +671,25 @@
     }
 
 
+
     let config = new Config()
+    let videoList = new Dictionary<string>();
+
+    const originFetch = fetch;
+    const modifyFetch = (url: any, options: any) => {
+        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
+        if (options.headers !== undefined) {
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "authorization") {
+                    config.authorization = options.headers[key]
+                }
+            }
+        }
+        return originFetch(url, options)
+    }
+    window.fetch = modifyFetch
+    window.unsafeWindow.fetch = modifyFetch
+
     // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i))
@@ -637,7 +721,7 @@
                         {
                             nodeType: 'h2',
                             childs: [
-                                '下载私有(上锁)视频请使用',
+                                '请使用',
                                 { nodeType: 'br' },
                                 {
                                     nodeType: 'a',
@@ -699,53 +783,35 @@
         }))
     }
 
-    const originFetch = fetch;
-    const modifyFetch = (url: any, options: any) => {
-        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
-        if (options.headers!==undefined){
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "authorization"){
-                    config.authorization = options.headers[key]
-                }
-            }
-        }
-        return originFetch(url, options)
-    }
-    window.fetch = modifyFetch
-    window.unsafeWindow.fetch = modifyFetch
-
-    let videoList = new Dictionary<string>();
-    
-
     async function getAuth(url?: string) {
         return Object.assign(
             {
                 'Cooike': config.cookies.map((i) => `${i.name}:${i.value}`).join('; '),
                 'Authorization': config.authorization
             },
-            url !== undefined && url !== null && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
+            notNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
         )
     }
 
-
-
     async function addDownloadTask() {
-        let IDListString = prompt('请输入需要下载的视频ID 用|分割', '').toLowerCase().split('|')
-        let IDList =  new Dictionary<string>();
-        IDListString.map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID =>IDList.set(ID,'手动解析'))
-        analyzeDownloadTask(IDList)
+        let data = prompt('请输入需要下载的视频ID! (若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC... )', '');
+        if (notNull(data) && !data.isEmpty()) {
+            let IDList = new Dictionary<string>();
+            data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'))
+            analyzeDownloadTask(IDList)
+        }
     }
 
 
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         for (const key in list.items) {
-            await delay(random(200,800))//脚本太快了,延迟一下防止被屏蔽
+            await delay(random(10, 200))//脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(list[key])).init(key)
-            if ( videoInfo.State ) {
+            if (videoInfo.State) {
                 await pustDownloadTask(videoInfo)
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
-                list.remove(key) 
+                list.remove(key)
             }
         }
     }
@@ -793,16 +859,72 @@
     }
 
     async function pustDownloadTask(videoInfo: VideoInfo) {
-        if (checkIsHaveDownloadLink(videoInfo.getComment())) {
-            console.error(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接 https://www.iwara.tv/video/${videoInfo.ID}`)
-            return
-        }
-        if (videoInfo.External) {
-            console.error(`${videoInfo.Name}[${videoInfo.ID}] 非本站视频,请手动处理!`)
+        if (checkIsHaveDownloadLink(videoInfo.Comments)) {
+            let toast = Toastify({
+                node: renderNode({
+                    nodeType: 'div',
+                    childs: [
+                        {
+                            nodeType: 'h3',
+                            childs: `创建下载任务`
+                        },
+                        {
+                            nodeType: 'p',
+                            childs: [
+                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `,{nodeType:'br'}, `→ 点击此处，进入视频页面 ←`
+                            ]
+                        }
+                    ]
+                }),
+                duration: -1,
+                newWindow: true,
+                gravity: "top",
+                position: "right",
+                stopOnFocus: true,
+                style: {
+                    background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
+                },
+                onClick: () =>{
+                    GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                    toast.hideToast()
+                }
+            })
+            toast.showToast();
+            console.warn(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接, 点击进入视频页面 https://www.iwara.tv/video/${videoInfo.ID}`)
             return
         }
         if (videoInfo.getDownloadQuality() != 'Source') {
-            console.error(`${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载连接`)
+            let toast = Toastify({
+                node: renderNode({
+                    nodeType: 'div',
+                    childs: [
+                        {
+                            nodeType: 'h3',
+                            childs: `创建下载任务`
+                        },
+                        {
+                            nodeType: 'p',
+                            childs: [
+                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `,{nodeType:'br'}, `→ 点击此处，进入视频页面 ←`
+                            ]
+                        }
+                    ]
+                }),
+                duration: -1,
+                newWindow: true,
+                gravity: "top",
+                position: "right",
+                stopOnFocus: true,
+                style: {
+                    background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
+                },
+                onClick: () =>{
+                    GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                    toast.hideToast()
+                }
+            })
+            toast.showToast();
+            console.warn(`${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载地址 https://www.iwara.tv/video/${videoInfo.ID}`)
             return
         }
         switch (config.downloadType) {
@@ -816,7 +938,6 @@
                 othersDownload(videoInfo)
                 break;
         }
-
     }
 
 
@@ -851,7 +972,7 @@
                         config.downloadProxy.isEmpty() ? {} : { 'all-proxy': config.downloadProxy },
                         config.downloadPath.isEmpty() ? {} : {
                             'out': localPath.filename,
-                            'dir': localPath.fullPath.replace(localPath.filename,'')
+                            'dir': localPath.fullPath.replace(localPath.filename, '')
                         },
                         {
                             'referer': 'https://ecchi.iwara.tv/',
@@ -864,7 +985,15 @@
                 ]
             })
             console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path, json)}`)
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()));
+            Toastify({
+                text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`,
+                duration: 2000,
+                newWindow: true,
+                gravity: "top",
+                position: "right",
+                stopOnFocus: true
+            }).showToast();
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
@@ -898,24 +1027,42 @@
 
             if (r.code == 0) {
                 console.log("已推送" + ID)
+                Toastify({
+                    text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到IwaraDownloader`,
+                    duration: 2000,
+                    newWindow: true,
+                    gravity: "top",
+                    position: "right",
+                    stopOnFocus: true
+                }).showToast();
             } else {
                 console.log("推送失败" + ID)
             }
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
     function othersDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
             GM_openInTab(DownloadUrl, { active: true, insert: true, setParent: true })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getComment(), videoInfo.Tags, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
 
-
+    document.head.appendChild(renderNode(
+        {
+            nodeType: 'link',
+            attributes: {
+                rel: 'stylesheet',
+                type: 'text/css',
+                href: 'https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'
+            }
+        }
+    ))
     document.head.appendChild(renderNode({
         nodeType: "style",
         childs: `
         #pluginMenu {
             z-index: 4096;
+            color: white;
             position: fixed;
             top: 50%;
             right: 0px;
@@ -940,6 +1087,7 @@
         }
         #pluginMenu li:hover {
             background-color: #000000cc;
+            border-radius: 3px;
         }
 
         #pluginMenu:hover {
@@ -1099,12 +1247,15 @@
             bottom: 24px;
             right: 0px;
         }
+
+        .toastify h3 {
+            margin: 0 0 10px 0;
+        }
+        .toastify p {
+            margin: 0 ;
+        }
         `
     }))
-
-
-
-    
 
 
     document.body.appendChild(renderNode({
@@ -1121,8 +1272,8 @@
                     events: {
                         click: () => {
                             if (!document.querySelector('.selectButton')) {
-                                console.clear()
-                                console.log("开始注入复选框 预计注入"+document.querySelectorAll('.videoTeaser .videoTeaser__thumbnail').length+"个复选框")
+                                //console.clear()
+                                console.log("开始注入复选框 预计注入" + document.querySelectorAll('.videoTeaser .videoTeaser__thumbnail').length + "个复选框")
                                 document.querySelectorAll('.videoTeaser .videoTeaser__thumbnail').forEach((element) => {
                                     element.appendChild(renderNode({
                                         nodeType: "input",
@@ -1133,19 +1284,13 @@
                                         }),
                                         className: 'selectButton',
                                         events: {
-                                            input: (event: Event) => {
-                                                event.stopPropagation()
-                                                return false;
-                                            },
                                             click: (event: Event) => {
                                                 let target = event.target as HTMLInputElement
-                                                let id = target.parentElement.getAttribute('href').trim().split('/')[2]
-                                                let name = target.parentElement.parentElement.querySelector('.videoTeaser__title').getAttribute('title')
-                                                if(name===undefined){
-                                                    debugger
-                                                }
+                                                let id = element.getAttribute('href').trim().split('/')[2]
+                                                let name = element.parentElement.querySelector('.videoTeaser__title').getAttribute('title')
                                                 target.checked ? videoList.set(id, name) : videoList.remove(id)
                                                 event.stopPropagation()
+                                                event.stopImmediatePropagation();
                                                 return false;
                                             }
                                         }
@@ -1239,5 +1384,16 @@
         }
     }))
 
+    Toastify({
+        text: `Iwara 批量下载工具加载完成`,
+        duration: 10000,
+        newWindow: true,
+        close: true,
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
+        style: {
+            background: "#1E90FF",
+        }
+    }).showToast();
 })()
-
