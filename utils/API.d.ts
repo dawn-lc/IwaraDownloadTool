@@ -5,6 +5,10 @@ interface String {
     isEmpty(): boolean;
 }
 
+interface Array{
+    any(): boolean;
+    append(arr: Array): void;
+}
 
 type RenderCode = string | Node |{
     nodeType: string;
@@ -59,7 +63,23 @@ interface VideoFileAPIRawData{
     type: string;
 }
 
-interface VideoInfoAPIRawData {
+interface VideoCommentAPIRawData {
+    count: number;
+    limit: number;
+    page: number;
+    results: Array<{
+        id: string;
+        body:string;
+        numReplies: number;
+        user: {
+            id: string;
+            name: string;
+            username: string;
+        };
+    }>;
+}
+
+interface VideoAPIRawData {
     id: string;
     title: string;
     body: string;
