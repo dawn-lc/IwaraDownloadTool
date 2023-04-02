@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.257
+// @version           3.0.260
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -422,6 +422,50 @@
                                     childs: [
                                         '下载方式：',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
+                                    ]
+                                },
+                                {
+                                    nodeType: 'p',
+                                    className: 'inputRadioLine',
+                                    childs: [
+                                        '高画质检查：',
+                                        {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                "开启",
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: Object.assign({
+                                                        name: 'CheckDownloadLink',
+                                                        type: 'radio'
+                                                    }, config.checkDownloadLink ? { checked: true } : {}),
+                                                    events: {
+                                                        change: () => {
+                                                            config.checkDownloadLink = true;
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }, {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                "关闭",
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: Object.assign({
+                                                        name: 'CheckDownloadLink',
+                                                        type: 'radio'
+                                                    }, config.checkDownloadLink ? {} : { checked: true }),
+                                                    events: {
+                                                        change: () => {
+                                                            config.checkDownloadLink = false;
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
                                     ]
                                 },
                                 {
@@ -864,7 +908,7 @@
         return false;
     }
     async function pustDownloadTask(videoInfo) {
-        if (checkIsHaveDownloadLink(videoInfo.Comments)) {
+        if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
             let toast = Toastify({
                 node: renderNode({
                     nodeType: 'div',

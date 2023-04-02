@@ -408,6 +408,56 @@
                                 },
                                 {
                                     nodeType: 'p',
+                                    className: 'inputRadioLine',
+                                    childs: [
+                                        '高画质检查：',
+                                        {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                "开启",
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: Object.assign(
+                                                        {
+                                                            name: 'CheckDownloadLink',
+                                                            type: 'radio'
+                                                        },
+                                                        config.checkDownloadLink ? { checked: true } : {}
+                                                    ),
+                                                    events: {
+                                                        change: () => {
+                                                            config.checkDownloadLink = true
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        },{
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                "关闭",
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: Object.assign(
+                                                        {
+                                                            name: 'CheckDownloadLink',
+                                                            type: 'radio'
+                                                        },
+                                                        config.checkDownloadLink ? {} : { checked: true }
+                                                    ),
+                                                    events: {
+                                                        change: () => {
+                                                            config.checkDownloadLink = false
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    nodeType: 'p',
                                     attributes: {
                                         id: 'pluginConfigPage'
                                     }
@@ -866,7 +916,7 @@
     }
 
     async function pustDownloadTask(videoInfo: VideoInfo) {
-        if (checkIsHaveDownloadLink(videoInfo.Comments)) {
+        if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
             let toast = Toastify({
                 node: renderNode({
                     nodeType: 'div',
