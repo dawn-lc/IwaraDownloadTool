@@ -3,6 +3,7 @@ interface String {
     replaceNowTime(): String;
     replaceUploadTime(time: Date): String;
     isEmpty(): boolean;
+    truncate(maxLength: number): string
 }
 
 interface Array{

@@ -16,6 +16,12 @@
     String.prototype.isEmpty = function () {
         return this.trim().length == 0
     }
+    String.prototype.truncate = function (maxLength) {
+        if (this.length > maxLength) {
+            return this.substring(0, maxLength);
+        }
+        return this.toString();
+    };
     Array.prototype.append = function (arr) {
         this.push(...arr);
     };
@@ -431,8 +437,10 @@
         UploadTime: Date
         Name: string | null
         FileName: string
+        Size: number
         Tags: string[]
-        Author: string | null
+        Alias: string
+        Author: string
         Private: boolean
         VideoInfoSource: VideoAPIRawData
         VideoFileSource: VideoFileAPIRawDataList
@@ -448,21 +456,23 @@
         }
         async init(ID: string) {
             try {
-                this.ID = ID
+                this.ID = ID.toLocaleLowerCase()
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`, window.location.href, await getAuth()))
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败')
                 }
-                this.Name = (this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
+                this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100)
                 this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
                     throw new Error(`非本站视频 ${this.VideoInfoSource.embedUrl}`)
                 }
                 this.Private = this.VideoInfoSource.private
+                this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt)
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
+                this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl, window.location.href, await getAuth(this.VideoInfoSource.fileUrl)))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败')
@@ -535,7 +545,6 @@
                     stopOnFocus: true,
                     style: {
                         background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
-
                     },
                     onClick: () =>{
                         analyzeDownloadTask(new Dictionary<string>([{ key: this.ID, value: this.Name }]))
@@ -722,7 +731,6 @@
                             nodeType: 'h2',
                             childs: [
                                 '请使用',
-                                { nodeType: 'br' },
                                 {
                                     nodeType: 'a',
                                     attributes: {
@@ -746,7 +754,6 @@
                         { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
                         { nodeType: 'p', childs: '打开i站后等待加载出视频后, 点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '[即将到来]在作者用户页面可以点击下载全部，将会搜索该用户的所有视频进行下载。' },
                         { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会在控制台提示，您可以手动打开视频页面选择。' },
                         { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
                     ]
@@ -996,7 +1003,7 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
-        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
+        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string, Size: number) {
             let r = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
                 'ver': 1,
                 'code': 'add',
@@ -1008,6 +1015,8 @@
                     'uploadTime': UploadTime,
                     'downloadUrl': DownloadUrl,
                     'downloadCookies': config.cookies,
+                    'authorization': config.authorization,
+                    'size': Size,
                     'info': Info,
                     'tag': Tag
                 },
@@ -1036,9 +1045,40 @@
                     stopOnFocus: true
                 }).showToast();
             } else {
+                let toast = Toastify({
+                    node: renderNode({
+                        nodeType: 'div',
+                        childs: [
+                            {
+                                nodeType: 'h3',
+                                childs: `推送下载任务`
+                            },
+                            {
+                                nodeType: 'p',
+                                childs: [
+                                    `在推送 ${videoInfo.Name}[${videoInfo.ID}] 下载任务到IwaraDownloader过程中出现错误! `,
+                                    { nodeType: 'br' },
+                                    `错误信息: ${r.msg}`
+                                ]
+                            }
+                        ]
+                    }),
+                    duration: -1,
+                    newWindow: true,
+                    gravity: "top",
+                    position: "right",
+                    stopOnFocus: true,
+                    style: {
+                        background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+                    },
+                    onClick: () =>{
+                        toast.hideToast()
+                    }
+                })
+                toast.showToast();
                 console.log("推送失败" + ID)
             }
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl(), videoInfo.Size))
     }
     function othersDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
@@ -1242,8 +1282,8 @@
 
         .selectButton {
             position: absolute;
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
             bottom: 24px;
             right: 0px;
         }
