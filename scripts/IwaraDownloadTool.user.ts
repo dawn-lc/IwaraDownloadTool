@@ -72,6 +72,7 @@
         }
     }
     class Dictionary<T> {
+        [key: string]: any;
         public items: { [key: string]: T };
         constructor(data: Array<{ key: string, value: T }> = []) {
             this.items = {};
@@ -155,6 +156,7 @@
         iwaraDownloaderPath: string
         iwaraDownloaderToken: string
         authorization: string
+        [key: string]: any;
         constructor() {
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true)
@@ -167,11 +169,11 @@
             this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '')
             //代理本页面的更改
             let body = new Proxy(this, {
-                get: function (target, property) {
+                get: function (target, property: string) {
                     GM_getValue('isDebug') && console.log(`get ${property.toString()}`)
                     return target[property]
                 },
-                set: function (target, property, value) {
+                set: function (target, property: string, value) {
                     if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
                         let setr = Reflect.set(target, property, value);
                         console.log(`set ${property.toString()} ${value} ${setr}`)
@@ -191,7 +193,7 @@
                     }
                 })
             })
-            GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
+            GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list: any, error: any) => {
                 if (error) {
                     console.log(error)
                     body.cookies = [];
@@ -432,7 +434,7 @@
                                                     }
                                                 }
                                             ]
-                                        },{
+                                        }, {
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
@@ -469,8 +471,18 @@
                             className: 'closeButton',
                             childs: '保存',
                             events: {
-                                click: () => {
-                                    editor.remove()
+                                click: async () => {
+                                    switch (config.downloadType) {
+                                        case DownloadType.Aria2:
+                                            (await aria2Check()) && editor.remove()
+                                            break;
+                                        case DownloadType.IwaraDownloader:
+                                            (await iwaraDownloaderCheck()) && editor.remove()
+                                            break;
+                                        default:
+                                            editor.remove()
+                                            break;
+                                    }
                                 }
                             }
                         }
@@ -528,7 +540,7 @@
                     throw new Error('获取视频源失败')
                 }
                 this.getDownloadQuality = () => {
-                    let priority = {
+                    let priority : Record<string, number>= {
                         'Source': 100,
                         '540': 2,
                         '360': 1
@@ -547,17 +559,17 @@
                         )
                     ) as VideoCommentAPIRawData
                 }
-                const getCommentDatas = async (commentID:string = null): Promise<VideoCommentAPIRawData["results"]> => {
+                const getCommentDatas = async (commentID: string = null): Promise<VideoCommentAPIRawData["results"]> => {
                     let comments: VideoCommentAPIRawData["results"] = [];
                     let base = await getCommentData(commentID)
                     comments.append(base.results)
                     for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
-                        comments.append((await getCommentData(commentID,page)).results)
+                        comments.append((await getCommentData(commentID, page)).results)
                     }
                     let replies: VideoCommentAPIRawData["results"] = [];
                     for (let index = 0; index < comments.length; index++) {
                         const comment = comments[index];
-                        if (comment.numReplies>0){
+                        if (comment.numReplies > 0) {
                             replies.append(await getCommentDatas(comment.id))
                         }
                     }
@@ -596,10 +608,10 @@
                     style: {
                         background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
                     },
-                    onClick: () =>{
+                    onClick: () => {
                         analyzeDownloadTask(new Dictionary<string>([{ key: this.ID, value: this.Name }]))
                         toast.hideToast()
-                    } 
+                    }
                 })
                 toast.showToast()
                 console.error(`${this.Name}[${this.ID}] ${error.toString()}`)
@@ -619,7 +631,7 @@
     }
     async function getXVersion(urlString: string): Promise<string> {
         let url = new URL(urlString)
-        let params = parseSearchParams(url.searchParams)
+        let params = parseSearchParams(url.searchParams) as Record<string, any>
         const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
         const hashBuffer = await crypto.subtle.digest("SHA-1", data);
         return Array.from(new Uint8Array(hashBuffer))
@@ -659,7 +671,7 @@
             return data.responseText
         }
     }
-    async function post(url: string, body: any, referrer: string = window.location.hostname, headers: object = {}) {
+    async function post(url: string, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
         if (url.split('//')[1].split('/')[0] == window.location.hostname) {
             return await (await fetch(url, {
@@ -928,7 +940,7 @@
                         {
                             nodeType: 'p',
                             childs: [
-                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `,{nodeType:'br'}, `→ 点击此处，进入视频页面 ←`
+                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`
                             ]
                         }
                     ]
@@ -941,7 +953,7 @@
                 style: {
                     background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
                 },
-                onClick: () =>{
+                onClick: () => {
                     GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
                     toast.hideToast()
                 }
@@ -962,7 +974,7 @@
                         {
                             nodeType: 'p',
                             childs: [
-                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `,{nodeType:'br'}, `→ 点击此处，进入视频页面 ←`
+                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`
                             ]
                         }
                     ]
@@ -975,7 +987,7 @@
                 style: {
                     background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
                 },
-                onClick: () =>{
+                onClick: () => {
                     GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
                     toast.hideToast()
                 }
@@ -1008,7 +1020,98 @@
             match: matchPath !== null
         }
     }
-
+    async function aria2Check(): Promise<boolean> {
+        try {
+            let res = JSON.parse(await post(config.aria2Path, {
+                'jsonrpc': '2.0',
+                'method': 'aria2.tellActive',
+                'id': UUID(),
+                'params': ['token:' + config.aria2Token]
+            }))
+            if(res.error){
+                throw new Error(res.error.message)
+            }
+        } catch (error) {
+            let toast = Toastify({
+                node: renderNode({
+                    nodeType: 'div',
+                    childs: [
+                        {
+                            nodeType: 'h3',
+                            childs: `Aria2 RPC 连接测试`
+                        },
+                        {
+                            nodeType: 'p',
+                            childs: [
+                                `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
+                                `错误信息：${error.toString()}`
+                            ]
+                        }
+                    ]
+                }),
+                duration: -1,
+                newWindow: true,
+                gravity: "top",
+                position: "center",
+                stopOnFocus: true,
+                style: {
+                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+                },
+                onClick: () => {
+                    toast.hideToast()
+                }
+            })
+            toast.showToast()
+            return false;
+        }
+        return true;
+    }
+    async function iwaraDownloaderCheck(): Promise<boolean> {
+        try {
+            let res = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
+                'ver': 1,
+                'code': 'State'
+            },
+                config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
+            )))
+            if (res.code !== 0) {
+                throw new Error(res.msg)
+            }
+        } catch (error) {
+            let toast = Toastify({
+                node: renderNode({
+                    nodeType: 'div',
+                    childs: [
+                        {
+                            nodeType: 'h3',
+                            childs: `IwaraDownloader RPC 连接测试`
+                        },
+                        {
+                            nodeType: 'p',
+                            childs: [
+                                `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
+                                `错误信息：${error.toString()}`
+                            ]
+                        }
+                    ]
+                }),
+                duration: -1,
+                newWindow: true,
+                gravity: "top",
+                position: "center",
+                stopOnFocus: true,
+                style: {
+                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+                },
+                onClick: () => {
+                    toast.hideToast()
+                }
+            })
+            toast.showToast()
+            return false;
+        }
+        return true;
+    }
     function aria2Download(videoInfo: VideoInfo) {
         (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<string>, downloadUrl: string) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceNowTime().replaceUploadTime(uploadTime).replaceVariable(
@@ -1121,7 +1224,7 @@
                     style: {
                         background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
                     },
-                    onClick: () =>{
+                    onClick: () => {
                         toast.hideToast()
                     }
                 })
@@ -1147,206 +1250,202 @@
             }
         }
     ))
-    document.head.appendChild(renderNode({
-        nodeType: "style",
-        childs: `
-        #pluginMenu {
-            z-index: 4096;
-            color: white;
-            position: fixed;
-            top: 50%;
-            right: 0px;
-            padding: 10px;
-            background-color: #565656;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 0 10px #ccc;
-            transform: translate(85%, -50%);
-            transition: transform 0.5s cubic-bezier(0.68, -0.24, 0.265, 1.20);
-        }
-        #pluginMenu ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-        #pluginMenu li {
-            padding: 5px 10px;
-            cursor: pointer;
-            text-align: center;
-            user-select: none;
-        }
-        #pluginMenu li:hover {
-            background-color: #000000cc;
-            border-radius: 3px;
-        }
+    GM_addStyle(`
+    #pluginMenu {
+        z-index: 4096;
+        color: white;
+        position: fixed;
+        top: 50%;
+        right: 0px;
+        padding: 10px;
+        background-color: #565656;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 0 10px #ccc;
+        transform: translate(85%, -50%);
+        transition: transform 0.5s cubic-bezier(0.68, -0.24, 0.265, 1.20);
+    }
+    #pluginMenu ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    #pluginMenu li {
+        padding: 5px 10px;
+        cursor: pointer;
+        text-align: center;
+        user-select: none;
+    }
+    #pluginMenu li:hover {
+        background-color: #000000cc;
+        border-radius: 3px;
+    }
 
-        #pluginMenu:hover {
-            transform: translate(0%, -50%);
-            transition-delay: 0.5s;
-        }
-    
-        #pluginMenu:not(:hover) {
-            transition-delay: 0s;
-        }
-    
-        #pluginMenu.moving-out {
-            transform: translate(0%, -50%);
-        }
-    
-        #pluginMenu.moving-in {
-            transform: translate(85%, -50%);
-        }
-    
-        /* 以下为兼容性处理 */
-        #pluginMenu:not(.moving-out):not(.moving-in) {
-            transition-delay: 0s;
-        }
-    
-        #pluginMenu:hover,
-        #pluginMenu:hover ~ #pluginMenu {
-            transition-delay: 0s;
-        }
-    
-        #pluginMenu:hover {
-            transition-duration: 0.5s;
-        }
-    
-        #pluginMenu:not(:hover).moving-in {
-            transition-delay: 0.5s;
-        }
+    #pluginMenu:hover {
+        transform: translate(0%, -50%);
+        transition-delay: 0.5s;
+    }
+
+    #pluginMenu:not(:hover) {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu.moving-out {
+        transform: translate(0%, -50%);
+    }
+
+    #pluginMenu.moving-in {
+        transform: translate(85%, -50%);
+    }
+
+    /* 以下为兼容性处理 */
+    #pluginMenu:not(.moving-out):not(.moving-in) {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu:hover,
+    #pluginMenu:hover ~ #pluginMenu {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu:hover {
+        transition-duration: 0.5s;
+    }
+
+    #pluginMenu:not(:hover).moving-in {
+        transition-delay: 0.5s;
+    }
 
 
-        #pluginConfig {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background-color: rgba(128, 128, 128, 0.8);
-			z-index: 8192; 
-			display: flex;
-            flex-direction: column;
-			align-items: center;
-			justify-content: center;
-		}
-		#pluginConfig .main {
-            color: white;
-            background-color: rgb(64,64,64,0.7);
-            padding: 24px;
-            margin: 10px;
-            overflow-y: auto;
+    #pluginConfig {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(128, 128, 128, 0.8);
+        z-index: 8192; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    #pluginConfig .main {
+        color: white;
+        background-color: rgb(64,64,64,0.7);
+        padding: 24px;
+        margin: 10px;
+        overflow-y: auto;
+    }
+    @media (max-width: 640px) {
+        #pluginConfig .main {
+            width: 100%;
         }
-        @media (max-width: 640px) {
-            #pluginConfig .main {
-                width: 100%;
-            }
+    }
+    #pluginConfig button {
+        background-color: blue;
+        padding: 10px 20px;
+        color: white;
+        font-size: 18px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #pluginConfig p {
+        display: flex;
+        flex-direction: column;
+    }
+    #pluginConfig p label{
+        display: flex;
+    }
+    #pluginConfig p label input{
+        flex-grow: 1;
+        margin-left: 10px;
+    }
+    #pluginConfig .inputRadioLine {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        margin-right: 10px;
+    }
+    #pluginConfig .inputRadio {
+        display: flex;
+        align-items: center;
+        flex-direction: row-reverse;
+        margin-right: 10px;
+    }
+
+    #pluginOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(128, 128, 128, 0.8);
+        z-index: 8192; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #pluginOverlay .main {
+        color: white;
+        font-size: 24px;
+        width: 60%;
+        background-color: rgb(64,64,64,0.7);
+        padding: 24px;
+        margin: 10px;
+        overflow-y: auto;
+    }
+    @media (max-width: 640px) {
+        #pluginOverlay .main {
+            width: 100%;
         }
-        #pluginConfig button {
-			background-color: blue;
-			padding: 10px 20px;
-			color: white;
-			font-size: 18px;
-			border: none;
-			border-radius: 4px;
-			cursor: pointer;
-		}
-        #pluginConfig p {
-			display: flex;
-            flex-direction: column;
-		}
-        #pluginConfig p label{
-			display: flex;
-		}
-        #pluginConfig p label input{
-			flex-grow: 1;
-            margin-left: 10px;
-		}
-        #pluginConfig .inputRadioLine {
-			display: flex;
-			align-items: center;
-            flex-direction: row;
-            margin-right: 10px;
-		}
-        #pluginConfig .inputRadio {
-			display: flex;
-            align-items: center;
-            flex-direction: row-reverse;
-            margin-right: 10px;
-		}
+    }
 
-        #pluginOverlay {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background-color: rgba(128, 128, 128, 0.8);
-			z-index: 8192; 
-			display: flex;
-            flex-direction: column;
-			align-items: center;
-			justify-content: center;
-		}
+    #pluginOverlay button {
+        padding: 10px 20px;
+        color: white;
+        font-size: 18px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #pluginOverlay button {
+        background-color: blue;
+    }
+    #pluginOverlay button[disabled] {
+        background-color: darkgray;
+        cursor: not-allowed;
+    }
 
-		#pluginOverlay .main {
-            color: white;
-            font-size: 24px;
-            width: 60%;
-            background-color: rgb(64,64,64,0.7);
-            padding: 24px;
-            margin: 10px;
-            overflow-y: auto;
-        }
-        @media (max-width: 640px) {
-            #pluginOverlay .main {
-                width: 100%;
-            }
-        }
+    #pluginOverlay .checkbox-container {
+        display: flex;
+        align-items: center;
+    }
 
-		#pluginOverlay button {
-			padding: 10px 20px;
-			color: white;
-			font-size: 18px;
-			border: none;
-			border-radius: 4px;
-			cursor: pointer;
-		}
-        #pluginOverlay button {
-			background-color: blue;
-        }
-        #pluginOverlay button[disabled] {
-			background-color: darkgray;
-            cursor: not-allowed;
-		}
+    #pluginOverlay .checkbox-label {
+        color: white;
+        font-size: 18px;
+        margin-left: 10px;
+    }
 
-		#pluginOverlay .checkbox-container {
-			display: flex;
-			align-items: center;
-		}
+    .selectButton {
+        position: absolute;
+        width: 38px;
+        height: 38px;
+        bottom: 24px;
+        right: 0px;
+    }
 
-		#pluginOverlay .checkbox-label {
-			color: white;
-			font-size: 18px;
-			margin-left: 10px;
-		}
-
-        .selectButton {
-            position: absolute;
-            width: 38px;
-            height: 38px;
-            bottom: 24px;
-            right: 0px;
-        }
-
-        .toastify h3 {
-            margin: 0 0 10px 0;
-        }
-        .toastify p {
-            margin: 0 ;
-        }
-        `
-    }))
-
+    .toastify h3 {
+        margin: 0 0 10px 0;
+    }
+    .toastify p {
+        margin: 0 ;
+    }
+    `)
 
     document.body.appendChild(renderNode({
         nodeType: "div",

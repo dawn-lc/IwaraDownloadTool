@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.260
+// @version           3.0.265
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -481,8 +481,18 @@
                             className: 'closeButton',
                             childs: '保存',
                             events: {
-                                click: () => {
-                                    editor.remove();
+                                click: async () => {
+                                    switch (config.downloadType) {
+                                        case DownloadType.Aria2:
+                                            (await aria2Check()) && editor.remove();
+                                            break;
+                                        case DownloadType.IwaraDownloader:
+                                            (await iwaraDownloaderCheck()) && editor.remove();
+                                            break;
+                                        default:
+                                            editor.remove();
+                                            break;
+                                    }
                                 }
                             }
                         }
@@ -998,6 +1008,98 @@
             match: matchPath !== null
         };
     }
+    async function aria2Check() {
+        try {
+            let res = JSON.parse(await post(config.aria2Path, {
+                'jsonrpc': '2.0',
+                'method': 'aria2.tellActive',
+                'id': UUID(),
+                'params': ['token:' + config.aria2Token]
+            }));
+            if (res.error) {
+                throw new Error(res.error.message);
+            }
+        }
+        catch (error) {
+            let toast = Toastify({
+                node: renderNode({
+                    nodeType: 'div',
+                    childs: [
+                        {
+                            nodeType: 'h3',
+                            childs: `Aria2 RPC 连接测试`
+                        },
+                        {
+                            nodeType: 'p',
+                            childs: [
+                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
+                                `错误信息：${error.toString()}`
+                            ]
+                        }
+                    ]
+                }),
+                duration: -1,
+                newWindow: true,
+                gravity: "top",
+                position: "center",
+                stopOnFocus: true,
+                style: {
+                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+                },
+                onClick: () => {
+                    toast.hideToast();
+                }
+            });
+            toast.showToast();
+            return false;
+        }
+        return true;
+    }
+    async function iwaraDownloaderCheck() {
+        try {
+            let res = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
+                'ver': 1,
+                'code': 'State'
+            }, config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken })));
+            if (res.code !== 0) {
+                throw new Error(res.msg);
+            }
+        }
+        catch (error) {
+            let toast = Toastify({
+                node: renderNode({
+                    nodeType: 'div',
+                    childs: [
+                        {
+                            nodeType: 'h3',
+                            childs: `IwaraDownloader RPC 连接测试`
+                        },
+                        {
+                            nodeType: 'p',
+                            childs: [
+                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
+                                `错误信息：${error.toString()}`
+                            ]
+                        }
+                    ]
+                }),
+                duration: -1,
+                newWindow: true,
+                gravity: "top",
+                position: "center",
+                stopOnFocus: true,
+                style: {
+                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+                },
+                onClick: () => {
+                    toast.hideToast();
+                }
+            });
+            toast.showToast();
+            return false;
+        }
+        return true;
+    }
     function aria2Download(videoInfo) {
         (async function (id, author, name, uploadTime, info, tag, downloadUrl) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceNowTime().replaceUploadTime(uploadTime).replaceVariable({
@@ -1120,205 +1222,202 @@
             href: 'https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'
         }
     }));
-    document.head.appendChild(renderNode({
-        nodeType: "style",
-        childs: `
-        #pluginMenu {
-            z-index: 4096;
-            color: white;
-            position: fixed;
-            top: 50%;
-            right: 0px;
-            padding: 10px;
-            background-color: #565656;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 0 10px #ccc;
-            transform: translate(85%, -50%);
-            transition: transform 0.5s cubic-bezier(0.68, -0.24, 0.265, 1.20);
-        }
-        #pluginMenu ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-        #pluginMenu li {
-            padding: 5px 10px;
-            cursor: pointer;
-            text-align: center;
-            user-select: none;
-        }
-        #pluginMenu li:hover {
-            background-color: #000000cc;
-            border-radius: 3px;
-        }
+    GM_addStyle(`
+    #pluginMenu {
+        z-index: 4096;
+        color: white;
+        position: fixed;
+        top: 50%;
+        right: 0px;
+        padding: 10px;
+        background-color: #565656;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 0 10px #ccc;
+        transform: translate(85%, -50%);
+        transition: transform 0.5s cubic-bezier(0.68, -0.24, 0.265, 1.20);
+    }
+    #pluginMenu ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    #pluginMenu li {
+        padding: 5px 10px;
+        cursor: pointer;
+        text-align: center;
+        user-select: none;
+    }
+    #pluginMenu li:hover {
+        background-color: #000000cc;
+        border-radius: 3px;
+    }
 
-        #pluginMenu:hover {
-            transform: translate(0%, -50%);
-            transition-delay: 0.5s;
-        }
-    
-        #pluginMenu:not(:hover) {
-            transition-delay: 0s;
-        }
-    
-        #pluginMenu.moving-out {
-            transform: translate(0%, -50%);
-        }
-    
-        #pluginMenu.moving-in {
-            transform: translate(85%, -50%);
-        }
-    
-        /* 以下为兼容性处理 */
-        #pluginMenu:not(.moving-out):not(.moving-in) {
-            transition-delay: 0s;
-        }
-    
-        #pluginMenu:hover,
-        #pluginMenu:hover ~ #pluginMenu {
-            transition-delay: 0s;
-        }
-    
-        #pluginMenu:hover {
-            transition-duration: 0.5s;
-        }
-    
-        #pluginMenu:not(:hover).moving-in {
-            transition-delay: 0.5s;
-        }
+    #pluginMenu:hover {
+        transform: translate(0%, -50%);
+        transition-delay: 0.5s;
+    }
+
+    #pluginMenu:not(:hover) {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu.moving-out {
+        transform: translate(0%, -50%);
+    }
+
+    #pluginMenu.moving-in {
+        transform: translate(85%, -50%);
+    }
+
+    /* 以下为兼容性处理 */
+    #pluginMenu:not(.moving-out):not(.moving-in) {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu:hover,
+    #pluginMenu:hover ~ #pluginMenu {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu:hover {
+        transition-duration: 0.5s;
+    }
+
+    #pluginMenu:not(:hover).moving-in {
+        transition-delay: 0.5s;
+    }
 
 
-        #pluginConfig {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background-color: rgba(128, 128, 128, 0.8);
-			z-index: 8192; 
-			display: flex;
-            flex-direction: column;
-			align-items: center;
-			justify-content: center;
-		}
-		#pluginConfig .main {
-            color: white;
-            background-color: rgb(64,64,64,0.7);
-            padding: 24px;
-            margin: 10px;
-            overflow-y: auto;
+    #pluginConfig {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(128, 128, 128, 0.8);
+        z-index: 8192; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    #pluginConfig .main {
+        color: white;
+        background-color: rgb(64,64,64,0.7);
+        padding: 24px;
+        margin: 10px;
+        overflow-y: auto;
+    }
+    @media (max-width: 640px) {
+        #pluginConfig .main {
+            width: 100%;
         }
-        @media (max-width: 640px) {
-            #pluginConfig .main {
-                width: 100%;
-            }
-        }
-        #pluginConfig button {
-			background-color: blue;
-			padding: 10px 20px;
-			color: white;
-			font-size: 18px;
-			border: none;
-			border-radius: 4px;
-			cursor: pointer;
-		}
-        #pluginConfig p {
-			display: flex;
-            flex-direction: column;
-		}
-        #pluginConfig p label{
-			display: flex;
-		}
-        #pluginConfig p label input{
-			flex-grow: 1;
-            margin-left: 10px;
-		}
-        #pluginConfig .inputRadioLine {
-			display: flex;
-			align-items: center;
-            flex-direction: row;
-            margin-right: 10px;
-		}
-        #pluginConfig .inputRadio {
-			display: flex;
-            align-items: center;
-            flex-direction: row-reverse;
-            margin-right: 10px;
-		}
+    }
+    #pluginConfig button {
+        background-color: blue;
+        padding: 10px 20px;
+        color: white;
+        font-size: 18px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #pluginConfig p {
+        display: flex;
+        flex-direction: column;
+    }
+    #pluginConfig p label{
+        display: flex;
+    }
+    #pluginConfig p label input{
+        flex-grow: 1;
+        margin-left: 10px;
+    }
+    #pluginConfig .inputRadioLine {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        margin-right: 10px;
+    }
+    #pluginConfig .inputRadio {
+        display: flex;
+        align-items: center;
+        flex-direction: row-reverse;
+        margin-right: 10px;
+    }
 
-        #pluginOverlay {
-			position: fixed;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
-			background-color: rgba(128, 128, 128, 0.8);
-			z-index: 8192; 
-			display: flex;
-            flex-direction: column;
-			align-items: center;
-			justify-content: center;
-		}
+    #pluginOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(128, 128, 128, 0.8);
+        z-index: 8192; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
 
-		#pluginOverlay .main {
-            color: white;
-            font-size: 24px;
-            width: 60%;
-            background-color: rgb(64,64,64,0.7);
-            padding: 24px;
-            margin: 10px;
-            overflow-y: auto;
+    #pluginOverlay .main {
+        color: white;
+        font-size: 24px;
+        width: 60%;
+        background-color: rgb(64,64,64,0.7);
+        padding: 24px;
+        margin: 10px;
+        overflow-y: auto;
+    }
+    @media (max-width: 640px) {
+        #pluginOverlay .main {
+            width: 100%;
         }
-        @media (max-width: 640px) {
-            #pluginOverlay .main {
-                width: 100%;
-            }
-        }
+    }
 
-		#pluginOverlay button {
-			padding: 10px 20px;
-			color: white;
-			font-size: 18px;
-			border: none;
-			border-radius: 4px;
-			cursor: pointer;
-		}
-        #pluginOverlay button {
-			background-color: blue;
-        }
-        #pluginOverlay button[disabled] {
-			background-color: darkgray;
-            cursor: not-allowed;
-		}
+    #pluginOverlay button {
+        padding: 10px 20px;
+        color: white;
+        font-size: 18px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #pluginOverlay button {
+        background-color: blue;
+    }
+    #pluginOverlay button[disabled] {
+        background-color: darkgray;
+        cursor: not-allowed;
+    }
 
-		#pluginOverlay .checkbox-container {
-			display: flex;
-			align-items: center;
-		}
+    #pluginOverlay .checkbox-container {
+        display: flex;
+        align-items: center;
+    }
 
-		#pluginOverlay .checkbox-label {
-			color: white;
-			font-size: 18px;
-			margin-left: 10px;
-		}
+    #pluginOverlay .checkbox-label {
+        color: white;
+        font-size: 18px;
+        margin-left: 10px;
+    }
 
-        .selectButton {
-            position: absolute;
-            width: 38px;
-            height: 38px;
-            bottom: 24px;
-            right: 0px;
-        }
+    .selectButton {
+        position: absolute;
+        width: 38px;
+        height: 38px;
+        bottom: 24px;
+        right: 0px;
+    }
 
-        .toastify h3 {
-            margin: 0 0 10px 0;
-        }
-        .toastify p {
-            margin: 0 ;
-        }
-        `
-    }));
+    .toastify h3 {
+        margin: 0 0 10px 0;
+    }
+    .toastify p {
+        margin: 0 ;
+    }
+    `);
     document.body.appendChild(renderNode({
         nodeType: "div",
         attributes: {
