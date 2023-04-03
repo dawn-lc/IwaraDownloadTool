@@ -593,7 +593,7 @@
                                 childs: [
                                     `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
                                     { nodeType: 'br' },
-                                    `错误信息: ${error.toString()}`,
+                                    `错误信息: ${JSON.stringify(error)}`,
                                     { nodeType: 'br' },
                                     `→ 点击此处重新解析 ←`
                                 ]
@@ -614,7 +614,7 @@
                     }
                 })
                 toast.showToast()
-                console.error(`${this.Name}[${this.ID}] ${error.toString()}`)
+                console.error(`${this.Name}[${this.ID}] ${JSON.stringify(error)}`)
                 console.log(this.VideoInfoSource)
                 console.log(this.VideoFileSource)
                 let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
@@ -1044,7 +1044,7 @@
                             nodeType: 'p',
                             childs: [
                                 `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
-                                `错误信息：${error.toString()}`
+                                `错误信息：${JSON.stringify(error)}`
                             ]
                         }
                     ]
@@ -1090,7 +1090,7 @@
                             nodeType: 'p',
                             childs: [
                                 `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
-                                `错误信息：${error.toString()}`
+                                `错误信息：${JSON.stringify(error)}`
                             ]
                         }
                     ]
