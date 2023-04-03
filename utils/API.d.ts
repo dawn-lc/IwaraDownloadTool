@@ -1,3 +1,6 @@
+declare function GM_cookie(any,any,any);
+
+
 interface String {
     replaceVariable(replacements: Record<string, any>): String;
     replaceNowTime(): String;
@@ -6,12 +9,12 @@ interface String {
     truncate(maxLength: number): string
 }
 
-interface Array{
+interface Array {
     any(): boolean;
     append(arr: Array): void;
 }
 
-type RenderCode = string | Node |{
+type RenderCode = string | Node | {
     nodeType: string;
     attributes?: Record<string, any>;
     events?: Record<string, (event: Event) => void>;
@@ -46,13 +49,13 @@ interface QueueItem<T> {
 interface LogCode {
     content?: RenderCode;
     title?: RenderCode;
-    wait?:boolean;
-    id?:string;
+    wait?: boolean;
+    id?: string;
 }
 
 
 type VideoFileAPIRawDataList = VideoFileAPIRawData[];
-interface VideoFileAPIRawData{
+interface VideoFileAPIRawData {
     id: string;
     name: string;
     src: {
@@ -70,7 +73,7 @@ interface VideoCommentAPIRawData {
     page: number;
     results: Array<{
         id: string;
-        body:string;
+        body: string;
         numReplies: number;
         user: {
             id: string;
