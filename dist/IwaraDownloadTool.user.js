@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.289
+// @version           3.0.332
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -63,18 +63,33 @@
     Array.prototype.any = function () {
         return this.length > 0;
     };
-    const ceilDiv = function (dividend, divisor) {
-        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
+    String.prototype.replaceNowTime = function () {
+        return this.replaceVariable({
+            Y: new Date().getFullYear(),
+            M: new Date().getMonth() + 1,
+            D: new Date().getDate(),
+            h: new Date().getHours(),
+            m: new Date().getMinutes(),
+            s: new Date().getSeconds()
+        });
     };
-    const random = function (min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+    String.prototype.replaceUploadTime = function (time) {
+        return this.replaceVariable({
+            UploadYear: time.getFullYear(),
+            UploadMonth: time.getMonth() + 1,
+            UploadDate: time.getDate(),
+            UploadHours: time.getHours(),
+            UploadMinutes: time.getMinutes(),
+            UploadSeconds: time.getSeconds()
+        });
     };
-    const isNull = function (obj) {
-        return obj === undefined || obj === null;
-    };
-    const notNull = function (obj) {
-        return obj !== undefined && obj !== null;
-    };
+    let DownloadType;
+    (function (DownloadType) {
+        DownloadType[DownloadType["Aria2"] = 0] = "Aria2";
+        DownloadType[DownloadType["IwaraDownloader"] = 1] = "IwaraDownloader";
+        DownloadType[DownloadType["Browser"] = 2] = "Browser";
+        DownloadType[DownloadType["Others"] = 3] = "Others";
+    })(DownloadType || (DownloadType = {}));
     class Queue {
         items;
         constructor() {
@@ -147,36 +162,6 @@
             }
         }
     }
-    /**
-     * RenderCode 转换成 Node
-     * @param renderCode - RenderCode
-     * @returns Node 节点
-     */
-    const renderNode = function (renderCode) {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode);
-        }
-        if (renderCode instanceof Node) {
-            return renderCode;
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments');
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode;
-        const node = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node;
-    };
-    let DownloadType;
-    (function (DownloadType) {
-        DownloadType[DownloadType["Aria2"] = 0] = "Aria2";
-        DownloadType[DownloadType["IwaraDownloader"] = 1] = "IwaraDownloader";
-        DownloadType[DownloadType["Browser"] = 2] = "Browser";
-        DownloadType[DownloadType["Others"] = 3] = "Others";
-    })(DownloadType || (DownloadType = {}));
     class Config {
         cookies;
         checkDownloadLink;
@@ -207,7 +192,7 @@
                 set: function (target, property, value) {
                     if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
                         let setr = Reflect.set(target, property, value);
-                        console.log(`set ${property.toString()} ${value} ${setr}`);
+                        GM_getValue('isDebug') && console.log(`set ${property.toString()} ${value} ${setr}`);
                         GM_getValue(property.toString()) !== value && GM_setValue(property.toString(), value);
                         target.configChange(property.toString());
                         return setr;
@@ -557,13 +542,14 @@
         }
         async init(ID) {
             try {
+                config.authorization = `Bearer ${await refreshToken()}`;
                 this.ID = ID.toLocaleLowerCase();
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`, window.location.href, await getAuth()));
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败');
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100);
-                this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty();
+                this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty();
                 if (this.External) {
                     throw new Error(`非本站视频 ${this.VideoInfoSource.embedUrl}`);
                 }
@@ -628,7 +614,7 @@
                                 childs: [
                                     `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
                                     { nodeType: 'br' },
-                                    `错误信息: ${JSON.stringify(error)}`,
+                                    `错误信息: ${error}`,
                                     { nodeType: 'br' },
                                     `→ 点击此处重新解析 ←`
                                 ]
@@ -660,33 +646,113 @@
             }
         }
     }
-    function parseSearchParams(searchParams, initialObject = {}) {
-        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
-    }
-    async function getXVersion(urlString) {
-        let url = new URL(urlString);
-        let params = parseSearchParams(url.searchParams);
-        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
-        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
-        return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, "0"))
-            .join("");
-    }
+    let config = new Config();
+    let videoList = new Dictionary();
+    const originFetch = fetch;
+    const modifyFetch = async (url, options) => {
+        GM_getValue('isDebug') && console.log(`Fetch ${url}`);
+        if (options !== undefined && options.headers !== undefined) {
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "authorization") {
+                    if (config.authorization !== options.headers[key]) {
+                        let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))));
+                        if (playload['type'] === 'refresh_token') {
+                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`);
+                            break;
+                        }
+                        if (playload['type'] === 'access_token') {
+                            config.authorization = `Bearer ${options.headers[key].split(' ').pop()}`;
+                            GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))));
+                            GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`);
+                            break;
+                        }
+                    }
+                    /*
+                    if (playload['type'] === 'refresh_token') {
+                        let fetchResponse = await originFetch(url, options)
+                        let token = (await fetchResponse.json())['accessToken']
+                        GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(token.split('.')[1])))))
+                        config.authorization = `Bearer ${token}`
+                        return new Promise<Response>((resolve, reject) => {
+                            resolve(new Proxy(fetchResponse, {
+                                    get: function (target: any, prop: any, receiver: any) {
+                                        if (typeof Reflect.get(target, prop) === 'function') {
+                                            if (Reflect.get(target, prop + 'proxy') === undefined) {
+                                                target[prop + 'proxy'] = new Proxy(Reflect.get(target, prop), {
+                                                    apply: (target, thisArg, argumentsList) => {
+                                                        console.log('fetchfunction', target.name, Response, argumentsList)
+                                                        return Reflect.apply(target, Response, argumentsList);
+                                                    }
+                                                });
+                                            }
+                                            return Reflect.get(target, prop + 'proxy')
+                                        }
+                                        return Reflect.get(target, prop);
+                                    },
+                                    set(target: any, prop: any, value: any) {
+                                        return Reflect.set(target, prop, value);
+                                    }
+                                }
+                            ))
+                        })
+                    }
+                    */
+                }
+            }
+        }
+        return originFetch(url, options);
+    };
+    window.fetch = modifyFetch;
+    window.unsafeWindow.fetch = modifyFetch;
+    const delay = async function (ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    };
+    const UUID = function () {
+        return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('');
+    };
+    const ceilDiv = function (dividend, divisor) {
+        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
+    };
+    const random = function (min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    };
+    const isNull = function (obj) {
+        return obj === undefined || obj === null;
+    };
+    const notNull = function (obj) {
+        return obj !== undefined && obj !== null;
+    };
+    const renderNode = function (renderCode) {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode);
+        }
+        if (renderCode instanceof Node) {
+            return renderCode;
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments');
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode;
+        const node = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node;
+    };
     async function get(url, referrer = window.location.href, headers = {}) {
-        if (url.split('//')[1].split('/')[0] == window.location.hostname) {
-            return await (await fetch(url, {
+        try {
+            return await (await originFetch(url, {
                 'headers': Object.assign({
                     'accept': 'application/json, text/plain, */*'
                 }, headers),
-                "referrerPolicy": "strict-origin-when-cross-origin",
                 'referrer': referrer,
                 'method': 'GET',
-                'mode': 'cors',
-                'redirect': 'follow',
-                'credentials': 'omit'
+                "mode": "cors",
+                "credentials": "include"
             })).text();
         }
-        else {
+        catch (error) {
             let data = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
@@ -708,26 +774,25 @@
     async function post(url, body, referrer = window.location.hostname, headers = {}) {
         if (typeof body !== 'string')
             body = JSON.stringify(body);
-        if (url.split('//')[1].split('/')[0] == window.location.hostname) {
-            return await (await fetch(url, {
+        try {
+            return await (await originFetch(url, {
                 'headers': Object.assign({
                     'accept': 'application/json, text/plain, */*'
                 }, headers),
                 'referrer': referrer,
                 'body': body,
                 'method': 'POST',
-                'mode': 'cors',
-                'redirect': 'follow',
-                'credentials': 'include'
+                "mode": "cors",
+                "credentials": "include"
             })).text();
         }
-        else {
-            let data = await new Promise((resolve, reject) => {
+        catch (error) {
+            let data = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'POST',
                     url: url,
                     headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*',
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     }, headers),
                     data: body,
@@ -742,58 +807,24 @@
             return data.responseText;
         }
     }
-    String.prototype.replaceNowTime = function () {
-        return this.replaceVariable({
-            Y: new Date().getFullYear(),
-            M: new Date().getMonth() + 1,
-            D: new Date().getDate(),
-            h: new Date().getHours(),
-            m: new Date().getMinutes(),
-            s: new Date().getSeconds()
-        });
-    };
-    String.prototype.replaceUploadTime = function (time) {
-        return this.replaceVariable({
-            UploadYear: time.getFullYear(),
-            UploadMonth: time.getMonth() + 1,
-            UploadDate: time.getDate(),
-            UploadHours: time.getHours(),
-            UploadMinutes: time.getMinutes(),
-            UploadSeconds: time.getSeconds()
-        });
-    };
-    async function delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    function parseSearchParams(searchParams, initialObject = {}) {
+        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
     }
-    function UUID() {
-        let UUID = '';
-        for (let index = 0; index < 8; index++) {
-            UUID += (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
-        }
-        return UUID;
+    async function refreshToken() {
+        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`, {}, window.location.href, {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }));
+        return refresh['accessToken'];
     }
-    let config = new Config();
-    let videoList = new Dictionary();
-    const originFetch = fetch;
-    const modifyFetch = async (url, options) => {
-        GM_getValue('isDebug') && console.log(`Fetch ${url}`);
-        if (options.headers !== undefined) {
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "authorization") {
-                    let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))));
-                    if (playload['type'] === 'refresh_token') {
-                        debugger;
-                        let refresh_token = await (await originFetch(url, options)).json();
-                        config.authorization = `Bearer ${refresh_token['accessToken']}`;
-                        debugger;
-                    }
-                }
-            }
-        }
-        return originFetch(url, options);
-    };
-    window.fetch = modifyFetch;
-    window.unsafeWindow.fetch = modifyFetch;
+    async function getXVersion(urlString) {
+        let url = new URL(urlString);
+        let params = parseSearchParams(url.searchParams);
+        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
+        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("");
+    }
     // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i));
@@ -891,8 +922,8 @@
         }, notNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {});
     }
     async function addDownloadTask() {
-        let data = prompt('请输入需要下载的视频ID! (若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC... )', '');
-        if (notNull(data) && !data.isEmpty()) {
+        let data = prompt('请输入需要下载的视频ID! \r\n(若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC... )', '');
+        if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary();
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'));
             analyzeDownloadTask(IDList);
@@ -910,11 +941,6 @@
             }
         }
     }
-    /**
-      * 检查字符串中是否包含下载链接特征
-      * @param {string} comment - 待检查的字符串
-      * @returns {boolean} - 如果字符串中包含下载链接特征则返回 true，否则返回 false
-      */
     function checkIsHaveDownloadLink(comment) {
         if (!config.checkDownloadLink) {
             return false;

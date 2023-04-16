@@ -5,8 +5,9 @@
 
     const originalAddEventListener = EventTarget.prototype.addEventListener
     EventTarget.prototype.addEventListener = function (type, listener, options) {
-        originalAddEventListener.call(this, type, listener, options);
+        originalAddEventListener.call(this, type, listener, options)
     }
+
     String.prototype.replaceVariable = function (replacements) {
         return Object.entries(replacements).reduce(
             (str, [key, value]) => str.split(`%#${key}#%`).join(String(value)),
@@ -18,29 +19,43 @@
     }
     String.prototype.truncate = function (maxLength) {
         if (this.length > maxLength) {
-            return this.substring(0, maxLength);
+            return this.substring(0, maxLength)
         }
-        return this.toString();
-    };
+        return this.toString()
+    }
     Array.prototype.append = function (arr) {
-        this.push(...arr);
-    };
+        this.push(...arr)
+    }
     Array.prototype.any = function () {
         return this.length > 0
     }
-    const ceilDiv = function (dividend: number, divisor: number): number {
-        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
+    String.prototype.replaceNowTime = function () {
+        return this.replaceVariable({
+            Y: new Date().getFullYear(),
+            M: new Date().getMonth() + 1,
+            D: new Date().getDate(),
+            h: new Date().getHours(),
+            m: new Date().getMinutes(),
+            s: new Date().getSeconds()
+        })
     }
-    const random = function (min: number, max: number): number {
-        return Math.floor(Math.random() * (max - min + 1)) + min
-    }
-    const isNull = function (obj: any): boolean {
-        return obj === undefined || obj === null
-    }
-    const notNull = function (obj: any): boolean {
-        return obj !== undefined && obj !== null
+    String.prototype.replaceUploadTime = function (time) {
+        return this.replaceVariable({
+            UploadYear: time.getFullYear(),
+            UploadMonth: time.getMonth() + 1,
+            UploadDate: time.getDate(),
+            UploadHours: time.getHours(),
+            UploadMinutes: time.getMinutes(),
+            UploadSeconds: time.getSeconds()
+        })
     }
 
+    enum DownloadType {
+        Aria2,
+        IwaraDownloader,
+        Browser,
+        Others
+    }
     class Queue<T> {
         private items: QueueItem<T>[];
         constructor() {
@@ -114,38 +129,6 @@
             }
         }
     }
-
-    /**
-     * RenderCode 转换成 Node
-     * @param renderCode - RenderCode
-     * @returns Node 节点
-     */
-    const renderNode = function (renderCode: RenderCode): Node | Element {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode)
-        }
-        if (renderCode instanceof Node) {
-            return renderCode
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments')
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode
-        const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node
-    }
-
-    enum DownloadType {
-        Aria2,
-        IwaraDownloader,
-        Browser,
-        Others
-    }
-
     class Config {
         cookies: Array<any>
         checkDownloadLink: boolean
@@ -177,7 +160,7 @@
                 set: function (target, property: string, value) {
                     if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
                         let setr = Reflect.set(target, property, value);
-                        console.log(`set ${property.toString()} ${value} ${setr}`)
+                        GM_getValue('isDebug') && console.log(`set ${property.toString()} ${value} ${setr}`)
                         GM_getValue(property.toString()) !== value && GM_setValue(property.toString(), value)
                         target.configChange(property.toString())
                         return setr
@@ -506,7 +489,7 @@
                                         case DownloadType.IwaraDownloader:
                                             (await iwaraDownloaderCheck()) && editor.remove()
                                             break;
-                                            case DownloadType.Browser:
+                                        case DownloadType.Browser:
                                             (await EnvCheck()) && editor.remove()
                                             break;
                                         default:
@@ -548,13 +531,14 @@
         }
         async init(ID: string) {
             try {
+                config.authorization = `Bearer ${await refreshToken()}`
                 this.ID = ID.toLocaleLowerCase()
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`, window.location.href, await getAuth()))
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败')
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100)
-                this.External = this.VideoInfoSource.embedUrl !== null && !this.VideoInfoSource.embedUrl.isEmpty()
+                this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
                     throw new Error(`非本站视频 ${this.VideoInfoSource.embedUrl}`)
                 }
@@ -570,7 +554,7 @@
                     throw new Error('获取视频源失败')
                 }
                 this.getDownloadQuality = () => {
-                    let priority : Record<string, number>= {
+                    let priority: Record<string, number> = {
                         'Source': 100,
                         '540': 2,
                         '360': 1
@@ -623,7 +607,7 @@
                                 childs: [
                                     `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
                                     { nodeType: 'br' },
-                                    `错误信息: ${JSON.stringify(error)}`,
+                                    `错误信息: ${error}`,
                                     { nodeType: 'br' },
                                     `→ 点击此处重新解析 ←`
                                 ]
@@ -656,8 +640,176 @@
         }
     }
 
+    let config = new Config()
+    let videoList = new Dictionary<string>();
+
+    const originFetch = fetch;
+    const modifyFetch = async (url: any, options?: any) => {
+        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
+        if (options !== undefined && options.headers !== undefined) {
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "authorization") {
+                    if (config.authorization !== options.headers[key]) {
+                        let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
+                        if (playload['type'] === 'refresh_token') {
+                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`)
+                            break
+                        }
+                        if (playload['type'] === 'access_token') {
+                            config.authorization = `Bearer ${options.headers[key].split(' ').pop()}`
+                            GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
+                            GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
+                            break
+                        }
+                    }
+                    /*
+                    if (playload['type'] === 'refresh_token') {
+                        let fetchResponse = await originFetch(url, options)
+                        let token = (await fetchResponse.json())['accessToken']
+                        GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(token.split('.')[1])))))
+                        config.authorization = `Bearer ${token}`
+                        return new Promise<Response>((resolve, reject) => {
+                            resolve(new Proxy(fetchResponse, {
+                                    get: function (target: any, prop: any, receiver: any) {
+                                        if (typeof Reflect.get(target, prop) === 'function') {
+                                            if (Reflect.get(target, prop + 'proxy') === undefined) {
+                                                target[prop + 'proxy'] = new Proxy(Reflect.get(target, prop), {
+                                                    apply: (target, thisArg, argumentsList) => {
+                                                        console.log('fetchfunction', target.name, Response, argumentsList)
+                                                        return Reflect.apply(target, Response, argumentsList);
+                                                    }
+                                                });
+                                            }
+                                            return Reflect.get(target, prop + 'proxy')
+                                        }
+                                        return Reflect.get(target, prop);
+                                    },
+                                    set(target: any, prop: any, value: any) {
+                                        return Reflect.set(target, prop, value);
+                                    }
+                                }
+                            ))
+                        })
+                    }
+                    */
+                }
+            }
+        }
+        return originFetch(url, options)
+    }
+    window.fetch = modifyFetch
+    window.unsafeWindow.fetch = modifyFetch
+
+    const delay = async function (ms: number) {
+        return new Promise(resolve => setTimeout(resolve, ms))
+    }
+    const UUID = function () {
+        return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
+    }
+    const ceilDiv = function (dividend: number, divisor: number): number {
+        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
+    }
+    const random = function (min: number, max: number): number {
+        return Math.floor(Math.random() * (max - min + 1)) + min
+    }
+    const isNull = function (obj: any): boolean {
+        return obj === undefined || obj === null
+    }
+    const notNull = function (obj: any): boolean {
+        return obj !== undefined && obj !== null
+    }
+
+    const renderNode = function (renderCode: RenderCode): Node | Element {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode)
+        }
+        if (renderCode instanceof Node) {
+            return renderCode
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments')
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode
+        const node: Element = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node
+    }
+
+    async function get(url: string, referrer: string = window.location.href, headers: object = {}) {
+        try {
+            return await (await originFetch(url, {
+                'headers': Object.assign({
+                    'accept': 'application/json, text/plain, */*'
+                }, headers),
+                'referrer': referrer,
+                'method': 'GET',
+                "mode": "cors",
+                "credentials": "include"
+            })).text();
+        } catch (error) {
+            let data: any = await new Promise(async (resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url,
+                    headers: Object.assign({
+                        'Accept': 'application/json, text/plain, */*'
+                    }, headers),
+                    onload: function (response) {
+                        resolve(response);
+                    },
+                    onerror: function (error) {
+                        reject(error);
+                    }
+                });
+            });
+            return data.responseText;
+        }
+    }
+    async function post(url: string, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
+        if (typeof body !== 'string') body = JSON.stringify(body)
+        try {
+            return await (await originFetch(url, {
+                'headers': Object.assign({
+                    'accept': 'application/json, text/plain, */*'
+                }, headers),
+                'referrer': referrer,
+                'body': body,
+                'method': 'POST',
+                "mode": "cors",
+                "credentials": "include"
+            })).text();
+        } catch (error) {
+            let data: any = await new Promise(async (resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: url,
+                    headers: Object.assign({
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }, headers),
+                    data: body,
+                    onload: function (response) {
+                        resolve(response);
+                    },
+                    onerror: function (error) {
+                        reject(error);
+                    }
+                });
+            });
+            return data.responseText;
+        }
+    }
     function parseSearchParams(searchParams: URLSearchParams, initialObject = {}): {} {
         return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
+    }
+    async function refreshToken(): Promise<string> {
+        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`, {}, window.location.href, {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }))
+        return refresh['accessToken']
     }
     async function getXVersion(urlString: string): Promise<string> {
         let url = new URL(urlString)
@@ -669,133 +821,6 @@
             .join("");
     }
 
-    async function get(url: string, referrer: string = window.location.href, headers: object = {}) {
-        if (url.split('//')[1].split('/')[0] == window.location.hostname) {
-            return await (await fetch(url, {
-                'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
-                }, headers),
-                "referrerPolicy": "strict-origin-when-cross-origin",
-                'referrer': referrer,
-                'method': 'GET',
-                'mode': 'cors',
-                'redirect': 'follow',
-                'credentials': 'omit'
-            })).text()
-        } else {
-            let data: any = await new Promise(async (resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url,
-                    headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*'
-                    }, headers),
-                    onload: function (response: any) {
-                        resolve(response)
-                    },
-                    onerror: function (error: any) {
-                        reject(error)
-                    }
-                })
-            })
-            return data.responseText
-        }
-    }
-    async function post(url: string, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
-        if (typeof body !== 'string') body = JSON.stringify(body)
-        if (url.split('//')[1].split('/')[0] == window.location.hostname) {
-            return await (await fetch(url, {
-                'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
-                }, headers),
-                'referrer': referrer,
-                'body': body,
-                'method': 'POST',
-                'mode': 'cors',
-                'redirect': 'follow',
-                'credentials': 'include'
-            })).text()
-        } else {
-            let data: any = await new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: url,
-                    headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*',
-                        'Content-Type': 'application/json'
-                    }, headers),
-                    data: body,
-                    onload: function (response: any) {
-                        resolve(response)
-                    },
-                    onerror: function (error: any) {
-                        reject(error)
-                    }
-                })
-            })
-            return data.responseText
-        }
-    }
-
-    String.prototype.replaceNowTime = function () {
-        return this.replaceVariable({
-            Y: new Date().getFullYear(),
-            M: new Date().getMonth() + 1,
-            D: new Date().getDate(),
-            h: new Date().getHours(),
-            m: new Date().getMinutes(),
-            s: new Date().getSeconds()
-        })
-    }
-
-    String.prototype.replaceUploadTime = function (time) {
-        return this.replaceVariable({
-            UploadYear: time.getFullYear(),
-            UploadMonth: time.getMonth() + 1,
-            UploadDate: time.getDate(),
-            UploadHours: time.getHours(),
-            UploadMinutes: time.getMinutes(),
-            UploadSeconds: time.getSeconds()
-        })
-    }
-
-    async function delay(ms: number) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function UUID() {
-        let UUID = '';
-        for (let index = 0; index < 8; index++) {
-            UUID += (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
-        }
-        return UUID;
-    }
-
-
-
-    let config = new Config()
-    let videoList = new Dictionary<string>();
-
-    const originFetch = fetch;
-    const modifyFetch = async (url: any, options: any) => {
-        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
-        if (options.headers !== undefined) {
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "authorization") {
-                    let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
-                    if (playload['type'] === 'refresh_token'){
-                        debugger
-                        let refresh_token = await (await originFetch(url, options)).json()
-                        config.authorization = `Bearer ${refresh_token['accessToken']}`
-                        debugger
-                    }
-                }
-            }
-        }
-        return originFetch(url, options)
-    }
-    window.fetch = modifyFetch
-    window.unsafeWindow.fetch = modifyFetch
 
     // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
@@ -899,8 +924,8 @@
     }
 
     async function addDownloadTask() {
-        let data = prompt('请输入需要下载的视频ID! (若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC... )', '');
-        if (notNull(data) && !data.isEmpty()) {
+        let data = prompt('请输入需要下载的视频ID! \r\n(若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC... )', '');
+        if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<string>();
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'))
             analyzeDownloadTask(IDList)
@@ -920,11 +945,7 @@
             }
         }
     }
-    /**
-      * 检查字符串中是否包含下载链接特征
-      * @param {string} comment - 待检查的字符串
-      * @returns {boolean} - 如果字符串中包含下载链接特征则返回 true，否则返回 false
-      */
+
     function checkIsHaveDownloadLink(comment: string): boolean {
         if (!config.checkDownloadLink) {
             return false
@@ -1065,7 +1086,7 @@
             if (GM_info.downloadMode !== "browser") {
                 let err = new Error("请启用脚本管理器的浏览器API下载模式!")
                 errorObj = {
-                    message: err.message, 
+                    message: err.message,
                     stack: err.stack
                 }
                 throw err;
@@ -1082,7 +1103,7 @@
                         {
                             nodeType: 'p',
                             childs: [
-                                `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
+                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
                                 `错误信息：${JSON.stringify(errorObj)}`
                             ]
                         }
@@ -1114,10 +1135,10 @@
                 'id': UUID(),
                 'params': ['token:' + config.aria2Token]
             }))
-            if(res.error){
+            if (res.error) {
                 let err = new Error(res.error.message)
                 errorObj = {
-                    message: err.message, 
+                    message: err.message,
                     stack: err.stack
                 }
                 throw err;
@@ -1134,7 +1155,7 @@
                         {
                             nodeType: 'p',
                             childs: [
-                                `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
+                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
                                 `错误信息：${JSON.stringify(errorObj)}`
                             ]
                         }
@@ -1166,7 +1187,7 @@
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
             )))
-            
+
             if (res.code !== 0) {
                 let err = new Error(res.msg)
                 errorObj = {
@@ -1187,7 +1208,7 @@
                         {
                             nodeType: 'p',
                             childs: [
-                                `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
+                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
                                 `错误信息：${JSON.stringify(errorObj)}`
                             ]
                         }
@@ -1338,7 +1359,7 @@
     }
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
-            function browserDownloadError (error: any) {
+            function browserDownloadError(error: any) {
                 let toast = Toastify({
                     node: renderNode({
                         nodeType: 'div',
@@ -1384,8 +1405,8 @@
             GM_download({
                 url: DownloadUrl,
                 saveAs: false,
-                name : localPath.filename,
-                onerror: (err) =>  browserDownloadError(err),
+                name: localPath.filename,
+                onerror: (err) => browserDownloadError(err),
                 ontimeout: () => browserDownloadError(new Error('Timeout'))
             })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
