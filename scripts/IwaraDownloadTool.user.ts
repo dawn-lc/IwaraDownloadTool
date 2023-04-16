@@ -428,7 +428,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '高画质检查：',
+                                        '画质检查：',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -1020,7 +1020,7 @@
             console.warn(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接, 点击进入视频页面 https://www.iwara.tv/video/${videoInfo.ID}`)
             return
         }
-        if (videoInfo.getDownloadQuality() != 'Source') {
+        if (config.checkDownloadLink && videoInfo.getDownloadQuality() != 'Source') {
             let toast = Toastify({
                 node: renderNode({
                     nodeType: 'div',

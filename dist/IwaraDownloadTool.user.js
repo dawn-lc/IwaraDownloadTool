@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.333
+// @version           3.0.335
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -445,7 +445,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '高画质检查：',
+                                        '画质检查：',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -1014,7 +1014,7 @@
             console.warn(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接, 点击进入视频页面 https://www.iwara.tv/video/${videoInfo.ID}`);
             return;
         }
-        if (videoInfo.getDownloadQuality() != 'Source') {
+        if (config.checkDownloadLink && videoInfo.getDownloadQuality() != 'Source') {
             let toast = Toastify({
                 node: renderNode({
                     nodeType: 'div',
