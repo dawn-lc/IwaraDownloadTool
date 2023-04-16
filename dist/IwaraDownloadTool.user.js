@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.332
+// @version           3.0.333
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -173,6 +173,7 @@
         iwaraDownloaderPath;
         iwaraDownloaderToken;
         authorization;
+        priority;
         constructor() {
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
@@ -183,6 +184,11 @@
             this.aria2Token = GM_getValue('aria2Token', '');
             this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800/jsonrpc');
             this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '');
+            this.priority = GM_getValue('priority', {
+                'Source': 100,
+                '540': 2,
+                '360': 1
+            });
             //代理本页面的更改
             let body = new Proxy(this, {
                 get: function (target, property) {
@@ -565,12 +571,7 @@
                     throw new Error('获取视频源失败');
                 }
                 this.getDownloadQuality = () => {
-                    let priority = {
-                        'Source': 100,
-                        '540': 2,
-                        '360': 1
-                    };
-                    return this.VideoFileSource.sort((a, b) => priority[b.name] - priority[a.name])[0].name;
+                    return this.VideoFileSource.sort((a, b) => config.priority[b.name] - config.priority[a.name])[0].name;
                 };
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality());

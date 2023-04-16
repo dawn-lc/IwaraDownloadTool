@@ -140,6 +140,7 @@
         iwaraDownloaderPath: string
         iwaraDownloaderToken: string
         authorization: string
+        priority: Record<string, number>
         [key: string]: any;
         constructor() {
             //初始化
@@ -151,6 +152,11 @@
             this.aria2Token = GM_getValue('aria2Token', '')
             this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800/jsonrpc')
             this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '')
+            this.priority = GM_getValue('priority', {
+                'Source': 100,
+                '540': 2,
+                '360': 1
+            })
             //代理本页面的更改
             let body = new Proxy(this, {
                 get: function (target, property: string) {
@@ -554,12 +560,7 @@
                     throw new Error('获取视频源失败')
                 }
                 this.getDownloadQuality = () => {
-                    let priority: Record<string, number> = {
-                        'Source': 100,
-                        '540': 2,
-                        '360': 1
-                    }
-                    return this.VideoFileSource.sort((a, b) => priority[b.name] - priority[a.name])[0].name
+                    return this.VideoFileSource.sort((a, b) => config.priority[b.name] - config.priority[a.name])[0].name
                 }
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality())
