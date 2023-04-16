@@ -142,6 +142,7 @@
     enum DownloadType {
         Aria2,
         IwaraDownloader,
+        Browser,
         Others
     }
 
@@ -160,7 +161,7 @@
         constructor() {
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true)
-            this.downloadType = GM_getValue('downloadType', DownloadType.Others)
+            this.downloadType = GM_getValue('downloadType', DownloadType.Browser)
             this.downloadPath = GM_getValue('downloadPath', '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
             this.downloadProxy = GM_getValue('downloadProxy', '')
             this.aria2Path = GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc')
@@ -367,6 +368,29 @@
                             ]
                         })
                     ]
+                    let BrowserConfigInput = [
+                        renderNode({
+                            nodeType: 'label',
+                            childs: [
+                                '重命名：',
+                                {
+                                    nodeType: 'input',
+                                    attributes: Object.assign(
+                                        {
+                                            name: 'DownloadPath',
+                                            type: 'Text',
+                                            value: config.downloadPath
+                                        }
+                                    ),
+                                    events: {
+                                        change: (event: Event) => {
+                                            config.downloadPath = (event.target as HTMLInputElement).value
+                                        }
+                                    }
+                                }
+                            ]
+                        })
+                    ]
                     switch (config.downloadType) {
                         case DownloadType.Aria2:
                             downloadConfigInput.map(i => page.appendChild(i))
@@ -375,6 +399,9 @@
                         case DownloadType.IwaraDownloader:
                             downloadConfigInput.map(i => page.appendChild(i))
                             iwaraDownloaderConfigInput.map(i => page.appendChild(i))
+                            break;
+                        case DownloadType.Browser:
+                            BrowserConfigInput.map(i => page.appendChild(i))
                             break;
                         default:
                             break;
@@ -478,6 +505,9 @@
                                             break;
                                         case DownloadType.IwaraDownloader:
                                             (await iwaraDownloaderCheck()) && editor.remove()
+                                            break;
+                                            case DownloadType.Browser:
+                                            (await EnvCheck()) && editor.remove()
                                             break;
                                         default:
                                             editor.remove()
@@ -747,12 +777,18 @@
     let videoList = new Dictionary<string>();
 
     const originFetch = fetch;
-    const modifyFetch = (url: any, options: any) => {
+    const modifyFetch = async (url: any, options: any) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`)
         if (options.headers !== undefined) {
             for (const key in options.headers) {
                 if (key.toLocaleLowerCase() == "authorization") {
-                    config.authorization = options.headers[key]
+                    let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
+                    if (playload['type'] === 'refresh_token'){
+                        debugger
+                        let refresh_token = await (await originFetch(url, options)).json()
+                        config.authorization = `Bearer ${refresh_token['accessToken']}`
+                        debugger
+                    }
                 }
             }
         }
@@ -1003,6 +1039,9 @@
             case DownloadType.IwaraDownloader:
                 iwaraDownloaderDownload(videoInfo)
                 break;
+            case DownloadType.Browser:
+                browserDownload(videoInfo)
+                break;
             default:
                 othersDownload(videoInfo)
                 break;
@@ -1020,7 +1059,54 @@
             match: matchPath !== null
         }
     }
+    async function EnvCheck(): Promise<boolean> {
+        let errorObj = {};
+        try {
+            if (GM_info.downloadMode !== "browser") {
+                let err = new Error("请启用脚本管理器的浏览器API下载模式!")
+                errorObj = {
+                    message: err.message, 
+                    stack: err.stack
+                }
+                throw err;
+            }
+        } catch (error: any) {
+            let toast = Toastify({
+                node: renderNode({
+                    nodeType: 'div',
+                    childs: [
+                        {
+                            nodeType: 'h3',
+                            childs: `环境测试`
+                        },
+                        {
+                            nodeType: 'p',
+                            childs: [
+                                `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
+                                `错误信息：${JSON.stringify(errorObj)}`
+                            ]
+                        }
+                    ]
+                }),
+                duration: -1,
+                newWindow: true,
+                gravity: "top",
+                position: "center",
+                stopOnFocus: true,
+                style: {
+                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+                },
+                onClick: () => {
+                    toast.hideToast()
+                }
+            })
+            toast.showToast()
+            return false;
+        }
+        return true;
+    }
     async function aria2Check(): Promise<boolean> {
+        let errorObj = {};
         try {
             let res = JSON.parse(await post(config.aria2Path, {
                 'jsonrpc': '2.0',
@@ -1029,9 +1115,14 @@
                 'params': ['token:' + config.aria2Token]
             }))
             if(res.error){
-                throw new Error(res.error.message)
+                let err = new Error(res.error.message)
+                errorObj = {
+                    message: err.message, 
+                    stack: err.stack
+                }
+                throw err;
             }
-        } catch (error) {
+        } catch (error: any) {
             let toast = Toastify({
                 node: renderNode({
                     nodeType: 'div',
@@ -1044,7 +1135,7 @@
                             nodeType: 'p',
                             childs: [
                                 `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
-                                `错误信息：${JSON.stringify(error)}`
+                                `错误信息：${JSON.stringify(errorObj)}`
                             ]
                         }
                     ]
@@ -1067,6 +1158,7 @@
         return true;
     }
     async function iwaraDownloaderCheck(): Promise<boolean> {
+        let errorObj = {};
         try {
             let res = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
                 'ver': 1,
@@ -1074,8 +1166,14 @@
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
             )))
+            
             if (res.code !== 0) {
-                throw new Error(res.msg)
+                let err = new Error(res.msg)
+                errorObj = {
+                    message: err.message,
+                    stack: err.stack
+                }
+                throw err;
             }
         } catch (error) {
             let toast = Toastify({
@@ -1090,7 +1188,7 @@
                             nodeType: 'p',
                             childs: [
                                 `无法保存配置, 请检查配置是否正确。`,{ nodeType: 'br'},
-                                `错误信息：${JSON.stringify(error)}`
+                                `错误信息：${JSON.stringify(errorObj)}`
                             ]
                         }
                     ]
@@ -1137,8 +1235,8 @@
                         {
                             'referer': 'https://ecchi.iwara.tv/',
                             'header': [
-                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; '),
-                                'Authorization:' + config.authorization
+                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
+                                //,'Authorization:' + config.authorization
                             ]
                         }
                     )
@@ -1161,7 +1259,7 @@
                 'ver': 1,
                 'code': 'add',
                 'data': Object.assign({
-                    'Source': ID,
+                    'source': ID,
                     'author': Author,
                     'name': Name,
                     'downloadTime': new Date(),
@@ -1236,6 +1334,60 @@
     function othersDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
             GM_openInTab(DownloadUrl, { active: true, insert: true, setParent: true })
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
+    }
+    function browserDownload(videoInfo: VideoInfo) {
+        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
+            function browserDownloadError (error: any) {
+                let toast = Toastify({
+                    node: renderNode({
+                        nodeType: 'div',
+                        childs: [
+                            {
+                                nodeType: 'h3',
+                                childs: `下载`
+                            },
+                            {
+                                nodeType: 'p',
+                                childs: [
+                                    `在下载 ${Name}[${ID}] 的过程中出现问题!  `,
+                                    { nodeType: 'br' },
+                                    `错误信息: ${error.message || error.toString()}`,
+                                    { nodeType: 'br' },
+                                    `→ 点击此处重新下载 ←`
+                                ]
+                            }
+                        ]
+                    }),
+                    duration: -1,
+                    newWindow: true,
+                    gravity: "top",
+                    position: "right",
+                    stopOnFocus: true,
+                    style: {
+                        background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
+                    },
+                    onClick: () => {
+                        analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
+                        toast.hideToast()
+                    }
+                })
+                toast.showToast()
+            }
+            let localPath = analyzeLocalPath(config.downloadPath.replaceNowTime().replaceUploadTime(UploadTime).replaceVariable(
+                {
+                    AUTHOR: Author,
+                    ID: ID,
+                    TITLE: Name
+                }
+            ).trim())
+            GM_download({
+                url: DownloadUrl,
+                saveAs: false,
+                name : localPath.filename,
+                onerror: (err) =>  browserDownloadError(err),
+                ontimeout: () => browserDownloadError(new Error('Timeout'))
+            })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
