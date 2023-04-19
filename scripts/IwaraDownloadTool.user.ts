@@ -8,26 +8,18 @@
         originalAddEventListener.call(this, type, listener, options)
     }
 
+
+    String.prototype.isEmpty = function () {
+        return this.trim().length == 0
+    }
+    String.prototype.truncate = function (maxLength) {
+        return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
+    }
     String.prototype.replaceVariable = function (replacements) {
         return Object.entries(replacements).reduce(
             (str, [key, value]) => str.split(`%#${key}#%`).join(String(value)),
             this as string
         )
-    }
-    String.prototype.isEmpty = function () {
-        return this.trim().length == 0
-    }
-    String.prototype.truncate = function (maxLength) {
-        if (this.length > maxLength) {
-            return this.substring(0, maxLength)
-        }
-        return this.toString()
-    }
-    Array.prototype.append = function (arr) {
-        this.push(...arr)
-    }
-    Array.prototype.any = function () {
-        return this.length > 0
     }
     String.prototype.replaceNowTime = function () {
         return this.replaceVariable({
@@ -49,6 +41,13 @@
             UploadSeconds: time.getSeconds()
         })
     }
+    Array.prototype.append = function (arr) {
+        this.push(...arr)
+    }
+    Array.prototype.any = function () {
+        return this.length > 0
+    }
+
 
     enum DownloadType {
         Aria2,
@@ -56,6 +55,14 @@
         Browser,
         Others
     }
+
+    enum ToastType {
+        Log,
+        Info,
+        Warn,
+        Error
+    }
+
     class Queue<T> {
         private items: QueueItem<T>[];
         constructor() {
@@ -513,7 +520,6 @@
         }
     }
     class VideoInfo {
-        Title: RenderCode
         ID: string
         UploadTime: Date
         Name: string | null
@@ -531,7 +537,6 @@
         getDownloadQuality: () => string
         getDownloadUrl: () => string
         constructor(Name: string) {
-            this.Title = { nodeType: 'h2', childs: 'Iwara批量下载工具-解析模块' }
             this.Name = Name
             return this;
         }
@@ -595,43 +600,32 @@
                 this.State = true
                 return this
             } catch (error) {
-                let toast = Toastify({
-                    node: renderNode({
-                        nodeType: 'div',
-                        childs: [
-                            {
-                                nodeType: 'h3',
-                                childs: `解析模块`
-                            },
-                            {
-                                nodeType: 'p',
-                                childs: [
-                                    `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
-                                    { nodeType: 'br' },
-                                    `错误信息: ${error}`,
-                                    { nodeType: 'br' },
-                                    `→ 点击此处重新解析 ←`
-                                ]
-                            }
-                        ]
-                    }),
-                    duration: -1,
-                    newWindow: true,
-                    gravity: "top",
-                    position: "right",
-                    stopOnFocus: true,
-                    style: {
-                        background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
-                    },
-                    onClick: () => {
-                        analyzeDownloadTask(new Dictionary<string>([{ key: this.ID, value: this.Name }]))
-                        toast.hideToast()
+                let data = this
+                let toast = newToast(
+                    ToastType.Error,
+                    {
+                        node:
+                            toastNode([
+                                `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
+                                { nodeType: 'br' },
+                                `错误信息: ${error}`,
+                                { nodeType: 'br' },
+                                `→ 点击此处重新解析 ←`
+                            ], '解析模块'),
+                        onClick() {
+                            analyzeDownloadTask(new Dictionary<string>([{ key: data.ID, value: data.Name }]))
+                            toast.hideToast()
+                        },
                     }
-                })
+                )
                 toast.showToast()
-                console.error(`${this.Name}[${this.ID}] ${JSON.stringify(error)}`)
+
+                console.error(`--------- ${this.Name}[${this.ID}] Error ---------`)
                 console.log(this.VideoInfoSource)
                 console.log(this.VideoFileSource)
+                console.error(error)
+                console.error(`--------- ${this.Name}[${this.ID}] Error ---------`)
+
                 let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 videoList.remove(this.ID)
@@ -739,9 +733,9 @@
         return node
     }
 
-    async function get(url: string, referrer: string = window.location.href, headers: object = {}) {
+    async function get(url: string, referrer: string = window.location.href, headers: object = {}): Promise<string> {
         try {
-            return await (await originFetch(url, {
+            return (await originFetch(url, {
                 'headers': Object.assign({
                     'accept': 'application/json, text/plain, */*'
                 }, headers),
@@ -772,7 +766,7 @@
     async function post(url: string, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
         try {
-            return await (await originFetch(url, {
+            return (await originFetch(url, {
                 'headers': Object.assign({
                     'accept': 'application/json, text/plain, */*'
                 }, headers),
@@ -873,8 +867,9 @@
                                 '载入本脚本。'
                             ]
                         },
-                        { nodeType: 'p', childs: '全局可用变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                        { nodeType: 'p', childs: '路径可用变量：%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者) | %#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
+                        { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
+                        { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
+                        { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
                         { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
                         { nodeType: 'p', childs: '打开i站后等待加载出视频后, 点击侧边栏中“开关选择”开启下载复选框' },
@@ -905,7 +900,10 @@
                             attributes: {
                                 for: 'agree-checkbox'
                             },
-                            childs: '我已知晓如何使用',
+                            childs: {
+                                nodeType: 'h1',
+                                childs: '我已知晓如何使用!!!!!!'
+                            },
                         },
                     ],
                 },
@@ -936,7 +934,7 @@
 
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         for (const key in list.items) {
-            await delay(random(10, 200))//脚本太快了,延迟一下防止被屏蔽
+            await delay(random(10, 100))//脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             if (videoInfo.State) {
                 await pustDownloadTask(videoInfo)
@@ -985,73 +983,78 @@
         return false
     }
 
-    async function pustDownloadTask(videoInfo: VideoInfo) {
-        if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
-            let toast = Toastify({
-                node: renderNode({
-                    nodeType: 'div',
-                    childs: [
-                        {
-                            nodeType: 'h3',
-                            childs: `创建下载任务`
-                        },
-                        {
-                            nodeType: 'p',
-                            childs: [
-                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`
-                            ]
-                        }
-                    ]
-                }),
-                duration: -1,
+
+    function toastNode(body: RenderCode | RenderCode[], title?: string): Element | Node {
+        return renderNode({
+            nodeType: 'div',
+            childs: [
+                notNull(title) && !title.isEmpty() ? {
+                    nodeType: 'h3',
+                    childs: `Iwara 批量下载工具 - ${title}`
+                } : {
+                    nodeType: 'h3',
+                    childs: 'Iwara 批量下载工具'
+                }
+                ,
+                {
+                    nodeType: 'p',
+                    childs: body
+                }
+            ]
+        })
+    }
+    function newToast(type: ToastType, params?: Toastify.Options) {
+        return Toastify(
+            Object.assign({
                 newWindow: true,
                 gravity: "top",
                 position: "right",
-                stopOnFocus: true,
-                style: {
-                    background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
+                stopOnFocus: true
+            },
+                type === ToastType.Warn && {
+                    duration: -1,
+                    style: {
+                        background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
+                    }
                 },
-                onClick: () => {
-                    GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
-                    toast.hideToast()
+                type === ToastType.Error && {
+                    duration: -1,
+                    style: {
+                        background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))"
+                    }
+                },
+                notNull(params) && params
+            )
+        )
+    }
+
+    async function pustDownloadTask(videoInfo: VideoInfo) {
+        if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
+            let toast = newToast(
+                ToastType.Warn,
+                {
+                    node: toastNode([`在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `, { nodeType: 'br' }, `点击此处，进入视频页面`], '创建任务'),
+                    onClick() {
+                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                        toast.hideToast()
+                    }
                 }
-            })
+            )
             toast.showToast();
-            console.warn(`${videoInfo.Name}[${videoInfo.ID}] 发现疑似高画质下载连接, 点击进入视频页面 https://www.iwara.tv/video/${videoInfo.ID}`)
             return
         }
         if (config.checkDownloadLink && videoInfo.getDownloadQuality() != 'Source') {
-            let toast = Toastify({
-                node: renderNode({
-                    nodeType: 'div',
-                    childs: [
-                        {
-                            nodeType: 'h3',
-                            childs: `创建下载任务`
-                        },
-                        {
-                            nodeType: 'p',
-                            childs: [
-                                `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`
-                            ]
-                        }
-                    ]
-                }),
-                duration: -1,
-                newWindow: true,
-                gravity: "top",
-                position: "right",
-                stopOnFocus: true,
-                style: {
-                    background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
-                },
-                onClick: () => {
-                    GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
-                    toast.hideToast()
+            let toast = newToast(
+                ToastType.Warn,
+                {
+                    node: toastNode([`在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`], '创建任务'),
+                    onClick() {
+                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                        toast.hideToast()
+                    }
                 }
-            })
+            )
             toast.showToast();
-            console.warn(`${videoInfo.Name}[${videoInfo.ID}] 无法解析到原画下载地址 https://www.iwara.tv/video/${videoInfo.ID}`)
             return
         }
         switch (config.downloadType) {
@@ -1070,7 +1073,6 @@
         }
     }
 
-
     function analyzeLocalPath(path: string): LocalPath {
         let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/) || ''
         return {
@@ -1082,53 +1084,32 @@
         }
     }
     async function EnvCheck(): Promise<boolean> {
-        let errorObj = {};
         try {
             if (GM_info.downloadMode !== "browser") {
-                let err = new Error("请启用脚本管理器的浏览器API下载模式!")
-                errorObj = {
-                    message: err.message,
-                    stack: err.stack
-                }
-                throw err;
+                throw new Error("请启用脚本管理器的浏览器API下载模式!");
             }
         } catch (error: any) {
-            let toast = Toastify({
-                node: renderNode({
-                    nodeType: 'div',
-                    childs: [
-                        {
-                            nodeType: 'h3',
-                            childs: `环境测试`
-                        },
-                        {
-                            nodeType: 'p',
-                            childs: [
-                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
-                                `错误信息：${JSON.stringify(errorObj)}`
-                            ]
-                        }
-                    ]
-                }),
-                duration: -1,
-                newWindow: true,
-                gravity: "top",
-                position: "center",
-                stopOnFocus: true,
-                style: {
-                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
-                },
-                onClick: () => {
-                    toast.hideToast()
+            let toast = newToast(
+                ToastType.Error,
+                {
+                    node: toastNode([
+                        `无法保存配置, 请检查配置是否正确。`,
+                        { nodeType: 'br' },
+                        `错误信息: ${error}`
+                    ], '配置检查'),
+                    position: "center",
+                    onClick() {
+                        toast.hideToast()
+                    }
                 }
-            })
+            )
             toast.showToast()
+            console.error(error)
             return false;
         }
         return true;
     }
     async function aria2Check(): Promise<boolean> {
-        let errorObj = {};
         try {
             let res = JSON.parse(await post(config.aria2Path, {
                 'jsonrpc': '2.0',
@@ -1137,44 +1118,25 @@
                 'params': ['token:' + config.aria2Token]
             }))
             if (res.error) {
-                let err = new Error(res.error.message)
-                errorObj = {
-                    message: err.message,
-                    stack: err.stack
-                }
-                throw err;
+                throw new Error(res.error.message);
             }
         } catch (error: any) {
-            let toast = Toastify({
-                node: renderNode({
-                    nodeType: 'div',
-                    childs: [
-                        {
-                            nodeType: 'h3',
-                            childs: `Aria2 RPC 连接测试`
-                        },
-                        {
-                            nodeType: 'p',
-                            childs: [
-                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
-                                `错误信息：${JSON.stringify(errorObj)}`
-                            ]
-                        }
-                    ]
-                }),
-                duration: -1,
-                newWindow: true,
-                gravity: "top",
-                position: "center",
-                stopOnFocus: true,
-                style: {
-                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
-                },
-                onClick: () => {
-                    toast.hideToast()
+            let toast = newToast(
+                ToastType.Error,
+                {
+                    node: toastNode([
+                        `Aria2 RPC 连接测试`,
+                        { nodeType: 'br' },
+                        `错误信息: ${error}`
+                    ], '配置检查'),
+                    position: "center",
+                    onClick() {
+                        toast.hideToast()
+                    }
                 }
-            })
+            )
             toast.showToast()
+            console.error(error)
             return false;
         }
         return true;
@@ -1198,36 +1160,22 @@
                 throw err;
             }
         } catch (error) {
-            let toast = Toastify({
-                node: renderNode({
-                    nodeType: 'div',
-                    childs: [
-                        {
-                            nodeType: 'h3',
-                            childs: `IwaraDownloader RPC 连接测试`
-                        },
-                        {
-                            nodeType: 'p',
-                            childs: [
-                                `无法保存配置, 请检查配置是否正确。`, { nodeType: 'br' },
-                                `错误信息：${JSON.stringify(errorObj)}`
-                            ]
-                        }
-                    ]
-                }),
-                duration: -1,
-                newWindow: true,
-                gravity: "top",
-                position: "center",
-                stopOnFocus: true,
-                style: {
-                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
-                },
-                onClick: () => {
-                    toast.hideToast()
+            let toast = newToast(
+                ToastType.Error,
+                {
+                    node: toastNode([
+                        `IwaraDownloader RPC 连接测试`,
+                        { nodeType: 'br' },
+                        `错误信息: ${error}`
+                    ], '配置检查'),
+                    position: "center",
+                    onClick() {
+                        toast.hideToast()
+                    }
                 }
-            })
+            )
             toast.showToast()
+            console.error(error)
             return false;
         }
         return true;
@@ -1265,14 +1213,12 @@
                 ]
             })
             console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path, json)}`)
-            Toastify({
-                text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`,
-                duration: 2000,
-                newWindow: true,
-                gravity: "top",
-                position: "right",
-                stopOnFocus: true
-            }).showToast();
+            newToast(
+                ToastType.Info,
+                {
+                    node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`)
+                }
+            ).showToast()
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
@@ -1308,48 +1254,30 @@
             )))
 
             if (r.code == 0) {
-                console.log("已推送" + ID)
-                Toastify({
-                    text: `${videoInfo.Name}[${videoInfo.ID}] 已推送到IwaraDownloader`,
-                    duration: 2000,
-                    newWindow: true,
-                    gravity: "top",
-                    position: "right",
-                    stopOnFocus: true
-                }).showToast();
-            } else {
-                let toast = Toastify({
-                    node: renderNode({
-                        nodeType: 'div',
-                        childs: [
-                            {
-                                nodeType: 'h3',
-                                childs: `推送下载任务`
-                            },
-                            {
-                                nodeType: 'p',
-                                childs: [
-                                    `在推送 ${videoInfo.Name}[${videoInfo.ID}] 下载任务到IwaraDownloader过程中出现错误! `,
-                                    { nodeType: 'br' },
-                                    `错误信息: ${r.msg}`
-                                ]
-                            }
-                        ]
-                    }),
-                    duration: -1,
-                    newWindow: true,
-                    gravity: "top",
-                    position: "right",
-                    stopOnFocus: true,
-                    style: {
-                        background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
-                    },
-                    onClick: () => {
-                        toast.hideToast()
+                console.log(`${Name} 已推送到IwaraDownloader ${r}`)
+                newToast(
+                    ToastType.Info,
+                    {
+                        node: toastNode(`${Name}[${ID}] 已推送到IwaraDownloader`)
                     }
-                })
-                toast.showToast();
-                console.log("推送失败" + ID)
+                ).showToast()
+            } else {
+                let toast = newToast(
+                    ToastType.Error,
+                    {
+                        node: toastNode([
+                            `在推送 ${Name}[${ID}] 下载任务到IwaraDownloader过程中出现错误! `,
+                            { nodeType: 'br' },
+                            `错误信息: ${r.msg}`
+                        ], '推送下载任务'),
+                        position: "center",
+                        onClick() {
+                            toast.hideToast()
+                        }
+                    }
+                )
+                toast.showToast()
+                console.log(`${Name} 推送失败 ${r}`)
             }
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl(), videoInfo.Size))
     }
@@ -1361,39 +1289,23 @@
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
             function browserDownloadError(error: any) {
-                let toast = Toastify({
-                    node: renderNode({
-                        nodeType: 'div',
-                        childs: [
-                            {
-                                nodeType: 'h3',
-                                childs: `下载`
-                            },
-                            {
-                                nodeType: 'p',
-                                childs: [
-                                    `在下载 ${Name}[${ID}] 的过程中出现问题!  `,
-                                    { nodeType: 'br' },
-                                    `错误信息: ${error.message || error.toString()}`,
-                                    { nodeType: 'br' },
-                                    `→ 点击此处重新下载 ←`
-                                ]
-                            }
-                        ]
-                    }),
-                    duration: -1,
-                    newWindow: true,
-                    gravity: "top",
-                    position: "right",
-                    stopOnFocus: true,
-                    style: {
-                        background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))",
-                    },
-                    onClick: () => {
-                        analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
-                        toast.hideToast()
+                let toast = newToast(
+                    ToastType.Error,
+                    {
+                        node: toastNode([
+                            `在下载 ${Name}[${ID}] 的过程中出现问题!  `,
+                            { nodeType: 'br' },
+                            `错误信息: ${error.message || error.toString()}`,
+                            { nodeType: 'br' },
+                            `→ 点击此处重新下载 ←`
+                        ], '下载任务'),
+                        position: "center",
+                        onClick() {
+                            analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
+                            toast.hideToast()
+                        }
                     }
-                })
+                )
                 toast.showToast()
             }
             let localPath = analyzeLocalPath(config.downloadPath.replaceNowTime().replaceUploadTime(UploadTime).replaceVariable(
@@ -1414,16 +1326,7 @@
     }
 
 
-    document.head.appendChild(renderNode(
-        {
-            nodeType: 'link',
-            attributes: {
-                rel: 'stylesheet',
-                type: 'text/css',
-                href: 'https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'
-            }
-        }
-    ))
+    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'))
     GM_addStyle(`
     #pluginMenu {
         z-index: 4096;
@@ -1675,6 +1578,10 @@
                     events: {
                         click: (event: Event) => {
                             analyzeDownloadTask()
+                            newToast(ToastType.Info, {
+                                text: `正在下载所选, 请稍后...`,
+                                close: true
+                            }).showToast()
                             event.stopPropagation()
                             return false;
                         }
@@ -1746,17 +1653,9 @@
             ]
         }
     }))
-
-    Toastify({
+    newToast(ToastType.Info, {
         text: `Iwara 批量下载工具加载完成`,
         duration: 10000,
-        newWindow: true,
-        close: true,
-        gravity: "top",
-        position: "right",
-        stopOnFocus: true,
-        style: {
-            background: "#1E90FF",
-        }
-    }).showToast();
+        close: true
+    }).showToast()
 })()
