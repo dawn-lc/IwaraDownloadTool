@@ -14,7 +14,7 @@ interface Array {
     append(arr: Array): void;
 }
 
-type RenderCode = string | Node | {
+type RenderCode = string | Node | Element | {
     nodeType: string;
     attributes?: Record<string, any>;
     events?: Record<string, (event: Event) => void>;
