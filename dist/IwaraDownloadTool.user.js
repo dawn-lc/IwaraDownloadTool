@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.344
+// @version           3.0.366
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -94,36 +94,6 @@
         ToastType[ToastType["Warn"] = 2] = "Warn";
         ToastType[ToastType["Error"] = 3] = "Error";
     })(ToastType || (ToastType = {}));
-    class Queue {
-        items;
-        constructor() {
-            this.items = [];
-        }
-        enqueue(id, element) {
-            this.items.push({ id, data: element });
-        }
-        dequeue() {
-            return this.items.shift();
-        }
-        peek() {
-            return this.items[0];
-        }
-        size() {
-            return this.items.length;
-        }
-        isEmpty() {
-            return this.items.length === 0;
-        }
-        clear() {
-            this.items = [];
-        }
-        remove(id) {
-            const index = this.items.findIndex(item => item.id === id);
-            if (index !== -1) {
-                this.items.splice(index, 1);
-            }
-        }
-    }
     class Dictionary {
         items;
         constructor(data = []) {
@@ -896,7 +866,8 @@
                             },
                             childs: {
                                 nodeType: 'h1',
-                                childs: '我已知晓如何使用!!!!!!'
+                                className: 'rainbow-text',
+                                childs: '我已知晓如何使用!!!'
                             },
                         },
                     ],
@@ -912,7 +883,7 @@
         }, notNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {});
     }
     async function addDownloadTask() {
-        let data = prompt('请输入需要下载的视频ID! \r\n(若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC... )', '');
+        let data = prompt('请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...', '');
         if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary();
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'));
@@ -932,10 +903,7 @@
         }
     }
     function checkIsHaveDownloadLink(comment) {
-        if (!config.checkDownloadLink) {
-            return false;
-        }
-        if (comment == null) {
+        if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {
             return false;
         }
         const downloadLinkCharacteristics = [
@@ -962,7 +930,7 @@
             'gigafile\.nu'
         ];
         for (let index = 0; index < downloadLinkCharacteristics.length; index++) {
-            if (comment.indexOf(downloadLinkCharacteristics[index]) != -1) {
+            if (comment.toLowerCase().includes(downloadLinkCharacteristics[index])) {
                 return true;
             }
         }
@@ -1260,6 +1228,21 @@
     }
     GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'));
     GM_addStyle(`
+    .rainbow-text {
+        background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-size: 600% 100%;
+        animation: rainbow 0.5s infinite linear;
+    }
+    @keyframes rainbow {
+        0% {
+            background-position: 0% 0%;
+        }
+        100% {
+            background-position: 100% 0%;
+        }
+    }
     #pluginMenu {
         z-index: 4096;
         color: white;
@@ -1272,7 +1255,7 @@
         border-radius: 5px;
         box-shadow: 0 0 10px #ccc;
         transform: translate(85%, -50%);
-        transition: transform 0.5s cubic-bezier(0.68, -0.24, 0.265, 1.20);
+        transition: transform 0.5s cubic-bezier(0,1,.60,1);
     }
     #pluginMenu ul {
         list-style: none;
@@ -1447,6 +1430,16 @@
         bottom: 24px;
         right: 0px;
     }
+    .selectButtonFirefox {
+        position: absolute;
+        width: 32px;
+        height: 32px;
+        bottom: 0px;
+        right: 4px;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        padding: 0;
+    }
 
     .toastify h3 {
         margin: 0 0 10px 0;
@@ -1468,23 +1461,27 @@
                     childs: "开关选择",
                     events: {
                         click: () => {
+                            let isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+                            GM_getValue('isDebug') && console.log(isFirefox);
                             if (!document.querySelector('.selectButton')) {
-                                //console.clear()
-                                console.log("开始注入复选框 预计注入" + document.querySelectorAll('.videoTeaser .videoTeaser__thumbnail').length + "个复选框");
-                                document.querySelectorAll('.videoTeaser .videoTeaser__thumbnail').forEach((element) => {
-                                    element.appendChild(renderNode({
+                                let videoNodes = document.querySelectorAll(`.videoTeaser`);
+                                console.log("开始注入复选框 预计注入" + videoNodes.length + "个复选框");
+                                videoNodes.forEach((element) => {
+                                    let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2];
+                                    let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim();
+                                    let node = isFirefox ? element : element.querySelector('.videoTeaser__thumbnail');
+                                    node.appendChild(renderNode({
                                         nodeType: "input",
-                                        attributes: Object.assign(videoList.has(element.getAttribute('href').trim().split('/')[2]) ? { checked: true } : {}, {
+                                        attributes: Object.assign(videoList.has(ID) ? { checked: true } : {}, {
                                             type: "checkbox",
-                                            videoid: element.getAttribute('href').trim().split('/')[2]
+                                            videoID: ID,
+                                            videoName: Name
                                         }),
-                                        className: 'selectButton',
+                                        className: isFirefox ? ['selectButton', 'selectButtonFirefox'] : 'selectButton',
                                         events: {
                                             click: (event) => {
                                                 let target = event.target;
-                                                let id = element.getAttribute('href').trim().split('/')[2];
-                                                let name = element.parentElement.querySelector('.videoTeaser__title').getAttribute('title');
-                                                target.checked ? videoList.set(id, name) : videoList.remove(id);
+                                                target.checked ? videoList.set(ID, Name) : videoList.remove(ID);
                                                 event.stopPropagation();
                                                 event.stopImmediatePropagation();
                                                 return false;
@@ -1496,7 +1493,7 @@
                             else {
                                 console.log("移除复选框");
                                 document.querySelectorAll('.selectButton').forEach((element) => {
-                                    videoList.remove(element.parentElement.getAttribute('href').trim().split('/')[2]);
+                                    videoList.remove(element.getAttribute('videoid'));
                                     element.remove();
                                 });
                             }
