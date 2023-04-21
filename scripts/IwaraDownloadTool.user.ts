@@ -41,6 +41,9 @@
             UploadSeconds: time.getSeconds()
         })
     }
+    String.prototype.toURL = function () {
+        return new URL(this.toString());
+    }
     Array.prototype.append = function (arr) {
         this.push(...arr)
     }
@@ -514,7 +517,7 @@
             try {
                 config.authorization = `Bearer ${await refreshToken()}`
                 this.ID = ID.toLocaleLowerCase()
-                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`, window.location.href, await getAuth()))
+                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), window.location.href, await getAuth()))
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败')
                 }
@@ -530,7 +533,7 @@
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.Size = this.VideoInfoSource.file.size
-                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl, window.location.href, await getAuth(this.VideoInfoSource.fileUrl)))
+                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), window.location.href, await getAuth(this.VideoInfoSource.fileUrl)))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败')
                 }
@@ -543,7 +546,7 @@
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
                     return JSON.parse(
-                        await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${notNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`,
+                        await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${notNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`.toURL(),
                             window.location.href,
                             await getAuth()
                         )
@@ -703,22 +706,12 @@
         return node
     }
 
-    async function get(url: string, referrer: string = window.location.href, headers: object = {}): Promise<string> {
-        try {
-            return (await originFetch(url, {
-                'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
-                }, headers),
-                'referrer': referrer,
-                'method': 'GET',
-                "mode": "cors",
-                "credentials": "include"
-            })).text();
-        } catch (error) {
+    async function get(url: URL, referrer: string = window.location.href, headers: object = {}): Promise<string> {
+        if (url.hostname !== window.location.hostname) {
             let data: any = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
-                    url: url,
+                    url: url.href,
                     headers: Object.assign({
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
@@ -732,25 +725,23 @@
             });
             return data.responseText;
         }
+        return (await originFetch(url.href, {
+            'headers': Object.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'method': 'GET',
+            "mode": "cors",
+            "credentials": "include"
+        })).text();
     }
-    async function post(url: string, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
+    async function post(url: URL, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
-        try {
-            return (await originFetch(url, {
-                'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
-                }, headers),
-                'referrer': referrer,
-                'body': body,
-                'method': 'POST',
-                "mode": "cors",
-                "credentials": "include"
-            })).text();
-        } catch (error) {
+        if (url.hostname !== window.location.hostname) {
             let data: any = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'POST',
-                    url: url,
+                    url: url.href,
                     headers: Object.assign({
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
@@ -766,12 +757,22 @@
             });
             return data.responseText;
         }
+        return (await originFetch(url.href, {
+            'headers': Object.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'body': body,
+            'method': 'POST',
+            "mode": "cors",
+            "credentials": "include"
+        })).text();
     }
     function parseSearchParams(searchParams: URLSearchParams, initialObject = {}): {} {
         return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
     }
     async function refreshToken(): Promise<string> {
-        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`, {}, window.location.href, {
+        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         }))
         return refresh['accessToken']
@@ -1079,7 +1080,7 @@
     }
     async function aria2Check(): Promise<boolean> {
         try {
-            let res = JSON.parse(await post(config.aria2Path, {
+            let res = JSON.parse(await post(config.aria2Path.toURL(), {
                 'jsonrpc': '2.0',
                 'method': 'aria2.tellActive',
                 'id': UUID(),
@@ -1112,7 +1113,7 @@
     async function iwaraDownloaderCheck(): Promise<boolean> {
         let errorObj = {};
         try {
-            let res = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
+            let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': 1,
                 'code': 'State'
             },
@@ -1180,7 +1181,7 @@
                     )
                 ]
             })
-            console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path, json)}`)
+            console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path.toURL(), json)}`)
             newToast(
                 ToastType.Info,
                 {
@@ -1191,7 +1192,7 @@
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string, Size: number) {
-            let r = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
+            let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': 1,
                 'code': 'add',
                 'data': Object.assign({
@@ -1294,7 +1295,7 @@
     }
 
 
-    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'))
+    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()))
     GM_addStyle(`
     .rainbow-text {
         background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);

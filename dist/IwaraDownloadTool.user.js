@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.366
+// @version           3.0.370
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -18,6 +18,11 @@
 // @connect           iwara.tv
 // @connect           www.iwara.tv
 // @connect           api.iwara.tv
+// @connect           127.*
+// @connect           localhost
+// @connect           10.*
+// @connect           172.16.*
+// @connect           192.168.*
 // @connect           *
 // @match             *://*.iwara.tv/*
 // @grant             GM_getValue
@@ -73,6 +78,9 @@
             UploadMinutes: time.getMinutes(),
             UploadSeconds: time.getSeconds()
         });
+    };
+    String.prototype.toURL = function () {
+        return new URL(this.toString());
     };
     Array.prototype.append = function (arr) {
         this.push(...arr);
@@ -522,7 +530,7 @@
             try {
                 config.authorization = `Bearer ${await refreshToken()}`;
                 this.ID = ID.toLocaleLowerCase();
-                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`, window.location.href, await getAuth()));
+                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), window.location.href, await getAuth()));
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error('获取视频信息失败');
                 }
@@ -538,7 +546,7 @@
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id);
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
                 this.Size = this.VideoInfoSource.file.size;
-                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl, window.location.href, await getAuth(this.VideoInfoSource.fileUrl)));
+                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), window.location.href, await getAuth(this.VideoInfoSource.fileUrl)));
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败');
                 }
@@ -550,7 +558,7 @@
                     return decodeURIComponent('https:' + fileList[Math.floor(Math.random() * fileList.length)].src.download);
                 };
                 const getCommentData = async (commentID = null, page = 0) => {
-                    return JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${notNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, window.location.href, await getAuth()));
+                    return JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${notNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`.toURL(), window.location.href, await getAuth()));
                 };
                 const getCommentDatas = async (commentID = null) => {
                     let comments = [];
@@ -697,22 +705,11 @@
         return node;
     };
     async function get(url, referrer = window.location.href, headers = {}) {
-        try {
-            return (await originFetch(url, {
-                'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
-                }, headers),
-                'referrer': referrer,
-                'method': 'GET',
-                "mode": "cors",
-                "credentials": "include"
-            })).text();
-        }
-        catch (error) {
+        if (url.hostname !== window.location.hostname) {
             let data = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'GET',
-                    url: url,
+                    url: url.href,
                     headers: Object.assign({
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
@@ -726,27 +723,24 @@
             });
             return data.responseText;
         }
+        return (await originFetch(url.href, {
+            'headers': Object.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'method': 'GET',
+            "mode": "cors",
+            "credentials": "include"
+        })).text();
     }
     async function post(url, body, referrer = window.location.hostname, headers = {}) {
         if (typeof body !== 'string')
             body = JSON.stringify(body);
-        try {
-            return (await originFetch(url, {
-                'headers': Object.assign({
-                    'accept': 'application/json, text/plain, */*'
-                }, headers),
-                'referrer': referrer,
-                'body': body,
-                'method': 'POST',
-                "mode": "cors",
-                "credentials": "include"
-            })).text();
-        }
-        catch (error) {
+        if (url.hostname !== window.location.hostname) {
             let data = await new Promise(async (resolve, reject) => {
                 GM_xmlhttpRequest({
                     method: 'POST',
-                    url: url,
+                    url: url.href,
                     headers: Object.assign({
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
@@ -762,12 +756,22 @@
             });
             return data.responseText;
         }
+        return (await originFetch(url.href, {
+            'headers': Object.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'body': body,
+            'method': 'POST',
+            "mode": "cors",
+            "credentials": "include"
+        })).text();
     }
     function parseSearchParams(searchParams, initialObject = {}) {
         return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
     }
     async function refreshToken() {
-        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`, {}, window.location.href, {
+        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         }));
         return refresh['accessToken'];
@@ -1046,7 +1050,7 @@
     }
     async function aria2Check() {
         try {
-            let res = JSON.parse(await post(config.aria2Path, {
+            let res = JSON.parse(await post(config.aria2Path.toURL(), {
                 'jsonrpc': '2.0',
                 'method': 'aria2.tellActive',
                 'id': UUID(),
@@ -1077,7 +1081,7 @@
     async function iwaraDownloaderCheck() {
         let errorObj = {};
         try {
-            let res = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
+            let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': 1,
                 'code': 'State'
             }, config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken })));
@@ -1134,7 +1138,7 @@
                     })
                 ]
             });
-            console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path, json)}`);
+            console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path.toURL(), json)}`);
             newToast(ToastType.Info, {
                 node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`)
             }).showToast();
@@ -1142,7 +1146,7 @@
     }
     function iwaraDownloaderDownload(videoInfo) {
         (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl, Size) {
-            let r = JSON.parse(await post(config.iwaraDownloaderPath, Object.assign({
+            let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': 1,
                 'code': 'add',
                 'data': Object.assign({
@@ -1226,7 +1230,7 @@
             });
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
-    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'));
+    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()));
     GM_addStyle(`
     .rainbow-text {
         background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
