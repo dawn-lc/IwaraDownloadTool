@@ -1,5 +1,8 @@
 declare function GM_cookie(any,any,any);
 
+interface Object {
+    getString(): string;
+}
 
 interface String {
     replaceVariable(replacements: Record<string, any>): String;
