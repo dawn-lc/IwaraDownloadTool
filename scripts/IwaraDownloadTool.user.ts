@@ -8,10 +8,6 @@
         originalAddEventListener.call(this, type, listener, options)
     }
 
-    Object.prototype.getObjectString = function () {
-        return String(this).includes('[object') || String(this).includes('[native code]') ? JSON.stringify(this) : String(this)
-    }
-
     String.prototype.isEmpty = function () {
         return this.trim().length == 0
     }
@@ -584,7 +580,7 @@
                             toastNode([
                                 `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
                                 { nodeType: 'br' },
-                                `错误信息: ${error.getObjectString()}`,
+                                `错误信息: ${getString(error)}`,
                                 { nodeType: 'br' },
                                 `→ 点击此处重新解析 ←`
                             ], '解析模块'),
@@ -671,6 +667,9 @@
     window.fetch = modifyFetch
     window.unsafeWindow.fetch = modifyFetch
 
+    const getString = function (obj: any) {
+        return String(obj).includes('[object') || String(obj).includes('[native code]') ? JSON.stringify(obj) : String(obj)
+    }
     const delay = async function (ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms))
     }
@@ -1068,7 +1067,7 @@
                     node: toastNode([
                         `无法保存配置, 请检查配置是否正确。`,
                         { nodeType: 'br' },
-                        `错误信息: ${error.getObjectString()}`
+                        `错误信息: ${getString(error)}`
                     ], '配置检查'),
                     position: "center",
                     onClick() {
@@ -1100,7 +1099,7 @@
                     node: toastNode([
                         `Aria2 RPC 连接测试`,
                         { nodeType: 'br' },
-                        `错误信息: ${error.getObjectString()}`
+                        `错误信息: ${getString(error)}`
                     ], '配置检查'),
                     position: "center",
                     onClick() {
@@ -1139,7 +1138,7 @@
                     node: toastNode([
                         `IwaraDownloader RPC 连接测试`,
                         { nodeType: 'br' },
-                        `错误信息: ${error.getObjectString()}`
+                        `错误信息: ${getString(error)}`
                     ], '配置检查'),
                     position: "center",
                     onClick() {
@@ -1268,7 +1267,7 @@
                         node: toastNode([
                             `在下载 ${Name}[${ID}] 的过程中出现问题!  `,
                             { nodeType: 'br' },
-                            `错误信息: ${error.getObjectString()}`,
+                            `错误信息: ${getString(error)}`,
                             { nodeType: 'br' },
                             `→ 点击此处重新下载 ←`
                         ], '下载任务'),
