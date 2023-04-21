@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.382
+// @version           3.0.385
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -717,12 +717,8 @@
                     headers: Object.assign({
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
-                    onload: function (response) {
-                        resolve(response);
-                    },
-                    onerror: function (error) {
-                        reject(error);
-                    }
+                    onload: response => resolve(response),
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
                 });
             });
             return data.responseText;
@@ -750,12 +746,8 @@
                         'Content-Type': 'application/json'
                     }, headers),
                     data: body,
-                    onload: function (response) {
-                        resolve(response);
-                    },
-                    onerror: function (error) {
-                        reject(error);
-                    }
+                    onload: response => resolve(response),
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
                 });
             });
             return data.responseText;
@@ -1084,19 +1076,13 @@
         return true;
     }
     async function iwaraDownloaderCheck() {
-        let errorObj = {};
         try {
             let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': 1,
                 'code': 'State'
             }, config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken })));
             if (res.code !== 0) {
-                let err = new Error(res.msg);
-                errorObj = {
-                    message: err.message,
-                    stack: err.stack
-                };
-                throw err;
+                throw new Error(res.msg);
             }
         }
         catch (error) {
