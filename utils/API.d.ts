@@ -1,7 +1,7 @@
 declare function GM_cookie(any,any,any);
 
 interface Object {
-    getString(): string;
+    getObjectString(): string;
 }
 
 interface String {
