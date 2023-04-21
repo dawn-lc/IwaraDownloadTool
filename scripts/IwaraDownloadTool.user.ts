@@ -163,7 +163,6 @@
                     body.cookies = list;
                 }
             })
-            /*
             //同步其他页面脚本的更改
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
@@ -172,7 +171,6 @@
                     }
                 })
             })
-            */
             return body
         }
         private downloadTypeItem(type: DownloadType): RenderCode {
