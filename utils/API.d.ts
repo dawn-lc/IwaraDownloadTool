@@ -6,6 +6,7 @@ interface String {
     replaceNowTime(): String;
     replaceUploadTime(time: Date): String;
     isEmpty(): boolean;
+    toURL(): URL;
     truncate(maxLength: number): string
 }
 
