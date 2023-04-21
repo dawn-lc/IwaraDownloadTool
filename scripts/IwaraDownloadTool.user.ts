@@ -717,12 +717,8 @@
                     headers: Object.assign({
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
-                    onload: function (response) {
-                        resolve(response);
-                    },
-                    onerror: function (error) {
-                        reject(error);
-                    }
+                    onload: response => resolve(response),
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
                 });
             });
             return data.responseText;
@@ -749,12 +745,8 @@
                         'Content-Type': 'application/json'
                     }, headers),
                     data: body,
-                    onload: function (response) {
-                        resolve(response);
-                    },
-                    onerror: function (error) {
-                        reject(error);
-                    }
+                    onload: response => resolve(response),
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接" )
                 });
             });
             return data.responseText;
@@ -1114,7 +1106,6 @@
         return true;
     }
     async function iwaraDownloaderCheck(): Promise<boolean> {
-        let errorObj = {};
         try {
             let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': 1,
@@ -1122,14 +1113,8 @@
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
             )))
-
             if (res.code !== 0) {
-                let err = new Error(res.msg)
-                errorObj = {
-                    message: err.message,
-                    stack: err.stack
-                }
-                throw err;
+                throw new Error(res.msg);
             }
         } catch (error) {
             let toast = newToast(
