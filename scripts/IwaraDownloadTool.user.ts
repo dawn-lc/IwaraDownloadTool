@@ -52,6 +52,102 @@
     }
 
 
+    const getString = function (obj: any) {
+        return String(obj).includes('[object') || String(obj).includes('[native code]') ? JSON.stringify(obj) : String(obj)
+    }
+    const delay = async function (ms: number) {
+        return new Promise(resolve => setTimeout(resolve, ms))
+    }
+    const UUID = function () {
+        return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
+    }
+    const ceilDiv = function (dividend: number, divisor: number): number {
+        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
+    }
+    const random = function (min: number, max: number): number {
+        return Math.floor(Math.random() * (max - min + 1)) + min
+    }
+    const isNull = function (obj: any): boolean {
+        return obj === undefined || obj === null
+    }
+    const notNull = function (obj: any): boolean {
+        return obj !== undefined && obj !== null
+    }
+
+    const renderNode = function (renderCode: RenderCode): Node | Element {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode)
+        }
+        if (renderCode instanceof Node) {
+            return renderCode
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments')
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode
+        const node: Element = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node
+    }
+
+    async function get(url: URL, referrer: string = window.location.href, headers: object = {}): Promise<string> {
+        if (url.hostname !== window.location.hostname) {
+            let data: any = await new Promise(async (resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url.href,
+                    headers: Object.assign({
+                        'Accept': 'application/json, text/plain, */*'
+                    }, headers),
+                    onload: response => resolve(response),
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
+                });
+            });
+            return data.responseText;
+        }
+        return (await originFetch(url.href, {
+            'headers': Object.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'method': 'GET',
+            "mode": "cors",
+            "credentials": "include"
+        })).text();
+    }
+    async function post(url: URL, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
+        if (typeof body !== 'string') body = JSON.stringify(body)
+        if (url.hostname !== window.location.hostname) {
+            let data: any = await new Promise(async (resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: url.href,
+                    headers: Object.assign({
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }, headers),
+                    data: body,
+                    onload: response => resolve(response),
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接" )
+                });
+            });
+            return data.responseText;
+        }
+        return (await originFetch(url.href, {
+            'headers': Object.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'body': body,
+            'method': 'POST',
+            "mode": "cors",
+            "credentials": "include"
+        })).text();
+    }
+
     enum DownloadType {
         Aria2,
         IwaraDownloader,
@@ -676,121 +772,7 @@
     window.fetch = modifyFetch
     window.unsafeWindow.fetch = modifyFetch
 
-    const getString = function (obj: any) {
-        return String(obj).includes('[object') || String(obj).includes('[native code]') ? JSON.stringify(obj) : String(obj)
-    }
-    const delay = async function (ms: number) {
-        return new Promise(resolve => setTimeout(resolve, ms))
-    }
-    const UUID = function () {
-        return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
-    }
-    const ceilDiv = function (dividend: number, divisor: number): number {
-        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
-    }
-    const random = function (min: number, max: number): number {
-        return Math.floor(Math.random() * (max - min + 1)) + min
-    }
-    const isNull = function (obj: any): boolean {
-        return obj === undefined || obj === null
-    }
-    const notNull = function (obj: any): boolean {
-        return obj !== undefined && obj !== null
-    }
-
-    const renderNode = function (renderCode: RenderCode): Node | Element {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode)
-        }
-        if (renderCode instanceof Node) {
-            return renderCode
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments')
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode
-        const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node
-    }
-
-    async function get(url: URL, referrer: string = window.location.href, headers: object = {}): Promise<string> {
-        if (url.hostname !== window.location.hostname) {
-            let data: any = await new Promise(async (resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url.href,
-                    headers: Object.assign({
-                        'Accept': 'application/json, text/plain, */*'
-                    }, headers),
-                    onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
-                });
-            });
-            return data.responseText;
-        }
-        return (await originFetch(url.href, {
-            'headers': Object.assign({
-                'accept': 'application/json, text/plain, */*'
-            }, headers),
-            'referrer': referrer,
-            'method': 'GET',
-            "mode": "cors",
-            "credentials": "include"
-        })).text();
-    }
-    async function post(url: URL, body: any, referrer: string = window.location.hostname, headers: object = {}): Promise<string> {
-        if (typeof body !== 'string') body = JSON.stringify(body)
-        if (url.hostname !== window.location.hostname) {
-            let data: any = await new Promise(async (resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: url.href,
-                    headers: Object.assign({
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }, headers),
-                    data: body,
-                    onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接" )
-                });
-            });
-            return data.responseText;
-        }
-        return (await originFetch(url.href, {
-            'headers': Object.assign({
-                'accept': 'application/json, text/plain, */*'
-            }, headers),
-            'referrer': referrer,
-            'body': body,
-            'method': 'POST',
-            "mode": "cors",
-            "credentials": "include"
-        })).text();
-    }
-    function parseSearchParams(searchParams: URLSearchParams, initialObject = {}): {} {
-        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
-    }
-    async function refreshToken(): Promise<string> {
-        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }))
-        return refresh['accessToken']
-    }
-    async function getXVersion(urlString: string): Promise<string> {
-        let url = new URL(urlString)
-        let params = parseSearchParams(url.searchParams) as Record<string, any>
-        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
-        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
-        return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, "0"))
-            .join("");
-    }
-
-    
+        
     GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()))
     GM_addStyle(`
     .rainbow-text {
@@ -1000,8 +982,7 @@
         bottom: 24px;
         right: 0px;
     }
-    .selectButtonFirefox {
-        position: absolute;
+    .selectButtonCompatible {
         width: 32px;
         height: 32px;
         bottom: 0px;
@@ -1018,6 +999,31 @@
         margin: 0 ;
     }
     `)
+
+
+
+
+
+    function parseSearchParams(searchParams: URLSearchParams, initialObject = {}): {} {
+        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
+    }
+    async function refreshToken(): Promise<string> {
+        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }))
+        return refresh['accessToken']
+    }
+    async function getXVersion(urlString: string): Promise<string> {
+        let url = new URL(urlString)
+        let params = parseSearchParams(url.searchParams) as Record<string, any>
+        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
+        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+        return Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join("");
+    }
+
+
 
     function versionDifference (A: Array<number>, B: Array<number>) {
         return Array.from(A, (num, i) => num - B[i])
@@ -1573,7 +1579,7 @@
                                             videoID: ID,
                                             videoName: Name
                                         }),
-                                        className: compatibilityMode ? ['selectButton', 'selectButtonFirefox'] : 'selectButton',
+                                        className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
                                         events: {
                                             click: (event: Event) => {
                                                 let target = event.target as HTMLInputElement
