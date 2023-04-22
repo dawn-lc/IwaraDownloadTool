@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.2
+// @version           3.1.3
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -654,7 +654,12 @@
                 };
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality());
-                    return decodeURIComponent('https:' + fileList[Math.floor(Math.random() * fileList.length)].src.download);
+                    if (!fileList.any())
+                        throw new Error('没有可供下载的视频源');
+                    let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download;
+                    if (isNull(Source) || Source.isEmpty())
+                        throw new Error('视频源地址不可用');
+                    return decodeURIComponent(`https:${Source}`);
                 };
                 const getCommentData = async (commentID = null, page = 0) => {
                     return JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${notNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`.toURL(), window.location.href, await getAuth()));
