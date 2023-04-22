@@ -155,14 +155,6 @@
                     }
                 }
             })
-            GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list: any, error: any) => {
-                if (error) {
-                    console.log(error)
-                    body.cookies = [];
-                } else {
-                    body.cookies = list;
-                }
-            })
             //同步其他页面脚本的更改
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
@@ -171,6 +163,14 @@
                     }
                 })
             })
+            GM_info.scriptHandler === "Tampermonkey" ? GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list: any, error: any) => {
+                if (error) {
+                    console.log(error)
+                    body.cookies = [];
+                } else {
+                    body.cookies = list;
+                }
+            }) : body.cookies = [];
             return body
         }
         private downloadTypeItem(type: DownloadType): RenderCode {
@@ -1026,9 +1026,8 @@
     function versionArray (version: string) {
         return version.split('.').map(i => Number(i))
     }
-    versionDifference(versionArray('0.0.0'),versionArray('3.0.0')).filter(i => i < 0).any()
 
-    if( isNull(GM_getValue('version', null)) || versionDifference(versionArray(GM_getValue('version', '0.0.0')),versionArray('3.0.0')).filter(i => i < 0).any()){
+    if(versionDifference(versionArray(GM_getValue('version', '0.0.0')),versionArray('3.0.0')).filter(i => i < 0).any()){
         GM_setValue('isFirstRun', true)
     }
 
@@ -1068,28 +1067,25 @@
                                 {
                                     nodeType: 'a',
                                     attributes: {
-                                        href: 'https://violentmonkey.github.io/'
-                                    },
-                                    childs: 'Violentmonkey'
-                                },
-                                ' 或 ',
-                                {
-                                    nodeType: 'a',
-                                    attributes: {
                                         href: 'https://www.tampermonkey.net/index.php?#download_gcal'
                                     },
                                     childs: 'Tampermonkey Beta'
                                 },
-                                '载入本脚本。'
+                                '载入本脚本, 以保证可以利用脚本所有功能。'
                             ]
+                        },
+                        {
+                            nodeType: 'h1',
+                            className: 'rainbow-text',
+                            childs: ['由于版本变化较大，配置失效，现已清空。请重新配置！']
                         },
                         { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
                         { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
                         { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
                         { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '打开i站后等待加载出视频后, 点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会在控制台提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '等待加载出视频卡片后, 点击侧边栏中“开关选择”开启下载复选框' },
+                        { nodeType: 'p', childs: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。' },
                         { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
                     ]
                 },
@@ -1547,15 +1543,28 @@
                     childs: "开关选择",
                     events: {
                         click: () => {
-                            let isFirefox = navigator.userAgent.toLowerCase().includes('firefox')
-                            GM_getValue('isDebug') && console.log(isFirefox)
+                            let compatibilityMode = false;
+                            switch (GM_info.scriptHandler) {
+                                case 'Tampermonkey':
+                                    // @ts-ignore
+                                    compatibilityMode = GM_info.userAgentData.brands.filter(i => i.brand.toLowerCase().includes('firefox')).any();
+                                    break;
+                                case 'Violentmonkey':
+                                    // @ts-ignore
+                                    compatibilityMode = GM_info.platform.browserName.includes('firefox');
+                                    break;
+                                default:
+                                    compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
+                                    break;
+                            }
+                            GM_getValue('isDebug') && console.log(compatibilityMode)
                             if (!document.querySelector('.selectButton')) {
                                 let videoNodes = document.querySelectorAll(`.videoTeaser`)
                                 console.log("开始注入复选框 预计注入" + videoNodes.length + "个复选框")
                                 videoNodes.forEach((element) => {
                                     let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2]
                                     let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
-                                    let node = isFirefox ? element : element.querySelector('.videoTeaser__thumbnail')
+                                    let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
                                     node.appendChild(renderNode({
                                         nodeType: "input",
                                         attributes: Object.assign(
@@ -1564,7 +1573,7 @@
                                             videoID: ID,
                                             videoName: Name
                                         }),
-                                        className: isFirefox ? ['selectButton', 'selectButtonFirefox'] : 'selectButton',
+                                        className: compatibilityMode ? ['selectButton', 'selectButtonFirefox'] : 'selectButton',
                                         events: {
                                             click: (event: Event) => {
                                                 let target = event.target as HTMLInputElement
