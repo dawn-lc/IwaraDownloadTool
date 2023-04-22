@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.3
+// @version           3.1.12
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -266,7 +266,7 @@
             let body = new Proxy(this, {
                 get: function (target, property) {
                     GM_getValue('isDebug') && console.log(`get ${property.toString()}`);
-                    return GM_getValue(property.toString(), target[property]);
+                    return target[property];
                 },
                 set: function (target, property, value) {
                     if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
@@ -619,7 +619,7 @@
         External;
         State;
         Comments;
-        getDownloadQuality;
+        DownloadQuality;
         getDownloadUrl;
         constructor(Name) {
             this.Name = Name;
@@ -645,15 +645,13 @@
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id);
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
                 this.Size = this.VideoInfoSource.file.size;
-                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), window.location.href, await getAuth(this.VideoInfoSource.fileUrl)));
+                this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), window.location.href, await getAuth(this.VideoInfoSource.fileUrl))).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0));
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败');
                 }
-                this.getDownloadQuality = () => {
-                    return this.VideoFileSource.sort((a, b) => config.priority[b.name] - config.priority[a.name])[0].name;
-                };
+                this.DownloadQuality = this.VideoFileSource[0].name;
                 this.getDownloadUrl = () => {
-                    let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality());
+                    let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality);
                     if (!fileList.any())
                         throw new Error('没有可供下载的视频源');
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download;
@@ -726,6 +724,7 @@
                         let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))));
                         if (playload['type'] === 'refresh_token') {
                             GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`);
+                            isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop());
                             break;
                         }
                         if (playload['type'] === 'access_token') {
@@ -1226,7 +1225,7 @@
             toast.showToast();
             return;
         }
-        if (config.checkDownloadLink && videoInfo.getDownloadQuality() != 'Source') {
+        if (config.checkDownloadLink && videoInfo.DownloadQuality != 'Source') {
             let toast = newToast(ToastType.Warn, {
                 node: toastNode([`在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`], '创建任务'),
                 onClick() {
@@ -1378,40 +1377,41 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
     function iwaraDownloaderDownload(videoInfo) {
-        (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl, Size) {
+        (async function (videoInfo) {
             let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': 1,
                 'code': 'add',
                 'data': Object.assign({
-                    'source': ID,
-                    'author': Author,
-                    'name': Name,
+                    'source': videoInfo.ID,
+                    'alias': videoInfo.Alias,
+                    'author': videoInfo.Author,
+                    'name': videoInfo.Name,
                     'downloadTime': new Date(),
-                    'uploadTime': UploadTime,
-                    'downloadUrl': DownloadUrl,
+                    'uploadTime': videoInfo.UploadTime,
+                    'downloadUrl': videoInfo.getDownloadUrl(),
                     'downloadCookies': config.cookies,
                     'authorization': config.authorization,
-                    'size': Size,
-                    'info': Info,
-                    'tag': Tag
+                    'size': videoInfo.Size,
+                    'info': videoInfo.Comments,
+                    'tag': videoInfo.Tags
                 }, config.downloadPath.isEmpty() ? {} : {
-                    'path': config.downloadPath.replaceNowTime().replaceUploadTime(UploadTime).replaceVariable({
-                        AUTHOR: Author,
-                        ID: ID,
-                        TITLE: Name
+                    'path': config.downloadPath.replaceNowTime().replaceUploadTime(videoInfo.UploadTime).replaceVariable({
+                        AUTHOR: videoInfo.Author,
+                        ID: videoInfo.ID,
+                        TITLE: videoInfo.Name
                     })
                 })
             }, config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken })));
             if (r.code == 0) {
-                console.log(`${Name} 已推送到IwaraDownloader ${r}`);
+                console.log(`${videoInfo.Name} 已推送到IwaraDownloader ${r}`);
                 newToast(ToastType.Info, {
-                    node: toastNode(`${Name}[${ID}] 已推送到IwaraDownloader`)
+                    node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到IwaraDownloader`)
                 }).showToast();
             }
             else {
                 let toast = newToast(ToastType.Error, {
                     node: toastNode([
-                        `在推送 ${Name}[${ID}] 下载任务到IwaraDownloader过程中出现错误! `,
+                        `在推送 ${videoInfo.Name}[${videoInfo.ID}] 下载任务到IwaraDownloader过程中出现错误! `,
                         { nodeType: 'br' },
                         `错误信息: ${r.msg}`
                     ], '推送下载任务'),
@@ -1421,9 +1421,9 @@
                     }
                 });
                 toast.showToast();
-                console.log(`${Name} 推送失败 ${r}`);
+                console.log(`${videoInfo.Name} 推送失败 ${r}`);
             }
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl(), videoInfo.Size));
+        }(videoInfo));
     }
     function othersDownload(videoInfo) {
         (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
