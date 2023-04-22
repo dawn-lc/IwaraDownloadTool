@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.0.385
+// @version           3.1.1
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -19,11 +19,8 @@
 // @connect           www.iwara.tv
 // @connect           api.iwara.tv
 // @connect           cdn.staticfile.org
-// @connect           127.*
 // @connect           localhost
-// @connect           10.*
-// @connect           172.16.*
-// @connect           192.168.*
+// @connect           127.0.0.1
 // @connect           *
 // @match             *://*.iwara.tv/*
 // @grant             GM_getValue
@@ -31,7 +28,6 @@
 // @grant             GM_listValues
 // @grant             GM_deleteValue
 // @grant             GM_addValueChangeListener
-// @grant             GM_removeValueChangeListener
 // @grant             GM_addStyle
 // @grant             GM_getResourceText
 // @grant             GM_download
@@ -176,7 +172,7 @@
             let body = new Proxy(this, {
                 get: function (target, property) {
                     GM_getValue('isDebug') && console.log(`get ${property.toString()}`);
-                    return target[property];
+                    return GM_getValue(property.toString(), target[property]);
                 },
                 set: function (target, property, value) {
                     if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
@@ -199,7 +195,7 @@
                     }
                 });
             });
-            GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
+            GM_info.scriptHandler === "Tampermonkey" ? GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list, error) => {
                 if (error) {
                     console.log(error);
                     body.cookies = [];
@@ -207,7 +203,7 @@
                 else {
                     body.cookies = list;
                 }
-            });
+            }) : body.cookies = [];
             return body;
         }
         downloadTypeItem(type) {
@@ -307,7 +303,7 @@
                                     nodeType: 'input',
                                     attributes: Object.assign({
                                         name: 'Aria2Token',
-                                        type: 'Text',
+                                        type: 'Password',
                                         value: config.aria2Token
                                     }),
                                     events: {
@@ -347,7 +343,7 @@
                                     nodeType: 'input',
                                     attributes: Object.assign({
                                         name: 'IwaraDownloaderToken',
-                                        type: 'Text',
+                                        type: 'Password',
                                         value: config.iwaraDownloaderToken
                                     }),
                                     events: {
@@ -467,6 +463,14 @@
                                             ]
                                         }
                                     ]
+                                },
+                                {
+                                    nodeType: 'p',
+                                    childs: [{ nodeType: 'label', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
+                                        { nodeType: 'label', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
+                                        { nodeType: 'label', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
+                                        { nodeType: 'label', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                                        { nodeType: 'label', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), }]
                                 },
                                 {
                                     nodeType: 'p',
@@ -781,6 +785,242 @@
             .map(b => b.toString(16).padStart(2, "0"))
             .join("");
     }
+    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()));
+    GM_addStyle(`
+    .rainbow-text {
+        background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-size: 600% 100%;
+        animation: rainbow 0.5s infinite linear;
+    }
+    @keyframes rainbow {
+        0% {
+            background-position: 0% 0%;
+        }
+        100% {
+            background-position: 100% 0%;
+        }
+    }
+    #pluginMenu {
+        z-index: 4096;
+        color: white;
+        position: fixed;
+        top: 50%;
+        right: 0px;
+        padding: 10px;
+        background-color: #565656;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 0 10px #ccc;
+        transform: translate(85%, -50%);
+        transition: transform 0.5s cubic-bezier(0,1,.60,1);
+    }
+    #pluginMenu ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    #pluginMenu li {
+        padding: 5px 10px;
+        cursor: pointer;
+        text-align: center;
+        user-select: none;
+    }
+    #pluginMenu li:hover {
+        background-color: #000000cc;
+        border-radius: 3px;
+    }
+
+    #pluginMenu:hover {
+        transform: translate(0%, -50%);
+        transition-delay: 0.5s;
+    }
+
+    #pluginMenu:not(:hover) {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu.moving-out {
+        transform: translate(0%, -50%);
+    }
+
+    #pluginMenu.moving-in {
+        transform: translate(85%, -50%);
+    }
+
+    /* 以下为兼容性处理 */
+    #pluginMenu:not(.moving-out):not(.moving-in) {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu:hover,
+    #pluginMenu:hover ~ #pluginMenu {
+        transition-delay: 0s;
+    }
+
+    #pluginMenu:hover {
+        transition-duration: 0.5s;
+    }
+
+    #pluginMenu:not(:hover).moving-in {
+        transition-delay: 0.5s;
+    }
+
+
+    #pluginConfig {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(128, 128, 128, 0.8);
+        z-index: 8192; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    #pluginConfig .main {
+        color: white;
+        background-color: rgb(64,64,64,0.7);
+        padding: 24px;
+        margin: 10px;
+        overflow-y: auto;
+    }
+    @media (max-width: 640px) {
+        #pluginConfig .main {
+            width: 100%;
+        }
+    }
+    #pluginConfig button {
+        background-color: blue;
+        padding: 10px 20px;
+        color: white;
+        font-size: 18px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #pluginConfig p {
+        display: flex;
+        flex-direction: column;
+    }
+    #pluginConfig p label{
+        display: flex;
+    }
+    #pluginConfig p label input{
+        flex-grow: 1;
+        margin-left: 10px;
+    }
+    #pluginConfig .inputRadioLine {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        margin-right: 10px;
+    }
+    #pluginConfig .inputRadio {
+        display: flex;
+        align-items: center;
+        flex-direction: row-reverse;
+        margin-right: 10px;
+    }
+
+    #pluginOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(128, 128, 128, 0.8);
+        z-index: 8192; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #pluginOverlay .main {
+        color: white;
+        font-size: 24px;
+        width: 60%;
+        background-color: rgb(64,64,64,0.7);
+        padding: 24px;
+        margin: 10px;
+        overflow-y: auto;
+    }
+    @media (max-width: 640px) {
+        #pluginOverlay .main {
+            width: 100%;
+        }
+    }
+
+    #pluginOverlay button {
+        padding: 10px 20px;
+        color: white;
+        font-size: 18px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    #pluginOverlay button {
+        background-color: blue;
+    }
+    #pluginOverlay button[disabled] {
+        background-color: darkgray;
+        cursor: not-allowed;
+    }
+
+    #pluginOverlay .checkbox {
+        width: 32px;
+        height: 32px;
+    }
+
+    #pluginOverlay .checkbox-container {
+        display: flex;
+        align-items: center;
+    }
+
+    #pluginOverlay .checkbox-label {
+        color: white;
+        font-size: 18px;
+        margin-left: 10px;
+    }
+
+    .selectButton {
+        position: absolute;
+        width: 38px;
+        height: 38px;
+        bottom: 24px;
+        right: 0px;
+    }
+    .selectButtonFirefox {
+        position: absolute;
+        width: 32px;
+        height: 32px;
+        bottom: 0px;
+        right: 4px;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        padding: 0;
+    }
+
+    .toastify h3 {
+        margin: 0 0 10px 0;
+    }
+    .toastify p {
+        margin: 0 ;
+    }
+    `);
+    function versionDifference(A, B) {
+        return Array.from(A, (num, i) => num - B[i]);
+    }
+    function versionArray(version) {
+        return version.split('.').map(i => Number(i));
+    }
+    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.0.0')).filter(i => i < 0).any()) {
+        GM_setValue('isFirstRun', true);
+    }
     // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i));
@@ -794,8 +1034,9 @@
             events: {
                 click: () => {
                     GM_setValue('isFirstRun', false);
+                    GM_setValue('version', GM_info.script.version);
                     document.querySelector('#pluginOverlay').remove();
-                    window.unsafeWindow.location.reload();
+                    config.edit();
                 }
             }
         });
@@ -816,28 +1057,25 @@
                                 {
                                     nodeType: 'a',
                                     attributes: {
-                                        href: 'https://docs.scriptcat.org/'
-                                    },
-                                    childs: 'ScriptCat'
-                                },
-                                ' 或 ',
-                                {
-                                    nodeType: 'a',
-                                    attributes: {
                                         href: 'https://www.tampermonkey.net/index.php?#download_gcal'
                                     },
                                     childs: 'Tampermonkey Beta'
                                 },
-                                '载入本脚本。'
+                                '载入本脚本, 以保证可以利用脚本所有功能。'
                             ]
+                        },
+                        {
+                            nodeType: 'h1',
+                            className: 'rainbow-text',
+                            childs: ['由于版本变化较大，配置失效，现已清空。请重新配置！']
                         },
                         { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
                         { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
                         { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
                         { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
                         { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '打开i站后等待加载出视频后, 点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '插件下载视频前会检查视频简介，如果在简介中发现疑似第三方下载链接，将会在控制台提示，您可以手动打开视频页面选择。' },
+                        { nodeType: 'p', childs: '等待加载出视频卡片后, 点击侧边栏中“开关选择”开启下载复选框' },
+                        { nodeType: 'p', childs: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。' },
                         { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
                     ]
                 },
@@ -1221,228 +1459,6 @@
             });
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
-    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()));
-    GM_addStyle(`
-    .rainbow-text {
-        background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-size: 600% 100%;
-        animation: rainbow 0.5s infinite linear;
-    }
-    @keyframes rainbow {
-        0% {
-            background-position: 0% 0%;
-        }
-        100% {
-            background-position: 100% 0%;
-        }
-    }
-    #pluginMenu {
-        z-index: 4096;
-        color: white;
-        position: fixed;
-        top: 50%;
-        right: 0px;
-        padding: 10px;
-        background-color: #565656;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 0 10px #ccc;
-        transform: translate(85%, -50%);
-        transition: transform 0.5s cubic-bezier(0,1,.60,1);
-    }
-    #pluginMenu ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-    #pluginMenu li {
-        padding: 5px 10px;
-        cursor: pointer;
-        text-align: center;
-        user-select: none;
-    }
-    #pluginMenu li:hover {
-        background-color: #000000cc;
-        border-radius: 3px;
-    }
-
-    #pluginMenu:hover {
-        transform: translate(0%, -50%);
-        transition-delay: 0.5s;
-    }
-
-    #pluginMenu:not(:hover) {
-        transition-delay: 0s;
-    }
-
-    #pluginMenu.moving-out {
-        transform: translate(0%, -50%);
-    }
-
-    #pluginMenu.moving-in {
-        transform: translate(85%, -50%);
-    }
-
-    /* 以下为兼容性处理 */
-    #pluginMenu:not(.moving-out):not(.moving-in) {
-        transition-delay: 0s;
-    }
-
-    #pluginMenu:hover,
-    #pluginMenu:hover ~ #pluginMenu {
-        transition-delay: 0s;
-    }
-
-    #pluginMenu:hover {
-        transition-duration: 0.5s;
-    }
-
-    #pluginMenu:not(:hover).moving-in {
-        transition-delay: 0.5s;
-    }
-
-
-    #pluginConfig {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(128, 128, 128, 0.8);
-        z-index: 8192; 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-    #pluginConfig .main {
-        color: white;
-        background-color: rgb(64,64,64,0.7);
-        padding: 24px;
-        margin: 10px;
-        overflow-y: auto;
-    }
-    @media (max-width: 640px) {
-        #pluginConfig .main {
-            width: 100%;
-        }
-    }
-    #pluginConfig button {
-        background-color: blue;
-        padding: 10px 20px;
-        color: white;
-        font-size: 18px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    #pluginConfig p {
-        display: flex;
-        flex-direction: column;
-    }
-    #pluginConfig p label{
-        display: flex;
-    }
-    #pluginConfig p label input{
-        flex-grow: 1;
-        margin-left: 10px;
-    }
-    #pluginConfig .inputRadioLine {
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        margin-right: 10px;
-    }
-    #pluginConfig .inputRadio {
-        display: flex;
-        align-items: center;
-        flex-direction: row-reverse;
-        margin-right: 10px;
-    }
-
-    #pluginOverlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(128, 128, 128, 0.8);
-        z-index: 8192; 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #pluginOverlay .main {
-        color: white;
-        font-size: 24px;
-        width: 60%;
-        background-color: rgb(64,64,64,0.7);
-        padding: 24px;
-        margin: 10px;
-        overflow-y: auto;
-    }
-    @media (max-width: 640px) {
-        #pluginOverlay .main {
-            width: 100%;
-        }
-    }
-
-    #pluginOverlay button {
-        padding: 10px 20px;
-        color: white;
-        font-size: 18px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    #pluginOverlay button {
-        background-color: blue;
-    }
-    #pluginOverlay button[disabled] {
-        background-color: darkgray;
-        cursor: not-allowed;
-    }
-
-    #pluginOverlay .checkbox-container {
-        display: flex;
-        align-items: center;
-    }
-
-    #pluginOverlay .checkbox-label {
-        color: white;
-        font-size: 18px;
-        margin-left: 10px;
-    }
-
-    .selectButton {
-        position: absolute;
-        width: 38px;
-        height: 38px;
-        bottom: 24px;
-        right: 0px;
-    }
-    .selectButtonFirefox {
-        position: absolute;
-        width: 32px;
-        height: 32px;
-        bottom: 0px;
-        right: 4px;
-        transform: translate(-50%, -50%);
-        margin: 0;
-        padding: 0;
-    }
-
-    .toastify h3 {
-        margin: 0 0 10px 0;
-    }
-    .toastify p {
-        margin: 0 ;
-    }
-    `);
     document.body.appendChild(renderNode({
         nodeType: "div",
         attributes: {
@@ -1456,15 +1472,28 @@
                     childs: "开关选择",
                     events: {
                         click: () => {
-                            let isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
-                            GM_getValue('isDebug') && console.log(isFirefox);
+                            let compatibilityMode = false;
+                            switch (GM_info.scriptHandler) {
+                                case 'Tampermonkey':
+                                    // @ts-ignore
+                                    compatibilityMode = GM_info.userAgentData.brands.filter(i => i.brand.toLowerCase().includes('firefox')).any();
+                                    break;
+                                case 'Violentmonkey':
+                                    // @ts-ignore
+                                    compatibilityMode = GM_info.platform.browserName.includes('firefox');
+                                    break;
+                                default:
+                                    compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
+                                    break;
+                            }
+                            GM_getValue('isDebug') && console.log(compatibilityMode);
                             if (!document.querySelector('.selectButton')) {
                                 let videoNodes = document.querySelectorAll(`.videoTeaser`);
                                 console.log("开始注入复选框 预计注入" + videoNodes.length + "个复选框");
                                 videoNodes.forEach((element) => {
                                     let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2];
                                     let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim();
-                                    let node = isFirefox ? element : element.querySelector('.videoTeaser__thumbnail');
+                                    let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail');
                                     node.appendChild(renderNode({
                                         nodeType: "input",
                                         attributes: Object.assign(videoList.has(ID) ? { checked: true } : {}, {
@@ -1472,7 +1501,7 @@
                                             videoID: ID,
                                             videoName: Name
                                         }),
-                                        className: isFirefox ? ['selectButton', 'selectButtonFirefox'] : 'selectButton',
+                                        className: compatibilityMode ? ['selectButton', 'selectButtonFirefox'] : 'selectButton',
                                         events: {
                                             click: (event) => {
                                                 let target = event.target;
