@@ -646,7 +646,10 @@
                 }
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.getDownloadQuality())
-                    return decodeURIComponent('https:' + fileList[Math.floor(Math.random() * fileList.length)].src.download)
+                    if(!fileList.any()) throw new Error('没有可供下载的视频源')
+                    let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
+                    if(isNull(Source)||Source.isEmpty()) throw new Error('视频源地址不可用')
+                    return decodeURIComponent(`https:${Source}`)
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
                     return JSON.parse(
