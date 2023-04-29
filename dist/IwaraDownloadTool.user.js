@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.12
+// @version           3.1.23
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -53,6 +53,12 @@
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString();
     };
+    String.prototype.trimHead = function (prefix) {
+        return this.startsWith(prefix) ? this.slice(prefix.length) : this.toString();
+    };
+    String.prototype.trimTail = function (suffix) {
+        return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString();
+    };
     String.prototype.replaceVariable = function (replacements) {
         return Object.entries(replacements).reduce((str, [key, value]) => str.split(`%#${key}#%`).join(String(value)), this);
     };
@@ -86,7 +92,8 @@
         return this.length > 0;
     };
     const getString = function (obj) {
-        return String(obj).includes('[object') || String(obj).includes('[native code]') ? JSON.stringify(obj) : String(obj);
+        obj = obj instanceof Error ? String(obj) : obj;
+        return typeof obj === 'object' ? JSON.stringify(obj).trimHead('{').trimTail('}') : String(obj);
     };
     const delay = async function (ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -1001,10 +1008,16 @@
         return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
     }
     async function refreshToken() {
-        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }));
-        return refresh['accessToken'];
+        let refresh = config.authorization;
+        try {
+            refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }))['accessToken'];
+        }
+        catch (error) {
+            console.warn(`Refresh token error: ${getString(error)}`);
+        }
+        return refresh;
     }
     async function getXVersion(urlString) {
         let url = new URL(urlString);

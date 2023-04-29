@@ -15,6 +15,12 @@
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
     }
+    String.prototype.trimHead = function (prefix: string) {
+        return this.startsWith(prefix) ? this.slice(prefix.length) : this.toString()
+    }
+    String.prototype.trimTail = function (suffix: string) {
+        return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString()
+    }
     String.prototype.replaceVariable = function (replacements) {
         return Object.entries(replacements).reduce(
             (str, [key, value]) => str.split(`%#${key}#%`).join(String(value)),
@@ -53,7 +59,8 @@
 
 
     const getString = function (obj: any) {
-        return String(obj).includes('[object') || String(obj).includes('[native code]') ? JSON.stringify(obj) : String(obj)
+        obj = obj instanceof Error ? String(obj) : obj
+        return typeof obj === 'object' ? JSON.stringify(obj).trimHead('{').trimTail('}') : String(obj)
     }
     const delay = async function (ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms))
@@ -1002,18 +1009,19 @@
     }
     `)
 
-
-
-
-
     function parseSearchParams(searchParams: URLSearchParams, initialObject = {}): {} {
         return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
     }
     async function refreshToken(): Promise<string> {
-        let refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }))
-        return refresh['accessToken']
+        let refresh = config.authorization
+        try {
+            refresh =JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, window.location.href, {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }))['accessToken']
+        } catch (error) {
+            console.warn(`Refresh token error: ${getString(error)}`)
+        }
+        return refresh
     }
     async function getXVersion(urlString: string): Promise<string> {
         let url = new URL(urlString)
@@ -1689,5 +1697,5 @@
         text: `Iwara 批量下载工具加载完成`,
         duration: 10000,
         close: true
-    }).showToast()
+    }).showToast()    
 })()
