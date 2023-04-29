@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.23
+// @version           3.1.27
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -706,11 +706,6 @@
                     },
                 });
                 toast.showToast();
-                console.error(`--------- ${this.Name}[${this.ID}] Error ---------`);
-                console.log(this.VideoInfoSource);
-                console.log(this.VideoFileSource);
-                console.error(error);
-                console.error(`--------- ${this.Name}[${this.ID}] Error ---------`);
                 let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`);
                 button && button.checked && button.click();
                 videoList.remove(this.ID);
@@ -1208,8 +1203,23 @@
             ]
         });
     }
+    function getTextNode(node) {
+        return node.nodeType === Node.TEXT_NODE
+            ? node.textContent || ''
+            : node.nodeType === Node.ELEMENT_NODE
+                ? Array.from(node.childNodes)
+                    .map(getTextNode)
+                    .join('')
+                : '';
+    }
     function newToast(type, params) {
-        return Toastify(Object.assign({
+        const logFunc = {
+            [ToastType.Warn]: console.warn,
+            [ToastType.Error]: console.error,
+            [ToastType.Log]: console.log,
+            [ToastType.Info]: console.info,
+        }[type] || console.log;
+        params = Object.assign({
             newWindow: true,
             gravity: "top",
             position: "right",
@@ -1224,7 +1234,9 @@
             style: {
                 background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))"
             }
-        }, notNull(params) && params));
+        }, notNull(params) && params);
+        logFunc(notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined');
+        return Toastify(params);
     }
     async function pustDownloadTask(videoInfo) {
         if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
@@ -1294,7 +1306,6 @@
                 }
             });
             toast.showToast();
-            console.error(error);
             return false;
         }
         return true;
@@ -1324,7 +1335,6 @@
                 }
             });
             toast.showToast();
-            console.error(error);
             return false;
         }
         return true;
@@ -1352,7 +1362,6 @@
                 }
             });
             toast.showToast();
-            console.error(error);
             return false;
         }
         return true;
@@ -1383,7 +1392,7 @@
                     })
                 ]
             });
-            console.log(`${name} 已推送到Aria2 ${await post(config.aria2Path.toURL(), json)}`);
+            console.log(`Aria2 ${name} ${await post(config.aria2Path.toURL(), json)}`);
             newToast(ToastType.Info, {
                 node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`)
             }).showToast();
@@ -1434,7 +1443,6 @@
                     }
                 });
                 toast.showToast();
-                console.log(`${videoInfo.Name} 推送失败 ${r}`);
             }
         }(videoInfo));
     }
@@ -1506,7 +1514,10 @@
                             GM_getValue('isDebug') && console.log(compatibilityMode);
                             if (!document.querySelector('.selectButton')) {
                                 let videoNodes = document.querySelectorAll(`.videoTeaser`);
-                                console.log("开始注入复选框 预计注入" + videoNodes.length + "个复选框");
+                                newToast(ToastType.Info, {
+                                    text: `开始注入复选框 预计注入${videoNodes.length}个复选框`,
+                                    close: true
+                                }).showToast();
                                 videoNodes.forEach((element) => {
                                     let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2];
                                     let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim();
@@ -1532,9 +1543,12 @@
                                 });
                             }
                             else {
-                                console.log("移除复选框");
+                                newToast(ToastType.Info, {
+                                    text: `开始移除复选框`,
+                                    close: true
+                                }).showToast();
                                 document.querySelectorAll('.selectButton').forEach((element) => {
-                                    videoList.remove(element.getAttribute('videoid'));
+                                    //videoList.remove(element.getAttribute('videoid'))
                                     element.remove();
                                 });
                             }
