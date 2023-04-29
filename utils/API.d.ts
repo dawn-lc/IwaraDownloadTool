@@ -11,6 +11,8 @@ interface String {
     isEmpty(): boolean;
     toURL(): URL;
     truncate(maxLength: number): string
+    trimHead(prefix: string): string;
+    trimTail(suffix: string): string;
 }
 
 interface Array {
