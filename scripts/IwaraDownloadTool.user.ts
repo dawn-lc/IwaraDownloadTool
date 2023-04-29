@@ -1564,20 +1564,7 @@
                     childs: "开关选择",
                     events: {
                         click: () => {
-                            let compatibilityMode = false;
-                            switch (GM_info.scriptHandler) {
-                                case 'Tampermonkey':
-                                    // @ts-ignore
-                                    compatibilityMode = GM_info.userAgentData.brands.filter(i => i.brand.toLowerCase().includes('firefox')).any();
-                                    break;
-                                case 'Violentmonkey':
-                                    // @ts-ignore
-                                    compatibilityMode = GM_info.platform.browserName.includes('firefox');
-                                    break;
-                                default:
-                                    compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
-                                    break;
-                            }
+                            let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
                             GM_getValue('isDebug') && console.log(compatibilityMode)
                             if (!document.querySelector('.selectButton')) {
                                 let videoNodes = document.querySelectorAll(`.videoTeaser`)
