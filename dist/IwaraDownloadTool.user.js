@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.31
+// @version           3.1.34
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -307,6 +307,23 @@
             }) : body.cookies = [];
             return body;
         }
+        async check() {
+            if (await localPathCheck()) {
+                switch (config.downloadType) {
+                    case DownloadType.Aria2:
+                        return (await aria2Check());
+                    case DownloadType.IwaraDownloader:
+                        return (await iwaraDownloaderCheck());
+                    case DownloadType.Browser:
+                        return (await EnvCheck());
+                    default:
+                        return true;
+                }
+            }
+            else {
+                return false;
+            }
+        }
         downloadTypeItem(type) {
             return {
                 nodeType: 'label',
@@ -587,20 +604,7 @@
                             childs: '保存',
                             events: {
                                 click: async () => {
-                                    switch (config.downloadType) {
-                                        case DownloadType.Aria2:
-                                            (await aria2Check()) && (await localPathCheck()) && editor.remove();
-                                            break;
-                                        case DownloadType.IwaraDownloader:
-                                            (await iwaraDownloaderCheck()) && (await localPathCheck()) && editor.remove();
-                                            break;
-                                        case DownloadType.Browser:
-                                            (await EnvCheck()) && (await localPathCheck()) && editor.remove();
-                                            break;
-                                        default:
-                                            editor.remove();
-                                            break;
-                                    }
+                                    (await this.check()) && editor.remove();
                                 }
                             }
                         }
@@ -1029,7 +1033,14 @@
     function versionArray(version) {
         return version.split('.').map(i => Number(i));
     }
-    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.0.0')).filter(i => i < 0).any()) {
+    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.1.0')).filter(i => i < 0).any()) {
+        GM_setValue('isFirstRun', true);
+    }
+    if (!await config.check()) {
+        newToast(ToastType.Info, {
+            text: `配置文件存在错误，已重置。`,
+            duration: 60 * 1000,
+        }).showToast();
         GM_setValue('isFirstRun', true);
     }
     // 检查是否是首次运行脚本
