@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.44
+// @version           3.1.48
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -1135,7 +1135,7 @@
     }
     async function analyzeDownloadTask(list = videoList) {
         for (const key in list.items) {
-            await delay(random(10, 100)); //脚本太快了,延迟一下防止被屏蔽
+            //await delay(random(10, 100))脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(list[key])).init(key);
             if (videoInfo.State) {
                 await pustDownloadTask(videoInfo);
@@ -1144,6 +1144,11 @@
                 list.remove(key);
             }
         }
+        newToast(ToastType.Info, {
+            text: `全部解析完成！`,
+            duration: -1,
+            close: true
+        }).showToast();
     }
     function checkIsHaveDownloadLink(comment) {
         if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {

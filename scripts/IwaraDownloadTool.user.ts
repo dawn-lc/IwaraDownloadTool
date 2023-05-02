@@ -1148,7 +1148,7 @@
 
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         for (const key in list.items) {
-            await delay(random(10, 100))//脚本太快了,延迟一下防止被屏蔽
+            //await delay(random(10, 100))脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             if (videoInfo.State) {
                 await pustDownloadTask(videoInfo)
@@ -1157,6 +1157,11 @@
                 list.remove(key)
             }
         }
+        newToast(ToastType.Info,{
+            text: `全部解析完成！`,
+            duration: -1,
+            close: true
+        }).showToast()
     }
 
     function checkIsHaveDownloadLink(comment: string): boolean {
