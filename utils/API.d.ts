@@ -31,7 +31,6 @@ type RenderCode = string | Node | Element | {
 interface LocalPath {
     fullPath: string;
     drive: string;
-    directories: string[];
     filename: string;
     match: boolean;
 }

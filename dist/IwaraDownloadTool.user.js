@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.30
+// @version           3.1.34
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -257,7 +257,7 @@
         constructor() {
             //初始化
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
-            this.downloadType = GM_getValue('downloadType', DownloadType.Browser);
+            this.downloadType = GM_getValue('downloadType', DownloadType.Others);
             this.downloadPath = GM_getValue('downloadPath', '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4');
             this.downloadProxy = GM_getValue('downloadProxy', '');
             this.aria2Path = GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc');
@@ -306,6 +306,23 @@
                 }
             }) : body.cookies = [];
             return body;
+        }
+        async check() {
+            if (await localPathCheck()) {
+                switch (config.downloadType) {
+                    case DownloadType.Aria2:
+                        return (await aria2Check());
+                    case DownloadType.IwaraDownloader:
+                        return (await iwaraDownloaderCheck());
+                    case DownloadType.Browser:
+                        return (await EnvCheck());
+                    default:
+                        return true;
+                }
+            }
+            else {
+                return false;
+            }
         }
         downloadTypeItem(type) {
             return {
@@ -587,20 +604,7 @@
                             childs: '保存',
                             events: {
                                 click: async () => {
-                                    switch (config.downloadType) {
-                                        case DownloadType.Aria2:
-                                            (await aria2Check()) && editor.remove();
-                                            break;
-                                        case DownloadType.IwaraDownloader:
-                                            (await iwaraDownloaderCheck()) && editor.remove();
-                                            break;
-                                        case DownloadType.Browser:
-                                            (await EnvCheck()) && editor.remove();
-                                            break;
-                                        default:
-                                            editor.remove();
-                                            break;
-                                    }
+                                    (await this.check()) && editor.remove();
                                 }
                             }
                         }
@@ -1029,7 +1033,14 @@
     function versionArray(version) {
         return version.split('.').map(i => Number(i));
     }
-    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.0.0')).filter(i => i < 0).any()) {
+    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.1.0')).filter(i => i < 0).any()) {
+        GM_setValue('isFirstRun', true);
+    }
+    if (!await config.check()) {
+        newToast(ToastType.Info, {
+            text: `配置文件存在错误，已重置。`,
+            duration: 60 * 1000,
+        }).showToast();
         GM_setValue('isFirstRun', true);
     }
     // 检查是否是首次运行脚本
@@ -1277,14 +1288,18 @@
         }
     }
     function analyzeLocalPath(path) {
-        let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/) || '';
-        return {
-            fullPath: matchPath[0],
-            drive: matchPath[1] || '',
-            directories: matchPath[2].split(/[\/\\]/),
-            filename: matchPath[3],
-            match: matchPath !== null
-        };
+        let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/);
+        try {
+            return {
+                fullPath: matchPath[0],
+                drive: matchPath[1] || '',
+                filename: matchPath[3],
+                match: matchPath !== null
+            };
+        }
+        catch (error) {
+            throw new Error(`错误的下载路径，请检查路径是否存在！${matchPath.join('-')}`);
+        }
     }
     async function EnvCheck() {
         try {
@@ -1297,6 +1312,27 @@
             let toast = newToast(ToastType.Error, {
                 node: toastNode([
                     `无法保存配置, 请检查配置是否正确。`,
+                    { nodeType: 'br' },
+                    `错误信息: ${getString(error)}`
+                ], '配置检查'),
+                position: "center",
+                onClick() {
+                    toast.hideToast();
+                }
+            });
+            toast.showToast();
+            return false;
+        }
+        return true;
+    }
+    async function localPathCheck() {
+        try {
+            analyzeLocalPath(config.downloadPath);
+        }
+        catch (error) {
+            let toast = newToast(ToastType.Error, {
+                node: toastNode([
+                    `下载路径存在问题！`,
                     { nodeType: 'br' },
                     `错误信息: ${getString(error)}`
                 ], '配置检查'),
