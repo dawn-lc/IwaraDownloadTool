@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.48
+// @version           3.1.51
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -651,7 +651,7 @@
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100);
                 this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty();
                 if (this.External) {
-                    throw new Error(`非本站视频 ${this.VideoInfoSource.embedUrl}`);
+                    throw new Error(`非本站视频`);
                 }
                 this.Private = this.VideoInfoSource.private;
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
@@ -704,12 +704,17 @@
                     node: toastNode([
                         `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`,
+                        `${getString(error)}`,
                         { nodeType: 'br' },
-                        `→ 点击此处重新解析 ←`
+                        this.External ? `→ 点击打开视频地址 ←` : `→ 点击此处重新解析 ←`
                     ], '解析模块'),
                     onClick() {
-                        analyzeDownloadTask(new Dictionary([{ key: data.ID, value: data.Name }]));
+                        if (data.External) {
+                            GM_openInTab(data.VideoInfoSource.embedUrl, { active: true, insert: true, setParent: true });
+                        }
+                        else {
+                            analyzeDownloadTask(new Dictionary([{ key: data.ID, value: data.Name }]));
+                        }
                         toast.hideToast();
                     },
                 });
