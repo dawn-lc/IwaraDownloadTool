@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.34
+// @version           3.1.44
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -93,7 +93,7 @@
     };
     const getString = function (obj) {
         obj = obj instanceof Error ? String(obj) : obj;
-        return typeof obj === 'object' ? JSON.stringify(obj).trimHead('{').trimTail('}') : String(obj);
+        return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj);
     };
     const delay = async function (ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -311,14 +311,15 @@
             if (await localPathCheck()) {
                 switch (config.downloadType) {
                     case DownloadType.Aria2:
-                        return (await aria2Check());
+                        return await aria2Check();
                     case DownloadType.IwaraDownloader:
-                        return (await iwaraDownloaderCheck());
+                        return await iwaraDownloaderCheck();
                     case DownloadType.Browser:
-                        return (await EnvCheck());
+                        return await EnvCheck();
                     default:
-                        return true;
+                        break;
                 }
+                return true;
             }
             else {
                 return false;
@@ -516,6 +517,18 @@
         }
         edit() {
             if (!document.querySelector('#pluginConfig')) {
+                let save = renderNode({
+                    nodeType: 'button',
+                    className: 'closeButton',
+                    childs: '保存',
+                    events: {
+                        click: async () => {
+                            save.disabled = !save.disabled;
+                            await this.check() && editor.remove();
+                            save.disabled = !save.disabled;
+                        }
+                    }
+                });
                 let editor = renderNode({
                     nodeType: 'div',
                     attributes: {
@@ -598,16 +611,7 @@
                                 }
                             ]
                         },
-                        {
-                            nodeType: 'button',
-                            className: 'closeButton',
-                            childs: '保存',
-                            events: {
-                                click: async () => {
-                                    (await this.check()) && editor.remove();
-                                }
-                            }
-                        }
+                        save
                     ]
                 });
                 document.body.appendChild(editor);
@@ -720,6 +724,8 @@
     }
     let config = new Config();
     let videoList = new Dictionary();
+    // @ts-ignore
+    Toastify.defaults.oldestFirst = false;
     const originFetch = fetch;
     const modifyFetch = async (url, options) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`);
@@ -740,36 +746,6 @@
                             break;
                         }
                     }
-                    /*
-                    if (playload['type'] === 'refresh_token') {
-                        let fetchResponse = await originFetch(url, options)
-                        let token = (await fetchResponse.json())['accessToken']
-                        GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(token.split('.')[1])))))
-                        config.authorization = `Bearer ${token}`
-                        return new Promise<Response>((resolve, reject) => {
-                            resolve(new Proxy(fetchResponse, {
-                                    get: function (target: any, prop: any, receiver: any) {
-                                        if (typeof Reflect.get(target, prop) === 'function') {
-                                            if (Reflect.get(target, prop + 'proxy') === undefined) {
-                                                target[prop + 'proxy'] = new Proxy(Reflect.get(target, prop), {
-                                                    apply: (target, thisArg, argumentsList) => {
-                                                        console.log('fetchfunction', target.name, Response, argumentsList)
-                                                        return Reflect.apply(target, Response, argumentsList);
-                                                    }
-                                                });
-                                            }
-                                            return Reflect.get(target, prop + 'proxy')
-                                        }
-                                        return Reflect.get(target, prop);
-                                    },
-                                    set(target: any, prop: any, value: any) {
-                                        return Reflect.set(target, prop, value);
-                                    }
-                                }
-                            ))
-                        })
-                    }
-                    */
                 }
             }
         }
@@ -893,6 +869,13 @@
         border: none;
         border-radius: 4px;
         cursor: pointer;
+    }
+    #pluginConfig button {
+        background-color: blue;
+    }
+    #pluginConfig button[disabled] {
+        background-color: darkgray;
+        cursor: not-allowed;
     }
     #pluginConfig p {
         display: flex;
