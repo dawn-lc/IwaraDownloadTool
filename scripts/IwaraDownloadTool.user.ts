@@ -4,7 +4,6 @@
         debugger
     }
 
-
     let unsafeWindow = window.unsafeWindow;
 
     const originalAddEventListener = EventTarget.prototype.addEventListener
@@ -59,7 +58,6 @@
     Array.prototype.any = function () {
         return this.length > 0
     }
-
 
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
@@ -141,7 +139,7 @@
                     }, headers),
                     data: body,
                     onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接" )
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
                 });
             });
             return data.responseText;
@@ -280,7 +278,7 @@
             return body
         }
         public async check() {
-            if (await localPathCheck()){
+            if (await localPathCheck()) {
                 switch (config.downloadType) {
                     case DownloadType.Aria2:
                         return await aria2Check()
@@ -594,7 +592,7 @@
                                 },
                                 {
                                     nodeType: 'p',
-                                    childs:[{ nodeType: 'label', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
+                                    childs: [{ nodeType: 'label', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
                                     { nodeType: 'label', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
                                     { nodeType: 'label', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
                                     { nodeType: 'label', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
@@ -657,16 +655,16 @@
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
                 this.Size = this.VideoInfoSource.file.size
-                this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name])?config.priority[b.name]:0) - (notNull(config.priority[a.name])?config.priority[a.name]:0))
+                this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error('获取视频源失败')
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality)
-                    if(!fileList.any()) throw new Error('没有可供下载的视频源')
+                    if (!fileList.any()) throw new Error('没有可供下载的视频源')
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-                    if(isNull(Source)||Source.isEmpty()) throw new Error('视频源地址不可用')
+                    if (isNull(Source) || Source.isEmpty()) throw new Error('视频源地址不可用')
                     return decodeURIComponent(`https:${Source}`)
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
@@ -745,7 +743,7 @@
                         let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
                         if (playload['type'] === 'refresh_token') {
                             GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`);
-                            isNull(localStorage.getItem('token')) && localStorage.setItem('token',options.headers[key].split(' ').pop())
+                            isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop())
                             break
                         }
                         if (playload['type'] === 'access_token') {
@@ -763,7 +761,7 @@
     window.fetch = modifyFetch
     unsafeWindow.fetch = modifyFetch
 
-        
+
     GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()))
     GM_addStyle(`
     .rainbow-text {
@@ -1004,7 +1002,7 @@
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
         try {
-            refresh =JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, unsafeWindow.location.href, {
+            refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, unsafeWindow.location.href, {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }))['accessToken']
         } catch (error) {
@@ -1022,111 +1020,12 @@
             .join("");
     }
 
-    function versionDifference (A: Array<number>, B: Array<number>) {
+    function versionDifference(A: Array<number>, B: Array<number>) {
         return Array.from(A, (num, i) => num - B[i])
     }
 
-    function versionArray (version: string) {
+    function versionArray(version: string) {
         return version.split('.').map(i => Number(i))
-    }
-
-    if(versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.1.0')).filter(i => i < 0).any()){
-        GM_setValue('isFirstRun', true)
-    }
-
-
-    // 检查是否是首次运行脚本
-    if (GM_getValue('isFirstRun', true)) {
-        GM_listValues().forEach(i => GM_deleteValue(i))
-        config = new Config()
-        let confirmButton = renderNode({
-            nodeType: 'button',
-            attributes: {
-                disabled: true
-            },
-            childs: '确定',
-            events: {
-                click: () => {
-                    GM_setValue('isFirstRun', false)
-                    GM_setValue('version', GM_info.script.version)
-                    document.querySelector('#pluginOverlay').remove()
-                    config.edit()
-                }
-            }
-        }) as HTMLButtonElement
-        document.body.appendChild(renderNode({
-            nodeType: 'div',
-            attributes: {
-                id: 'pluginOverlay'
-            },
-            childs: [
-                {
-                    nodeType: 'div',
-                    className: 'main',
-                    childs: [
-                        {
-                            nodeType: 'h2',
-                            childs: [
-                                '请使用',
-                                {
-                                    nodeType: 'a',
-                                    attributes: {
-                                        href: 'https://www.tampermonkey.net/index.php?#download_gcal'
-                                    },
-                                    childs: 'Tampermonkey Beta'
-                                },
-                                '载入本脚本, 以保证可以利用脚本所有功能。'
-                            ]
-                        },
-                        {
-                            nodeType: 'h1',
-                            className: 'rainbow-text',
-                            childs: ['由于版本变化较大，配置失效，现已清空。请重新配置！']
-                        },
-                        { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                        { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
-                        { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
-                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '等待加载出视频卡片后, 点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。' },
-                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
-                    ]
-                },
-                {
-                    nodeType: 'div',
-                    className: 'checkbox-container',
-                    childs: [
-                        {
-                            nodeType: 'input',
-                            className: 'checkbox',
-                            attributes: {
-                                type: 'checkbox',
-                                name: 'agree-checkbox'
-                            },
-                            events: {
-                                change: (event: Event) => {
-                                    confirmButton.disabled = !(event.target as HTMLInputElement).checked
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'label',
-                            className: 'checkbox-label',
-                            attributes: {
-                                for: 'agree-checkbox'
-                            },
-                            childs: {
-                                nodeType: 'h1',
-                                className: 'rainbow-text',
-                                childs: '我已知晓如何使用!!!'
-                            },
-                        },
-                    ],
-                },
-                confirmButton
-            ]
-        }))
     }
 
     async function getAuth(url?: string) {
@@ -1150,17 +1049,26 @@
 
 
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
+        let size = list.size;
+        let start = newToast(ToastType.Info, {
+            text: `开始解析选中的${list.size}条视频信息...`,
+            duration: -1,
+            close: true
+        })
+        start.showToast()
         for (const key in list.items) {
-            //await delay(random(10, 100))脚本太快了,延迟一下防止被屏蔽
+            await delay(random(10, 100))//脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             if (videoInfo.State) {
                 await pustDownloadTask(videoInfo)
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.remove(key)
+                start.options.text = `共${size}条视频, 还剩${list.size}条视频尚未解析。`
             }
         }
-        newToast(ToastType.Info,{
+        start.hideToast()
+        newToast(ToastType.Info, {
             text: `全部解析完成！`,
             duration: -1,
             close: true
@@ -1576,156 +1484,257 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
-    if (!await config.check()) {
-        newToast(ToastType.Info, {
-            text: `脚本配置中存在错误，请修改。`,
-            duration: 60*1000,
-        }).showToast()
-        config.edit()
-    }else{
-        document.body.appendChild(renderNode({
-            nodeType: "div",
+
+    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.1.30')).filter(i => i < 0).any()) {
+        GM_setValue('isFirstRun', true)
+    }
+
+
+    // 检查是否是首次运行脚本
+    if (GM_getValue('isFirstRun', true)) {
+        GM_listValues().forEach(i => GM_deleteValue(i))
+        config = new Config()
+        let confirmButton = renderNode({
+            nodeType: 'button',
             attributes: {
-                id: "pluginMenu"
+                disabled: true
             },
-            childs: {
-                nodeType: "ul",
-                childs: [
-                    {
-                        nodeType: "li",
-                        childs: "开关选择",
-                        events: {
-                            click: () => {
-                                let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
-                                GM_getValue('isDebug') && console.log(compatibilityMode)
-                                if (!document.querySelector('.selectButton')) {
-                                    let videoNodes = document.querySelectorAll(`.videoTeaser`)
-                                    newToast(ToastType.Info, {
-                                        text: `开始注入复选框 预计注入${videoNodes.length}个复选框`,
-                                        close: true
-                                    }).showToast()
-                                    videoNodes.forEach((element) => {
-                                        let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2]
-                                        let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
-                                        let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
-                                        node.appendChild(renderNode({
-                                            nodeType: "input",
-                                            attributes: Object.assign(
-                                                videoList.has(ID) ? { checked: true } : {}, {
-                                                type: "checkbox",
-                                                videoID: ID,
-                                                videoName: Name
-                                            }),
-                                            className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
-                                            events: {
-                                                click: (event: Event) => {
-                                                    let target = event.target as HTMLInputElement
-                                                    target.checked ? videoList.set(ID, Name) : videoList.remove(ID)
-                                                    event.stopPropagation()
-                                                    event.stopImmediatePropagation();
-                                                    return false;
+            childs: '确定',
+            events: {
+                click: () => {
+                    GM_setValue('isFirstRun', false)
+                    GM_setValue('version', GM_info.script.version)
+                    document.querySelector('#pluginOverlay').remove()
+                    config.edit()
+                }
+            }
+        }) as HTMLButtonElement
+        document.body.appendChild(renderNode({
+            nodeType: 'div',
+            attributes: {
+                id: 'pluginOverlay'
+            },
+            childs: [
+                {
+                    nodeType: 'div',
+                    className: 'main',
+                    childs: [
+                        {
+                            nodeType: 'h2',
+                            childs: [
+                                '请使用',
+                                {
+                                    nodeType: 'a',
+                                    attributes: {
+                                        href: 'https://www.tampermonkey.net/index.php?#download_gcal'
+                                    },
+                                    childs: 'Tampermonkey Beta'
+                                },
+                                '载入本脚本, 以保证可以利用脚本所有功能。'
+                            ]
+                        },
+                        {
+                            nodeType: 'h1',
+                            className: 'rainbow-text',
+                            childs: ['版本升级原有配置失效，现已清空。请重新配置！']
+                        },
+                        { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
+                        { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
+                        { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
+                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
+                        { nodeType: 'p', childs: '等待加载出视频卡片后, 点击侧边栏中“开关选择”开启下载复选框' },
+                        { nodeType: 'p', childs: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。' },
+                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
+                    ]
+                },
+                {
+                    nodeType: 'div',
+                    className: 'checkbox-container',
+                    childs: [
+                        {
+                            nodeType: 'input',
+                            className: 'checkbox',
+                            attributes: {
+                                type: 'checkbox',
+                                name: 'agree-checkbox'
+                            },
+                            events: {
+                                change: (event: Event) => {
+                                    confirmButton.disabled = !(event.target as HTMLInputElement).checked
+                                }
+                            }
+                        },
+                        {
+                            nodeType: 'label',
+                            className: 'checkbox-label',
+                            attributes: {
+                                for: 'agree-checkbox'
+                            },
+                            childs: {
+                                nodeType: 'h1',
+                                className: 'rainbow-text',
+                                childs: '我已知晓如何使用!!!'
+                            },
+                        },
+                    ],
+                },
+                confirmButton
+            ]
+        }))
+    } else {
+        if (!await config.check()) {
+            newToast(ToastType.Info, {
+                text: `脚本配置中存在错误，请修改。`,
+                duration: 60 * 1000,
+            }).showToast()
+            config.edit()
+        } else {
+            GM_setValue('version', GM_info.script.version)
+            document.body.appendChild(renderNode({
+                nodeType: "div",
+                attributes: {
+                    id: "pluginMenu"
+                },
+                childs: {
+                    nodeType: "ul",
+                    childs: [
+                        {
+                            nodeType: "li",
+                            childs: "开关选择",
+                            events: {
+                                click: () => {
+                                    let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
+                                    GM_getValue('isDebug') && console.log(compatibilityMode)
+                                    if (!document.querySelector('.selectButton')) {
+                                        let videoNodes = document.querySelectorAll(`.videoTeaser`)
+                                        newToast(ToastType.Info, {
+                                            text: `开始注入复选框 预计注入${videoNodes.length}个复选框`,
+                                            close: true
+                                        }).showToast()
+                                        videoNodes.forEach((element) => {
+                                            let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2]
+                                            let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
+                                            let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
+                                            node.appendChild(renderNode({
+                                                nodeType: "input",
+                                                attributes: Object.assign(
+                                                    videoList.has(ID) ? { checked: true } : {}, {
+                                                    type: "checkbox",
+                                                    videoID: ID,
+                                                    videoName: Name
+                                                }),
+                                                className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
+                                                events: {
+                                                    click: (event: Event) => {
+                                                        let target = event.target as HTMLInputElement
+                                                        target.checked ? videoList.set(ID, Name) : videoList.remove(ID)
+                                                        event.stopPropagation()
+                                                        event.stopImmediatePropagation();
+                                                        return false;
+                                                    }
                                                 }
-                                            }
-                                        }))
-                                    })
-                                } else {
+                                            }))
+                                        })
+                                    } else {
+                                        newToast(ToastType.Info, {
+                                            text: `开始移除复选框`,
+                                            close: true
+                                        }).showToast()
+                                        document.querySelectorAll('.selectButton').forEach((element) => {
+                                            //videoList.remove(element.getAttribute('videoid'))
+                                            element.remove()
+                                        })
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            nodeType: "li",
+                            childs: "下载所选",
+                            events: {
+                                click: (event: Event) => {
+                                    analyzeDownloadTask()
                                     newToast(ToastType.Info, {
-                                        text: `开始移除复选框`,
+                                        text: `正在下载所选, 请稍后...`,
                                         close: true
                                     }).showToast()
+                                    event.stopPropagation()
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: "li",
+                            childs: "全部选中",
+                            events: {
+                                click: (event: Event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
-                                        //videoList.remove(element.getAttribute('videoid'))
-                                        element.remove()
+                                        let button = element as HTMLInputElement
+                                        !button.checked && button.click()
                                     })
+                                    event.stopPropagation()
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: "li",
+                            childs: "取消全选",
+                            events: {
+                                click: (event: Event) => {
+                                    document.querySelectorAll('.selectButton').forEach((element) => {
+                                        let button = element as HTMLInputElement
+                                        button.checked && button.click()
+                                    })
+                                    event.stopPropagation()
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: "li",
+                            childs: "反向选中",
+                            events: {
+                                click: (event: Event) => {
+                                    document.querySelectorAll('.selectButton').forEach((element) => {
+                                        (element as HTMLInputElement).click()
+                                    })
+                                    event.stopPropagation()
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: "li",
+                            childs: "手动下载",
+                            events: {
+                                click: (event: Event) => {
+                                    addDownloadTask()
+                                    event.stopPropagation()
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: "li",
+                            childs: "打开设置",
+                            events: {
+                                click: (event: Event) => {
+                                    config.edit()
+                                    event.stopPropagation()
+                                    return false;
                                 }
                             }
                         }
-                    },
-                    {
-                        nodeType: "li",
-                        childs: "下载所选",
-                        events: {
-                            click: (event: Event) => {
-                                analyzeDownloadTask()
-                                newToast(ToastType.Info, {
-                                    text: `正在下载所选, 请稍后...`,
-                                    close: true
-                                }).showToast()
-                                event.stopPropagation()
-                                return false;
-                            }
-                        }
-                    },
-                    {
-                        nodeType: "li",
-                        childs: "全部选中",
-                        events: {
-                            click: (event: Event) => {
-                                document.querySelectorAll('.selectButton').forEach((element) => {
-                                    let button = element as HTMLInputElement
-                                    !button.checked && button.click()
-                                })
-                                event.stopPropagation()
-                                return false;
-                            }
-                        }
-                    },
-                    {
-                        nodeType: "li",
-                        childs: "取消全选",
-                        events: {
-                            click: (event: Event) => {
-                                document.querySelectorAll('.selectButton').forEach((element) => {
-                                    let button = element as HTMLInputElement
-                                    button.checked && button.click()
-                                })
-                                event.stopPropagation()
-                                return false;
-                            }
-                        }
-                    },
-                    {
-                        nodeType: "li",
-                        childs: "反向选中",
-                        events: {
-                            click: (event: Event) => {
-                                document.querySelectorAll('.selectButton').forEach((element) => {
-                                    (element as HTMLInputElement).click()
-                                })
-                                event.stopPropagation()
-                                return false;
-                            }
-                        }
-                    },
-                    {
-                        nodeType: "li",
-                        childs: "手动下载",
-                        events: {
-                            click: (event: Event) => {
-                                addDownloadTask()
-                                event.stopPropagation()
-                                return false;
-                            }
-                        }
-                    },
-                    {
-                        nodeType: "li",
-                        childs: "打开设置",
-                        events: {
-                            click: (event: Event) => {
-                                config.edit()
-                                event.stopPropagation()
-                                return false;
-                            }
-                        }
-                    }
-                ]
-            }
-        }))
-        newToast(ToastType.Info, {
-            text: `Iwara 批量下载工具加载完成`,
-            duration: 10000,
-            close: true
-        }).showToast()
+                    ]
+                }
+            }))
+            newToast(ToastType.Info, {
+                text: `Iwara 批量下载工具加载完成`,
+                duration: 10000,
+                close: true
+            }).showToast()
+        }
     }
 })()
