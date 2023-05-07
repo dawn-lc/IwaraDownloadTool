@@ -3,15 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {},
-  "devDependencies": {
-    "@types/react-dom": "^17.0.13",
-    "csstype": "^3.1.2"
-  },
   "dependencies": {
     "@types/greasemonkey": "^4.0.4",
     "@types/tampermonkey": "^4.0.10",
     "@types/toastify-js": "^1.11.1",
-    "decimal": "0.0.2",
     "toastify-js": "^1.12.0"
   }
 }

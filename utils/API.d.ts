@@ -1,4 +1,4 @@
-declare function GM_cookie(any,any,any);
+declare function GM_cookie(any: any,any: any,any: any);
 
 interface Object {
     getObjectString(): string;
