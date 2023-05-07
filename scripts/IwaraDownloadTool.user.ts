@@ -1047,7 +1047,6 @@
         }
     }
 
-
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         let size = list.size;
         let start = newToast(ToastType.Info, {
