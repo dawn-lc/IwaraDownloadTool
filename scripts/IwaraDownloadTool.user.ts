@@ -1489,7 +1489,6 @@
         GM_setValue('isFirstRun', true)
     }
 
-
     // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i))
