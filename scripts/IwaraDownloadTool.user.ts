@@ -958,17 +958,23 @@
     #pluginOverlay .checkbox {
         width: 32px;
         height: 32px;
+        margin: 0 4px 0 0;
+        padding: 0;
     }
 
     #pluginOverlay .checkbox-container {
         display: flex;
         align-items: center;
+        margin: 0 0 10px 0;
     }
 
     #pluginOverlay .checkbox-label {
         color: white;
-        font-size: 18px;
+        font-size: 32px;
+        font-weight: bold;
         margin-left: 10px;
+        display: flex;
+        align-items: center;
     }
 
     .selectButton {
@@ -1020,13 +1026,31 @@
             .join("");
     }
 
-    function versionDifference(A: Array<number>, B: Array<number>) {
-        return Array.from(A, (num, i) => num - B[i])
+
+    enum VersionState {
+        low,
+        equal,
+        high
     }
 
-    function versionArray(version: string) {
-        return version.split('.').map(i => Number(i))
+    function compareVersions(version1: string, version2: string): VersionState {
+        const v1 = version1.split('.').map(Number);
+        const v2 = version2.split('.').map(Number);
+
+        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+            const num1 = v1[i] || 0;
+            const num2 = v2[i] || 0;
+
+            if (num1 < num2) {
+                return VersionState.low;
+            } else if (num1 > num2) {
+                return VersionState.high;
+            }
+        }
+
+        return VersionState.equal;
     }
+
 
     async function getAuth(url?: string) {
         return Object.assign(
@@ -1049,10 +1073,13 @@
 
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         let size = list.size;
+        let node = renderNode({
+            nodeType:'p',
+            childs: `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+        })
         let start = newToast(ToastType.Info, {
-            text: `开始解析选中的${list.size}条视频信息...`,
-            duration: -1,
-            close: true
+            node: node,
+            duration: -1
         })
         start.showToast()
         for (const key in list.items) {
@@ -1063,7 +1090,7 @@
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.remove(key)
-                start.options.text = `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+                node.firstChild.textContent = `共${size}条视频, 还剩${list.size}条视频尚未解析。`
             }
         }
         start.hideToast()
@@ -1483,8 +1510,8 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
-
-    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.1.30')).filter(i => i < 0).any()) {
+    
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.30') === VersionState.low) {
         GM_setValue('isFirstRun', true)
     }
 
@@ -1531,11 +1558,6 @@
                                 '载入本脚本, 以保证可以利用脚本所有功能。'
                             ]
                         },
-                        {
-                            nodeType: 'h1',
-                            className: 'rainbow-text',
-                            childs: ['版本升级原有配置失效，现已清空。请重新配置！']
-                        },
                         { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
                         { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
                         { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
@@ -1549,8 +1571,10 @@
                 {
                     nodeType: 'div',
                     className: 'checkbox-container',
-                    childs: [
-                        {
+                    childs: {
+                        nodeType: 'label',
+                        className: ['checkbox-label','rainbow-text'],
+                        childs: [{
                             nodeType: 'input',
                             className: 'checkbox',
                             attributes: {
@@ -1562,20 +1586,9 @@
                                     confirmButton.disabled = !(event.target as HTMLInputElement).checked
                                 }
                             }
-                        },
-                        {
-                            nodeType: 'label',
-                            className: 'checkbox-label',
-                            attributes: {
-                                for: 'agree-checkbox'
-                            },
-                            childs: {
-                                nodeType: 'h1',
-                                className: 'rainbow-text',
-                                childs: '我已知晓如何使用!!!'
-                            },
-                        },
-                    ],
+                        },'我已知晓如何使用!!!'
+                        ]
+                    }
                 },
                 confirmButton
             ]
