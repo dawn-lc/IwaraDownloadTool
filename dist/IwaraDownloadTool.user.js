@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.61
+// @version           3.1.73
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -958,17 +958,23 @@
     #pluginOverlay .checkbox {
         width: 32px;
         height: 32px;
+        margin: 0 4px 0 0;
+        padding: 0;
     }
 
     #pluginOverlay .checkbox-container {
         display: flex;
         align-items: center;
+        margin: 0 0 10px 0;
     }
 
     #pluginOverlay .checkbox-label {
         color: white;
-        font-size: 18px;
+        font-size: 32px;
+        font-weight: bold;
         margin-left: 10px;
+        display: flex;
+        align-items: center;
     }
 
     .selectButton {
@@ -1019,11 +1025,26 @@
             .map(b => b.toString(16).padStart(2, "0"))
             .join("");
     }
-    function versionDifference(A, B) {
-        return Array.from(A, (num, i) => num - B[i]);
-    }
-    function versionArray(version) {
-        return version.split('.').map(i => Number(i));
+    let VersionState;
+    (function (VersionState) {
+        VersionState[VersionState["low"] = 0] = "low";
+        VersionState[VersionState["equal"] = 1] = "equal";
+        VersionState[VersionState["high"] = 2] = "high";
+    })(VersionState || (VersionState = {}));
+    function compareVersions(version1, version2) {
+        const v1 = version1.split('.').map(Number);
+        const v2 = version2.split('.').map(Number);
+        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+            const num1 = v1[i] || 0;
+            const num2 = v2[i] || 0;
+            if (num1 < num2) {
+                return VersionState.low;
+            }
+            else if (num1 > num2) {
+                return VersionState.high;
+            }
+        }
+        return VersionState.equal;
     }
     async function getAuth(url) {
         return Object.assign({
@@ -1423,7 +1444,7 @@
             });
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
-    if (versionDifference(versionArray(GM_getValue('version', '0.0.0')), versionArray('3.1.30')).filter(i => i < 0).any()) {
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.30') === VersionState.low) {
         GM_setValue('isFirstRun', true);
     }
     // 检查是否是首次运行脚本
@@ -1469,11 +1490,6 @@
                                 '载入本脚本, 以保证可以利用脚本所有功能。'
                             ]
                         },
-                        {
-                            nodeType: 'h1',
-                            className: 'rainbow-text',
-                            childs: ['版本升级原有配置失效，现已清空。请重新配置！']
-                        },
                         { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
                         { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
                         { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
@@ -1487,33 +1503,23 @@
                 {
                     nodeType: 'div',
                     className: 'checkbox-container',
-                    childs: [
-                        {
-                            nodeType: 'input',
-                            className: 'checkbox',
-                            attributes: {
-                                type: 'checkbox',
-                                name: 'agree-checkbox'
-                            },
-                            events: {
-                                change: (event) => {
-                                    confirmButton.disabled = !event.target.checked;
+                    childs: {
+                        nodeType: 'label',
+                        className: ['checkbox-label', 'rainbow-text'],
+                        childs: [{
+                                nodeType: 'input',
+                                className: 'checkbox',
+                                attributes: {
+                                    type: 'checkbox',
+                                    name: 'agree-checkbox'
+                                },
+                                events: {
+                                    change: (event) => {
+                                        confirmButton.disabled = !event.target.checked;
+                                    }
                                 }
-                            }
-                        },
-                        {
-                            nodeType: 'label',
-                            className: 'checkbox-label',
-                            attributes: {
-                                for: 'agree-checkbox'
-                            },
-                            childs: {
-                                nodeType: 'h1',
-                                className: 'rainbow-text',
-                                childs: '我已知晓如何使用!!!'
-                            },
-                        },
-                    ],
+                            }, '我已知晓如何使用!!!']
+                    }
                 },
                 confirmButton
             ]
