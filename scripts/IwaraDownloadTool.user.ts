@@ -1073,10 +1073,13 @@
 
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         let size = list.size;
+        let node = renderNode({
+            nodeType:'p',
+            childs: `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+        })
         let start = newToast(ToastType.Info, {
-            text: `开始解析选中的${list.size}条视频信息...`,
-            duration: -1,
-            close: true
+            node: node,
+            duration: -1
         })
         start.showToast()
         for (const key in list.items) {
@@ -1087,7 +1090,7 @@
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.remove(key)
-                start.options.text = `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+                node.firstChild.textContent = `共${size}条视频, 还剩${list.size}条视频尚未解析。`
             }
         }
         start.hideToast()
