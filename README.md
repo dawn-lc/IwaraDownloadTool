@@ -1,5 +1,17 @@
-# IwaraDownloadTool
-Iwara 视频下载工具
+[English]() [日本語]()
+# Iwara 视频下载工具
+
+ * 批量选中并下载
+ * 自定义保存位置以及文件名
+ * 支持Aria2
+ * 一键下载任意作者的全部视频
+ * 自动检查视频简介以及评论区中是否存在由作者提供的第三方网站高画质下载连接(例如:[Shiroko - Lilac (シロコ)](https://www.iwara.tv/videos/713gbud4yign5xpx))
+
+以下功能需要使用 **[Tampermonkey Beta](https://www.tampermonkey.net/index.php?#download_gcal)** 载入本脚本。
+* 支持下载上锁视频 <sup>*需要使用已与作者成为好友的账号进行下载</sup>
+* 支持下载隐藏视频 <sup>*需要知道视频ID</sup>
+
+## 使用说明
 
 ### 安装脚本
 
@@ -24,7 +36,5 @@ Iwara 视频下载工具
 * Windows、MacOS、Linux 等支持 Chrome 或 Firefox 浏览器的所有操作系统 <sup>*移动平台如 iOS、Android 除外</sup>
 
 
-## 第三方库
-
-本项目使用了以下第三方库：
+## 依赖库
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
