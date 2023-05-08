@@ -1648,12 +1648,7 @@
                                             }))
                                         })
                                     } else {
-                                        newToast(ToastType.Info, {
-                                            text: `开始移除复选框`,
-                                            close: true
-                                        }).showToast()
                                         document.querySelectorAll('.selectButton').forEach((element) => {
-                                            //videoList.remove(element.getAttribute('videoid'))
                                             element.remove()
                                         })
                                     }
