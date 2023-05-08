@@ -3,6 +3,8 @@ Iwara 视频下载工具
 
 ### 安装脚本
 
+* 从 GitHub 安装
+ **[点我](https://scriptcat.org/script-show-page/348)**
 * 从 GreasyFork 安装
  **[点我](https://greasyfork.org/scripts/422239)**  
 * 从 ScriptCat 安装
