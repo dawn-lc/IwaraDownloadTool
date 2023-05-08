@@ -1,5 +1,4 @@
 (async function () {
-
     if (GM_getValue('isDebug')) {
         debugger
     }
@@ -213,6 +212,19 @@
             }
         }
     }
+
+
+    class I18n {
+        zh_CN: {
+
+        }
+
+    }
+
+
+
+
+
     class Config {
         cookies: Array<any>
         checkDownloadLink: boolean
@@ -330,7 +342,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '下载到：',
+                                `%#downloadPath#%: `,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -351,7 +363,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '下载代理：',
+                                '%#downloadProxy#%: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -462,7 +474,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '重命名：',
+                                '%#rename#%: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -506,7 +518,7 @@
                 let save = renderNode({
                     nodeType: 'button',
                     className: 'closeButton',
-                    childs: '保存',
+                    childs: '%#save#%',
                     events: {
                         click: async () => {
                             save.disabled = !save.disabled;
@@ -530,13 +542,13 @@
                             childs: [
                                 {
                                     nodeType: 'h2',
-                                    childs: 'Iwara 批量下载工具'
+                                    childs: '%#appName#%'
                                 },
                                 {
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '下载方式：',
+                                        '%#downloadType#%: ',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
                                     ]
                                 },
@@ -544,7 +556,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '画质检查：',
+                                        '%#checkDownloadLink#%: ',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -570,7 +582,7 @@
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "关闭",
+                                                "%#off#%",
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign(
@@ -1737,7 +1749,7 @@
                 }
             }))
             newToast(ToastType.Info, {
-                text: `Iwara 批量下载工具加载完成`,
+                text: `加载完成`,
                 duration: 10000,
                 close: true
             }).showToast()
