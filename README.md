@@ -1,5 +1,5 @@
-# 脚本库
-自用
+# IwaraDownloadTool
+Iwara 视频下载工具
 
 ## 第三方库
 
