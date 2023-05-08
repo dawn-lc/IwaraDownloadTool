@@ -1,4 +1,4 @@
-[English]() [日本語]()
+[English](.github/README/README.md) [日本語](.github/README/README_ja.md)
 # Iwara 视频下载工具
 
  * 批量选中并下载
