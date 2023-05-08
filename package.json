@@ -1,12 +1,13 @@
 {
-  "name": "userscripts",
-  "version": "0.1.0",
+  "name": "iwaradownloadtool",
+  "version": "3.0.0",
   "private": true,
   "scripts": {},
   "dependencies": {
     "@types/greasemonkey": "^4.0.4",
     "@types/tampermonkey": "^4.0.10",
     "@types/toastify-js": "^1.11.1",
-    "toastify-js": "^1.12.0"
+    "toastify-js": "^1.12.0",
+    "typescript": "^5.0.4"
   }
 }

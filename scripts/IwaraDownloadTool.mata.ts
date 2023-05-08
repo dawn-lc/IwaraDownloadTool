@@ -6,15 +6,15 @@
 // @name:zh-CN        Iwara 批量下载工具
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
-// @namespace         https://github.com/dawn-lc/user.js
-// @version           3.1.75
+// @namespace         https://github.com/dawn-lc/
+// @version           3.1.84
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
-// @source            https://github.com/dawn-lc/user.js
-// @supportURL        https://github.com/dawn-lc/user.js/issues
-// @updateURL         https://github.com/dawn-lc/user.js/raw/master/dist/IwaraDownloadTool.mata.js
-// @downloadURL       https://github.com/dawn-lc/user.js/raw/master/dist/IwaraDownloadTool.user.js
+// @source            https://github.com/dawn-lc/IwaraDownloadTool
+// @supportURL        https://github.com/dawn-lc/IwaraDownloadTool/issues
+// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/IwaraDownloadTool.mata.js
+// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/IwaraDownloadTool.user.js
 // @connect           iwara.tv
 // @connect           www.iwara.tv
 // @connect           api.iwara.tv

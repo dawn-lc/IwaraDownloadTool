@@ -33,7 +33,7 @@
 			"label": "Main Build",
 			"group": "build",
 			"type": "shell",
-			"command": "tsc",
+			"command": "${workspaceFolder}/node_modules/typescript/bin/tsc",
 			"args": [
 				"--project",
 				"${workspaceFolder}"
@@ -42,6 +42,9 @@
 				"reveal": "silent",
 				"revealProblems": "onProblem",
 				"close": true
+			},
+			"windows": {
+				"command": "${workspaceFolder}\\node_modules\\.bin\\tsc.cmd"
 			},
 			"problemMatcher": []
 		},
