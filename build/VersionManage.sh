@@ -26,6 +26,7 @@ addVersion(){
     done
     echo $a
 }
+cd $(cd -P -- "$(dirname -- "$0")" && pwd -P)
 cd ../scripts/
 for i in `ls -1 *.mata.ts`
 do
