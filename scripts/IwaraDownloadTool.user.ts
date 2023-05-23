@@ -40,12 +40,12 @@
     }
     String.prototype.replaceUploadTime = function (time) {
         return this.replaceVariable({
-            UploadYear: time.getFullYear(),
-            UploadMonth: time.getMonth() + 1,
-            UploadDate: time.getDate(),
-            UploadHours: time.getHours(),
-            UploadMinutes: time.getMinutes(),
-            UploadSeconds: time.getSeconds()
+            uY: time.getFullYear(),
+            uM: time.getMonth() + 1,
+            uD: time.getDate(),
+            uh: time.getHours(),
+            um: time.getMinutes(),
+            us: time.getSeconds()
         })
     }
     String.prototype.toURL = function () {
@@ -208,9 +208,13 @@
             on: "开启",
             off: "关闭",
             downloadType: "下载方式: ",
-            checkDownloadLink: "画质检查: "
+            checkDownloadLink: "画质检查: ",
+            variable: "可用变量: ",
+            downloadTime: "下载时间 ",
+            uploadTime: "发布时间 ",
+            example: "示例: ",
+            result: "结果: "
         }
-
     }
 
 
@@ -613,11 +617,17 @@
                                 },
                                 {
                                     nodeType: 'p',
-                                    childs: [{ nodeType: 'label', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                                    { nodeType: 'label', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
-                                    { nodeType: 'label', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
-                                    { nodeType: 'label', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                                    { nodeType: 'label', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), }]
+                                    childs: [
+                                        { nodeType: 'label', childs: '%#variable#%' },
+                                        { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
+                                        { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
+                                        { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
+                                        { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                                        { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                                            TITLE: "ExampleTitle",
+                                            ID: "ExampleID"
+                                        })}`}
+                                    ]
                                 },
                                 {
                                     nodeType: 'p',
@@ -1096,7 +1106,7 @@
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         let size = list.size;
         let node = renderNode({
-            nodeType:'p',
+            nodeType: 'p',
             childs: `共${size}条视频, 还剩${list.size}条视频尚未解析。`
         })
         let start = newToast(ToastType.Info, {
@@ -1532,7 +1542,7 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
-    
+
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.30') === VersionState.low) {
         GM_setValue('isFirstRun', true)
     }
@@ -1595,7 +1605,7 @@
                     className: 'checkbox-container',
                     childs: {
                         nodeType: 'label',
-                        className: ['checkbox-label','rainbow-text'],
+                        className: ['checkbox-label', 'rainbow-text'],
                         childs: [{
                             nodeType: 'input',
                             className: 'checkbox',
@@ -1608,7 +1618,7 @@
                                     confirmButton.disabled = !(event.target as HTMLInputElement).checked
                                 }
                             }
-                        },'我已知晓如何使用!!!'
+                        }, '我已知晓如何使用!!!'
                         ]
                     }
                 },
