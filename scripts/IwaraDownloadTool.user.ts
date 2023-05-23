@@ -353,6 +353,20 @@
                     }
                     let downloadConfigInput = [
                         renderNode({
+                            nodeType: 'p',
+                            childs: [
+                                { nodeType: 'label', childs: '%#variable#%' },
+                                { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
+                                { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
+                                { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
+                                { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                                { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                                    TITLE: "ExampleTitle",
+                                    ID: "ExampleID"
+                                })}`}
+                            ]
+                        }),
+                        renderNode({
                             nodeType: 'label',
                             childs: [
                                 `%#downloadPath#%`,
@@ -613,20 +627,6 @@
                                                 }
                                             ]
                                         }
-                                    ]
-                                },
-                                {
-                                    nodeType: 'p',
-                                    childs: [
-                                        { nodeType: 'label', childs: '%#variable#%' },
-                                        { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
-                                        { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
-                                        { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
-                                        { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                                        { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
-                                            TITLE: "ExampleTitle",
-                                            ID: "ExampleID"
-                                        })}`}
                                     ]
                                 },
                                 {
