@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.95
+// @version           3.1.96
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -378,7 +378,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                `%#downloadPath#%: `,
+                                `%#downloadPath#%`,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -397,7 +397,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '%#downloadProxy#%: ',
+                                '%#downloadProxy#%',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -418,7 +418,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'Aria2 RPC：',
+                                'Aria2 RPC: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -437,7 +437,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'Aria2 Token：',
+                                'Aria2 Token: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -458,7 +458,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'IwaraDownloader RPC：',
+                                'IwaraDownloader RPC: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -477,7 +477,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'IwaraDownloader Token：',
+                                'IwaraDownloader Token: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -570,7 +570,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#downloadType#%: ',
+                                        '%#downloadType#%',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
                                     ]
                                 },
@@ -578,7 +578,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#checkDownloadLink#%: ',
+                                        '%#checkDownloadLink#%',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',

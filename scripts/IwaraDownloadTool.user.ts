@@ -355,7 +355,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                `%#downloadPath#%: `,
+                                `%#downloadPath#%`,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -376,7 +376,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '%#downloadProxy#%: ',
+                                '%#downloadProxy#%',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -399,7 +399,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'Aria2 RPC：',
+                                'Aria2 RPC: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -420,7 +420,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'Aria2 Token：',
+                                'Aria2 Token: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -443,7 +443,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'IwaraDownloader RPC：',
+                                'IwaraDownloader RPC: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -464,7 +464,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'IwaraDownloader Token：',
+                                'IwaraDownloader Token: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -561,7 +561,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#downloadType#%: ',
+                                        '%#downloadType#%',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
                                     ]
                                 },
@@ -569,7 +569,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#checkDownloadLink#%: ',
+                                        '%#checkDownloadLink#%',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
