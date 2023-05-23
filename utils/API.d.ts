@@ -29,10 +29,10 @@ type RenderCode = string | Node | Element | {
 }
 
 interface LocalPath {
+    [key: string]: any;
     fullPath: string;
     drive: string;
     filename: string;
-    match: boolean;
 }
 
 

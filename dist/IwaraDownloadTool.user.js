@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.99
+// @version           3.1.100
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -241,7 +241,14 @@
             downloadTime: "下载时间 ",
             uploadTime: "发布时间 ",
             example: "示例: ",
-            result: "结果: "
+            result: "结果: ",
+            loadingCompleted: "加载完成",
+            settings: "打开设置",
+            manualDownload: "手动下载",
+            reverseSelect: "反向选中",
+            deselect: "取消选中",
+            selectAll: "全部选中",
+            downloadSelected: "下载所选"
         };
     }
     const renderNode = function (renderCode) {
@@ -375,14 +382,15 @@
                         page.removeChild(page.firstChild);
                     }
                     let variableInfo = renderNode({
-                        nodeType: 'p',
+                        nodeType: 'label',
                         childs: [
                             { nodeType: 'label', childs: '%#variable#%' },
                             { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
                             { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
                             { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
-                            { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                            { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                            { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4' },
+                            { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                                    AUTHOR: "ExampleAuthorID",
                                     TITLE: "ExampleTitle",
                                     ID: "ExampleID"
                                 })}` }
@@ -1159,10 +1167,10 @@
             childs: [
                 notNull(title) && !title.isEmpty() ? {
                     nodeType: 'h3',
-                    childs: `Iwara 批量下载工具 - ${title}`
+                    childs: `%#appName#% - ${title}`
                 } : {
                     nodeType: 'h3',
-                    childs: 'Iwara 批量下载工具'
+                    childs: '%#appName#%'
                 },
                 {
                     nodeType: 'p',
@@ -1203,13 +1211,17 @@
                 background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))"
             }
         }, notNull(params) && params);
-        logFunc(notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined');
+        logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language]));
         return Toastify(params);
     }
     async function pustDownloadTask(videoInfo) {
         if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
             let toast = newToast(ToastType.Warn, {
-                node: toastNode([`在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `, { nodeType: 'br' }, `点击此处，进入视频页面`], '创建任务'),
+                node: toastNode([
+                    `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `,
+                    { nodeType: 'br' },
+                    `点击此处，进入视频页面`
+                ], '创建任务'),
                 onClick() {
                     GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true });
                     toast.hideToast();
@@ -1220,7 +1232,11 @@
         }
         if (config.checkDownloadLink && videoInfo.DownloadQuality != 'Source') {
             let toast = newToast(ToastType.Warn, {
-                node: toastNode([`在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`], '创建任务'),
+                node: toastNode([
+                    `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `,
+                    { nodeType: 'br' },
+                    `→ 点击此处，进入视频页面 ←`
+                ], '创建任务'),
                 onClick() {
                     GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true });
                     toast.hideToast();
@@ -1246,16 +1262,16 @@
     }
     function analyzeLocalPath(path) {
         let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/);
+        isNull(matchPath) ?? new Error(`无法解析的下载路径，请检查路径是否合法！["${path}"]`);
         try {
             return {
                 fullPath: matchPath[0],
                 drive: matchPath[1] || '',
-                filename: matchPath[3],
-                match: matchPath !== null
+                filename: matchPath[3]
             };
         }
         catch (error) {
-            throw new Error(`错误的下载路径，请检查路径是否存在！${matchPath.join('-')}`);
+            throw new Error(`错误的下载路径，请检查路径是否存在！["${matchPath.join('","')}"]`);
         }
     }
     async function EnvCheck() {
@@ -1284,7 +1300,11 @@
     }
     async function localPathCheck() {
         try {
-            analyzeLocalPath(config.downloadPath);
+            let pathTest = analyzeLocalPath(config.downloadPath);
+            for (const key in pathTest) {
+                if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
+                }
+            }
         }
         catch (error) {
             let toast = newToast(ToastType.Error, {
@@ -1623,7 +1643,7 @@
                         },
                         {
                             nodeType: "li",
-                            childs: "下载所选",
+                            childs: "%#downloadSelected#%",
                             events: {
                                 click: (event) => {
                                     analyzeDownloadTask();
@@ -1638,7 +1658,7 @@
                         },
                         {
                             nodeType: "li",
-                            childs: "全部选中",
+                            childs: "%#selectAll#%",
                             events: {
                                 click: (event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1652,7 +1672,7 @@
                         },
                         {
                             nodeType: "li",
-                            childs: "取消全选",
+                            childs: "%#deselect#%",
                             events: {
                                 click: (event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1666,7 +1686,7 @@
                         },
                         {
                             nodeType: "li",
-                            childs: "反向选中",
+                            childs: "%#reverseSelect#%",
                             events: {
                                 click: (event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1679,7 +1699,7 @@
                         },
                         {
                             nodeType: "li",
-                            childs: "手动下载",
+                            childs: "%#manualDownload#%",
                             events: {
                                 click: (event) => {
                                     addDownloadTask();
@@ -1690,7 +1710,7 @@
                         },
                         {
                             nodeType: "li",
-                            childs: "打开设置",
+                            childs: "%#settings#%",
                             events: {
                                 click: (event) => {
                                     config.edit();
@@ -1703,7 +1723,7 @@
                 }
             }));
             newToast(ToastType.Info, {
-                text: `加载完成`,
+                text: `%#loadingCompleted#%`,
                 duration: 10000,
                 close: true
             }).showToast();
