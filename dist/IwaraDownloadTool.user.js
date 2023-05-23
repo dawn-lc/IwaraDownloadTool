@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.89
+// @version           3.1.91
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -92,6 +92,7 @@
     Array.prototype.any = function () {
         return this.length > 0;
     };
+    const language = navigator.language ?? navigator.languages[0];
     const getString = function (obj) {
         obj = obj instanceof Error ? String(obj) : obj;
         return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj);
@@ -113,24 +114,6 @@
     };
     const notNull = function (obj) {
         return obj !== undefined && obj !== null;
-    };
-    const renderNode = function (renderCode) {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode);
-        }
-        if (renderCode instanceof Node) {
-            return renderCode;
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments');
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode;
-        const node = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node;
     };
     async function get(url, referrer = unsafeWindow.location.href, headers = {}) {
         if (url.hostname !== unsafeWindow.location.hostname) {
@@ -243,6 +226,27 @@
             }
         }
     }
+    class I18N {
+        zh_CN;
+    }
+    const renderNode = function (renderCode) {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode.replaceVariable(i18n[language]).toString());
+        }
+        if (renderCode instanceof Node) {
+            return renderCode;
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments');
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode;
+        const node = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node;
+    };
     class Config {
         cookies;
         checkDownloadLink;
@@ -359,7 +363,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '下载到：',
+                                `%#downloadPath#%: `,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -378,7 +382,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '下载代理：',
+                                '%#downloadProxy#%: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -479,7 +483,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '重命名：',
+                                '%#rename#%: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -521,7 +525,7 @@
                 let save = renderNode({
                     nodeType: 'button',
                     className: 'closeButton',
-                    childs: '保存',
+                    childs: '%#save#%',
                     events: {
                         click: async () => {
                             save.disabled = !save.disabled;
@@ -545,13 +549,13 @@
                             childs: [
                                 {
                                     nodeType: 'h2',
-                                    childs: 'Iwara 批量下载工具'
+                                    childs: '%#appName#%'
                                 },
                                 {
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '下载方式：',
+                                        '%#downloadType#%: ',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
                                     ]
                                 },
@@ -559,12 +563,12 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '画质检查：',
+                                        '%#checkDownloadLink#%: ',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "开启",
+                                                "%#on#%",
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign({
@@ -582,7 +586,7 @@
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "关闭",
+                                                "%#off#%",
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign({
@@ -731,6 +735,7 @@
             }
         }
     }
+    let i18n = new I18N();
     let config = new Config();
     let videoList = new Dictionary();
     // @ts-ignore
@@ -1673,7 +1678,7 @@
                 }
             }));
             newToast(ToastType.Info, {
-                text: `Iwara 批量下载工具加载完成`,
+                text: `加载完成`,
                 duration: 10000,
                 close: true
             }).showToast();

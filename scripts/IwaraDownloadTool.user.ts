@@ -58,6 +58,8 @@
         return this.length > 0
     }
 
+    const language = navigator.language ?? navigator.languages[0];
+
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
         return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj)
@@ -79,25 +81,6 @@
     }
     const notNull = function (obj: any): boolean {
         return obj !== undefined && obj !== null
-    }
-
-    const renderNode = function (renderCode: RenderCode): Node | Element {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode)
-        }
-        if (renderCode instanceof Node) {
-            return renderCode
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments')
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode
-        const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node
     }
 
     async function get(url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}): Promise<string> {
@@ -214,15 +197,41 @@
     }
 
 
-    class I18n {
+    class I18N {
+        [key: string]: any;
         zh_CN: {
-
+            appName: "Iwara 批量下载工具",
+            downloadPath: "下载到: ",
+            downloadProxy: "下载代理: ",
+            rename: "重命名: ",
+            save: "保存",
+            on: "开启",
+            off: "关闭",
+            downloadType: "下载方式: ",
+            checkDownloadLink: "画质检查: "
         }
 
     }
 
 
-
+    const renderNode = function (renderCode: RenderCode): Node | Element {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode.replaceVariable(i18n[language]).toString())
+        }
+        if (renderCode instanceof Node) {
+            return renderCode
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments')
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode
+        const node: Element = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node
+    }
 
 
     class Config {
@@ -561,7 +570,7 @@
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "开启",
+                                                "%#on#%",
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign(
@@ -740,6 +749,7 @@
         }
     }
 
+    let i18n = new I18N()
     let config = new Config()
     let videoList = new Dictionary<string>();
     // @ts-ignore
