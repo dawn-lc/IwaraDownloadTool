@@ -58,7 +58,7 @@
         return this.length > 0
     }
 
-    const language = navigator.language ?? navigator.languages[0];
+    const language = (navigator.language ?? navigator.languages[0]).replace('-','_');
 
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
