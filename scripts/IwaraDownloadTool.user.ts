@@ -1236,6 +1236,9 @@
             },
             notNull(params) && params
         )
+        if (notNull(params.text)){
+            params.text = params.text.replaceVariable(i18n[language]).toString()
+        }
         logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language]))
         return Toastify(params)
     }

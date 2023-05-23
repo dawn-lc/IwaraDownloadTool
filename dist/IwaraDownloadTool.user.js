@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.100
+// @version           3.1.101
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -1211,6 +1211,9 @@
                 background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))"
             }
         }, notNull(params) && params);
+        if (notNull(params.text)) {
+            params.text = params.text.replaceVariable(i18n[language]).toString();
+        }
         logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language]));
         return Toastify(params);
     }
