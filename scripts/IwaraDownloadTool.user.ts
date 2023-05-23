@@ -199,7 +199,7 @@
 
     class I18N {
         [key: string]: any;
-        zh_CN: {
+        public zh_CN : { [key: string]: string } = {
             appName: "Iwara 批量下载工具",
             downloadPath: "下载到: ",
             downloadProxy: "下载代理: ",

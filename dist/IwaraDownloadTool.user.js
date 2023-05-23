@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.91
+// @version           3.1.94
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -75,12 +75,12 @@
     };
     String.prototype.replaceUploadTime = function (time) {
         return this.replaceVariable({
-            UploadYear: time.getFullYear(),
-            UploadMonth: time.getMonth() + 1,
-            UploadDate: time.getDate(),
-            UploadHours: time.getHours(),
-            UploadMinutes: time.getMinutes(),
-            UploadSeconds: time.getSeconds()
+            uY: time.getFullYear(),
+            uM: time.getMonth() + 1,
+            uD: time.getDate(),
+            uh: time.getHours(),
+            um: time.getMinutes(),
+            us: time.getSeconds()
         });
     };
     String.prototype.toURL = function () {
@@ -227,7 +227,22 @@
         }
     }
     class I18N {
-        zh_CN;
+        zh_CN = {
+            appName: "Iwara 批量下载工具",
+            downloadPath: "下载到: ",
+            downloadProxy: "下载代理: ",
+            rename: "重命名: ",
+            save: "保存",
+            on: "开启",
+            off: "关闭",
+            downloadType: "下载方式: ",
+            checkDownloadLink: "画质检查: ",
+            variable: "可用变量: ",
+            downloadTime: "下载时间 ",
+            uploadTime: "发布时间 ",
+            example: "示例: ",
+            result: "结果: "
+        };
     }
     const renderNode = function (renderCode) {
         if (typeof renderCode === "string") {
@@ -605,11 +620,17 @@
                                 },
                                 {
                                     nodeType: 'p',
-                                    childs: [{ nodeType: 'label', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                                        { nodeType: 'label', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
-                                        { nodeType: 'label', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
-                                        { nodeType: 'label', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                                        { nodeType: 'label', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), }]
+                                    childs: [
+                                        { nodeType: 'label', childs: '%#variable#%' },
+                                        { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
+                                        { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
+                                        { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
+                                        { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                                        { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                                                TITLE: "ExampleTitle",
+                                                ID: "ExampleID"
+                                            })}` }
+                                    ]
                                 },
                                 {
                                     nodeType: 'p',
