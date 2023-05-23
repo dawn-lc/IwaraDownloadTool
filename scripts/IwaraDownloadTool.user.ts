@@ -351,21 +351,22 @@
                     while (page.hasChildNodes()) {
                         page.removeChild(page.firstChild);
                     }
+                    let variableInfo = renderNode({
+                        nodeType: 'p',
+                        childs: [
+                            { nodeType: 'label', childs: '%#variable#%' },
+                            { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
+                            { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
+                            { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
+                            { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
+                            { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                                TITLE: "ExampleTitle",
+                                ID: "ExampleID"
+                            })}`}
+                        ]
+                    })
                     let downloadConfigInput = [
-                        renderNode({
-                            nodeType: 'p',
-                            childs: [
-                                { nodeType: 'label', childs: '%#variable#%' },
-                                { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
-                                { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
-                                { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
-                                { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                                { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
-                                    TITLE: "ExampleTitle",
-                                    ID: "ExampleID"
-                                })}`}
-                            ]
-                        }),
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
@@ -410,6 +411,7 @@
                         })
                     ]
                     let aria2ConfigInput = [
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
@@ -454,6 +456,7 @@
                         })
                     ]
                     let iwaraDownloaderConfigInput = [
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
@@ -498,10 +501,11 @@
                         })
                     ]
                     let BrowserConfigInput = [
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '%#rename#%: ',
+                                '%#rename#%',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
