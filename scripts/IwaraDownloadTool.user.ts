@@ -198,16 +198,19 @@
 
 
     class I18N {
-        [key: string]: any;
-        public zh_CN : { [key: string]: string } = {
+        [key: string]: { [key: string]: string };
+        public zh_CN = {
             appName: "Iwara 批量下载工具",
             downloadPath: "下载到: ",
             downloadProxy: "下载代理: ",
             rename: "重命名: ",
             save: "保存",
+            ok: "确定",
             on: "开启",
             off: "关闭",
             downloadType: "下载方式: ",
+            browserDownload: "浏览器下载",
+            iwaraDownloaderDownload: "iwaraDownloader下载",
             checkDownloadLink: "画质检查: ",
             variable: "可用变量: ",
             downloadTime: "下载时间 ",
@@ -220,7 +223,21 @@
             reverseSelect: "反向选中",
             deselect: "取消选中",
             selectAll: "全部选中",
-            downloadSelected: "下载所选"
+            downloadSelected: "下载所选",
+            downloadingSelected: "正在下载所选, 请稍后...",
+            injectCheckbox: "开关选择",
+            configError: "脚本配置中存在错误，请修改。",
+            alreadyKnowHowToUse: "我已知晓如何使用!!!",
+            useHelpForInjectCheckbox:`等待加载出视频卡片后, 点击侧边栏中[${this['injectCheckbox']}]开启下载复选框`,
+            useHelpForCheckDownloadLink: "下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。",
+            useHelpForManualDownload: "手动下载需要您提供视频ID!",
+            downloadFailed: "下载失败！",
+            tryRestartingDownload: "→ 点击此处重新下载 ←",
+            pushTaskFailed: "推送下载任务失败！",
+            pushTaskSucceed: "推送下载任务成功！",
+            connectionTest: "连接测试",
+            settingsCheck: "配置检查",
+            downloadPathError: "下载路径错误!"
         }
     }
 
@@ -1320,10 +1337,10 @@
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `无法保存配置, 请检查配置是否正确。`,
+                        `%#configError#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
+                        getString(error)
+                    ], '%#settingsCheck#%'),
                     position: "center",
                     onClick() {
                         toast.hideToast()
@@ -1347,10 +1364,10 @@
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `下载路径存在问题！`,
+                        `%#downloadPathError#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
+                        getString(error)
+                    ], '%#settingsCheck#%'),
                     position: "center",
                     onClick() {
                         toast.hideToast()
@@ -1378,10 +1395,10 @@
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `Aria2 RPC 连接测试`,
+                        `Aria2 RPC %#connectionTest#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
+                        getString(error)
+                    ], '%#settingsCheck#%'),
                     position: "center",
                     onClick() {
                         toast.hideToast()
@@ -1409,10 +1426,10 @@
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `IwaraDownloader RPC 连接测试`,
+                        `IwaraDownloader RPC %#connectionTest#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
+                        getString(error)
+                    ], '%#settingsCheck#%'),
                     position: "center",
                     onClick() {
                         toast.hideToast()
@@ -1460,7 +1477,7 @@
             newToast(
                 ToastType.Info,
                 {
-                    node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`)
+                    node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
@@ -1499,11 +1516,11 @@
             )))
 
             if (r.code == 0) {
-                console.log(`${videoInfo.Name} 已推送到IwaraDownloader ${r}`)
+                console.log(`${videoInfo.Name} %#pushTaskSucceed#% ${r}`)
                 newToast(
                     ToastType.Info,
                     {
-                        node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到IwaraDownloader`)
+                        node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                     }
                 ).showToast()
             } else {
@@ -1511,10 +1528,10 @@
                     ToastType.Error,
                     {
                         node: toastNode([
-                            `在推送 ${videoInfo.Name}[${videoInfo.ID}] 下载任务到IwaraDownloader过程中出现错误! `,
+                            `${videoInfo.Name}[${videoInfo.ID}] %#pushTaskFailed#% `,
                             { nodeType: 'br' },
-                            `错误信息: ${r.msg}`
-                        ], '推送下载任务'),
+                            r.msg
+                        ], '%#iwaraDownloaderDownload#%'),
                         position: "center",
                         onClick() {
                             toast.hideToast()
@@ -1537,12 +1554,12 @@
                     ToastType.Error,
                     {
                         node: toastNode([
-                            `在下载 ${Name}[${ID}] 的过程中出现问题!  `,
+                            `${Name}[${ID}] %#downloadFailed#%`,
                             { nodeType: 'br' },
-                            `错误信息: ${getString(error)}`,
+                            getString(error),
                             { nodeType: 'br' },
-                            `→ 点击此处重新下载 ←`
-                        ], '下载任务'),
+                            `%#tryRestartingDownload#%`
+                        ], '%#browserDownload#%'),
                         position: "center",
                         onClick() {
                             analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
@@ -1583,7 +1600,7 @@
             attributes: {
                 disabled: true
             },
-            childs: '确定',
+            childs: '%#ok#%',
             events: {
                 click: () => {
                     GM_setValue('isFirstRun', false)
@@ -1603,28 +1620,9 @@
                     nodeType: 'div',
                     className: 'main',
                     childs: [
-                        {
-                            nodeType: 'h2',
-                            childs: [
-                                '请使用',
-                                {
-                                    nodeType: 'a',
-                                    attributes: {
-                                        href: 'https://www.tampermonkey.net/index.php?#download_gcal'
-                                    },
-                                    childs: 'Tampermonkey Beta'
-                                },
-                                '载入本脚本, 以保证可以利用脚本所有功能。'
-                            ]
-                        },
-                        { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                        { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
-                        { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
-                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '等待加载出视频卡片后, 点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。' },
-                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
+                        { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
+                        { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
+                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' }
                     ]
                 },
                 {
@@ -1645,7 +1643,7 @@
                                     confirmButton.disabled = !(event.target as HTMLInputElement).checked
                                 }
                             }
-                        }, '我已知晓如何使用!!!'
+                        }, '%#alreadyKnowHowToUse#%'
                         ]
                     }
                 },
@@ -1655,7 +1653,7 @@
     } else {
         if (!await config.check()) {
             newToast(ToastType.Info, {
-                text: `脚本配置中存在错误，请修改。`,
+                text: `%#configError#%`,
                 duration: 60 * 1000,
             }).showToast()
             config.edit()
@@ -1671,17 +1669,13 @@
                     childs: [
                         {
                             nodeType: "li",
-                            childs: "开关选择",
+                            childs: "%#injectCheckbox#%",
                             events: {
                                 click: () => {
                                     let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
                                     GM_getValue('isDebug') && console.log(compatibilityMode)
                                     if (!document.querySelector('.selectButton')) {
                                         let videoNodes = document.querySelectorAll(`.videoTeaser`)
-                                        newToast(ToastType.Info, {
-                                            text: `开始注入复选框 预计注入${videoNodes.length}个复选框`,
-                                            close: true
-                                        }).showToast()
                                         videoNodes.forEach((element) => {
                                             let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2]
                                             let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
@@ -1721,7 +1715,7 @@
                                 click: (event: Event) => {
                                     analyzeDownloadTask()
                                     newToast(ToastType.Info, {
-                                        text: `正在下载所选, 请稍后...`,
+                                        text: `%#downloadingSelected#%`,
                                         close: true
                                     }).showToast()
                                     event.stopPropagation()
