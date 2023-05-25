@@ -61,7 +61,7 @@
         return this.filter(Boolean).length > 0
     }
 
-    const language = (navigator.language ?? navigator.languages[0]).replace('-','_');
+    const language = (navigator.language ?? navigator.languages[0] ?? 'zh-CN').replace('-','_');
 
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
@@ -96,7 +96,7 @@
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
                     onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
                 });
             });
             return data.responseText;
@@ -107,8 +107,8 @@
             }, headers),
             'referrer': referrer,
             'method': 'GET',
-            "mode": "cors",
-            "credentials": "include"
+            'mode': 'cors',
+            'credentials': 'include'
         })).text();
     }
     async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
@@ -124,7 +124,7 @@
                     }, headers),
                     data: body,
                     onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
                 });
             });
             return data.responseText;
@@ -136,8 +136,8 @@
             'referrer': referrer,
             'body': body,
             'method': 'POST',
-            "mode": "cors",
-            "credentials": "include"
+            'mode': 'cors',
+            'credentials': 'include'
         })).text();
     }
 
@@ -203,44 +203,58 @@
     class I18N {
         [key: string]: { [key: string]: string };
         public zh_CN: { [key: string]: string }= {
-            appName: "Iwara 批量下载工具",
-            downloadPath: "下载到: ",
-            downloadProxy: "下载代理: ",
-            rename: "重命名: ",
-            save: "保存",
-            ok: "确定",
-            on: "开启",
-            off: "关闭",
-            downloadType: "下载方式: ",
-            browserDownload: "浏览器下载",
-            iwaraDownloaderDownload: "iwaraDownloader下载",
-            checkDownloadLink: "画质检查: ",
-            variable: "可用变量: ",
-            downloadTime: "下载时间 ",
-            uploadTime: "发布时间 ",
-            example: "示例: ",
-            result: "结果: ",
-            loadingCompleted: "加载完成",
-            settings: "打开设置",
-            manualDownload: "手动下载",
-            reverseSelect: "反向选中",
-            deselect: "取消选中",
-            selectAll: "全部选中",
-            downloadSelected: "下载所选",
-            downloadingSelected: "正在下载所选, 请稍后...",
-            injectCheckbox: "开关选择",
-            configError: "脚本配置中存在错误，请修改。",
-            alreadyKnowHowToUse: "我已知晓如何使用!!!",
+            appName: 'Iwara 批量下载工具',
+            downloadPath: '下载到: ',
+            downloadProxy: '下载代理: ',
+            rename: '重命名: ',
+            save: '保存',
+            ok: '确定',
+            on: '开启',
+            off: '关闭',
+            downloadType: '下载方式: ',
+            browserDownload: '浏览器下载',
+            iwaraDownloaderDownload: 'iwaraDownloader下载',
+            checkDownloadLink: '高画质下载连接检查: ',
+            variable: '可用变量: ',
+            downloadTime: '下载时间 ',
+            uploadTime: '发布时间 ',
+            example: '示例: ',
+            result: '结果: ',
+            loadingCompleted: '加载完成',
+            settings: '打开设置',
+            manualDownload: '手动下载',
+            reverseSelect: '反向选中',
+            deselect: '取消选中',
+            selectAll: '全部选中',
+            downloadSelected: '下载所选',
+            downloadingSelected: '正在下载所选, 请稍后...',
+            injectCheckbox: '开关选择',
+            configError: '脚本配置中存在错误，请修改。',
+            alreadyKnowHowToUse: '我已知晓如何使用!!!',
             useHelpForInjectCheckbox: `等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载复选框`,
-            useHelpForCheckDownloadLink: "下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。",
-            useHelpForManualDownload: "手动下载需要您提供视频ID!",
-            downloadFailed: "下载失败！",
-            tryRestartingDownload: "→ 点击此处重新下载 ←",
-            pushTaskFailed: "推送下载任务失败！",
-            pushTaskSucceed: "推送下载任务成功！",
-            connectionTest: "连接测试",
-            settingsCheck: "配置检查",
-            downloadPathError: "下载路径错误!"
+            useHelpForCheckDownloadLink: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。',
+            useHelpForManualDownload: '手动下载需要您提供视频ID!',
+            downloadFailed: '下载失败！',
+            tryRestartingDownload: '→ 点击此处重新解析 ←',
+            openVideoLink: '→ 进入视频页面 ←',
+            pushTaskFailed: '推送下载任务失败！',
+            pushTaskSucceed: '推送下载任务成功！',
+            connectionTest: '连接测试',
+            settingsCheck: '配置检查',
+            parsingFailed: '视频信息解析失败！',
+            createTask: '创建任务',
+            downloadPathError: '下载路径错误!',
+            browserDownloadModeError: '请启用脚本管理器的浏览器API下载模式!',
+            downloadQualityError: '无原画下载地址!',
+            findedDownloadLink: '发现疑似高画质下载连接!',
+            allCompleted: '全部解析完成！',
+            parsingProgress: '解析进度: ',
+            manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...',
+            externalVideo: `非本站视频`,
+            getVideoSourceFailed: '获取视频源失败',
+            noAvailableVideoSource: '没有可供下载的视频源',
+            videoSourceNotAvailable: '视频源地址不可用',
+
         }
     }
 
@@ -381,16 +395,21 @@
                     let variableInfo = renderNode({
                         nodeType: 'label',
                         childs: [
-                            { nodeType: 'label', childs: '%#variable#%' },
-                            { nodeType: 'label', childs: '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%' },
-                            { nodeType: 'label', childs: '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%' },
-                            { nodeType: 'label', childs: '%#TITLE#% | %#ID#% | %#AUTHOR#%' },
-                            { nodeType: 'label', childs: '%#example#% %#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4' },
-                            { nodeType: 'label', childs: `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
-                                AUTHOR: "ExampleAuthorID",
-                                TITLE: "ExampleTitle",
-                                ID: "ExampleID"
-                            })}`}
+                            '%#variable#%',
+                            { nodeType: 'br'},
+                            '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%',
+                            { nodeType: 'br'},
+                            '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%',
+                            { nodeType: 'br'},
+                            '%#TITLE#% | %#ID#% | %#AUTHOR#%',
+                            { nodeType: 'br'},
+                            '%#example#% %#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
+                            { nodeType: 'br'},
+                            `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                                AUTHOR: 'ExampleAuthorID',
+                                TITLE: 'ExampleTitle',
+                                ID: 'ExampleID'
+                            })}`
                         ]
                     })
                     let downloadConfigInput = [
@@ -620,7 +639,7 @@
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "%#on#%",
+                                                '%#on#%',
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign(
@@ -641,7 +660,7 @@
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "%#off#%",
+                                                '%#off#%',
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign(
@@ -704,12 +723,12 @@
                 this.ID = ID.toLocaleLowerCase()
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), unsafeWindow.location.href, await getAuth()))
                 if (this.VideoInfoSource.id === undefined) {
-                    throw new Error('获取视频信息失败')
+                    throw new Error(i18n[language].parsingFailed)
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100)
                 this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
-                    throw new Error(`非本站视频`)
+                    throw new Error(i18n[language].externalVideo)
                 }
                 this.Private = this.VideoInfoSource.private
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
@@ -720,14 +739,14 @@
                 this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
-                    throw new Error('获取视频源失败')
+                    throw new Error(i18n[language].getVideoSourceFailed)
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality)
-                    if (!fileList.any()) throw new Error('没有可供下载的视频源')
+                    if (!fileList.any()) throw new Error(i18n[language].noAvailableVideoSource)
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-                    if (isNull(Source) || Source.isEmpty()) throw new Error('视频源地址不可用')
+                    if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language].videoSourceNotAvailable)
                     return decodeURIComponent(`https:${Source}`)
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
@@ -765,12 +784,12 @@
                     {
                         node:
                             toastNode([
-                                `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
+                                `${this.Name}[${this.ID}] %#parsingFailed#%`,
                                 { nodeType: 'br' },
                                 `${getString(error)}`,
                                 { nodeType: 'br' },
-                                this.External ? `→ 点击打开视频地址 ←` : `→ 点击此处重新解析 ←`
-                            ], '解析模块'),
+                                this.External ? `%#openVideoLink#%` : `%#tryRestartingDownload#%`
+                            ], '%#createTask#%'),
                         onClick() {
                             if (data.External) {
                                 GM_openInTab(data.VideoInfoSource.embedUrl, { active: true, insert: true, setParent: true })
@@ -794,9 +813,10 @@
     let i18n = new I18N()
     let config = new Config()
     let videoList = new Dictionary<string>();
+    /*
     // @ts-ignore
     Toastify.defaults.oldestFirst = false;
-
+    */
     const originFetch = fetch;
     const modifyFetch = async (url: any, options?: any) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`)
@@ -1084,7 +1104,7 @@
         let url = new URL(urlString)
         let params = parseSearchParams(url.searchParams) as Record<string, any>
         const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
-        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+        const hashBuffer = await crypto.subtle.digest('SHA-1', data);
         return Array.from(new Uint8Array(hashBuffer))
             .map(b => b.toString(16).padStart(2, "0"))
             .join("");
@@ -1127,7 +1147,7 @@
     }
 
     async function addDownloadTask() {
-        let data = prompt('请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...', '');
+        let data = prompt(i18n[language].manualDownloadTips, '');
         if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<string>();
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'))
@@ -1139,7 +1159,7 @@
         let size = list.size;
         let node = renderNode({
             nodeType: 'p',
-            childs: `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+            childs: `%#parsingProgress#%[${size}/${list.size}]`
         })
         let start = newToast(ToastType.Info, {
             node: node,
@@ -1154,12 +1174,12 @@
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.remove(key)
-                node.firstChild.textContent = `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+                node.firstChild.textContent = `%#parsingProgress#%[${size}/${list.size}]`
             }
         }
         start.hideToast()
         newToast(ToastType.Info, {
-            text: `全部解析完成！`,
+            text: `%#allCompleted#%`,
             duration: -1,
             close: true
         }).showToast()
@@ -1238,20 +1258,20 @@
         }[type] || console.log;
         params = Object.assign({
             newWindow: true,
-            gravity: "top",
-            position: "right",
+            gravity: 'top',
+            position: 'right',
             stopOnFocus: true
         },
             type === ToastType.Warn && {
                 duration: -1,
                 style: {
-                    background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
+                    background: 'linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))'
                 }
             },
             type === ToastType.Error && {
                 duration: -1,
                 style: {
-                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))"
+                    background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
                 }
             },
             notNull(params) && params
@@ -1269,10 +1289,10 @@
                 ToastType.Warn,
                 {
                     node: toastNode([
-                        `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `,
+                        `${videoInfo.Name}[${videoInfo.ID}] %#findedDownloadLink#%`,
                         { nodeType: 'br' },
-                        `点击此处，进入视频页面`
-                    ], '创建任务'),
+                        `%#openVideoLink#%`
+                    ], '%#createTask#%'),
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
                         toast.hideToast()
@@ -1287,10 +1307,10 @@
                 ToastType.Warn,
                 {
                     node: toastNode([
-                        `在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `,
+                        `${videoInfo.Name}[${videoInfo.ID}] %#downloadQualityError#%`,
                         { nodeType: 'br' },
-                        `→ 点击此处，进入视频页面 ←`
-                    ], '创建任务'),
+                        `%#openVideoLink#%`
+                    ], '%#createTask#%'),
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
                         toast.hideToast()
@@ -1318,7 +1338,7 @@
 
     function analyzeLocalPath(path: string): LocalPath {
         let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
-        isNull(matchPath) ?? new Error(`无法解析的下载路径，请检查路径是否合法！["${path}"]`)
+        isNull(matchPath) ?? new Error(`%#downloadPathError#%["${path}"]`)
         try {
             return {
                 fullPath: matchPath[0],
@@ -1326,14 +1346,14 @@
                 filename: matchPath[3]
             }
         } catch (error) {
-            throw new Error(`错误的下载路径，请检查路径是否存在！["${matchPath.join('","')}"]`);
+            throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`);
         }
     }
     async function EnvCheck(): Promise<boolean> {
         try {
             if (GM_info.downloadMode !== "browser") {
                 GM_getValue('isDebug') && console.log(GM_info)
-                throw new Error("请启用脚本管理器的浏览器API下载模式!");
+                throw new Error("%#browserDownloadModeError#%");
             }
         } catch (error: any) {
             let toast = newToast(
@@ -1344,7 +1364,7 @@
                         { nodeType: 'br' },
                         getString(error)
                     ], '%#settingsCheck#%'),
-                    position: "center",
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1371,7 +1391,7 @@
                         { nodeType: 'br' },
                         getString(error)
                     ], '%#settingsCheck#%'),
-                    position: "center",
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1402,7 +1422,7 @@
                         { nodeType: 'br' },
                         getString(error)
                     ], '%#settingsCheck#%'),
-                    position: "center",
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1433,7 +1453,7 @@
                         { nodeType: 'br' },
                         getString(error)
                     ], '%#settingsCheck#%'),
-                    position: "center",
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1535,7 +1555,7 @@
                             { nodeType: 'br' },
                             r.msg
                         ], '%#iwaraDownloaderDownload#%'),
-                        position: "center",
+                        position: 'center',
                         onClick() {
                             toast.hideToast()
                         }
@@ -1563,7 +1583,7 @@
                             { nodeType: 'br' },
                             `%#tryRestartingDownload#%`
                         ], '%#browserDownload#%'),
-                        position: "center",
+                        position: 'center',
                         onClick() {
                             analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
                             toast.hideToast()
@@ -1663,16 +1683,16 @@
         } else {
             GM_setValue('version', GM_info.script.version)
             document.body.appendChild(renderNode({
-                nodeType: "div",
+                nodeType: 'div',
                 attributes: {
-                    id: "pluginMenu"
+                    id: 'pluginMenu'
                 },
                 childs: {
-                    nodeType: "ul",
+                    nodeType: 'ul',
                     childs: [
                         {
-                            nodeType: "li",
-                            childs: "%#injectCheckbox#%",
+                            nodeType: 'li',
+                            childs: '%#injectCheckbox#%',
                             events: {
                                 click: () => {
                                     let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
@@ -1684,10 +1704,10 @@
                                             let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
                                             let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
                                             node.appendChild(renderNode({
-                                                nodeType: "input",
+                                                nodeType: 'input',
                                                 attributes: Object.assign(
                                                     videoList.has(ID) ? { checked: true } : {}, {
-                                                    type: "checkbox",
+                                                    type: 'checkbox',
                                                     videoID: ID,
                                                     videoName: Name
                                                 }),
@@ -1712,8 +1732,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "%#downloadSelected#%",
+                            nodeType: 'li',
+                            childs: '%#downloadSelected#%',
                             events: {
                                 click: (event: Event) => {
                                     analyzeDownloadTask()
@@ -1727,8 +1747,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "%#selectAll#%",
+                            nodeType: 'li',
+                            childs: '%#selectAll#%',
                             events: {
                                 click: (event: Event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1741,8 +1761,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "%#deselect#%",
+                            nodeType: 'li',
+                            childs: '%#deselect#%',
                             events: {
                                 click: (event: Event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1755,8 +1775,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "%#reverseSelect#%",
+                            nodeType: 'li',
+                            childs: '%#reverseSelect#%',
                             events: {
                                 click: (event: Event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1768,8 +1788,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "%#manualDownload#%",
+                            nodeType: 'li',
+                            childs: '%#manualDownload#%',
                             events: {
                                 click: (event: Event) => {
                                     addDownloadTask()
@@ -1779,8 +1799,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "%#settings#%",
+                            nodeType: 'li',
+                            childs: '%#settings#%',
                             events: {
                                 click: (event: Event) => {
                                     config.edit()
