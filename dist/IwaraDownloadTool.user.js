@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.102
+// @version           3.1.108
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -60,8 +60,11 @@
     String.prototype.trimTail = function (suffix) {
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString();
     };
-    String.prototype.replaceVariable = function (replacements) {
-        return Object.entries(replacements).reduce((str, [key, value]) => str.split(`%#${key}#%`).join(String(value)), this);
+    String.prototype.replaceVariable = function (replacements, count = 0) {
+        let replaceString = Object.entries(replacements).reduce((str, [key, value]) => str.replaceAll(`%#${key}#%`, String(value)), this.toString());
+        count++;
+        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+            replaceString.replaceVariable(replacements, count) : replaceString;
     };
     String.prototype.replaceNowTime = function () {
         return this.replaceVariable({
@@ -90,7 +93,7 @@
         this.push(...arr);
     };
     Array.prototype.any = function () {
-        return this.length > 0;
+        return this.filter(Boolean).length > 0;
     };
     const language = (navigator.language ?? navigator.languages[0]).replace('-', '_');
     const getString = function (obj) {
@@ -256,7 +259,7 @@
             injectCheckbox: "开关选择",
             configError: "脚本配置中存在错误，请修改。",
             alreadyKnowHowToUse: "我已知晓如何使用!!!",
-            useHelpForInjectCheckbox: `等待加载出视频卡片后, 点击侧边栏中[${this['injectCheckbox']}]开启下载复选框`,
+            useHelpForInjectCheckbox: `等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载复选框`,
             useHelpForCheckDownloadLink: "下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。",
             useHelpForManualDownload: "手动下载需要您提供视频ID!",
             downloadFailed: "下载失败！",

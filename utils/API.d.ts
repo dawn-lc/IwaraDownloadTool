@@ -5,7 +5,7 @@ interface Object {
 }
 
 interface String {
-    replaceVariable(replacements: Record<string, any>): String;
+    replaceVariable(replacements: Record<string, any>, count?: number): String;
     replaceNowTime(): String;
     replaceUploadTime(time: Date): String;
     isEmpty(): boolean;
