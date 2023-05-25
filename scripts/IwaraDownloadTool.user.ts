@@ -1159,7 +1159,7 @@
         let size = list.size;
         let node = renderNode({
             nodeType: 'p',
-            childs: `%#parsingProgress#%[${size}/${list.size}]`
+            childs: `%#parsingProgress#%[${list.size}/${size}]`
         })
         let start = newToast(ToastType.Info, {
             node: node,
@@ -1167,14 +1167,13 @@
         })
         start.showToast()
         for (const key in list.items) {
-            await delay(random(10, 100))//脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             if (videoInfo.State) {
                 await pustDownloadTask(videoInfo)
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.remove(key)
-                node.firstChild.textContent = `%#parsingProgress#%[${size}/${list.size}]`
+                node.firstChild.textContent = `${i18n[language].parsingProgress}[${list.size}/${size}]`
             }
         }
         start.hideToast()
