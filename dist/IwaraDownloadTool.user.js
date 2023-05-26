@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.117
+// @version           3.1.118
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -1456,7 +1456,7 @@
     function iwaraDownloaderDownload(videoInfo) {
         (async function (videoInfo) {
             let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
-                'ver': 1,
+                'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
                 'data': Object.assign({
                     'source': videoInfo.ID,

@@ -1507,7 +1507,7 @@
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
             let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
-                'ver': 1,
+                'ver': GM_getValue('version', '0.0.0').split('.').map(i=>Number(i)),
                 'code': 'add',
                 'data': Object.assign({
                     'source': videoInfo.ID,
