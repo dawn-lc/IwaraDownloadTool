@@ -1435,7 +1435,7 @@
     async function iwaraDownloaderCheck(): Promise<boolean> {
         try {
             let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
-                'ver': 1,
+                'ver': GM_getValue('version', '0.0.0').split('.').map(i=>Number(i)),
                 'code': 'State'
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
