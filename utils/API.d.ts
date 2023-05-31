@@ -5,7 +5,7 @@ interface Object {
 }
 
 interface String {
-    replaceVariable(replacements: Record<string, any>): String;
+    replaceVariable(replacements: Record<string, any>, count?: number): String;
     replaceNowTime(): String;
     replaceUploadTime(time: Date): String;
     isEmpty(): boolean;
@@ -29,10 +29,10 @@ type RenderCode = string | Node | Element | {
 }
 
 interface LocalPath {
+    [key: string]: any;
     fullPath: string;
     drive: string;
     filename: string;
-    match: boolean;
 }
 
 

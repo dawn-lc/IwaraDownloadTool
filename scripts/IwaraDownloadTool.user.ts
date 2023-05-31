@@ -1,5 +1,4 @@
 (async function () {
-
     if (GM_getValue('isDebug')) {
         debugger
     }
@@ -23,11 +22,14 @@
     String.prototype.trimTail = function (suffix: string) {
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString()
     }
-    String.prototype.replaceVariable = function (replacements) {
-        return Object.entries(replacements).reduce(
-            (str, [key, value]) => str.split(`%#${key}#%`).join(String(value)),
-            this as string
+    String.prototype.replaceVariable = function (replacements, count = 0) {
+        let replaceString = Object.entries(replacements).reduce(
+            (str,[key, value]) => str.replaceAll(`%#${key}#%`,String(value)),
+            this.toString()
         )
+        count++;
+        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+            replaceString.replaceVariable(replacements, count) : replaceString;
     }
     String.prototype.replaceNowTime = function () {
         return this.replaceVariable({
@@ -41,12 +43,12 @@
     }
     String.prototype.replaceUploadTime = function (time) {
         return this.replaceVariable({
-            UploadYear: time.getFullYear(),
-            UploadMonth: time.getMonth() + 1,
-            UploadDate: time.getDate(),
-            UploadHours: time.getHours(),
-            UploadMinutes: time.getMinutes(),
-            UploadSeconds: time.getSeconds()
+            uY: time.getFullYear(),
+            uM: time.getMonth() + 1,
+            uD: time.getDate(),
+            uh: time.getHours(),
+            um: time.getMinutes(),
+            us: time.getSeconds()
         })
     }
     String.prototype.toURL = function () {
@@ -56,8 +58,10 @@
         this.push(...arr)
     }
     Array.prototype.any = function () {
-        return this.length > 0
+        return this.filter(Boolean).length > 0
     }
+
+    const language = (navigator.language ?? navigator.languages[0] ?? 'zh-CN').replace('-','_');
 
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
@@ -82,25 +86,6 @@
         return obj !== undefined && obj !== null
     }
 
-    const renderNode = function (renderCode: RenderCode): Node | Element {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode)
-        }
-        if (renderCode instanceof Node) {
-            return renderCode
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments')
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode
-        const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node
-    }
-
     async function get(url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}): Promise<string> {
         if (url.hostname !== unsafeWindow.location.hostname) {
             let data: any = await new Promise(async (resolve, reject) => {
@@ -111,7 +96,7 @@
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
                     onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
                 });
             });
             return data.responseText;
@@ -122,8 +107,8 @@
             }, headers),
             'referrer': referrer,
             'method': 'GET',
-            "mode": "cors",
-            "credentials": "include"
+            'mode': 'cors',
+            'credentials': 'include'
         })).text();
     }
     async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
@@ -139,7 +124,7 @@
                     }, headers),
                     data: body,
                     onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : "无法建立连接")
+                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
                 });
             });
             return data.responseText;
@@ -151,8 +136,8 @@
             'referrer': referrer,
             'body': body,
             'method': 'POST',
-            "mode": "cors",
-            "credentials": "include"
+            'mode': 'cors',
+            'credentials': 'include'
         })).text();
     }
 
@@ -213,6 +198,87 @@
             }
         }
     }
+
+
+    class I18N {
+        [key: string]: { [key: string]: string };
+        public zh_CN: { [key: string]: string }= {
+            appName: 'Iwara 批量下载工具',
+            downloadPath: '下载到: ',
+            downloadProxy: '下载代理: ',
+            rename: '重命名: ',
+            save: '保存',
+            ok: '确定',
+            on: '开启',
+            off: '关闭',
+            downloadType: '下载方式: ',
+            browserDownload: '浏览器下载',
+            iwaraDownloaderDownload: 'iwaraDownloader下载',
+            checkDownloadLink: '高画质下载连接检查: ',
+            variable: '可用变量: ',
+            downloadTime: '下载时间 ',
+            uploadTime: '发布时间 ',
+            example: '示例: ',
+            result: '结果: ',
+            loadingCompleted: '加载完成',
+            settings: '打开设置',
+            manualDownload: '手动下载',
+            reverseSelect: '反向选中',
+            deselect: '取消选中',
+            selectAll: '全部选中',
+            downloadSelected: '下载所选',
+            downloadingSelected: '正在下载所选, 请稍后...',
+            injectCheckbox: '开关选择',
+            configError: '脚本配置中存在错误，请修改。',
+            alreadyKnowHowToUse: '我已知晓如何使用!!!',
+            useHelpForInjectCheckbox: `等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载复选框`,
+            useHelpForCheckDownloadLink: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。',
+            useHelpForManualDownload: '手动下载需要您提供视频ID!',
+            downloadFailed: '下载失败！',
+            tryRestartingDownload: '→ 点击此处重新解析 ←',
+            openVideoLink: '→ 进入视频页面 ←',
+            pushTaskFailed: '推送下载任务失败！',
+            pushTaskSucceed: '推送下载任务成功！',
+            connectionTest: '连接测试',
+            settingsCheck: '配置检查',
+            parsingFailed: '视频信息解析失败！',
+            createTask: '创建任务',
+            downloadPathError: '下载路径错误!',
+            browserDownloadModeError: '请启用脚本管理器的浏览器API下载模式!',
+            downloadQualityError: '无原画下载地址!',
+            findedDownloadLink: '发现疑似高画质下载连接!',
+            allCompleted: '全部解析完成！',
+            parsingProgress: '解析进度: ',
+            manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...',
+            externalVideo: `非本站视频`,
+            getVideoSourceFailed: '获取视频源失败',
+            noAvailableVideoSource: '没有可供下载的视频源',
+            videoSourceNotAvailable: '视频源地址不可用',
+
+        }
+    }
+
+
+    const renderNode = function (renderCode: RenderCode): Node | Element {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode.replaceVariable(i18n[language]).toString())
+        }
+        if (renderCode instanceof Node) {
+            return renderCode
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments')
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode
+        const node: Element = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node
+    }
+
+
     class Config {
         cookies: Array<any>
         checkDownloadLink: boolean
@@ -326,11 +392,32 @@
                     while (page.hasChildNodes()) {
                         page.removeChild(page.firstChild);
                     }
+                    let variableInfo = renderNode({
+                        nodeType: 'label',
+                        childs: [
+                            '%#variable#%',
+                            { nodeType: 'br'},
+                            '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%',
+                            { nodeType: 'br'},
+                            '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%',
+                            { nodeType: 'br'},
+                            '%#TITLE#% | %#ID#% | %#AUTHOR#%',
+                            { nodeType: 'br'},
+                            '%#example#% %#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
+                            { nodeType: 'br'},
+                            `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                                AUTHOR: 'ExampleAuthorID',
+                                TITLE: 'ExampleTitle',
+                                ID: 'ExampleID'
+                            })}`
+                        ]
+                    })
                     let downloadConfigInput = [
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '下载到：',
+                                `%#downloadPath#%`,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -351,7 +438,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '下载代理：',
+                                '%#downloadProxy#%',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -371,10 +458,11 @@
                         })
                     ]
                     let aria2ConfigInput = [
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'Aria2 RPC：',
+                                'Aria2 RPC: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -395,7 +483,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'Aria2 Token：',
+                                'Aria2 Token: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -415,10 +503,11 @@
                         })
                     ]
                     let iwaraDownloaderConfigInput = [
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'IwaraDownloader RPC：',
+                                'IwaraDownloader RPC: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -439,7 +528,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                'IwaraDownloader Token：',
+                                'IwaraDownloader Token: ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -459,10 +548,11 @@
                         })
                     ]
                     let BrowserConfigInput = [
+                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '重命名：',
+                                '%#rename#%',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -506,7 +596,7 @@
                 let save = renderNode({
                     nodeType: 'button',
                     className: 'closeButton',
-                    childs: '保存',
+                    childs: '%#save#%',
                     events: {
                         click: async () => {
                             save.disabled = !save.disabled;
@@ -530,13 +620,13 @@
                             childs: [
                                 {
                                     nodeType: 'h2',
-                                    childs: 'Iwara 批量下载工具'
+                                    childs: '%#appName#%'
                                 },
                                 {
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '下载方式：',
+                                        '%#downloadType#%',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
                                     ]
                                 },
@@ -544,12 +634,12 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '画质检查：',
+                                        '%#checkDownloadLink#%',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "开启",
+                                                '%#on#%',
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign(
@@ -570,7 +660,7 @@
                                             nodeType: 'label',
                                             className: 'inputRadio',
                                             childs: [
-                                                "关闭",
+                                                '%#off#%',
                                                 {
                                                     nodeType: 'input',
                                                     attributes: Object.assign(
@@ -589,14 +679,6 @@
                                             ]
                                         }
                                     ]
-                                },
-                                {
-                                    nodeType: 'p',
-                                    childs: [{ nodeType: 'label', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                                    { nodeType: 'label', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
-                                    { nodeType: 'label', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
-                                    { nodeType: 'label', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                                    { nodeType: 'label', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), }]
                                 },
                                 {
                                     nodeType: 'p',
@@ -641,12 +723,12 @@
                 this.ID = ID.toLocaleLowerCase()
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), unsafeWindow.location.href, await getAuth()))
                 if (this.VideoInfoSource.id === undefined) {
-                    throw new Error('获取视频信息失败')
+                    throw new Error(i18n[language].parsingFailed)
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100)
                 this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
-                    throw new Error(`非本站视频`)
+                    throw new Error(i18n[language].externalVideo)
                 }
                 this.Private = this.VideoInfoSource.private
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
@@ -657,14 +739,14 @@
                 this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
-                    throw new Error('获取视频源失败')
+                    throw new Error(i18n[language].getVideoSourceFailed)
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality)
-                    if (!fileList.any()) throw new Error('没有可供下载的视频源')
+                    if (!fileList.any()) throw new Error(i18n[language].noAvailableVideoSource)
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-                    if (isNull(Source) || Source.isEmpty()) throw new Error('视频源地址不可用')
+                    if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language].videoSourceNotAvailable)
                     return decodeURIComponent(`https:${Source}`)
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
@@ -702,12 +784,12 @@
                     {
                         node:
                             toastNode([
-                                `在解析 ${this.Name}[${this.ID}] 的过程中出现问题!  `,
+                                `${this.Name}[${this.ID}] %#parsingFailed#%`,
                                 { nodeType: 'br' },
                                 `${getString(error)}`,
                                 { nodeType: 'br' },
-                                this.External ? `→ 点击打开视频地址 ←` : `→ 点击此处重新解析 ←`
-                            ], '解析模块'),
+                                this.External ? `%#openVideoLink#%` : `%#tryRestartingDownload#%`
+                            ], '%#createTask#%'),
                         onClick() {
                             if (data.External) {
                                 GM_openInTab(data.VideoInfoSource.embedUrl, { active: true, insert: true, setParent: true })
@@ -728,11 +810,13 @@
         }
     }
 
+    let i18n = new I18N()
     let config = new Config()
     let videoList = new Dictionary<string>();
+    /*
     // @ts-ignore
     Toastify.defaults.oldestFirst = false;
-
+    */
     const originFetch = fetch;
     const modifyFetch = async (url: any, options?: any) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`)
@@ -1020,7 +1104,7 @@
         let url = new URL(urlString)
         let params = parseSearchParams(url.searchParams) as Record<string, any>
         const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
-        const hashBuffer = await crypto.subtle.digest("SHA-1", data);
+        const hashBuffer = await crypto.subtle.digest('SHA-1', data);
         return Array.from(new Uint8Array(hashBuffer))
             .map(b => b.toString(16).padStart(2, "0"))
             .join("");
@@ -1063,7 +1147,7 @@
     }
 
     async function addDownloadTask() {
-        let data = prompt('请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...', '');
+        let data = prompt(i18n[language].manualDownloadTips, '');
         if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<string>();
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'))
@@ -1074,8 +1158,8 @@
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
         let size = list.size;
         let node = renderNode({
-            nodeType:'p',
-            childs: `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+            nodeType: 'p',
+            childs: `%#parsingProgress#%[${list.size}/${size}]`
         })
         let start = newToast(ToastType.Info, {
             node: node,
@@ -1083,19 +1167,18 @@
         })
         start.showToast()
         for (const key in list.items) {
-            await delay(random(10, 100))//脚本太快了,延迟一下防止被屏蔽
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             if (videoInfo.State) {
                 await pustDownloadTask(videoInfo)
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.remove(key)
-                node.firstChild.textContent = `共${size}条视频, 还剩${list.size}条视频尚未解析。`
+                node.firstChild.textContent = `${i18n[language].parsingProgress}[${list.size}/${size}]`
             }
         }
         start.hideToast()
         newToast(ToastType.Info, {
-            text: `全部解析完成！`,
+            text: `%#allCompleted#%`,
             duration: -1,
             close: true
         }).showToast()
@@ -1143,10 +1226,10 @@
             childs: [
                 notNull(title) && !title.isEmpty() ? {
                     nodeType: 'h3',
-                    childs: `Iwara 批量下载工具 - ${title}`
+                    childs: `%#appName#% - ${title}`
                 } : {
                     nodeType: 'h3',
-                    childs: 'Iwara 批量下载工具'
+                    childs: '%#appName#%'
                 }
                 ,
                 {
@@ -1174,25 +1257,28 @@
         }[type] || console.log;
         params = Object.assign({
             newWindow: true,
-            gravity: "top",
-            position: "right",
+            gravity: 'top',
+            position: 'right',
             stopOnFocus: true
         },
             type === ToastType.Warn && {
                 duration: -1,
                 style: {
-                    background: "linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))"
+                    background: 'linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))'
                 }
             },
             type === ToastType.Error && {
                 duration: -1,
                 style: {
-                    background: "linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))"
+                    background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
                 }
             },
             notNull(params) && params
         )
-        logFunc(notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined')
+        if (notNull(params.text)){
+            params.text = params.text.replaceVariable(i18n[language]).toString()
+        }
+        logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language]))
         return Toastify(params)
     }
 
@@ -1201,7 +1287,11 @@
             let toast = newToast(
                 ToastType.Warn,
                 {
-                    node: toastNode([`在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现疑似高画质下载连接! `, { nodeType: 'br' }, `点击此处，进入视频页面`], '创建任务'),
+                    node: toastNode([
+                        `${videoInfo.Name}[${videoInfo.ID}] %#findedDownloadLink#%`,
+                        { nodeType: 'br' },
+                        `%#openVideoLink#%`
+                    ], '%#createTask#%'),
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
                         toast.hideToast()
@@ -1215,7 +1305,11 @@
             let toast = newToast(
                 ToastType.Warn,
                 {
-                    node: toastNode([`在创建 ${videoInfo.Name}[${videoInfo.ID}] 下载任务过程中发现无原画下载地址! `, { nodeType: 'br' }, `→ 点击此处，进入视频页面 ←`], '创建任务'),
+                    node: toastNode([
+                        `${videoInfo.Name}[${videoInfo.ID}] %#downloadQualityError#%`,
+                        { nodeType: 'br' },
+                        `%#openVideoLink#%`
+                    ], '%#createTask#%'),
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
                         toast.hideToast()
@@ -1243,33 +1337,33 @@
 
     function analyzeLocalPath(path: string): LocalPath {
         let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
+        isNull(matchPath) ?? new Error(`%#downloadPathError#%["${path}"]`)
         try {
             return {
                 fullPath: matchPath[0],
                 drive: matchPath[1] || '',
-                filename: matchPath[3],
-                match: matchPath !== null
+                filename: matchPath[3]
             }
         } catch (error) {
-            throw new Error(`错误的下载路径，请检查路径是否存在！${matchPath.join('-')}`);
+            throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`);
         }
     }
     async function EnvCheck(): Promise<boolean> {
         try {
             if (GM_info.downloadMode !== "browser") {
                 GM_getValue('isDebug') && console.log(GM_info)
-                throw new Error("请启用脚本管理器的浏览器API下载模式!");
+                throw new Error("%#browserDownloadModeError#%");
             }
         } catch (error: any) {
             let toast = newToast(
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `无法保存配置, 请检查配置是否正确。`,
+                        `%#configError#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
-                    position: "center",
+                        getString(error)
+                    ], '%#settingsCheck#%'),
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1282,17 +1376,21 @@
     }
     async function localPathCheck(): Promise<boolean> {
         try {
-            analyzeLocalPath(config.downloadPath)
+            let pathTest = analyzeLocalPath(config.downloadPath)
+            for (const key in pathTest) {
+                if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key] ) {
+                }
+            }
         } catch (error: any) {
             let toast = newToast(
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `下载路径存在问题！`,
+                        `%#downloadPathError#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
-                    position: "center",
+                        getString(error)
+                    ], '%#settingsCheck#%'),
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1319,11 +1417,11 @@
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `Aria2 RPC 连接测试`,
+                        `Aria2 RPC %#connectionTest#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
-                    position: "center",
+                        getString(error)
+                    ], '%#settingsCheck#%'),
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1337,7 +1435,7 @@
     async function iwaraDownloaderCheck(): Promise<boolean> {
         try {
             let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
-                'ver': 1,
+                'ver': GM_getValue('version', '0.0.0').split('.').map(i=>Number(i)),
                 'code': 'State'
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
@@ -1350,11 +1448,11 @@
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `IwaraDownloader RPC 连接测试`,
+                        `IwaraDownloader RPC %#connectionTest#%`,
                         { nodeType: 'br' },
-                        `错误信息: ${getString(error)}`
-                    ], '配置检查'),
-                    position: "center",
+                        getString(error)
+                    ], '%#settingsCheck#%'),
+                    position: 'center',
                     onClick() {
                         toast.hideToast()
                     }
@@ -1401,7 +1499,7 @@
             newToast(
                 ToastType.Info,
                 {
-                    node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到Aria2`)
+                    node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
@@ -1409,7 +1507,7 @@
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
             let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
-                'ver': 1,
+                'ver': GM_getValue('version', '0.0.0').split('.').map(i=>Number(i)),
                 'code': 'add',
                 'data': Object.assign({
                     'source': videoInfo.ID,
@@ -1440,11 +1538,11 @@
             )))
 
             if (r.code == 0) {
-                console.log(`${videoInfo.Name} 已推送到IwaraDownloader ${r}`)
+                console.log(`${videoInfo.Name} %#pushTaskSucceed#% ${r}`)
                 newToast(
                     ToastType.Info,
                     {
-                        node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] 已推送到IwaraDownloader`)
+                        node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                     }
                 ).showToast()
             } else {
@@ -1452,11 +1550,11 @@
                     ToastType.Error,
                     {
                         node: toastNode([
-                            `在推送 ${videoInfo.Name}[${videoInfo.ID}] 下载任务到IwaraDownloader过程中出现错误! `,
+                            `${videoInfo.Name}[${videoInfo.ID}] %#pushTaskFailed#% `,
                             { nodeType: 'br' },
-                            `错误信息: ${r.msg}`
-                        ], '推送下载任务'),
-                        position: "center",
+                            r.msg
+                        ], '%#iwaraDownloaderDownload#%'),
+                        position: 'center',
                         onClick() {
                             toast.hideToast()
                         }
@@ -1478,13 +1576,13 @@
                     ToastType.Error,
                     {
                         node: toastNode([
-                            `在下载 ${Name}[${ID}] 的过程中出现问题!  `,
+                            `${Name}[${ID}] %#downloadFailed#%`,
                             { nodeType: 'br' },
-                            `错误信息: ${getString(error)}`,
+                            getString(error),
                             { nodeType: 'br' },
-                            `→ 点击此处重新下载 ←`
-                        ], '下载任务'),
-                        position: "center",
+                            `%#tryRestartingDownload#%`
+                        ], '%#browserDownload#%'),
+                        position: 'center',
                         onClick() {
                             analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
                             toast.hideToast()
@@ -1510,7 +1608,7 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
-    
+
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.30') === VersionState.low) {
         GM_setValue('isFirstRun', true)
     }
@@ -1524,7 +1622,7 @@
             attributes: {
                 disabled: true
             },
-            childs: '确定',
+            childs: '%#ok#%',
             events: {
                 click: () => {
                     GM_setValue('isFirstRun', false)
@@ -1544,28 +1642,9 @@
                     nodeType: 'div',
                     className: 'main',
                     childs: [
-                        {
-                            nodeType: 'h2',
-                            childs: [
-                                '请使用',
-                                {
-                                    nodeType: 'a',
-                                    attributes: {
-                                        href: 'https://www.tampermonkey.net/index.php?#download_gcal'
-                                    },
-                                    childs: 'Tampermonkey Beta'
-                                },
-                                '载入本脚本, 以保证可以利用脚本所有功能。'
-                            ]
-                        },
-                        { nodeType: 'p', childs: '路径变量：%#Y#% (当前时间[年]) | %#M#% (当前时间[月]) | %#D#% (当前时间[日]) | %#h#% (当前时间[时]) | %#m#% (当前时间[分]) | %#s#% (当前时间[秒])' },
-                        { nodeType: 'p', childs: '%#TITLE#% (标题) | %#ID#% (ID) | %#AUTHOR#% (作者)' },
-                        { nodeType: 'p', childs: '%#UploadYear#% (发布时间[年]) | %#UploadMonth#% (发布时间[月]) | %#UploadDate#% (发布时间[日]) | %#UploadHours#% (发布时间[时]) | %#UploadMinutes#% (发布时间[分]) | %#UploadSeconds#% (发布时间[秒])' },
-                        { nodeType: 'p', childs: '例: %#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4' },
-                        { nodeType: 'p', childs: '结果: ' + '%#Y#%-%#M#%-%#D#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replace('%#TITLE#%', '演示标题').replace('%#ID#%', '演示ID'), },
-                        { nodeType: 'p', childs: '等待加载出视频卡片后, 点击侧边栏中“开关选择”开启下载复选框' },
-                        { nodeType: 'p', childs: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。' },
-                        { nodeType: 'p', childs: '手动下载需要您提供视频ID!' }
+                        { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
+                        { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
+                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' }
                     ]
                 },
                 {
@@ -1573,7 +1652,7 @@
                     className: 'checkbox-container',
                     childs: {
                         nodeType: 'label',
-                        className: ['checkbox-label','rainbow-text'],
+                        className: ['checkbox-label', 'rainbow-text'],
                         childs: [{
                             nodeType: 'input',
                             className: 'checkbox',
@@ -1586,7 +1665,7 @@
                                     confirmButton.disabled = !(event.target as HTMLInputElement).checked
                                 }
                             }
-                        },'我已知晓如何使用!!!'
+                        }, '%#alreadyKnowHowToUse#%'
                         ]
                     }
                 },
@@ -1596,42 +1675,38 @@
     } else {
         if (!await config.check()) {
             newToast(ToastType.Info, {
-                text: `脚本配置中存在错误，请修改。`,
+                text: `%#configError#%`,
                 duration: 60 * 1000,
             }).showToast()
             config.edit()
         } else {
             GM_setValue('version', GM_info.script.version)
             document.body.appendChild(renderNode({
-                nodeType: "div",
+                nodeType: 'div',
                 attributes: {
-                    id: "pluginMenu"
+                    id: 'pluginMenu'
                 },
                 childs: {
-                    nodeType: "ul",
+                    nodeType: 'ul',
                     childs: [
                         {
-                            nodeType: "li",
-                            childs: "开关选择",
+                            nodeType: 'li',
+                            childs: '%#injectCheckbox#%',
                             events: {
                                 click: () => {
                                     let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
                                     GM_getValue('isDebug') && console.log(compatibilityMode)
                                     if (!document.querySelector('.selectButton')) {
                                         let videoNodes = document.querySelectorAll(`.videoTeaser`)
-                                        newToast(ToastType.Info, {
-                                            text: `开始注入复选框 预计注入${videoNodes.length}个复选框`,
-                                            close: true
-                                        }).showToast()
                                         videoNodes.forEach((element) => {
                                             let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2]
                                             let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
                                             let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
                                             node.appendChild(renderNode({
-                                                nodeType: "input",
+                                                nodeType: 'input',
                                                 attributes: Object.assign(
                                                     videoList.has(ID) ? { checked: true } : {}, {
-                                                    type: "checkbox",
+                                                    type: 'checkbox',
                                                     videoID: ID,
                                                     videoName: Name
                                                 }),
@@ -1656,13 +1731,13 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "下载所选",
+                            nodeType: 'li',
+                            childs: '%#downloadSelected#%',
                             events: {
                                 click: (event: Event) => {
                                     analyzeDownloadTask()
                                     newToast(ToastType.Info, {
-                                        text: `正在下载所选, 请稍后...`,
+                                        text: `%#downloadingSelected#%`,
                                         close: true
                                     }).showToast()
                                     event.stopPropagation()
@@ -1671,8 +1746,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "全部选中",
+                            nodeType: 'li',
+                            childs: '%#selectAll#%',
                             events: {
                                 click: (event: Event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1685,8 +1760,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "取消全选",
+                            nodeType: 'li',
+                            childs: '%#deselect#%',
                             events: {
                                 click: (event: Event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1699,8 +1774,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "反向选中",
+                            nodeType: 'li',
+                            childs: '%#reverseSelect#%',
                             events: {
                                 click: (event: Event) => {
                                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1712,8 +1787,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "手动下载",
+                            nodeType: 'li',
+                            childs: '%#manualDownload#%',
                             events: {
                                 click: (event: Event) => {
                                     addDownloadTask()
@@ -1723,8 +1798,8 @@
                             }
                         },
                         {
-                            nodeType: "li",
-                            childs: "打开设置",
+                            nodeType: 'li',
+                            childs: '%#settings#%',
                             events: {
                                 click: (event: Event) => {
                                     config.edit()
@@ -1737,7 +1812,7 @@
                 }
             }))
             newToast(ToastType.Info, {
-                text: `Iwara 批量下载工具加载完成`,
+                text: `%#loadingCompleted#%`,
                 duration: 10000,
                 close: true
             }).showToast()
