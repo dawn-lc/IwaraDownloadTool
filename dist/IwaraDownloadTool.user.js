@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.119
+// @version           3.1.120
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -282,6 +282,59 @@
             getVideoSourceFailed: '获取视频源失败',
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
+        };
+        en = {
+            appName: 'Iwara Download Tool',
+            downloadPath: 'Download to: ',
+            downloadProxy: 'Download proxy: ',
+            rename: 'Rename: ',
+            save: 'Save',
+            ok: 'OK',
+            on: 'On',
+            off: 'Off',
+            downloadType: 'Download type:',
+            browserDownload: 'Browser download',
+            iwaraDownloaderDownload: 'iwaraDownloader download',
+            checkDownloadLink: 'High-quality download link check:',
+            variable: 'Available variables:',
+            downloadTime: 'Download time ',
+            uploadTime: 'Upload time ',
+            example: 'Example:',
+            result: 'Result:',
+            loadingCompleted: 'Loading completed',
+            settings: 'Open settings',
+            manualDownload: 'Manual download',
+            reverseSelect: 'Reverse select',
+            deselect: 'Deselect',
+            selectAll: 'Select all',
+            downloadSelected: 'Download selected',
+            downloadingSelected: 'Downloading selected, please wait...',
+            injectCheckbox: 'Switch selection',
+            configError: 'There is an error in the script configuration, please modify it.',
+            alreadyKnowHowToUse: "I'm already aware of how to use it!!!",
+            useHelpForInjectCheckbox: "After the video card is loaded, click [%#injectCheckbox#%] in the sidebar to enable the download checkbox",
+            useHelpForCheckDownloadLink: "Before downloading the video, the video introduction and comments will be checked. If a suspected third-party download link is found in them, a prompt will pop up. You can click the prompt to open the video page.",
+            useHelpForManualDownload: "Manual download requires you to provide a video ID! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
+            downloadFailed: 'Download failed!',
+            tryRestartingDownload: '→ Click here to re-parse ←',
+            openVideoLink: '→ Enter video page ←',
+            pushTaskFailed: 'Failed to push download task!',
+            pushTaskSucceed: 'Pushed download task successfully!',
+            connectionTest: 'Connection test',
+            settingsCheck: 'Configuration check',
+            parsingFailed: 'Video information parsing failed!',
+            createTask: 'Create task',
+            downloadPathError: 'Download path error!',
+            browserDownloadModeError: "Please enable the browser API download mode of the script manager!",
+            downloadQualityError: "No original painting download address!",
+            findedDownloadLink: "Found suspected high-quality download link!",
+            allCompleted: "All parsing completed!",
+            parsingProgress: "Parsing progress:",
+            manualDownloadTips: "Please enter the video ID you want to download! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
+            externalVideo: `Non-site video`,
+            getVideoSourceFailed: `Failed to get video source`,
+            noAvailableVideoSource: `No available video source`,
+            videoSourceNotAvailable: `Video source address not available`,
         };
     }
     const renderNode = function (renderCode) {

@@ -24,7 +24,7 @@
     }
     String.prototype.replaceVariable = function (replacements, count = 0) {
         let replaceString = Object.entries(replacements).reduce(
-            (str,[key, value]) => str.replaceAll(`%#${key}#%`,String(value)),
+            (str, [key, value]) => str.replaceAll(`%#${key}#%`, String(value)),
             this.toString()
         )
         count++;
@@ -61,7 +61,7 @@
         return this.filter(Boolean).length > 0
     }
 
-    const language = (navigator.language ?? navigator.languages[0] ?? 'zh-CN').replace('-','_');
+    const language = (navigator.language ?? navigator.languages[0] ?? 'zh-CN').replace('-', '_');
 
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
@@ -202,7 +202,7 @@
 
     class I18N {
         [key: string]: { [key: string]: string };
-        public zh_CN: { [key: string]: string }= {
+        public zh_CN: { [key: string]: string } = {
             appName: 'Iwara 批量下载工具',
             downloadPath: '下载到: ',
             downloadProxy: '下载代理: ',
@@ -254,10 +254,61 @@
             getVideoSourceFailed: '获取视频源失败',
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
-
+        }
+        public en: { [key: string]: string } = {
+            appName: 'Iwara Download Tool',
+            downloadPath: 'Download to: ',
+            downloadProxy: 'Download proxy: ',
+            rename: 'Rename: ',
+            save: 'Save',
+            ok: 'OK',
+            on: 'On',
+            off: 'Off',
+            downloadType: 'Download type:',
+            browserDownload: 'Browser download',
+            iwaraDownloaderDownload: 'iwaraDownloader download',
+            checkDownloadLink: 'High-quality download link check:',
+            variable: 'Available variables:',
+            downloadTime: 'Download time ',
+            uploadTime: 'Upload time ',
+            example: 'Example:',
+            result: 'Result:',
+            loadingCompleted: 'Loading completed',
+            settings: 'Open settings',
+            manualDownload: 'Manual download',
+            reverseSelect: 'Reverse select',
+            deselect: 'Deselect',
+            selectAll: 'Select all',
+            downloadSelected: 'Download selected',
+            downloadingSelected: 'Downloading selected, please wait...',
+            injectCheckbox: 'Switch selection',
+            configError: 'There is an error in the script configuration, please modify it.',
+            alreadyKnowHowToUse: "I'm already aware of how to use it!!!",
+            useHelpForInjectCheckbox: "After the video card is loaded, click [%#injectCheckbox#%] in the sidebar to enable the download checkbox",
+            useHelpForCheckDownloadLink: "Before downloading the video, the video introduction and comments will be checked. If a suspected third-party download link is found in them, a prompt will pop up. You can click the prompt to open the video page.",
+            useHelpForManualDownload: "Manual download requires you to provide a video ID! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
+            downloadFailed: 'Download failed!',
+            tryRestartingDownload: '→ Click here to re-parse ←',
+            openVideoLink: '→ Enter video page ←',
+            pushTaskFailed: 'Failed to push download task!',
+            pushTaskSucceed: 'Pushed download task successfully!',
+            connectionTest: 'Connection test',
+            settingsCheck: 'Configuration check',
+            parsingFailed: 'Video information parsing failed!',
+            createTask: 'Create task',
+            downloadPathError: 'Download path error!',
+            browserDownloadModeError: "Please enable the browser API download mode of the script manager!",
+            downloadQualityError: "No original painting download address!",
+            findedDownloadLink: "Found suspected high-quality download link!",
+            allCompleted: "All parsing completed!",
+            parsingProgress: "Parsing progress:",
+            manualDownloadTips: "Please enter the video ID you want to download! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
+            externalVideo: `Non-site video`,
+            getVideoSourceFailed: `Failed to get video source`,
+            noAvailableVideoSource: `No available video source`,
+            videoSourceNotAvailable: `Video source address not available`,
         }
     }
-
 
     const renderNode = function (renderCode: RenderCode): Node | Element {
         if (typeof renderCode === "string") {
@@ -396,15 +447,15 @@
                         nodeType: 'label',
                         childs: [
                             '%#variable#%',
-                            { nodeType: 'br'},
+                            { nodeType: 'br' },
                             '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%',
-                            { nodeType: 'br'},
+                            { nodeType: 'br' },
                             '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%',
-                            { nodeType: 'br'},
+                            { nodeType: 'br' },
                             '%#TITLE#% | %#ID#% | %#AUTHOR#%',
-                            { nodeType: 'br'},
+                            { nodeType: 'br' },
                             '%#example#% %#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
-                            { nodeType: 'br'},
+                            { nodeType: 'br' },
                             `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
                                 AUTHOR: 'ExampleAuthorID',
                                 TITLE: 'ExampleTitle',
@@ -1275,7 +1326,7 @@
             },
             notNull(params) && params
         )
-        if (notNull(params.text)){
+        if (notNull(params.text)) {
             params.text = params.text.replaceVariable(i18n[language]).toString()
         }
         logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language]))
@@ -1378,7 +1429,7 @@
         try {
             let pathTest = analyzeLocalPath(config.downloadPath)
             for (const key in pathTest) {
-                if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key] ) {
+                if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
                 }
             }
         } catch (error: any) {
@@ -1435,7 +1486,7 @@
     async function iwaraDownloaderCheck(): Promise<boolean> {
         try {
             let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
-                'ver': GM_getValue('version', '0.0.0').split('.').map(i=>Number(i)),
+                'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State'
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
@@ -1507,7 +1558,7 @@
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
             let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
-                'ver': GM_getValue('version', '0.0.0').split('.').map(i=>Number(i)),
+                'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
                 'data': Object.assign({
                     'source': videoInfo.ID,
