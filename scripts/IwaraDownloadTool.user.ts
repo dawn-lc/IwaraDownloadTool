@@ -1605,7 +1605,6 @@
                             { nodeType: 'br' },
                             r.msg
                         ], '%#iwaraDownloaderDownload#%'),
-                        position: 'center',
                         onClick() {
                             toast.hideToast()
                         }
