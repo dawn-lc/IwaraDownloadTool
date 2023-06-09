@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.119
+// @version           3.1.122
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -95,7 +95,10 @@
     Array.prototype.any = function () {
         return this.filter(Boolean).length > 0;
     };
-    const language = (navigator.language ?? navigator.languages[0] ?? 'zh-CN').replace('-', '_');
+    const language = function () {
+        let env = (navigator.language ?? navigator.languages[0] ?? 'zh-CN');
+        return (notNull(i18n[env]) ? env : 'zh-CN').replace('-', '_');
+    };
     const getString = function (obj) {
         obj = obj instanceof Error ? String(obj) : obj;
         return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj);
@@ -250,6 +253,7 @@
             result: '结果: ',
             loadingCompleted: '加载完成',
             settings: '打开设置',
+            downloadThis: '下载当前',
             manualDownload: '手动下载',
             reverseSelect: '反向选中',
             deselect: '取消选中',
@@ -283,10 +287,63 @@
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
         };
+        en = {
+            appName: 'Iwara Download Tool',
+            downloadPath: 'Download to: ',
+            downloadProxy: 'Download proxy: ',
+            rename: 'Rename: ',
+            save: 'Save',
+            ok: 'OK',
+            on: 'On',
+            off: 'Off',
+            downloadType: 'Download type:',
+            browserDownload: 'Browser download',
+            iwaraDownloaderDownload: 'iwaraDownloader download',
+            checkDownloadLink: 'High-quality download link check:',
+            variable: 'Available variables:',
+            downloadTime: 'Download time ',
+            uploadTime: 'Upload time ',
+            example: 'Example:',
+            result: 'Result:',
+            loadingCompleted: 'Loading completed',
+            settings: 'Open settings',
+            manualDownload: 'Manual download',
+            reverseSelect: 'Reverse select',
+            deselect: 'Deselect',
+            selectAll: 'Select all',
+            downloadSelected: 'Download selected',
+            downloadingSelected: 'Downloading selected, please wait...',
+            injectCheckbox: 'Switch selection',
+            configError: 'There is an error in the script configuration, please modify it.',
+            alreadyKnowHowToUse: "I'm already aware of how to use it!!!",
+            useHelpForInjectCheckbox: "After the video card is loaded, click [%#injectCheckbox#%] in the sidebar to enable the download checkbox",
+            useHelpForCheckDownloadLink: "Before downloading the video, the video introduction and comments will be checked. If a suspected third-party download link is found in them, a prompt will pop up. You can click the prompt to open the video page.",
+            useHelpForManualDownload: "Manual download requires you to provide a video ID! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
+            downloadFailed: 'Download failed!',
+            tryRestartingDownload: '→ Click here to re-parse ←',
+            openVideoLink: '→ Enter video page ←',
+            pushTaskFailed: 'Failed to push download task!',
+            pushTaskSucceed: 'Pushed download task successfully!',
+            connectionTest: 'Connection test',
+            settingsCheck: 'Configuration check',
+            parsingFailed: 'Video information parsing failed!',
+            createTask: 'Create task',
+            downloadPathError: 'Download path error!',
+            browserDownloadModeError: "Please enable the browser API download mode of the script manager!",
+            downloadQualityError: "No original painting download address!",
+            findedDownloadLink: "Found suspected high-quality download link!",
+            allCompleted: "All parsing completed!",
+            parsingProgress: "Parsing progress:",
+            manualDownloadTips: "Please enter the video ID you want to download! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
+            externalVideo: `Non-site video`,
+            getVideoSourceFailed: `Failed to get video source`,
+            noAvailableVideoSource: `No available video source`,
+            videoSourceNotAvailable: `Video source address not available`,
+        };
     }
     const renderNode = function (renderCode) {
         if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode.replaceVariable(i18n[language]).toString());
+            return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString());
         }
         if (renderCode instanceof Node) {
             return renderCode;
@@ -725,12 +782,12 @@
                 this.ID = ID.toLocaleLowerCase();
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), unsafeWindow.location.href, await getAuth()));
                 if (this.VideoInfoSource.id === undefined) {
-                    throw new Error(i18n[language].parsingFailed);
+                    throw new Error(i18n[language()].parsingFailed);
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100);
                 this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty();
                 if (this.External) {
-                    throw new Error(i18n[language].externalVideo);
+                    throw new Error(i18n[language()].externalVideo);
                 }
                 this.Private = this.VideoInfoSource.private;
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
@@ -741,16 +798,16 @@
                 this.Size = this.VideoInfoSource.file.size;
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0));
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
-                    throw new Error(i18n[language].getVideoSourceFailed);
+                    throw new Error(i18n[language()].getVideoSourceFailed);
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name;
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality);
                     if (!fileList.any())
-                        throw new Error(i18n[language].noAvailableVideoSource);
+                        throw new Error(i18n[language()].noAvailableVideoSource);
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download;
                     if (isNull(Source) || Source.isEmpty())
-                        throw new Error(i18n[language].videoSourceNotAvailable);
+                        throw new Error(i18n[language()].videoSourceNotAvailable);
                     return decodeURIComponent(`https:${Source}`);
                 };
                 const getCommentData = async (commentID = null, page = 0) => {
@@ -1131,7 +1188,7 @@
         }, notNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {});
     }
     async function addDownloadTask() {
-        let data = prompt(i18n[language].manualDownloadTips, '');
+        let data = prompt(i18n[language()].manualDownloadTips, '');
         if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary();
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'));
@@ -1156,7 +1213,7 @@
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`);
                 button && button.checked && button.click();
                 list.remove(key);
-                node.firstChild.textContent = `${i18n[language].parsingProgress}[${list.size}/${size}]`;
+                node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`;
             }
         }
         start.hideToast();
@@ -1251,9 +1308,9 @@
             }
         }, notNull(params) && params);
         if (notNull(params.text)) {
-            params.text = params.text.replaceVariable(i18n[language]).toString();
+            params.text = params.text.replaceVariable(i18n[language()]).toString();
         }
-        logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language]));
+        logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]));
         return Toastify(params);
     }
     async function pustDownloadTask(videoInfo) {
@@ -1722,6 +1779,23 @@
                             events: {
                                 click: (event) => {
                                     addDownloadTask();
+                                    event.stopPropagation();
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: 'li',
+                            childs: '%#downloadThis#%',
+                            events: {
+                                click: (event) => {
+                                    if (document.querySelector('.videoPlayer')) {
+                                        let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2];
+                                        let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题';
+                                        let IDList = new Dictionary();
+                                        IDList.set(ID, Title);
+                                        analyzeDownloadTask(IDList);
+                                    }
                                     event.stopPropagation();
                                     return false;
                                 }
