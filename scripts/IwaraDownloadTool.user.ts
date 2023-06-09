@@ -61,11 +61,6 @@
         return this.filter(Boolean).length > 0
     }
 
-    const language = function () {
-        let env = (navigator.language ?? navigator.languages[0] ?? 'en') 
-        return (notNull(i18n[env]) ? env : 'en').replace('-', '_')
-    };
-
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
         return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj)
@@ -314,6 +309,13 @@
         }
     }
 
+    let i18n = new I18N()
+    
+    const language = function () {
+        let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_')
+        return (notNull(i18n[env]) ? env : 'en')
+    };
+
     const renderNode = function (renderCode: RenderCode): Node | Element {
         if (typeof renderCode === "string") {
             return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
@@ -332,7 +334,6 @@
         notNull(childs) && node.append(...[].concat(childs).map(renderNode));
         return node
     }
-
 
     class Config {
         cookies: Array<any>
@@ -751,6 +752,9 @@
             }
         }
     }
+
+    let config = new Config()
+
     class VideoInfo {
         ID: string
         UploadTime: Date
@@ -865,9 +869,8 @@
         }
     }
 
-    let i18n = new I18N()
-    let config = new Config()
     let videoList = new Dictionary<string>();
+    
     /*
     // @ts-ignore
     Toastify.defaults.oldestFirst = false;
@@ -1609,7 +1612,6 @@
                             { nodeType: 'br' },
                             r.msg
                         ], '%#iwaraDownloaderDownload#%'),
-                        position: 'center',
                         onClick() {
                             toast.hideToast()
                         }
