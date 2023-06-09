@@ -62,8 +62,8 @@
     }
 
     const language = function () {
-        let env = (navigator.language ?? navigator.languages[0] ?? 'zh-CN') 
-        return (notNull(i18n[env]) ? env : 'zh-CN').replace('-', '_')
+        let env = (navigator.language ?? navigator.languages[0] ?? 'en') 
+        return (notNull(i18n[env]) ? env : 'en').replace('-', '_')
     };
 
     const getString = function (obj: any) {
