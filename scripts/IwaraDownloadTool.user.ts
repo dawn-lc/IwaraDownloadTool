@@ -225,6 +225,7 @@
             result: '结果: ',
             loadingCompleted: '加载完成',
             settings: '打开设置',
+            downloadThis: '下载当前',
             manualDownload: '手动下载',
             reverseSelect: '反向选中',
             deselect: '取消选中',
@@ -1846,6 +1847,23 @@
                             events: {
                                 click: (event: Event) => {
                                     addDownloadTask()
+                                    event.stopPropagation()
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: 'li',
+                            childs: '%#downloadThis#%',
+                            events: {
+                                click: (event: Event) => {
+                                    if (document.querySelector('.videoPlayer')){
+                                        let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
+                                        let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
+                                        let IDList = new Dictionary<string>()
+                                        IDList.set(ID,Title)
+                                        analyzeDownloadTask(IDList)
+                                    }
                                     event.stopPropagation()
                                     return false;
                                 }
