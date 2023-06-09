@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.124
+// @version           3.1.126
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -94,10 +94,6 @@
     };
     Array.prototype.any = function () {
         return this.filter(Boolean).length > 0;
-    };
-    const language = function () {
-        let env = (navigator.language ?? navigator.languages[0] ?? 'en');
-        return (notNull(i18n[env]) ? env : 'en').replace('-', '_');
     };
     const getString = function (obj) {
         obj = obj instanceof Error ? String(obj) : obj;
@@ -341,6 +337,11 @@
             videoSourceNotAvailable: `Video source address not available`,
         };
     }
+    let i18n = new I18N();
+    const language = function () {
+        let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_');
+        return (notNull(i18n[env]) ? env : 'en');
+    };
     const renderNode = function (renderCode) {
         if (typeof renderCode === "string") {
             return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString());
@@ -755,6 +756,7 @@
             }
         }
     }
+    let config = new Config();
     class VideoInfo {
         ID;
         UploadTime;
@@ -863,8 +865,6 @@
             }
         }
     }
-    let i18n = new I18N();
-    let config = new Config();
     let videoList = new Dictionary();
     /*
     // @ts-ignore
@@ -1549,7 +1549,6 @@
                         { nodeType: 'br' },
                         r.msg
                     ], '%#iwaraDownloaderDownload#%'),
-                    position: 'center',
                     onClick() {
                         toast.hideToast();
                     }
