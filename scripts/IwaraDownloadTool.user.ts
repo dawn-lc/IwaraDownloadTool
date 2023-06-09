@@ -61,7 +61,10 @@
         return this.filter(Boolean).length > 0
     }
 
-    const language = (navigator.language ?? navigator.languages[0] ?? 'zh-CN').replace('-', '_');
+    const language = function () {
+        let env = (navigator.language ?? navigator.languages[0] ?? 'en') 
+        return (notNull(i18n[env]) ? env : 'en').replace('-', '_')
+    };
 
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
@@ -222,6 +225,7 @@
             result: '结果: ',
             loadingCompleted: '加载完成',
             settings: '打开设置',
+            downloadThis: '下载当前',
             manualDownload: '手动下载',
             reverseSelect: '反向选中',
             deselect: '取消选中',
@@ -312,7 +316,7 @@
 
     const renderNode = function (renderCode: RenderCode): Node | Element {
         if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode.replaceVariable(i18n[language]).toString())
+            return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
         }
         if (renderCode instanceof Node) {
             return renderCode
@@ -774,12 +778,12 @@
                 this.ID = ID.toLocaleLowerCase()
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), unsafeWindow.location.href, await getAuth()))
                 if (this.VideoInfoSource.id === undefined) {
-                    throw new Error(i18n[language].parsingFailed)
+                    throw new Error(i18n[language()].parsingFailed)
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100)
                 this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
-                    throw new Error(i18n[language].externalVideo)
+                    throw new Error(i18n[language()].externalVideo)
                 }
                 this.Private = this.VideoInfoSource.private
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')
@@ -790,14 +794,14 @@
                 this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
-                    throw new Error(i18n[language].getVideoSourceFailed)
+                    throw new Error(i18n[language()].getVideoSourceFailed)
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality)
-                    if (!fileList.any()) throw new Error(i18n[language].noAvailableVideoSource)
+                    if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource)
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-                    if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language].videoSourceNotAvailable)
+                    if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable)
                     return decodeURIComponent(`https:${Source}`)
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
@@ -1198,7 +1202,7 @@
     }
 
     async function addDownloadTask() {
-        let data = prompt(i18n[language].manualDownloadTips, '');
+        let data = prompt(i18n[language()].manualDownloadTips, '');
         if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<string>();
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'))
@@ -1224,7 +1228,7 @@
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.remove(key)
-                node.firstChild.textContent = `${i18n[language].parsingProgress}[${list.size}/${size}]`
+                node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
         start.hideToast()
@@ -1327,9 +1331,9 @@
             notNull(params) && params
         )
         if (notNull(params.text)) {
-            params.text = params.text.replaceVariable(i18n[language]).toString()
+            params.text = params.text.replaceVariable(i18n[language()]).toString()
         }
-        logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language]))
+        logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
         return Toastify(params)
     }
 
@@ -1659,7 +1663,7 @@
     }
 
 
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.30') === VersionState.low) {
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.119') === VersionState.low) {
         GM_setValue('isFirstRun', true)
     }
 
@@ -1842,6 +1846,23 @@
                             events: {
                                 click: (event: Event) => {
                                     addDownloadTask()
+                                    event.stopPropagation()
+                                    return false;
+                                }
+                            }
+                        },
+                        {
+                            nodeType: 'li',
+                            childs: '%#downloadThis#%',
+                            events: {
+                                click: (event: Event) => {
+                                    if (document.querySelector('.videoPlayer')){
+                                        let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
+                                        let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
+                                        let IDList = new Dictionary<string>()
+                                        IDList.set(ID,Title)
+                                        analyzeDownloadTask(IDList)
+                                    }
                                     event.stopPropagation()
                                     return false;
                                 }
