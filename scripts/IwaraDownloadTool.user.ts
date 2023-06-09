@@ -1664,7 +1664,7 @@
     }
 
 
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.30') === VersionState.low) {
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.119') === VersionState.low) {
         GM_setValue('isFirstRun', true)
     }
 
