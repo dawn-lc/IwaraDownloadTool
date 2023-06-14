@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.126
+// @version           3.1.139
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -93,7 +93,10 @@
         this.push(...arr);
     };
     Array.prototype.any = function () {
-        return this.filter(Boolean).length > 0;
+        return this.prune().length > 0;
+    };
+    Array.prototype.prune = function () {
+        return this.filter(i => i !== null && typeof i !== 'undefined');
     };
     const getString = function (obj) {
         obj = obj instanceof Error ? String(obj) : obj;
@@ -229,7 +232,8 @@
         }
     }
     class I18N {
-        zh_CN = {
+        zh_CN = this['zh'];
+        zh = {
             appName: 'Iwara 批量下载工具',
             downloadPath: '下载到: ',
             downloadProxy: '下载代理: ',
@@ -242,6 +246,7 @@
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
             checkDownloadLink: '高画质下载连接检查: ',
+            autoInjectCheckbox: '自动注入选择框:',
             variable: '可用变量: ',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
@@ -296,6 +301,8 @@
             browserDownload: 'Browser download',
             iwaraDownloaderDownload: 'iwaraDownloader download',
             checkDownloadLink: 'High-quality download link check:',
+            downloadThis: 'Download this video',
+            autoInjectCheckbox: 'Auto inject selection',
             variable: 'Available variables:',
             downloadTime: 'Download time ',
             uploadTime: 'Upload time ',
@@ -340,7 +347,7 @@
     let i18n = new I18N();
     const language = function () {
         let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_');
-        return (notNull(i18n[env]) ? env : 'en');
+        return (notNull(i18n[env]) ? env : notNull(i18n[env.split('_').shift()]) ? env.split('_').shift() : 'en');
     };
     const renderNode = function (renderCode) {
         if (typeof renderCode === "string") {
@@ -362,6 +369,7 @@
     };
     class Config {
         cookies;
+        autoInjectCheckbox;
         checkDownloadLink;
         downloadType;
         downloadPath;
@@ -374,6 +382,7 @@
         priority;
         constructor() {
             //初始化
+            this.autoInjectCheckbox = GM_getValue('autoInjectCheckbox', true);
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
             this.downloadType = GM_getValue('downloadType', DownloadType.Others);
             this.downloadPath = GM_getValue('downloadPath', '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4');
@@ -693,7 +702,7 @@
                                     className: 'inputRadioLine',
                                     childs: [
                                         '%#downloadType#%',
-                                        ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).filter(Boolean)
+                                        ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
                                     ]
                                 },
                                 {
@@ -733,6 +742,50 @@
                                                     events: {
                                                         change: () => {
                                                             config.checkDownloadLink = false;
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    nodeType: 'p',
+                                    className: 'inputRadioLine',
+                                    childs: [
+                                        '%#autoInjectCheckbox#%',
+                                        {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                '%#on#%',
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: Object.assign({
+                                                        name: 'AutoInjectCheckbox',
+                                                        type: 'radio'
+                                                    }, config.autoInjectCheckbox ? { checked: true } : {}),
+                                                    events: {
+                                                        change: () => {
+                                                            config.autoInjectCheckbox = true;
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }, {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                '%#off#%',
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: Object.assign({
+                                                        name: 'AutoInjectCheckbox',
+                                                        type: 'radio'
+                                                    }, config.autoInjectCheckbox ? {} : { checked: true }),
+                                                    events: {
+                                                        change: () => {
+                                                            config.autoInjectCheckbox = false;
                                                         }
                                                     }
                                                 }
@@ -830,7 +883,7 @@
                         }
                     }
                     comments.append(replies);
-                    return comments.filter(Boolean);
+                    return comments.prune();
                 };
                 this.Comments = this.VideoInfoSource.body + (await getCommentDatas()).map(i => i.body).join('\n');
                 this.State = true;
@@ -1191,7 +1244,7 @@
         let data = prompt(i18n[language()].manualDownloadTips, '');
         if (notNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary();
-            data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).filter(Boolean).map(ID => IDList.set(ID, '手动解析'));
+            data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).prune().map(ID => IDList.set(ID, '手动解析'));
             analyzeDownloadTask(IDList);
         }
     }
@@ -1595,6 +1648,37 @@
             });
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
     }
+    function injectCheckbox() {
+        if (document.querySelector('.selectButton')) {
+            return;
+        }
+        let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
+        GM_getValue('isDebug') && console.log(compatibilityMode);
+        let videoNodes = document.querySelectorAll(`.videoTeaser`);
+        videoNodes.forEach((element) => {
+            let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2];
+            let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim();
+            let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail');
+            node.appendChild(renderNode({
+                nodeType: 'input',
+                attributes: Object.assign(videoList.has(ID) ? { checked: true } : {}, {
+                    type: 'checkbox',
+                    videoID: ID,
+                    videoName: Name
+                }),
+                className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
+                events: {
+                    click: (event) => {
+                        let target = event.target;
+                        target.checked ? videoList.set(ID, Name) : videoList.remove(ID);
+                        event.stopPropagation();
+                        event.stopImmediatePropagation();
+                        return false;
+                    }
+                }
+            }));
+        });
+    }
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.119') === VersionState.low) {
         GM_setValue('isFirstRun', true);
     }
@@ -1667,6 +1751,16 @@
         }
         else {
             GM_setValue('version', GM_info.script.version);
+            if (config.autoInjectCheckbox) {
+                const observer = new MutationObserver((mutationsList) => {
+                    mutationsList.forEach(mutation => {
+                        if ([...mutation.addedNodes].filter(i => i instanceof Element && i.querySelector('.videoTeaser')).any()) {
+                            injectCheckbox();
+                        }
+                    });
+                });
+                observer.observe(document.querySelector('#app'), { childList: true });
+            }
             document.body.appendChild(renderNode({
                 nodeType: 'div',
                 attributes: {
@@ -1680,38 +1774,13 @@
                             childs: '%#injectCheckbox#%',
                             events: {
                                 click: () => {
-                                    let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
-                                    GM_getValue('isDebug') && console.log(compatibilityMode);
-                                    if (!document.querySelector('.selectButton')) {
-                                        let videoNodes = document.querySelectorAll(`.videoTeaser`);
-                                        videoNodes.forEach((element) => {
-                                            let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2];
-                                            let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim();
-                                            let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail');
-                                            node.appendChild(renderNode({
-                                                nodeType: 'input',
-                                                attributes: Object.assign(videoList.has(ID) ? { checked: true } : {}, {
-                                                    type: 'checkbox',
-                                                    videoID: ID,
-                                                    videoName: Name
-                                                }),
-                                                className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
-                                                events: {
-                                                    click: (event) => {
-                                                        let target = event.target;
-                                                        target.checked ? videoList.set(ID, Name) : videoList.remove(ID);
-                                                        event.stopPropagation();
-                                                        event.stopImmediatePropagation();
-                                                        return false;
-                                                    }
-                                                }
-                                            }));
-                                        });
-                                    }
-                                    else {
+                                    if (document.querySelector('.selectButton')) {
                                         document.querySelectorAll('.selectButton').forEach((element) => {
                                             element.remove();
                                         });
+                                    }
+                                    else {
+                                        injectCheckbox();
                                     }
                                 }
                             }

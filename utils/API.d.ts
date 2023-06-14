@@ -17,6 +17,7 @@ interface String {
 
 interface Array {
     any(): boolean;
+    prune(): Array<T>;
     append(arr: Array): void;
 }
 
