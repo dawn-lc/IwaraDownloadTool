@@ -92,13 +92,13 @@
     }
 
     const renderNode = function (renderCode: RenderCode): Node | Element {
-        if (typeof renderCode === "string") {
+        if (typeof renderCode === 'string') {
             return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
         }
         if (renderCode instanceof Node) {
             return renderCode
         }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+        if (typeof renderCode !== 'object' || !renderCode.nodeType) {
             throw new Error('Invalid arguments')
         }
         const { nodeType, attributes, events, className, childs } = renderCode
@@ -313,7 +313,7 @@
             downloadingSelected: 'Downloading selected, please wait...',
             injectCheckbox: 'Switch selection',
             configError: 'There is an error in the script configuration, please modify it.',
-            alreadyKnowHowToUse: "I'm already aware of how to use it!!!",
+            alreadyKnowHowToUse: 'I\'m already aware of how to use it!!!',
             useHelpForInjectCheckbox: "After the video card is loaded, click [%#injectCheckbox#%] in the sidebar to enable the download checkbox",
             useHelpForCheckDownloadLink: "Before downloading the video, the video introduction and comments will be checked. If a suspected third-party download link is found in them, a prompt will pop up. You can click the prompt to open the video page.",
             useHelpForManualDownload: "Manual download requires you to provide a video ID! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
@@ -1246,8 +1246,8 @@
         const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
         const hashBuffer = await crypto.subtle.digest('SHA-1', data);
         return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, "0"))
-            .join("");
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
     }
 
 
@@ -1490,9 +1490,9 @@
     }
     async function EnvCheck(): Promise<boolean> {
         try {
-            if (GM_info.downloadMode !== "browser") {
+            if (GM_info.downloadMode !== 'browser') {
                 GM_getValue('isDebug') && console.log(GM_info)
-                throw new Error("%#browserDownloadModeError#%");
+                throw new Error('%#browserDownloadModeError#%');
             }
         } catch (error: any) {
             let toast = newToast(
