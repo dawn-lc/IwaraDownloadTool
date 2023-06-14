@@ -9,5 +9,7 @@
 * 支持下载上锁视频 <sup>*需要使用已与作者成为好友的账号进行下载</sup>
 * 支持下载隐藏视频 <sup>*需要知道视频ID</sup>
 
+## 如需使用FDM、IDM、迅雷等下载器，下载方式请选择Others
+
 ## 依赖库
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
