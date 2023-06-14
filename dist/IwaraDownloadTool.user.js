@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.139
+// @version           3.1.146
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -115,10 +115,32 @@
         return Math.floor(Math.random() * (max - min + 1)) + min;
     };
     const isNull = function (obj) {
-        return obj === undefined || obj === null;
+        return typeof obj === 'undefined' || obj === null;
     };
     const notNull = function (obj) {
-        return obj !== undefined && obj !== null;
+        return typeof obj !== 'undefined' && obj !== null;
+    };
+    const language = function () {
+        let env = (notNull(config) ? config.language : (navigator.language ?? navigator.languages[0] ?? 'en')).replace('-', '_');
+        return (notNull(i18n[env]) ? env : notNull(i18n[env.split('_').shift()]) ? env.split('_').shift() : 'en');
+    };
+    const renderNode = function (renderCode) {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString());
+        }
+        if (renderCode instanceof Node) {
+            return renderCode;
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments');
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode;
+        const node = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node;
     };
     async function get(url, referrer = unsafeWindow.location.href, headers = {}) {
         if (url.hostname !== unsafeWindow.location.hostname) {
@@ -235,6 +257,7 @@
         zh_CN = this['zh'];
         zh = {
             appName: 'Iwara 批量下载工具',
+            language: '语言:',
             downloadPath: '下载到: ',
             downloadProxy: '下载代理: ',
             rename: '重命名: ',
@@ -290,6 +313,7 @@
         };
         en = {
             appName: 'Iwara Download Tool',
+            language: 'Language:',
             downloadPath: 'Download to: ',
             downloadProxy: 'Download proxy: ',
             rename: 'Rename: ',
@@ -344,31 +368,9 @@
             videoSourceNotAvailable: `Video source address not available`,
         };
     }
-    let i18n = new I18N();
-    const language = function () {
-        let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_');
-        return (notNull(i18n[env]) ? env : notNull(i18n[env.split('_').shift()]) ? env.split('_').shift() : 'en');
-    };
-    const renderNode = function (renderCode) {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString());
-        }
-        if (renderCode instanceof Node) {
-            return renderCode;
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments');
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode;
-        const node = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node;
-    };
     class Config {
         cookies;
+        language;
         autoInjectCheckbox;
         checkDownloadLink;
         downloadType;
@@ -382,6 +384,7 @@
         priority;
         constructor() {
             //初始化
+            this.language = GM_getValue('language', language());
             this.autoInjectCheckbox = GM_getValue('autoInjectCheckbox', true);
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true);
             this.downloadType = GM_getValue('downloadType', DownloadType.Others);
@@ -698,10 +701,29 @@
                                     childs: '%#appName#%'
                                 },
                                 {
+                                    nodeType: 'label',
+                                    childs: [
+                                        '%#language#% ',
+                                        {
+                                            nodeType: 'input',
+                                            attributes: Object.assign({
+                                                name: 'Language',
+                                                type: 'Text',
+                                                value: config.language
+                                            }),
+                                            events: {
+                                                change: (event) => {
+                                                    config.language = event.target.value;
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#downloadType#%',
+                                        '%#downloadType#% ',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
                                     ]
                                 },
@@ -709,7 +731,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#checkDownloadLink#%',
+                                        '%#checkDownloadLink#% ',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -809,7 +831,6 @@
             }
         }
     }
-    let config = new Config();
     class VideoInfo {
         ID;
         UploadTime;
@@ -918,7 +939,9 @@
             }
         }
     }
-    let videoList = new Dictionary();
+    var i18n = new I18N();
+    var config = new Config();
+    var videoList = new Dictionary();
     /*
     // @ts-ignore
     Toastify.defaults.oldestFirst = false;
