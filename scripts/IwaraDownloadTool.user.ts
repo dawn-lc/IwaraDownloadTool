@@ -81,10 +81,33 @@
         return Math.floor(Math.random() * (max - min + 1)) + min
     }
     const isNull = function (obj: any): boolean {
-        return obj === undefined || obj === null
+        return typeof obj === 'undefined' || obj === null
     }
     const notNull = function (obj: any): boolean {
-        return obj !== undefined && obj !== null
+        return typeof obj !== 'undefined' && obj !== null
+    }
+    const language = function () {
+        let env = (notNull(config) ? config.language :(navigator.language ?? navigator.languages[0] ?? 'en')) .replace('-', '_')
+        return (notNull(i18n[env]) ? env : notNull(i18n[env.split('_').shift()]) ? env.split('_').shift() : 'en')
+    }
+
+    const renderNode = function (renderCode: RenderCode): Node | Element {
+        if (typeof renderCode === "string") {
+            return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
+        }
+        if (renderCode instanceof Node) {
+            return renderCode
+        }
+        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+            throw new Error('Invalid arguments')
+        }
+        const { nodeType, attributes, events, className, childs } = renderCode
+        const node: Element = document.createElement(nodeType);
+        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        return node
     }
 
     async function get(url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}): Promise<string> {
@@ -200,12 +223,12 @@
         }
     }
 
-
     class I18N {
         [key: string]: { [key: string]: string };
         public zh_CN = this['zh']
         public zh: { [key: string]: string } = {
             appName: 'Iwara 批量下载工具',
+            language: '语言:',
             downloadPath: '下载到: ',
             downloadProxy: '下载代理: ',
             rename: '重命名: ',
@@ -261,6 +284,7 @@
         }
         public en: { [key: string]: string } = {
             appName: 'Iwara Download Tool',
+            language: 'Language:',
             downloadPath: 'Download to: ',
             downloadProxy: 'Download proxy: ',
             rename: 'Rename: ',
@@ -315,35 +339,12 @@
             videoSourceNotAvailable: `Video source address not available`,
         }
     }
+    
 
-    let i18n = new I18N()
-
-    const language = function () {
-        let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_')
-        return (notNull(i18n[env]) ? env : notNull(i18n[env.split('_').shift()]) ? env.split('_').shift() : 'en')
-    };
-
-    const renderNode = function (renderCode: RenderCode): Node | Element {
-        if (typeof renderCode === "string") {
-            return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
-        }
-        if (renderCode instanceof Node) {
-            return renderCode
-        }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
-            throw new Error('Invalid arguments')
-        }
-        const { nodeType, attributes, events, className, childs } = renderCode
-        const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
-        return node
-    }
 
     class Config {
         cookies: Array<any>
+        language: string
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
         downloadType: DownloadType
@@ -358,6 +359,7 @@
         [key: string]: any;
         constructor() {
             //初始化
+            this.language = GM_getValue('language', language())
             this.autoInjectCheckbox = GM_getValue('autoInjectCheckbox', true)
             this.checkDownloadLink = GM_getValue('checkDownloadLink', true)
             this.downloadType = GM_getValue('downloadType', DownloadType.Others)
@@ -688,10 +690,31 @@
                                     childs: '%#appName#%'
                                 },
                                 {
+                                    nodeType: 'label',
+                                    childs: [
+                                        '%#language#% ',
+                                        {
+                                            nodeType: 'input',
+                                            attributes: Object.assign(
+                                                {
+                                                    name: 'Language',
+                                                    type: 'Text',
+                                                    value: config.language
+                                                }
+                                            ),
+                                            events: {
+                                                change: (event: Event) => {
+                                                    config.language = (event.target as HTMLInputElement).value
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#downloadType#%',
+                                        '%#downloadType#% ',
                                         ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
                                     ]
                                 },
@@ -699,7 +722,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#checkDownloadLink#%',
+                                        '%#checkDownloadLink#% ',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -812,7 +835,8 @@
         }
     }
 
-    let config = new Config()
+
+
 
     class VideoInfo {
         ID: string
@@ -928,12 +952,11 @@
         }
     }
 
-    let videoList = new Dictionary<string>();
 
-    /*
-    // @ts-ignore
-    Toastify.defaults.oldestFirst = false;
-    */
+    var i18n = new I18N()
+    var config = new Config()
+    var videoList = new Dictionary<string>();
+
     const originFetch = fetch;
     const modifyFetch = async (url: any, options?: any) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`)
