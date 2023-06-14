@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.147
+// @version           3.1.152
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -125,13 +125,13 @@
         return (notNull(i18n[env]) ? env : notNull(i18n[env.split('_').shift()]) ? env.split('_').shift() : 'en');
     };
     const renderNode = function (renderCode) {
-        if (typeof renderCode === "string") {
+        if (typeof renderCode === 'string') {
             return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString());
         }
         if (renderCode instanceof Node) {
             return renderCode;
         }
-        if (typeof renderCode !== "object" || !renderCode.nodeType) {
+        if (typeof renderCode !== 'object' || !renderCode.nodeType) {
             throw new Error('Invalid arguments');
         }
         const { nodeType, attributes, events, className, childs } = renderCode;
@@ -342,7 +342,7 @@
             downloadingSelected: 'Downloading selected, please wait...',
             injectCheckbox: 'Switch selection',
             configError: 'There is an error in the script configuration, please modify it.',
-            alreadyKnowHowToUse: "I'm already aware of how to use it!!!",
+            alreadyKnowHowToUse: 'I\'m already aware of how to use it!!!',
             useHelpForInjectCheckbox: "After the video card is loaded, click [%#injectCheckbox#%] in the sidebar to enable the download checkbox",
             useHelpForCheckDownloadLink: "Before downloading the video, the video introduction and comments will be checked. If a suspected third-party download link is found in them, a prompt will pop up. You can click the prompt to open the video page.",
             useHelpForManualDownload: "Manual download requires you to provide a video ID! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
@@ -1229,8 +1229,8 @@
         const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
         const hashBuffer = await crypto.subtle.digest('SHA-1', data);
         return Array.from(new Uint8Array(hashBuffer))
-            .map(b => b.toString(16).padStart(2, "0"))
-            .join("");
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
     }
     let VersionState;
     (function (VersionState) {
@@ -1447,9 +1447,9 @@
     }
     async function EnvCheck() {
         try {
-            if (GM_info.downloadMode !== "browser") {
+            if (GM_info.downloadMode !== 'browser') {
                 GM_getValue('isDebug') && console.log(GM_info);
-                throw new Error("%#browserDownloadModeError#%");
+                throw new Error('%#browserDownloadModeError#%');
             }
         }
         catch (error) {
@@ -1773,12 +1773,12 @@
             if (config.autoInjectCheckbox) {
                 const observer = new MutationObserver((mutationsList) => {
                     mutationsList.forEach(mutation => {
-                        if ([...mutation.addedNodes].filter(i => i instanceof Element && i.querySelector('.videoTeaser')).any()) {
+                        if (![...document.querySelectorAll('.selectButton')].any() && [...mutation.addedNodes].filter(i => i instanceof Element && i.querySelector('.videoTeaser')).any()) {
                             injectCheckbox();
                         }
                     });
                 });
-                observer.observe(document.querySelector('#app'), { childList: true });
+                observer.observe(document.querySelector('#app'), { childList: true, subtree: true });
             }
             document.body.appendChild(renderNode({
                 nodeType: 'div',

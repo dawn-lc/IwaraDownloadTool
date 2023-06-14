@@ -1854,14 +1854,14 @@
         } else {
             GM_setValue('version', GM_info.script.version)
             if (config.autoInjectCheckbox) {
-                const observer = new MutationObserver((mutationsList) => {
+                const observer = new MutationObserver( (mutationsList) => {
                     mutationsList.forEach(mutation => {
-                        if ([...mutation.addedNodes].filter(i => i instanceof Element && i.querySelector('.videoTeaser')).any()){
+                        if (![...document.querySelectorAll('.selectButton')].any() && [...mutation.addedNodes].filter(i => i instanceof Element && i.querySelector('.videoTeaser')).any()){
                             injectCheckbox()
                         }
                     })
                 });
-                observer.observe(document.querySelector('#app'), { childList: true });
+                observer.observe(document.querySelector('#app'), { childList: true, subtree: true });
             }
             document.body.appendChild(renderNode({
                 nodeType: 'div',
