@@ -956,10 +956,7 @@
     var i18n = new I18N()
     var config = new Config()
     var videoList = new Dictionary<string>();
-    /*
-    // @ts-ignore
-    Toastify.defaults.oldestFirst = false;
-    */
+
     const originFetch = fetch;
     const modifyFetch = async (url: any, options?: any) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`)
