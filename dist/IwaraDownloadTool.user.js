@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.152
+// @version           3.1.153
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -1280,13 +1280,11 @@
         start.showToast();
         for (const key in list.items) {
             let videoInfo = await (new VideoInfo(list[key])).init(key);
-            if (videoInfo.State) {
-                await pustDownloadTask(videoInfo);
-                let button = document.querySelector(`.selectButton[videoid="${key}"]`);
-                button && button.checked && button.click();
-                list.remove(key);
-                node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`;
-            }
+            videoInfo.State && await pustDownloadTask(videoInfo);
+            let button = document.querySelector(`.selectButton[videoid="${key}"]`);
+            button && button.checked && button.click();
+            list.remove(key);
+            node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`;
         }
         start.hideToast();
         newToast(ToastType.Info, {

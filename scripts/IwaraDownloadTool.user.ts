@@ -1308,13 +1308,11 @@
         start.showToast()
         for (const key in list.items) {
             let videoInfo = await (new VideoInfo(list[key])).init(key)
-            if (videoInfo.State) {
-                await pustDownloadTask(videoInfo)
-                let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
-                button && button.checked && button.click()
-                list.remove(key)
-                node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
-            }
+            videoInfo.State && await pustDownloadTask(videoInfo)
+            let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
+            button && button.checked && button.click()
+            list.remove(key)
+            node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
         newToast(ToastType.Info, {
