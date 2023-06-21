@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.153
+// @version           3.1.166
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -38,6 +38,8 @@
 // @grant             unsafeWindow
 // @run-at            document-start
 // @require           https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.js
+// @require           https://cdn.staticfile.org/moment.js/2.29.4/moment.min.js
+// @require           https://cdn.staticfile.org/moment.js/2.29.4/moment-with-locales.min.js
 // ==/UserScript==
 (async function () {
     if (GM_getValue('isDebug')) {
@@ -48,8 +50,24 @@
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options);
     };
+    const isNull = function (obj) {
+        return typeof obj === 'undefined' || obj === null;
+    };
+    const notNull = function (obj) {
+        return typeof obj !== 'undefined' && obj !== null;
+    };
     String.prototype.isEmpty = function () {
-        return this.trim().length == 0;
+        return notNull(this) && this.trim().length === 0;
+    };
+    String.prototype.notEmpty = function () {
+        return notNull(this) && this.trim().length !== 0;
+    };
+    String.prototype.among = function (start, end) {
+        if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
+            throw new Error('Empty');
+        }
+        let body = this.split(start).pop().notEmpty() ? this.split(start).pop() : '';
+        return body.split(end).shift().notEmpty() ? body.split(end).shift() : '';
     };
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString();
@@ -61,30 +79,22 @@
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString();
     };
     String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = Object.entries(replacements).reduce((str, [key, value]) => str.replaceAll(`%#${key}#%`, String(value)), this.toString());
+        let replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
+            switch (key) {
+                case 'NowTime':
+                case 'UploadTime':
+                    let format = str.among(`%#${key}:`, '#%').toString();
+                    return str.replaceAll(`%#${key}:${format}#%`, String(value.format(format)));
+                default:
+                    return str.replaceAll(`%#${key}#%`, String(value));
+            }
+        }, this.toString());
         count++;
         return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
             replaceString.replaceVariable(replacements, count) : replaceString;
     };
-    String.prototype.replaceNowTime = function () {
-        return this.replaceVariable({
-            Y: new Date().getFullYear(),
-            M: new Date().getMonth() + 1,
-            D: new Date().getDate(),
-            h: new Date().getHours(),
-            m: new Date().getMinutes(),
-            s: new Date().getSeconds()
-        });
-    };
-    String.prototype.replaceUploadTime = function (time) {
-        return this.replaceVariable({
-            uY: time.getFullYear(),
-            uM: time.getMonth() + 1,
-            uD: time.getDate(),
-            uh: time.getHours(),
-            um: time.getMinutes(),
-            us: time.getSeconds()
-        });
+    Date.prototype.format = function (format) {
+        return moment(this).locale(language()).format(format);
     };
     String.prototype.toURL = function () {
         return new URL(this.toString());
@@ -113,12 +123,6 @@
     };
     const random = function (min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
-    };
-    const isNull = function (obj) {
-        return typeof obj === 'undefined' || obj === null;
-    };
-    const notNull = function (obj) {
-        return typeof obj !== 'undefined' && obj !== null;
     };
     const language = function () {
         let env = (notNull(config) ? config.language : (navigator.language ?? navigator.languages[0] ?? 'en')).replace('-', '_');
@@ -270,6 +274,7 @@
             iwaraDownloaderDownload: 'iwaraDownloader下载',
             checkDownloadLink: '高画质下载连接检查: ',
             autoInjectCheckbox: '自动注入选择框:',
+            configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
             variable: '可用变量: ',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
@@ -322,6 +327,7 @@
             on: 'On',
             off: 'Off',
             downloadType: 'Download type:',
+            configurationIncompatible: 'An incompatible configuration file was detected, please reconfigure!',
             browserDownload: 'Browser download',
             iwaraDownloaderDownload: 'iwaraDownloader download',
             checkDownloadLink: 'High-quality download link check:',
@@ -489,15 +495,16 @@
                         childs: [
                             '%#variable#%',
                             { nodeType: 'br' },
-                            '%#downloadTime#% %#Y#% | %#M#% | %#D#% | %#h#% | %#m#% | %#s#%',
+                            '%#downloadTime#% %#NowTime#%',
                             { nodeType: 'br' },
-                            '%#uploadTime#% %#uY#% | %#uM#% | %#uD#% | %#uh#% | %#um#% | %#us#%',
+                            '%#uploadTime#% %#UploadTime#%',
                             { nodeType: 'br' },
                             '%#TITLE#% | %#ID#% | %#AUTHOR#%',
                             { nodeType: 'br' },
-                            '%#example#% %#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
+                            '%#example#% %#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
                             { nodeType: 'br' },
-                            `%#result#% ${'%#Y#%-%#M#%-%#D#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceNowTime().replaceVariable({
+                            `%#result#% ${'%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceVariable({
+                                NowTime: new Date(),
                                 AUTHOR: 'ExampleAuthorID',
                                 TITLE: 'ExampleTitle',
                                 ID: 'ExampleID'
@@ -505,7 +512,6 @@
                         ]
                     });
                     let downloadConfigInput = [
-                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
@@ -543,10 +549,10 @@
                                     }
                                 }
                             ]
-                        })
+                        }),
+                        variableInfo
                     ];
                     let aria2ConfigInput = [
-                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
@@ -584,10 +590,10 @@
                                     }
                                 }
                             ]
-                        })
+                        }),
+                        variableInfo
                     ];
                     let iwaraDownloaderConfigInput = [
-                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
@@ -625,10 +631,10 @@
                                     }
                                 }
                             ]
-                        })
+                        }),
+                        variableInfo
                     ];
                     let BrowserConfigInput = [
-                        variableInfo,
                         renderNode({
                             nodeType: 'label',
                             childs: [
@@ -647,7 +653,8 @@
                                     }
                                 }
                             ]
-                        })
+                        }),
+                        variableInfo
                     ];
                     switch (config.downloadType) {
                         case DownloadType.Aria2:
@@ -658,10 +665,8 @@
                             downloadConfigInput.map(i => page.appendChild(i));
                             iwaraDownloaderConfigInput.map(i => page.appendChild(i));
                             break;
-                        case DownloadType.Browser:
-                            BrowserConfigInput.map(i => page.appendChild(i));
-                            break;
                         default:
+                            BrowserConfigInput.map(i => page.appendChild(i));
                             break;
                     }
                     break;
@@ -1287,11 +1292,15 @@
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`;
         }
         start.hideToast();
-        newToast(ToastType.Info, {
+        let completed = newToast(ToastType.Info, {
             text: `%#allCompleted#%`,
             duration: -1,
-            close: true
-        }).showToast();
+            close: true,
+            onClick() {
+                completed.hideToast();
+            }
+        });
+        completed.showToast();
     }
     function checkIsHaveDownloadLink(comment) {
         if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {
@@ -1550,7 +1559,9 @@
     }
     function aria2Download(videoInfo) {
         (async function (id, author, name, uploadTime, info, tag, downloadUrl) {
-            let localPath = analyzeLocalPath(config.downloadPath.replaceNowTime().replaceUploadTime(uploadTime).replaceVariable({
+            let localPath = analyzeLocalPath(config.downloadPath.replaceVariable({
+                NowTime: new Date(),
+                UploadTime: uploadTime,
                 AUTHOR: author,
                 ID: id,
                 TITLE: name
@@ -1599,7 +1610,9 @@
                     'info': videoInfo.Comments,
                     'tag': videoInfo.Tags
                 }, config.downloadPath.isEmpty() ? {} : {
-                    'path': config.downloadPath.replaceNowTime().replaceUploadTime(videoInfo.UploadTime).replaceVariable({
+                    'path': config.downloadPath.replaceVariable({
+                        NowTime: new Date(),
+                        UploadTime: videoInfo.UploadTime,
                         AUTHOR: videoInfo.Author,
                         ID: videoInfo.ID,
                         TITLE: videoInfo.Name
@@ -1628,9 +1641,17 @@
         }(videoInfo));
     }
     function othersDownload(videoInfo) {
-        (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
-            GM_openInTab(DownloadUrl, { active: true, insert: true, setParent: true });
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
+        (async function (ID, Author, Name, UploadTime, DownloadUrl) {
+            let filename = analyzeLocalPath(config.downloadPath.replaceVariable({
+                NowTime: new Date(),
+                UploadTime: UploadTime,
+                AUTHOR: Author,
+                ID: ID,
+                TITLE: Name
+            }).trim()).filename;
+            DownloadUrl.searchParams.set('download', filename);
+            GM_openInTab(DownloadUrl.href, { active: true, insert: true, setParent: true });
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getDownloadUrl().toURL()));
     }
     function browserDownload(videoInfo) {
         (async function (ID, Author, Name, UploadTime, Info, Tag, DownloadUrl) {
@@ -1651,7 +1672,9 @@
                 });
                 toast.showToast();
             }
-            let localPath = analyzeLocalPath(config.downloadPath.replaceNowTime().replaceUploadTime(UploadTime).replaceVariable({
+            let localPath = analyzeLocalPath(config.downloadPath.replaceVariable({
+                NowTime: new Date(),
+                UploadTime: UploadTime,
                 AUTHOR: Author,
                 ID: ID,
                 TITLE: Name
@@ -1696,7 +1719,8 @@
             }));
         });
     }
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.119') === VersionState.low) {
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
+        alert(i18n[language()].configurationIncompatible);
         GM_setValue('isFirstRun', true);
     }
     // 检查是否是首次运行脚本

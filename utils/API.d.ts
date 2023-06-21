@@ -4,12 +4,17 @@ interface Object {
     getObjectString(): string;
 }
 
+
+interface Date{
+    format(format?: string): String;
+}
+
 interface String {
     replaceVariable(replacements: Record<string, any>, count?: number): String;
-    replaceNowTime(): String;
-    replaceUploadTime(time: Date): String;
     isEmpty(): boolean;
+    notEmpty(): boolean;
     toURL(): URL;
+    among(start: string, end: string): String;
     truncate(maxLength: number): string
     trimHead(prefix: string): string;
     trimTail(suffix: string): string;
