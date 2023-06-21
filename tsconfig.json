@@ -10,7 +10,9 @@
     "strictNullChecks": false,
     "outFile": "./dist/IwaraDownloadTool.user.js"
   },
-  "include": ["./utils/*.d.ts"],
+  "include": [
+    "./utils/*.d.ts"
+  ],
   "files": [
     "./scripts/IwaraDownloadTool.mata.ts",
     "./scripts/IwaraDownloadTool.user.ts"

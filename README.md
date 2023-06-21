@@ -38,3 +38,4 @@
 
 ## 依赖库
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
+- [moment.js](https://github.com/moment/moment/) - [MIT License](https://opensource.org/licenses/MIT)
