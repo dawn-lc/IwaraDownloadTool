@@ -1,3 +1,4 @@
+// @ts-ignore
 declare function GM_cookie(any: any,any: any,any: any);
 
 interface Object {
@@ -20,10 +21,10 @@ interface String {
     trimTail(suffix: string): string;
 }
 
-interface Array {
+interface Array<T> {
     any(): boolean;
     prune(): Array<T>;
-    append(arr: Array): void;
+    append(arr: Array<T>): void;
 }
 
 type RenderCode = string | Node | Element | {
