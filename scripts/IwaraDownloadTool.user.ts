@@ -3,8 +3,6 @@
         debugger
     }
 
-    
-
     let unsafeWindow = window.unsafeWindow;
 
     const originalAddEventListener = EventTarget.prototype.addEventListener
@@ -47,8 +45,8 @@
                 switch (key) {
                     case 'NowTime':
                     case 'UploadTime':
-                        let format = str.among(`%#${key}:`, '#%').toString()
-                        return str.replaceAll(`%#${key}:${format}#%`, String((value as Date).format(format)))
+                        let format = str.among(`%#${key}`, '#%').toString()
+                        return format.notEmpty() ? str.replaceAll(`%#${key}${format}#%`, String((value as Date).format(format.trimHead(':')))) : str.replaceAll(`%#${key}${format}#%`, String((value as Date).format()))
                     default:
                         return str.replaceAll(`%#${key}#%`, String(value))
                 }
@@ -96,7 +94,8 @@
 
     const language = function () {
         let env = (notNull(config) ? config.language :(navigator.language ?? navigator.languages[0] ?? 'en')) .replace('-', '_')
-        return (notNull(i18n[env]) ? env : notNull(i18n[env.split('_').shift()]) ? env.split('_').shift() : 'en')
+        let main = env.split('_').shift() ?? 'en'
+        return (notNull(i18n[env]) ? env : notNull(i18n[main]) ? main : 'en')
     }
 
     const renderNode = function (renderCode: RenderCode): Node | Element {
@@ -111,8 +110,8 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).length !== 0) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (notNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (notNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
         (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
         notNull(childs) && node.append(...[].concat(childs).map(renderNode));
         return node
