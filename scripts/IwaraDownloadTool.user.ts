@@ -16,12 +16,18 @@
     const notNull = function (obj: any): boolean {
         return typeof obj !== 'undefined' && obj !== null
     }
-
     String.prototype.isEmpty = function () {
         return notNull(this) && this.trim().length === 0
     }
     String.prototype.notEmpty = function () {
         return notNull(this) && this.trim().length !== 0
+    }
+    const hasFunction = function (obj: any, method: string) {
+        return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false
+    }
+    const getString = function (obj: any) {
+        obj = obj instanceof Error ? String(obj) : obj
+        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
     }
     String.prototype.among = function (start: string, end: string) {
         if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
@@ -39,32 +45,11 @@
     String.prototype.trimTail = function (suffix: string) {
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString()
     }
-    String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = Object.entries(replacements).reduce(
-            (str, [key, value]) => {
-                switch (key) {
-                    case 'NowTime':
-                    case 'UploadTime':
-                        let format = str.among(`%#${key}`, '#%').toString()
-                        return format.notEmpty() ? str.replaceAll(`%#${key}${format}#%`, String((value as Date).format(format.trimHead(':')))) : str.replaceAll(`%#${key}${format}#%`, String((value as Date).format()))
-                    default:
-                        return str.replaceAll(`%#${key}#%`, String(value))
-                }
-            },
-            this.toString()
-        )
-        count++;
-        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-            replaceString.replaceVariable(replacements, count) : replaceString;
-    }
-
-    Date.prototype.format = function (format?: string) {
-        return moment(this).locale(language()).format(format)
-    }
 
     String.prototype.toURL = function () {
         return new URL(this.toString());
     }
+    
     Array.prototype.append = function (arr) {
         this.push(...arr)
     }
@@ -75,10 +60,27 @@
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
 
-    const getString = function (obj: any) {
-        obj = obj instanceof Error ? String(obj) : obj
-        return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj)
+    Date.prototype.format = function (format?: string) {
+        return moment(this).locale(language()).format(format)
     }
+
+    String.prototype.replaceVariable = function (replacements, count = 0) {
+        let replaceString = Object.entries(replacements).reduce(
+            (str, [key, value]) => {
+                if (str.includes(`%#${key}:`)) {
+                    let format = str.among(`%#${key}:`, '#%').toString()
+                    return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
+                } else {
+                    return str.replaceAll(`%#${key}#%`, getString(value))
+                }
+            },
+            this.toString()
+        )
+        count++;
+        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+            replaceString.replaceVariable(replacements, count) : replaceString;
+    }
+
     const delay = async function (ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms))
     }

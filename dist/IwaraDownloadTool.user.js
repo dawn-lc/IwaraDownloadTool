@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.167
+// @version           3.1.169
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -62,6 +62,13 @@
     String.prototype.notEmpty = function () {
         return notNull(this) && this.trim().length !== 0;
     };
+    const hasFunction = function (obj, method) {
+        return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false;
+    };
+    const getString = function (obj) {
+        obj = obj instanceof Error ? String(obj) : obj;
+        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj);
+    };
     String.prototype.among = function (start, end) {
         if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
             throw new Error('Empty');
@@ -78,24 +85,6 @@
     String.prototype.trimTail = function (suffix) {
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString();
     };
-    String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
-            switch (key) {
-                case 'NowTime':
-                case 'UploadTime':
-                    let format = str.among(`%#${key}`, '#%').toString();
-                    return format.notEmpty() ? str.replaceAll(`%#${key}${format}#%`, String(value.format(format.trimHead(':')))) : str.replaceAll(`%#${key}${format}#%`, String(value.format()));
-                default:
-                    return str.replaceAll(`%#${key}#%`, String(value));
-            }
-        }, this.toString());
-        count++;
-        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-            replaceString.replaceVariable(replacements, count) : replaceString;
-    };
-    Date.prototype.format = function (format) {
-        return moment(this).locale(language()).format(format);
-    };
     String.prototype.toURL = function () {
         return new URL(this.toString());
     };
@@ -108,9 +97,22 @@
     Array.prototype.prune = function () {
         return this.filter(i => i !== null && typeof i !== 'undefined');
     };
-    const getString = function (obj) {
-        obj = obj instanceof Error ? String(obj) : obj;
-        return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj);
+    Date.prototype.format = function (format) {
+        return moment(this).locale(language()).format(format);
+    };
+    String.prototype.replaceVariable = function (replacements, count = 0) {
+        let replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
+            if (str.includes(`%#${key}:`)) {
+                let format = str.among(`%#${key}:`, '#%').toString();
+                return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value));
+            }
+            else {
+                return str.replaceAll(`%#${key}#%`, getString(value));
+            }
+        }, this.toString());
+        count++;
+        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+            replaceString.replaceVariable(replacements, count) : replaceString;
     };
     const delay = async function (ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
