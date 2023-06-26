@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.169
+// @version           3.1.170
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -265,20 +265,20 @@
         zh = {
             appName: 'Iwara 批量下载工具',
             language: '语言:',
-            downloadPath: '下载到: ',
-            downloadProxy: '下载代理: ',
+            downloadPath: '下载到:',
+            downloadProxy: '下载代理:',
             rename: '重命名: ',
             save: '保存',
             ok: '确定',
             on: '开启',
             off: '关闭',
-            downloadType: '下载方式: ',
+            downloadType: '下载方式:',
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
             checkDownloadLink: '高画质下载连接检查: ',
             autoInjectCheckbox: '自动注入选择框:',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
-            variable: '可用变量: ',
+            variable: '可用变量:',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
             example: '示例: ',
@@ -301,6 +301,7 @@
             downloadFailed: '下载失败！',
             tryRestartingDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
+            downloadThisFailed: '未找到可供下载的视频！',
             pushTaskFailed: '推送下载任务失败！',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
@@ -322,9 +323,9 @@
         en = {
             appName: 'Iwara Download Tool',
             language: 'Language:',
-            downloadPath: 'Download to: ',
-            downloadProxy: 'Download proxy: ',
-            rename: 'Rename: ',
+            downloadPath: 'Download to:',
+            downloadProxy: 'Download proxy:',
+            rename: 'Rename:',
             save: 'Save',
             ok: 'OK',
             on: 'On',
@@ -496,7 +497,7 @@
                     let variableInfo = renderNode({
                         nodeType: 'label',
                         childs: [
-                            '%#variable#%',
+                            '%#variable#% ',
                             { nodeType: 'br' },
                             '%#downloadTime#% %#NowTime#%',
                             { nodeType: 'br' },
@@ -518,7 +519,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                `%#downloadPath#%`,
+                                `%#downloadPath#% `,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -537,7 +538,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '%#downloadProxy#%',
+                                '%#downloadProxy#% ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -783,7 +784,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#autoInjectCheckbox#%',
+                                        '%#autoInjectCheckbox#% ',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -1908,6 +1909,15 @@
                                         IDList.set(ID, Title);
                                         analyzeDownloadTask(IDList);
                                     }
+                                    else {
+                                        let toast = newToast(ToastType.Warn, {
+                                            node: toastNode(`%#downloadThisFailed#%`),
+                                            onClick() {
+                                                toast.hideToast();
+                                            }
+                                        });
+                                        toast.showToast();
+                                    }
                                     event.stopPropagation();
                                     return false;
                                 }
@@ -1930,6 +1940,7 @@
             newToast(ToastType.Info, {
                 text: `%#loadingCompleted#%`,
                 duration: 10000,
+                gravity: 'bottom',
                 close: true
             }).showToast();
         }
