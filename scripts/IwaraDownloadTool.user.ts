@@ -16,12 +16,18 @@
     const notNull = function (obj: any): boolean {
         return typeof obj !== 'undefined' && obj !== null
     }
-
     String.prototype.isEmpty = function () {
         return notNull(this) && this.trim().length === 0
     }
     String.prototype.notEmpty = function () {
         return notNull(this) && this.trim().length !== 0
+    }
+    const hasFunction = function (obj: any, method: string) {
+        return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false
+    }
+    const getString = function (obj: any) {
+        obj = obj instanceof Error ? String(obj) : obj
+        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
     }
     String.prototype.among = function (start: string, end: string) {
         if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
@@ -39,32 +45,11 @@
     String.prototype.trimTail = function (suffix: string) {
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString()
     }
-    String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = Object.entries(replacements).reduce(
-            (str, [key, value]) => {
-                switch (key) {
-                    case 'NowTime':
-                    case 'UploadTime':
-                        let format = str.among(`%#${key}`, '#%').toString()
-                        return format.notEmpty() ? str.replaceAll(`%#${key}${format}#%`, String((value as Date).format(format.trimHead(':')))) : str.replaceAll(`%#${key}${format}#%`, String((value as Date).format()))
-                    default:
-                        return str.replaceAll(`%#${key}#%`, String(value))
-                }
-            },
-            this.toString()
-        )
-        count++;
-        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-            replaceString.replaceVariable(replacements, count) : replaceString;
-    }
-
-    Date.prototype.format = function (format?: string) {
-        return moment(this).locale(language()).format(format)
-    }
 
     String.prototype.toURL = function () {
         return new URL(this.toString());
     }
+    
     Array.prototype.append = function (arr) {
         this.push(...arr)
     }
@@ -75,10 +60,27 @@
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
 
-    const getString = function (obj: any) {
-        obj = obj instanceof Error ? String(obj) : obj
-        return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj)
+    Date.prototype.format = function (format?: string) {
+        return moment(this).locale(language()).format(format)
     }
+
+    String.prototype.replaceVariable = function (replacements, count = 0) {
+        let replaceString = Object.entries(replacements).reduce(
+            (str, [key, value]) => {
+                if (str.includes(`%#${key}:`)) {
+                    let format = str.among(`%#${key}:`, '#%').toString()
+                    return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
+                } else {
+                    return str.replaceAll(`%#${key}#%`, getString(value))
+                }
+            },
+            this.toString()
+        )
+        count++;
+        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+            replaceString.replaceVariable(replacements, count) : replaceString;
+    }
+
     const delay = async function (ms: number) {
         return new Promise(resolve => setTimeout(resolve, ms))
     }
@@ -236,20 +238,20 @@
         public zh: { [key: string]: string } = {
             appName: 'Iwara 批量下载工具',
             language: '语言:',
-            downloadPath: '下载到: ',
-            downloadProxy: '下载代理: ',
+            downloadPath: '下载到:',
+            downloadProxy: '下载代理:',
             rename: '重命名: ',
             save: '保存',
             ok: '确定',
             on: '开启',
             off: '关闭',
-            downloadType: '下载方式: ',
+            downloadType: '下载方式:',
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
             checkDownloadLink: '高画质下载连接检查: ',
             autoInjectCheckbox: '自动注入选择框:',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
-            variable: '可用变量: ',
+            variable: '可用变量:',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
             example: '示例: ',
@@ -272,6 +274,7 @@
             downloadFailed: '下载失败！',
             tryRestartingDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
+            downloadThisFailed: '未找到可供下载的视频！',
             pushTaskFailed: '推送下载任务失败！',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
@@ -293,9 +296,9 @@
         public en: { [key: string]: string } = {
             appName: 'Iwara Download Tool',
             language: 'Language:',
-            downloadPath: 'Download to: ',
-            downloadProxy: 'Download proxy: ',
-            rename: 'Rename: ',
+            downloadPath: 'Download to:',
+            downloadProxy: 'Download proxy:',
+            rename: 'Rename:',
             save: 'Save',
             ok: 'OK',
             on: 'On',
@@ -471,7 +474,7 @@
                     let variableInfo = renderNode({
                         nodeType: 'label',
                         childs: [
-                            '%#variable#%',
+                            '%#variable#% ',
                             { nodeType: 'br' },
                             '%#downloadTime#% %#NowTime#%',
                             { nodeType: 'br' },
@@ -493,7 +496,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                `%#downloadPath#%`,
+                                `%#downloadPath#% `,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -514,7 +517,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '%#downloadProxy#%',
+                                '%#downloadProxy#% ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign(
@@ -780,7 +783,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#autoInjectCheckbox#%',
+                                        '%#autoInjectCheckbox#% ',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -1994,6 +1997,17 @@
                                         let IDList = new Dictionary<string>()
                                         IDList.set(ID, Title)
                                         analyzeDownloadTask(IDList)
+                                    } else {
+                                        let toast = newToast(
+                                            ToastType.Warn,
+                                            {
+                                                node: toastNode(`%#downloadThisFailed#%`),
+                                                onClick() {
+                                                    toast.hideToast()
+                                                }
+                                            }
+                                        )
+                                        toast.showToast()
                                     }
                                     event.stopPropagation()
                                     return false;
@@ -2017,6 +2031,7 @@
             newToast(ToastType.Info, {
                 text: `%#loadingCompleted#%`,
                 duration: 10000,
+                gravity: 'bottom',
                 close: true
             }).showToast()
         }

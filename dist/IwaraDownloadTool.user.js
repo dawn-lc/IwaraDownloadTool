@@ -7,7 +7,7 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.167
+// @version           3.1.170
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -62,6 +62,13 @@
     String.prototype.notEmpty = function () {
         return notNull(this) && this.trim().length !== 0;
     };
+    const hasFunction = function (obj, method) {
+        return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false;
+    };
+    const getString = function (obj) {
+        obj = obj instanceof Error ? String(obj) : obj;
+        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj);
+    };
     String.prototype.among = function (start, end) {
         if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
             throw new Error('Empty');
@@ -78,24 +85,6 @@
     String.prototype.trimTail = function (suffix) {
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString();
     };
-    String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
-            switch (key) {
-                case 'NowTime':
-                case 'UploadTime':
-                    let format = str.among(`%#${key}`, '#%').toString();
-                    return format.notEmpty() ? str.replaceAll(`%#${key}${format}#%`, String(value.format(format.trimHead(':')))) : str.replaceAll(`%#${key}${format}#%`, String(value.format()));
-                default:
-                    return str.replaceAll(`%#${key}#%`, String(value));
-            }
-        }, this.toString());
-        count++;
-        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-            replaceString.replaceVariable(replacements, count) : replaceString;
-    };
-    Date.prototype.format = function (format) {
-        return moment(this).locale(language()).format(format);
-    };
     String.prototype.toURL = function () {
         return new URL(this.toString());
     };
@@ -108,9 +97,22 @@
     Array.prototype.prune = function () {
         return this.filter(i => i !== null && typeof i !== 'undefined');
     };
-    const getString = function (obj) {
-        obj = obj instanceof Error ? String(obj) : obj;
-        return typeof obj === 'object' ? JSON.stringify(obj, null, 2).trimHead('{').trimTail('}') : String(obj);
+    Date.prototype.format = function (format) {
+        return moment(this).locale(language()).format(format);
+    };
+    String.prototype.replaceVariable = function (replacements, count = 0) {
+        let replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
+            if (str.includes(`%#${key}:`)) {
+                let format = str.among(`%#${key}:`, '#%').toString();
+                return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value));
+            }
+            else {
+                return str.replaceAll(`%#${key}#%`, getString(value));
+            }
+        }, this.toString());
+        count++;
+        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+            replaceString.replaceVariable(replacements, count) : replaceString;
     };
     const delay = async function (ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -263,20 +265,20 @@
         zh = {
             appName: 'Iwara 批量下载工具',
             language: '语言:',
-            downloadPath: '下载到: ',
-            downloadProxy: '下载代理: ',
+            downloadPath: '下载到:',
+            downloadProxy: '下载代理:',
             rename: '重命名: ',
             save: '保存',
             ok: '确定',
             on: '开启',
             off: '关闭',
-            downloadType: '下载方式: ',
+            downloadType: '下载方式:',
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
             checkDownloadLink: '高画质下载连接检查: ',
             autoInjectCheckbox: '自动注入选择框:',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
-            variable: '可用变量: ',
+            variable: '可用变量:',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
             example: '示例: ',
@@ -299,6 +301,7 @@
             downloadFailed: '下载失败！',
             tryRestartingDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
+            downloadThisFailed: '未找到可供下载的视频！',
             pushTaskFailed: '推送下载任务失败！',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
@@ -320,9 +323,9 @@
         en = {
             appName: 'Iwara Download Tool',
             language: 'Language:',
-            downloadPath: 'Download to: ',
-            downloadProxy: 'Download proxy: ',
-            rename: 'Rename: ',
+            downloadPath: 'Download to:',
+            downloadProxy: 'Download proxy:',
+            rename: 'Rename:',
             save: 'Save',
             ok: 'OK',
             on: 'On',
@@ -494,7 +497,7 @@
                     let variableInfo = renderNode({
                         nodeType: 'label',
                         childs: [
-                            '%#variable#%',
+                            '%#variable#% ',
                             { nodeType: 'br' },
                             '%#downloadTime#% %#NowTime#%',
                             { nodeType: 'br' },
@@ -516,7 +519,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                `%#downloadPath#%`,
+                                `%#downloadPath#% `,
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -535,7 +538,7 @@
                         renderNode({
                             nodeType: 'label',
                             childs: [
-                                '%#downloadProxy#%',
+                                '%#downloadProxy#% ',
                                 {
                                     nodeType: 'input',
                                     attributes: Object.assign({
@@ -781,7 +784,7 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
-                                        '%#autoInjectCheckbox#%',
+                                        '%#autoInjectCheckbox#% ',
                                         {
                                             nodeType: 'label',
                                             className: 'inputRadio',
@@ -1906,6 +1909,15 @@
                                         IDList.set(ID, Title);
                                         analyzeDownloadTask(IDList);
                                     }
+                                    else {
+                                        let toast = newToast(ToastType.Warn, {
+                                            node: toastNode(`%#downloadThisFailed#%`),
+                                            onClick() {
+                                                toast.hideToast();
+                                            }
+                                        });
+                                        toast.showToast();
+                                    }
                                     event.stopPropagation();
                                     return false;
                                 }
@@ -1928,6 +1940,7 @@
             newToast(ToastType.Info, {
                 text: `%#loadingCompleted#%`,
                 duration: 10000,
+                gravity: 'bottom',
                 close: true
             }).showToast();
         }
