@@ -1322,7 +1322,7 @@
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
-        if (size == 1){
+        if (size != 1){
             let completed = newToast(
                 ToastType.Info,
                 {

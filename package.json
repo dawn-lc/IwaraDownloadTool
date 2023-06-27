@@ -2,13 +2,15 @@
   "name": "iwaradownloadtool",
   "version": "3.0.0",
   "private": true,
-  "scripts": {},
+  "scripts": {
+    "build:dev": "",
+    "build:master": ""
+  },
   "dependencies": {
     "@types/greasemonkey": "^4.0.4",
     "@types/moment": "^2.13.0",
     "@types/tampermonkey": "^4.0.10",
     "@types/toastify-js": "^1.11.1",
-    "moment": "^2.29.4",
     "toastify-js": "^1.12.0",
     "typescript": "^5.0.4"
   }
