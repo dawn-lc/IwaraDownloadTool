@@ -36,6 +36,13 @@
         let body = this.split(start).pop().notEmpty() ? this.split(start).pop() : ''
         return body.split(end).shift().notEmpty() ? body.split(end).shift() : ''
     }
+    String.prototype.splitLimit = function (separator: string, limit?: number) {
+        if (this.isEmpty() || isNull(separator)) {
+            throw new Error('Empty');
+        }
+        let body = this.split(separator);
+        return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body;
+    };
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
     }

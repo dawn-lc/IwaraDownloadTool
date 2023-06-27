@@ -16,6 +16,7 @@ interface String {
     notEmpty(): boolean;
     toURL(): URL;
     among(start: string, end: string): String;
+    splitLimit(separator: string, limit?: number): string[];
     truncate(maxLength: number): string
     trimHead(prefix: string): string;
     trimTail(suffix: string): string;
