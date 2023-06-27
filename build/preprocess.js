@@ -117,19 +117,22 @@ function addVersion(versionString) {
 }
 const packagePath = path.join(root, 'package.json');
 const scriptsPath = path.join(root, 'scripts');
+
+const scriptMataTemplatePath = path.join(scriptsPath, 'userjs.mata');
 const scriptMataPath = path.join(scriptsPath, 'mata.ts');
 
 let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+let scriptMataTemplate = parseMetadata(fs.readFileSync(scriptMataTemplatePath, 'utf8'));
 let scriptMata = parseMetadata(fs.readFileSync(scriptMataPath, 'utf8'));
 
 package.version = addVersion(package.version);
 scriptMata.version = package.version;
 
-scriptMata.updateURL = scriptMata.updateURL.replaceVariable({
+scriptMata.updateURL = scriptMataTemplate.updateURL.replaceVariable({
     'branch': getGitBranch(),
     'hash': getGitHash()
 });
-scriptMata.downloadURL = scriptMata.downloadURL.replaceVariable({
+scriptMata.downloadURL = scriptMataTemplate.downloadURL.replaceVariable({
     'branch': getGitBranch(),
     'hash': getGitHash()
 });
