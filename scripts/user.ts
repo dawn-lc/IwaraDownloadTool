@@ -3,7 +3,7 @@
         debugger
     }
 
-    let unsafeWindow = window.unsafeWindow;
+    let unsafeWindow = window.unsafeWindow
 
     const originalAddEventListener = EventTarget.prototype.addEventListener
     EventTarget.prototype.addEventListener = function (type, listener, options) {
@@ -36,6 +36,13 @@
         let body = this.split(start).pop().notEmpty() ? this.split(start).pop() : ''
         return body.split(end).shift().notEmpty() ? body.split(end).shift() : ''
     }
+    String.prototype.splitLimit = function (separator: string, limit?: number) {
+        if (this.isEmpty() || isNull(separator)) {
+            throw new Error('Empty');
+        }
+        let body = this.split(separator);
+        return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body;
+    };
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
     }
@@ -47,7 +54,7 @@
     }
 
     String.prototype.toURL = function () {
-        return new URL(this.toString());
+        return new URL(this.toString())
     }
     
     Array.prototype.append = function (arr) {
@@ -76,9 +83,9 @@
             },
             this.toString()
         )
-        count++;
+        count++
         return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-            replaceString.replaceVariable(replacements, count) : replaceString;
+            replaceString.replaceVariable(replacements, count) : replaceString
     }
 
     const delay = async function (ms: number) {
@@ -88,7 +95,7 @@
         return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
     }
     const ceilDiv = function (dividend: number, divisor: number): number {
-        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0);
+        return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0)
     }
     const random = function (min: number, max: number): number {
         return Math.floor(Math.random() * (max - min + 1)) + min
@@ -114,8 +121,8 @@
         const node: Element = document.createElement(nodeType);
         (notNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
         (notNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className));
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode));
+        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
+        notNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
     }
 
@@ -130,9 +137,9 @@
                     }, headers),
                     onload: response => resolve(response),
                     onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
-                });
-            });
-            return data.responseText;
+                })
+            })
+            return data.responseText
         }
         return (await originFetch(url.href, {
             'headers': Object.assign({
@@ -142,7 +149,7 @@
             'method': 'GET',
             'mode': 'cors',
             'credentials': 'include'
-        })).text();
+        })).text()
     }
     async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
@@ -158,9 +165,9 @@
                     data: body,
                     onload: response => resolve(response),
                     onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
-                });
-            });
-            return data.responseText;
+                })
+            })
+            return data.responseText
         }
         return (await originFetch(url.href, {
             'headers': Object.assign({
@@ -171,7 +178,7 @@
             'method': 'POST',
             'mode': 'cors',
             'credentials': 'include'
-        })).text();
+        })).text()
     }
 
     enum DownloadType {
@@ -189,51 +196,51 @@
     }
 
     class Dictionary<T> {
-        [key: string]: any;
-        public items: { [key: string]: T };
+        [key: string]: any
+        public items: { [key: string]: T }
         constructor(data: Array<{ key: string, value: T }> = []) {
-            this.items = {};
+            this.items = {}
             data.map(i => this.set(i.key, i.value))
         }
         public set(key: string, value: T): void {
-            this.items[key] = value;
+            this.items[key] = value
         }
         public get(key: string): T | undefined {
-            return this.has(key) ? this.items[key] : undefined;
+            return this.has(key) ? this.items[key] : undefined
         }
         public has(key: string): boolean {
-            return this.items.hasOwnProperty(key);
+            return this.items.hasOwnProperty(key)
         }
         public remove(key: string): boolean {
             if (this.has(key)) {
-                delete this.items[key];
-                return true;
+                delete this.items[key]
+                return true
             }
-            return false;
+            return false
         }
         public get size(): number {
-            return Object.keys(this.items).length;
+            return Object.keys(this.items).length
         }
         public keys(): string[] {
-            return Object.keys(this.items);
+            return Object.keys(this.items)
         }
         public values(): T[] {
-            return Object.values(this.items);
+            return Object.values(this.items)
         }
         public clear(): void {
-            this.items = {};
+            this.items = {}
         }
         public forEach(callback: (key: string, value: T) => void): void {
             for (let key in this.items) {
                 if (this.has(key)) {
-                    callback(key, this.items[key]);
+                    callback(key, this.items[key])
                 }
             }
         }
     }
 
     class I18N {
-        [key: string]: { [key: string]: string };
+        [key: string]: { [key: string]: string }
         public zh_CN = this['zh']
         public zh: { [key: string]: string } = {
             appName: 'Iwara 批量下载工具',
@@ -368,7 +375,7 @@
         iwaraDownloaderToken: string
         authorization: string
         priority: Record<string, number>
-        [key: string]: any;
+        [key: string]: any
         constructor() {
             //初始化
             this.language = GM_getValue('language', language())
@@ -394,13 +401,13 @@
                 },
                 set: function (target, property: string, value) {
                     if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
-                        let setr = Reflect.set(target, property, value);
+                        let setr = Reflect.set(target, property, value)
                         GM_getValue('isDebug') && console.log(`set ${property.toString()} ${value} ${setr}`)
                         GM_getValue(property.toString()) !== value && GM_setValue(property.toString(), value)
                         target.configChange(property.toString())
                         return setr
                     } else {
-                        return true;
+                        return true
                     }
                 }
             })
@@ -415,11 +422,11 @@
             GM_info.scriptHandler === "Tampermonkey" ? GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list: any, error: any) => {
                 if (error) {
                     console.log(error)
-                    body.cookies = [];
+                    body.cookies = []
                 } else {
-                    body.cookies = list;
+                    body.cookies = list
                 }
-            }) : body.cookies = [];
+            }) : body.cookies = []
             return body
         }
         public async check() {
@@ -467,9 +474,9 @@
         private configChange(item: string) {
             switch (item) {
                 case 'downloadType':
-                    let page: HTMLElement = document.querySelector('#pluginConfigPage');
+                    let page: HTMLElement = document.querySelector('#pluginConfigPage')
                     while (page.hasChildNodes()) {
-                        page.removeChild(page.firstChild);
+                        page.removeChild(page.firstChild)
                     }
                     let variableInfo = renderNode({
                         nodeType: 'label',
@@ -655,18 +662,18 @@
                         case DownloadType.Aria2:
                             downloadConfigInput.map(i => page.appendChild(i))
                             aria2ConfigInput.map(i => page.appendChild(i))
-                            break;
+                            break
                         case DownloadType.IwaraDownloader:
                             downloadConfigInput.map(i => page.appendChild(i))
                             iwaraDownloaderConfigInput.map(i => page.appendChild(i))
-                            break;
+                            break
                         default:
                             BrowserConfigInput.map(i => page.appendChild(i))
-                            break;
+                            break
                     }
-                    break;
+                    break
                 default:
-                    break;
+                    break
             }
         }
         public edit() {
@@ -677,10 +684,10 @@
                     childs: '%#save#%',
                     events: {
                         click: async () => {
-                            save.disabled = !save.disabled;
+                            save.disabled = !save.disabled
                             if (await this.check()) {
                                 editor.remove()
-                                unsafeWindow.location.reload();
+                                unsafeWindow.location.reload()
                             }
                             save.disabled = !save.disabled
                         }
@@ -868,7 +875,7 @@
         getDownloadUrl: () => string
         constructor(Name: string) {
             this.Name = Name
-            return this;
+            return this
         }
         async init(ID: string) {
             try {
@@ -911,15 +918,15 @@
                     ) as VideoCommentAPIRawData
                 }
                 const getCommentDatas = async (commentID: string = null): Promise<VideoCommentAPIRawData["results"]> => {
-                    let comments: VideoCommentAPIRawData["results"] = [];
+                    let comments: VideoCommentAPIRawData["results"] = []
                     let base = await getCommentData(commentID)
                     comments.append(base.results)
                     for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
                         comments.append((await getCommentData(commentID, page)).results)
                     }
-                    let replies: VideoCommentAPIRawData["results"] = [];
+                    let replies: VideoCommentAPIRawData["results"] = []
                     for (let index = 0; index < comments.length; index++) {
-                        const comment = comments[index];
+                        const comment = comments[index]
                         if (comment.numReplies > 0) {
                             replies.append(await getCommentDatas(comment.id))
                         }
@@ -966,9 +973,9 @@
 
     var i18n = new I18N()
     var config = new Config()
-    var videoList = new Dictionary<string>();
+    var videoList = new Dictionary<string>()
 
-    const originFetch = fetch;
+    const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`)
         if (options !== undefined && options.headers !== undefined) {
@@ -977,7 +984,7 @@
                     if (config.authorization !== options.headers[key]) {
                         let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
                         if (playload['type'] === 'refresh_token') {
-                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`);
+                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`)
                             isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop())
                             break
                         }
@@ -1237,9 +1244,6 @@
     }
     `)
 
-    function parseSearchParams(searchParams: URLSearchParams, initialObject = {}): {} {
-        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
-    }
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
         try {
@@ -1252,13 +1256,12 @@
         return refresh
     }
     async function getXVersion(urlString: string): Promise<string> {
-        let url = new URL(urlString)
-        let params = parseSearchParams(url.searchParams) as Record<string, any>
-        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
-        const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+        let url = urlString.toURL()
+        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${ url.searchParams.get('expires') }_5nFp9kmbNnHdAFhaqMvt`)
+        const hashBuffer = await crypto.subtle.digest('SHA-1', data)
         return Array.from(new Uint8Array(hashBuffer))
             .map(b => b.toString(16).padStart(2, '0'))
-            .join('');
+            .join('')
     }
 
 
@@ -1269,21 +1272,21 @@
     }
 
     function compareVersions(version1: string, version2: string): VersionState {
-        const v1 = version1.split('.').map(Number);
-        const v2 = version2.split('.').map(Number);
+        const v1 = version1.split('.').map(Number)
+        const v2 = version2.split('.').map(Number)
 
         for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-            const num1 = v1[i] || 0;
-            const num2 = v2[i] || 0;
+            const num1 = v1[i] || 0
+            const num2 = v2[i] || 0
 
             if (num1 < num2) {
-                return VersionState.low;
+                return VersionState.low
             } else if (num1 > num2) {
-                return VersionState.high;
+                return VersionState.high
             }
         }
 
-        return VersionState.equal;
+        return VersionState.equal
     }
 
 
@@ -1298,16 +1301,16 @@
     }
 
     async function addDownloadTask() {
-        let data = prompt(i18n[language()].manualDownloadTips, '');
+        let data = prompt(i18n[language()].manualDownloadTips, '')
         if (notNull(data) && !(data.isEmpty())) {
-            let IDList = new Dictionary<string>();
+            let IDList = new Dictionary<string>()
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).prune().map(ID => IDList.set(ID, '手动解析'))
             analyzeDownloadTask(IDList)
         }
     }
 
     async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
-        let size = list.size;
+        let size = list.size
         let node = renderNode({
             nodeType: 'p',
             childs: `%#parsingProgress#%[${list.size}/${size}]`
@@ -1326,18 +1329,20 @@
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
-        let completed = newToast(
-            ToastType.Info,
-            {
-                text: `%#allCompleted#%`,
-                duration: -1,
-                close: true,
-                onClick() {
-                    completed.hideToast()
+        if (size != 1){
+            let completed = newToast(
+                ToastType.Info,
+                {
+                    text: `%#allCompleted#%`,
+                    duration: -1,
+                    close: true,
+                    onClick() {
+                        completed.hideToast()
+                    }
                 }
-            }
-        );
-        completed.showToast()
+            )
+            completed.showToast()
+        }
     }
 
     function checkIsHaveDownloadLink(comment: string): boolean {
@@ -1402,7 +1407,7 @@
                 ? Array.from(node.childNodes)
                     .map(getTextNode)
                     .join('')
-                : '';
+                : ''
     }
     function newToast(type: ToastType, params?: Toastify.Options) {
         const logFunc = {
@@ -1410,7 +1415,7 @@
             [ToastType.Error]: console.error,
             [ToastType.Log]: console.log,
             [ToastType.Info]: console.info,
-        }[type] || console.log;
+        }[type] || console.log
         params = Object.assign({
             newWindow: true,
             gravity: 'top',
@@ -1454,7 +1459,7 @@
                     }
                 }
             )
-            toast.showToast();
+            toast.showToast()
             return
         }
         if (config.checkDownloadLink && videoInfo.DownloadQuality != 'Source') {
@@ -1472,22 +1477,22 @@
                     }
                 }
             )
-            toast.showToast();
+            toast.showToast()
             return
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
                 aria2Download(videoInfo)
-                break;
+                break
             case DownloadType.IwaraDownloader:
                 iwaraDownloaderDownload(videoInfo)
-                break;
+                break
             case DownloadType.Browser:
                 browserDownload(videoInfo)
-                break;
+                break
             default:
                 othersDownload(videoInfo)
-                break;
+                break
         }
     }
 
@@ -1501,14 +1506,14 @@
                 filename: matchPath[3]
             }
         } catch (error) {
-            throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`);
+            throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`)
         }
     }
     async function EnvCheck(): Promise<boolean> {
         try {
             if (GM_info.downloadMode !== 'browser') {
                 GM_getValue('isDebug') && console.log(GM_info)
-                throw new Error('%#browserDownloadModeError#%');
+                throw new Error('%#browserDownloadModeError#%')
             }
         } catch (error: any) {
             let toast = newToast(
@@ -1526,9 +1531,9 @@
                 }
             )
             toast.showToast()
-            return false;
+            return false
         }
-        return true;
+        return true
     }
     async function localPathCheck(): Promise<boolean> {
         try {
@@ -1553,9 +1558,9 @@
                 }
             )
             toast.showToast()
-            return false;
+            return false
         }
-        return true;
+        return true
     }
     async function aria2Check(): Promise<boolean> {
         try {
@@ -1566,7 +1571,7 @@
                 'params': ['token:' + config.aria2Token]
             }))
             if (res.error) {
-                throw new Error(res.error.message);
+                throw new Error(res.error.message)
             }
         } catch (error: any) {
             let toast = newToast(
@@ -1584,9 +1589,9 @@
                 }
             )
             toast.showToast()
-            return false;
+            return false
         }
-        return true;
+        return true
     }
     async function iwaraDownloaderCheck(): Promise<boolean> {
         try {
@@ -1597,7 +1602,7 @@
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
             )))
             if (res.code !== 0) {
-                throw new Error(res.msg);
+                throw new Error(res.msg)
             }
         } catch (error) {
             let toast = newToast(
@@ -1615,9 +1620,9 @@
                 }
             )
             toast.showToast()
-            return false;
+            return false
         }
-        return true;
+        return true
     }
     function aria2Download(videoInfo: VideoInfo) {
         (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<string>, downloadUrl: string) {
@@ -1660,7 +1665,7 @@
                     node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()));
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
@@ -1781,9 +1786,9 @@
 
     function injectCheckbox() {
         if (document.querySelector('.selectButton')) {
-            return;
+            return
         }
-        let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox');
+        let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox')
         GM_getValue('isDebug') && console.log(compatibilityMode)
         let videoNodes = document.querySelectorAll(`.videoTeaser`)
         videoNodes.forEach((element) => {
@@ -1804,8 +1809,8 @@
                         let target = event.target as HTMLInputElement
                         target.checked ? videoList.set(ID, Name) : videoList.remove(ID)
                         event.stopPropagation()
-                        event.stopImmediatePropagation();
-                        return false;
+                        event.stopImmediatePropagation()
+                        return false
                     }
                 }
             }))
@@ -1814,7 +1819,7 @@
 
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
-        alert(i18n[language()].configurationIncompatible);
+        alert(i18n[language()].configurationIncompatible)
         GM_setValue('isFirstRun', true)
     }
 
@@ -1893,8 +1898,8 @@
                             injectCheckbox()
                         }
                     })
-                });
-                observer.observe(document.querySelector('#app'), { childList: true, subtree: true });
+                })
+                observer.observe(document.querySelector('#app'), { childList: true, subtree: true })
             }
             document.body.appendChild(renderNode({
                 nodeType: 'div',
@@ -1930,7 +1935,7 @@
                                         close: true
                                     }).showToast()
                                     event.stopPropagation()
-                                    return false;
+                                    return false
                                 }
                             }
                         },
@@ -1944,7 +1949,7 @@
                                         !button.checked && button.click()
                                     })
                                     event.stopPropagation()
-                                    return false;
+                                    return false
                                 }
                             }
                         },
@@ -1958,7 +1963,7 @@
                                         button.checked && button.click()
                                     })
                                     event.stopPropagation()
-                                    return false;
+                                    return false
                                 }
                             }
                         },
@@ -1971,7 +1976,7 @@
                                         (element as HTMLInputElement).click()
                                     })
                                     event.stopPropagation()
-                                    return false;
+                                    return false
                                 }
                             }
                         },
@@ -1982,7 +1987,7 @@
                                 click: (event: Event) => {
                                     addDownloadTask()
                                     event.stopPropagation()
-                                    return false;
+                                    return false
                                 }
                             }
                         },
@@ -2010,7 +2015,7 @@
                                         toast.showToast()
                                     }
                                     event.stopPropagation()
-                                    return false;
+                                    return false
                                 }
                             }
                         },
@@ -2021,7 +2026,7 @@
                                 click: (event: Event) => {
                                     config.edit()
                                     event.stopPropagation()
-                                    return false;
+                                    return false
                                 }
                             }
                         }

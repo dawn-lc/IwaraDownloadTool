@@ -2,35 +2,29 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Add Version",
+			"label": "Preprocess",
 			"group": "build",
 			"type": "shell",
-			"command": "bash ${workspaceFolder}/build/VersionManage.sh",
+			"command": "npm run preprocess",
 			"presentation": {
 				"reveal": "silent",
 				"revealProblems": "onProblem",
 				"close": true
-			},
-			"windows": {
-				"command": "cmd /c 'cd ${workspaceFolder}\\build && VersionManage.cmd'"
 			}
 		},
 		{
-			"label": "Mata Build",
+			"label": "Release",
 			"group": "build",
 			"type": "shell",
-			"command": "cp ${workspaceFolder}/scripts/IwaraDownloadTool.mata.ts ${workspaceFolder}/dist/IwaraDownloadTool.mata.js",
+			"command": "npm run release",
 			"presentation": {
 				"reveal": "silent",
 				"revealProblems": "onProblem",
 				"close": true
-			},
-			"windows": {
-				"command": "copy ${workspaceFolder}\\scripts\\IwaraDownloadTool.mata.ts ${workspaceFolder}\\dist\\IwaraDownloadTool.mata.js"
 			}
 		},
 		{
-			"label": "Main Build",
+			"label": "Build",
 			"group": "build",
 			"type": "shell",
 			"command": "${workspaceFolder}/node_modules/.bin/tsc",
@@ -40,8 +34,7 @@
 			],
 			"presentation": {
 				"reveal": "silent",
-				"revealProblems": "onProblem",
-				//"close": true
+				"revealProblems": "onProblem"
 			},
 			"windows": {
 				"command": "${workspaceFolder}\\node_modules\\.bin\\tsc.cmd"
@@ -49,17 +42,16 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Build",
+			"label": "UserJS",
 			"dependsOrder": "sequence",
 			"dependsOn": [
-				"Add Version",
-				"Mata Build",
-				"Main Build"
+				"Preprocess",
+				"Build",
+				"Release"
 			],
 			"presentation": {
 				"reveal": "silent",
-				"revealProblems": "onProblem",
-				//"close": true
+				"revealProblems": "onProblem"
 			},
 			"problemMatcher": [],
 			"group": {

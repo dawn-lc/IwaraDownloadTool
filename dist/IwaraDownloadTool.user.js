@@ -7,14 +7,14 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.170
+// @version           3.1.178
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
 // @source            https://github.com/dawn-lc/IwaraDownloadTool
 // @supportURL        https://github.com/dawn-lc/IwaraDownloadTool/issues
-// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/IwaraDownloadTool.mata.js
-// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/IwaraDownloadTool.user.js
+// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/raw/dev/dist/IwaraDownloadTool.mata.js
+// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/raw/dev/dist/IwaraDownloadTool.user.js
 // @connect           iwara.tv
 // @connect           www.iwara.tv
 // @connect           api.iwara.tv
@@ -75,6 +75,13 @@
         }
         let body = this.split(start).pop().notEmpty() ? this.split(start).pop() : '';
         return body.split(end).shift().notEmpty() ? body.split(end).shift() : '';
+    };
+    String.prototype.splitLimit = function (separator, limit) {
+        if (this.isEmpty() || isNull(separator)) {
+            throw new Error('Empty');
+        }
+        let body = this.split(separator);
+        return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body;
     };
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString();
@@ -1217,9 +1224,6 @@
         margin: 0 ;
     }
     `);
-    function parseSearchParams(searchParams, initialObject = {}) {
-        return [...searchParams.entries()].reduce((acc, [key, value]) => ({ ...acc, [key]: value }), initialObject);
-    }
     async function refreshToken() {
         let refresh = config.authorization;
         try {
@@ -1233,9 +1237,8 @@
         return refresh;
     }
     async function getXVersion(urlString) {
-        let url = new URL(urlString);
-        let params = parseSearchParams(url.searchParams);
-        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${params['expires']}_5nFp9kmbNnHdAFhaqMvt`);
+        let url = urlString.toURL();
+        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${url.searchParams.get('expires')}_5nFp9kmbNnHdAFhaqMvt`);
         const hashBuffer = await crypto.subtle.digest('SHA-1', data);
         return Array.from(new Uint8Array(hashBuffer))
             .map(b => b.toString(16).padStart(2, '0'))
@@ -1296,15 +1299,17 @@
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`;
         }
         start.hideToast();
-        let completed = newToast(ToastType.Info, {
-            text: `%#allCompleted#%`,
-            duration: -1,
-            close: true,
-            onClick() {
-                completed.hideToast();
-            }
-        });
-        completed.showToast();
+        if (size != 1) {
+            let completed = newToast(ToastType.Info, {
+                text: `%#allCompleted#%`,
+                duration: -1,
+                close: true,
+                onClick() {
+                    completed.hideToast();
+                }
+            });
+            completed.showToast();
+        }
     }
     function checkIsHaveDownloadLink(comment) {
         if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {

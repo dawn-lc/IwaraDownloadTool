@@ -8,13 +8,13 @@
     "strict": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
-    "outFile": "./dist/IwaraDownloadTool.user.js"
+    "outFile": "./temp/user.js"
   },
   "include": [
     "./utils/*.d.ts"
   ],
   "files": [
-    "./scripts/IwaraDownloadTool.mata.ts",
-    "./scripts/IwaraDownloadTool.user.ts"
+    "./scripts/mata.ts",
+    "./scripts/user.ts"
   ]
 }
