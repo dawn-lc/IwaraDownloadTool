@@ -2,6 +2,17 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "Install",
+			"group": "build",
+			"type": "shell",
+			"command": "npm install",
+			"presentation": {
+				"reveal": "silent",
+				"revealProblems": "onProblem",
+				"close": true
+			}
+		},
+		{
 			"label": "Preprocess",
 			"group": "build",
 			"type": "shell",
@@ -46,6 +57,7 @@
 			"dependsOrder": "sequence",
 			"dependsOn": [
 				"Preprocess",
+				"Install",
 				"Build",
 				"Release"
 			],
