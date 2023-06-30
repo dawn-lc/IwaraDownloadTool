@@ -107,6 +107,10 @@ function getGitHash() {
     return childProcess.execSync('git rev-parse --short HEAD', { 'encoding': 'utf8' }).trim();
 }
 
+function mkdir(path) {
+    return fs.existsSync(path) || fs.mkdirSync(path)
+}
+
 function getGitBranch() {
     return childProcess.execSync('git rev-parse --abbrev-ref HEAD', { 'encoding': 'utf8' }).trim();
 }
@@ -115,6 +119,15 @@ function addVersion(versionString) {
     version[version.length - 1] = version[version.length - 1] + 1;
     return version.join('.');
 }
+
+const tempPath = path.join(root, 'temp');
+const distPath = path.join(root, 'dist');
+const branchPath = path.join(distPath, getGitBranch());
+
+mkdir(tempPath);
+mkdir(distPath);
+mkdir(branchPath);
+
 const packagePath = path.join(root, 'package.json');
 const scriptsPath = path.join(root, 'scripts');
 

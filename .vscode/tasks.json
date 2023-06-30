@@ -20,7 +20,7 @@
 			"presentation": {
 				"reveal": "silent",
 				"revealProblems": "onProblem",
-				"close": true
+				//"close": true
 			}
 		},
 		{
@@ -31,7 +31,7 @@
 			"presentation": {
 				"reveal": "silent",
 				"revealProblems": "onProblem",
-				"close": true
+				//"close": true
 			}
 		},
 		{
