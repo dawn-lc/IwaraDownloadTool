@@ -1792,7 +1792,7 @@
         GM_getValue('isDebug') && console.log(compatibilityMode)
         let videoNodes = document.querySelectorAll(`.videoTeaser`)
         videoNodes.forEach((element) => {
-            let ID = element.querySelector('.videoTeaser__thumbnail').getAttribute('href').trim().split('/')[2]
+            let ID = (element.querySelector('a.videoTeaser__thumbnail')as HTMLLinkElement).href.toURL().pathname.split('/')[2]
             let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
             let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
             node.appendChild(renderNode({
