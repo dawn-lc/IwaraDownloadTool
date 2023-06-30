@@ -7,14 +7,14 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.193
+// @version           3.1.195
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
 // @source            https://github.com/dawn-lc/IwaraDownloadTool
 // @supportURL        https://github.com/dawn-lc/IwaraDownloadTool/issues
-// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/IwaraDownloadTool.mata.js
-// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/IwaraDownloadTool.user.js
+// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/master/IwaraDownloadTool.mata.js
+// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/raw/master/dist/master/IwaraDownloadTool.user.js
 // @connect           iwara.tv
 // @connect           www.iwara.tv
 // @connect           api.iwara.tv
@@ -40,6 +40,7 @@
 // @require           https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.js
 // @require           https://cdn.staticfile.org/moment.js/2.29.4/moment.min.js
 // @require           https://cdn.staticfile.org/moment.js/2.29.4/moment-with-locales.min.js
+// @resource          toastify-css https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css
 // ==/UserScript==
 (async function () {
     if (GM_getValue('isDebug')) {
@@ -985,7 +986,7 @@
     };
     window.fetch = modifyFetch;
     unsafeWindow.fetch = modifyFetch;
-    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()));
+    GM_addStyle(GM_getResourceText('toastify-css'));
     GM_addStyle(`
     .rainbow-text {
         background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
