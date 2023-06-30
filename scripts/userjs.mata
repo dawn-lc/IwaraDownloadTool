@@ -12,6 +12,6 @@
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
 // @source            https://github.com/dawn-lc/IwaraDownloadTool
 // @supportURL        https://github.com/dawn-lc/IwaraDownloadTool/issues
-// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/raw/%#branch#%/dist/IwaraDownloadTool.mata.js
-// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/raw/%#branch#%/dist/IwaraDownloadTool.user.js
+// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/raw/%#branch#%/dist/%#branch#%/IwaraDownloadTool.mata.js
+// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/raw/%#branch#%/dist/%#branch#%/IwaraDownloadTool.user.js
 // ==/UserScript==

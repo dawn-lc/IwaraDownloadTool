@@ -1003,8 +1003,8 @@
     window.fetch = modifyFetch
     unsafeWindow.fetch = modifyFetch
 
-
-    GM_addStyle(await get('https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css'.toURL()))
+    
+    GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
     .rainbow-text {
         background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
