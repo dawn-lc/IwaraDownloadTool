@@ -1,5 +1,4 @@
 name: 反馈BUG
-description: 反馈遇到的BUG、使用问题等
 title: "[Bug]: "
 labels: ["BUG"]
 assignees:
