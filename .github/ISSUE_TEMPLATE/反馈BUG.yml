@@ -33,7 +33,7 @@ body:
         2. 点击 '....'
         4. 出现问题
     validations:
-      required: false
+      required: true
   - type: dropdown
     id: browsers
     attributes:
@@ -45,7 +45,7 @@ body:
         - Microsoft Edge
         - 其他（例如：XXX极速、XXX安全等）
     validations:
-      required: false
+      required: true
   - type: dropdown
     id: scriptManager
     attributes:
