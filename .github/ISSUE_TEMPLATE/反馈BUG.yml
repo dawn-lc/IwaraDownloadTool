@@ -61,7 +61,7 @@ body:
   - type: input
     id: version
     label: 脚本的版本是？
-      placeholder: 例如 3.1.1
+      placeholder: 例如3.1.1
     validations:
       required: true
   - type: dropdown
