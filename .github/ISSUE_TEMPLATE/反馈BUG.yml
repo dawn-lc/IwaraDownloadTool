@@ -62,8 +62,8 @@ body:
     attributes:
       label: 脚本的版本是？
       placeholder: 例如3.1.1
-      validations:
-        required: true
+    validations:
+      required: true
   - type: dropdown
     id: downloadMode
     attributes:
