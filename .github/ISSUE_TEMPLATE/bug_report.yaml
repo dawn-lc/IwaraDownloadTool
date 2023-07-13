@@ -1,0 +1,104 @@
+name: 反馈BUG
+description: 反馈遇到的BUG、使用问题等
+title: "[Bug]: "
+labels: ["BUG"]
+assignees:
+  - dawn-lc
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 在提问之前...
+      options:
+      - label: 我已经搜索了现有的 issues
+        required: true
+      - label: 我在提问题之前至少花费了 5 分钟来思考和准备
+        required: true
+      - label: 我正在使用最新版的脚本
+        required: false
+  - type: textarea
+    id: describe
+    attributes:
+      label: 描述你的问题
+      description: 简要描述你的问题
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 如何复现
+      description: 重现该行为的步骤
+      value: |
+        1. 前往 '...'
+        2. 点击 '....'
+        4. 出现问题
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: 使用的浏览器是？
+      options:
+        - Firefox
+        - Chrome
+        - Safari
+        - Microsoft Edge
+        - 其他（例如：XXX极速、XXX安全等）
+    validations:
+      required: true
+  - type: dropdown
+    id: scriptManager
+    attributes:
+      label: 使用的脚本管理器是？
+      options:
+        - Tampermonkey
+        - Tampermonkey Beta
+        - ScriptCat
+        - Violentmonkey
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 脚本的版本是？
+      placeholder: 例如3.1.1
+    validations:
+      required: true
+  - type: dropdown
+    id: downloadMode
+    attributes:
+      label: 下载模式是？
+      options:
+        - Aria2
+        - IwaraDownloader
+        - Browser
+        - Others
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志
+      description: 请复制并粘贴任何相关的日志输出。
+      render: Text
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图
+      description: |
+        如果有，添加屏幕截图以帮助解释你的问题。
+        提示: 可以通过点击这个区域，然后把文件拖进来添加图片或日志文件。
+    validations:
+      required: false
+  - type: textarea
+    id: others
+    attributes:
+      label: 其他信息
+      description: |
+        相关的配置？链接？参考资料？
+        任何能让我们对你所遇到的问题有更多了解的东西。
+    validations:
+      required: false
