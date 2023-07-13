@@ -7,7 +7,6 @@
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://i.harem-battle.club/images/2023/03/21/wMQ.png
 // @namespace         https://github.com/dawn-lc/
-// @version           3.1.195
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2023, Dawnlc (https://dawnlc.me/)
@@ -41,6 +40,7 @@
 // @require           https://cdn.staticfile.org/moment.js/2.29.4/moment.min.js
 // @require           https://cdn.staticfile.org/moment.js/2.29.4/moment-with-locales.min.js
 // @resource          toastify-css https://cdn.staticfile.org/toastify-js/1.12.0/toastify.min.css
+// @version           3.1.199
 // ==/UserScript==
 (async function () {
     if (GM_getValue('isDebug')) {
@@ -877,17 +877,17 @@
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error(i18n[language()].parsingFailed);
                 }
-                this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|.]/img, '_')).truncate(100);
+                this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(100);
                 this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty();
                 if (this.External) {
                     throw new Error(i18n[language()].externalVideo);
                 }
                 this.Private = this.VideoInfoSource.private;
-                this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
-                this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
+                this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_');
+                this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|]/img, '_');
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt);
                 this.Tags = this.VideoInfoSource.tags.map((i) => i.id);
-                this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|.]/img, '_');
+                this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_');
                 this.Size = this.VideoInfoSource.file.size;
                 this.VideoFileSource = JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0));
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
