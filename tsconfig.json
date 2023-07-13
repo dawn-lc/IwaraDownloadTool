@@ -8,13 +8,12 @@
     "strict": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
-    "outFile": "./temp/user.js"
+    "outFile": "temp/main.js"
   },
   "include": [
-    "./utils/*.d.ts"
+    "utils/*.d.ts"
   ],
   "files": [
-    "./scripts/mata.ts",
-    "./scripts/user.ts"
+    "src/main.ts"
   ]
 }
