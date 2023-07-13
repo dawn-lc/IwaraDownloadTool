@@ -129,26 +129,28 @@ mkdir(distPath);
 mkdir(branchPath);
 
 const packagePath = path.join(root, 'package.json');
-const scriptsPath = path.join(root, 'scripts');
-
-const scriptMataTemplatePath = path.join(scriptsPath, 'userjs.mata');
-const scriptMataPath = path.join(scriptsPath, 'mata.ts');
+const sourcePath = path.join(root, 'src');
 
 let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-let scriptMataTemplate = parseMetadata(fs.readFileSync(scriptMataTemplatePath, 'utf8'));
-let scriptMata = parseMetadata(fs.readFileSync(scriptMataPath, 'utf8'));
 
 package.version = addVersion(package.version);
-scriptMata.version = package.version;
-
-scriptMata.updateURL = scriptMataTemplate.updateURL.replaceVariable({
-    'branch': getGitBranch(),
-    'hash': getGitHash()
-});
-scriptMata.downloadURL = scriptMataTemplate.downloadURL.replaceVariable({
-    'branch': getGitBranch(),
-    'hash': getGitHash()
-});
-
 fs.writeFileSync(packagePath, JSON.stringify(package, null, 2));
-fs.writeFileSync(scriptMataPath, serializeMetadata(scriptMata));
+
+const mataTemplatePath = path.join(sourcePath, 'userjs.mata');
+const mataTempPath= path.join(tempPath, 'mata.js');
+
+let mataTemplate = parseMetadata(fs.readFileSync(mataTemplatePath, 'utf8'));
+let mata = {...mataTemplate};
+
+mata.version = package.version;
+
+mata.updateURL = mataTemplate.updateURL.replaceVariable({
+    'branch': getGitBranch(),
+    'hash': getGitHash()
+});
+mata.downloadURL = mataTemplate.downloadURL.replaceVariable({
+    'branch': getGitBranch(),
+    'hash': getGitHash()
+});
+
+fs.writeFileSync(mataTempPath, serializeMetadata(mata));
