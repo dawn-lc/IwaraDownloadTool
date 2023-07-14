@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/setup-node@v3
-    - run: git clone ${{ github.repositoryUrl }} .
+    - run: git clone --no-checkout ${{ github.repositoryUrl }} .tmp && cp ./.tmp/* ./
     - run: npm run preprocess
     - run: npm ci
     - run: npm run build
