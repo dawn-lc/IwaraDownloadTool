@@ -358,8 +358,6 @@
             videoSourceNotAvailable: `Video source address not available`,
         }
     }
-    
-
 
     class Config {
         cookies: Array<any>

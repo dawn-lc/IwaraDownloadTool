@@ -2,6 +2,8 @@ name: Pre-Release
 on:
   push:
     branches: ["dev"]
+    paths:
+      - 'src/*'
 jobs:
   Build:
     if: github.actor != 'github-actions'
