@@ -5,28 +5,8 @@ on:
       - master
     paths:
       - 'src/*'
-      - '.github/workflows/*'
-      - 'package.json'
 jobs:
-  UpdateVersion:
-    if: github.actor != 'github-actions'
-    runs-on: ubuntu-latest
-    steps:
-    - name: 初始化Node.js环境
-      uses: actions/setup-node@v3
-    - name: 拉取最新代码
-      uses: actions/checkout@v3
-      with:
-        ref: master
-    - run: |
-        git config --global user.name github-actions
-        git config --global user.email github-actions@github.com
-    - name: 修改版本号
-      run: npm version patch
-    - name: 保存版本号
-      run: git push
   Build:
-    needs: UpdateVersion
     if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
@@ -44,6 +24,15 @@ jobs:
       run: npm run build
     - name: 后处理
       run: npm run postprocess
+  Release:
+    needs: Build
+    if: github.actor != 'github-actions'
+    runs-on: ubuntu-latest
+    steps:
+    - name: 拉取最新代码
+      uses: actions/checkout@v3
+      with:
+        ref: master
     - uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 发布新版本
