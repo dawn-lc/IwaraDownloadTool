@@ -111,9 +111,9 @@ mkdir(tempPath);
 
 const sourcePath = path.join(root, 'src');
 
+const packagePath = path.join(root, 'package.json');
 const mataTemplatePath = path.join(sourcePath, 'userjs.mata');
 const mataTempPath= path.join(tempPath, 'mata.js');
-const packagePath = path.join(root, 'package.json');
 
 let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 let mataTemplate = parseMetadata(fs.readFileSync(mataTemplatePath, 'utf8'));
