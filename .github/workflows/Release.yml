@@ -25,7 +25,6 @@ jobs:
       run: npm version patch
     - name: 保存版本号
       run: |
-        git add .
         git commit -m "UpdateVersion"
         git push
   Build:
