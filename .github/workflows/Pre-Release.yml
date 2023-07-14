@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        path: dev
     - name: 初始化Node.js环境
       uses: actions/setup-node@v3
     - name: 预处理
@@ -29,7 +31,7 @@ jobs:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: "dev"
         prerelease: true
-        title: "Dev ${{ steps.package-version.outputs.version }}"
+        title: "[开发版] ${{ steps.package-version.outputs.version }}"
         files: |
           temp/*.user.js
           temp/*.mata.js
