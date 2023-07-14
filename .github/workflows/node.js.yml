@@ -24,7 +24,7 @@ jobs:
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: "latest"
-        title: "Development Build"
+        title: "Release"
         files: |
           *.user.js
           *.mata.js
