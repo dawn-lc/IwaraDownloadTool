@@ -4,16 +4,17 @@ on:
     branches: ["dev"]
     paths:
       - 'src/*'
-      - '.github/workflows/*'
 jobs:
-  build:
+  Build:
+    if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: dev
     - name: 初始化Node.js环境
       uses: actions/setup-node@v3
+    - name: 拉取最新代码
+      uses: actions/checkout@v3
+      with:
+        ref: dev
     - name: 预处理
       run: npm run preprocess
     - name: 安装依赖项
