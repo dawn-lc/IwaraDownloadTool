@@ -998,7 +998,6 @@
     window.fetch = modifyFetch
     unsafeWindow.fetch = modifyFetch
 
-    
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
     .rainbow-text {
