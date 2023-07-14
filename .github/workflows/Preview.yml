@@ -6,7 +6,7 @@ on:
     paths:
       - 'src/*'
 jobs:
-  UpdateVersion:
+  Update:
     if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
@@ -23,8 +23,8 @@ jobs:
       run: npm version patch
     - name: 保存版本号
       run: git push
-  Build:
-    needs: UpdateVersion
+  Release:
+    needs: Update
     if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
@@ -42,15 +42,6 @@ jobs:
       run: npm run build
     - name: 后处理
       run: npm run postprocess
-  Release:
-    needs: Build
-    if: github.actor != 'github-actions'
-    runs-on: ubuntu-latest
-    steps:
-    - name: 拉取最新代码
-      uses: actions/checkout@v3
-      with:
-        ref: dev
     - uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 发布新版本
