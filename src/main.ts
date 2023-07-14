@@ -1258,7 +1258,6 @@
             .join('')
     }
 
-
     enum VersionState {
         low,
         equal,
