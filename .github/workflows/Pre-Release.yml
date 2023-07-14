@@ -24,9 +24,7 @@ jobs:
     - name: 修改版本号
       run: npm version patch
     - name: 保存版本号
-      run: |
-        git commit -m "UpdateVersion"
-        git push
+      run: git push
   Build:
     needs: UpdateVersion
     if: github.actor != 'github-actions'
