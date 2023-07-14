@@ -1,0 +1,35 @@
+name: Release
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - 'src/*'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@latest
+    - name: 初始化Node.js环境
+      uses: actions/setup-node@v3
+    - name: 预处理
+      run: npm run preprocess
+    - name: 安装依赖项
+      run: npm ci
+    - name: 编译
+      run: npm run build
+    - name: 后处理
+      run: npm run postprocess
+    - uses: tyankatsu0105/read-package-version-actions@v1
+      with: 
+        path: "./package.json"
+      id: package-version
+    - name: 发布新版本
+      uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: false
+        title: "Release ${{ steps.package-version.outputs.version }}"
+        files: |
+          temp/*.user.js
+          temp/*.mata.js
