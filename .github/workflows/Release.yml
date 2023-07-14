@@ -1,7 +1,9 @@
 name: Release
 on:
   push:
-    branches: [ "master" ]
+    branches: "master"
+    paths:
+      - 'src/*'
 jobs:
   build:
   
