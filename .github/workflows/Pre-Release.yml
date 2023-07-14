@@ -4,13 +4,14 @@ on:
     branches: ["dev"]
     paths:
       - 'src/*'
+      - '.github/workflows/*'
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
-        path: dev
+        ref: dev
     - name: 初始化Node.js环境
       uses: actions/setup-node@v3
     - name: 预处理

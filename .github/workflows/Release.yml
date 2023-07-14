@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        path: master
+        ref: master
     - name: 初始化Node.js环境
       uses: actions/setup-node@v3
     - name: 预处理
