@@ -2,9 +2,6 @@ name: Pre-Release
 on:
   push:
     branches: ["dev"]
-    paths:
-      - 'src/*'
-      - '.github/workflows/*'
 jobs:
   Build:
     if: github.actor != 'github-actions'
