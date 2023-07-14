@@ -1,9 +1,11 @@
 name: Pre-Release
 on:
   push:
-    branches: ["dev"]
+    branches: 
+      - dev
     paths:
       - 'src/*'
+      - '.github/workflows/*'
       - 'package.json'
 jobs:
   UpdateVersion:
@@ -25,6 +27,7 @@ jobs:
         git commit -m "UpdateVersion"
         git push
   Build:
+    needs: UpdateVersion
     if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
