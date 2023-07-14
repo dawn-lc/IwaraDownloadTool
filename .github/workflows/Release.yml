@@ -10,9 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/setup-node@v3
-    - run: cd ../
-    - run: pwd && ls -alh
-    
+    - run: cd ../ && pwd && tree -a
     - run: npm run preprocess
     - run: npm ci
     - run: npm run build
