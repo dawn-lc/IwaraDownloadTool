@@ -29,7 +29,7 @@ jobs:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: "latest"
         prerelease: false
-        title: "${{ steps.package-version.outputs.version }}"
+        title: "[正式版] ${{ steps.package-version.outputs.current-version }}"
         files: |
           temp/*.user.js
           temp/*.mata.js
