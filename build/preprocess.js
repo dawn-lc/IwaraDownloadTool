@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs');
-const childProcess = require('child_process');
 const root = process.cwd();
 
 const isNull = function (obj) {
@@ -103,17 +102,10 @@ function serializeMetadata(metadata) {
     return results.join('\n');
 };
 
-function getGitHash() {
-    return childProcess.execSync('git rev-parse --short HEAD', { 'encoding': 'utf8' }).trim();
-}
-
 function mkdir(path) {
     return fs.existsSync(path) || fs.mkdirSync(path)
 }
 
-function getGitBranch() {
-    return childProcess.execSync('git rev-parse --abbrev-ref HEAD', { 'encoding': 'utf8' }).trim();
-}
 function addVersion(versionString) {
     let version = versionString.split('.').map(Number);
     version[version.length - 1] = version[version.length - 1] + 1;
@@ -121,12 +113,8 @@ function addVersion(versionString) {
 }
 
 const tempPath = path.join(root, 'temp');
-const distPath = path.join(root, 'dist');
-const branchPath = path.join(distPath, getGitBranch());
 
 mkdir(tempPath);
-mkdir(distPath);
-mkdir(branchPath);
 
 const packagePath = path.join(root, 'package.json');
 const sourcePath = path.join(root, 'src');
@@ -143,14 +131,5 @@ let mataTemplate = parseMetadata(fs.readFileSync(mataTemplatePath, 'utf8'));
 let mata = {...mataTemplate};
 
 mata.version = package.version;
-
-mata.updateURL = mataTemplate.updateURL.replaceVariable({
-    'branch': getGitBranch(),
-    'hash': getGitHash()
-});
-mata.downloadURL = mataTemplate.downloadURL.replaceVariable({
-    'branch': getGitBranch(),
-    'hash': getGitHash()
-});
 
 fs.writeFileSync(mataTempPath, serializeMetadata(mata));

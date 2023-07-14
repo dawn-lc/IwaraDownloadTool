@@ -20,37 +20,30 @@
 			"presentation": {
 				"reveal": "silent",
 				"revealProblems": "onProblem",
-				//"close": true
+				"close": true
 			}
 		},
 		{
-			"label": "Release",
+			"label": "Postprocess",
 			"group": "build",
 			"type": "shell",
-			"command": "npm run release",
+			"command": "npm run postprocess",
 			"presentation": {
 				"reveal": "silent",
 				"revealProblems": "onProblem",
-				//"close": true
+				"close": true
 			}
 		},
 		{
 			"label": "Build",
 			"group": "build",
 			"type": "shell",
-			"command": "${workspaceFolder}/node_modules/.bin/tsc",
-			"args": [
-				"--project",
-				"${workspaceFolder}"
-			],
+			"command": "npm run build",
 			"presentation": {
 				"reveal": "silent",
-				"revealProblems": "onProblem"
-			},
-			"windows": {
-				"command": "${workspaceFolder}\\node_modules\\.bin\\tsc.cmd"
-			},
-			"problemMatcher": []
+				"revealProblems": "onProblem",
+				"close": true
+			}
 		},
 		{
 			"label": "UserJS",
@@ -59,7 +52,7 @@
 				"Preprocess",
 				"Install",
 				"Build",
-				"Release"
+				"Postprocess"
 			],
 			"presentation": {
 				"reveal": "silent",
