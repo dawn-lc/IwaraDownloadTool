@@ -11,6 +11,7 @@ jobs:
     steps:
     - uses: actions/setup-node@v3
     - run: cd ../
+    - run: npm ci
     - run: npm run preprocess
     - run: npm install
     - run: npm run build
