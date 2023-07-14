@@ -5,7 +5,6 @@ on:
       - dev
     paths:
       - 'src/*'
-      - '.github/workflows/*'
       - 'package.json'
 jobs:
   UpdateVersion:
@@ -44,13 +43,21 @@ jobs:
       run: npm run build
     - name: 后处理
       run: npm run postprocess
+  Release:
+    needs: Build
+    if: github.actor != 'github-actions'
+    runs-on: ubuntu-latest
+    steps:
+    - name: 拉取最新代码
+      uses: actions/checkout@v3
+      with:
+        ref: dev
     - uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 发布新版本
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "development"
         prerelease: true
         title: "[开发版] ${{ steps.package-version.outputs.current-version }}"
         files: |
