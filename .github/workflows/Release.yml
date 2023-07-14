@@ -21,9 +21,7 @@ jobs:
       run: npm run build
     - name: 后处理
       run: npm run postprocess
-    - uses: tyankatsu0105/read-package-version-actions@v1
-      with: 
-        path: "./package.json"
+    - uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 发布新版本
       uses: "marvinpinto/action-automatic-releases@latest"
