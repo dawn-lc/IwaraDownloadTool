@@ -1652,7 +1652,6 @@
                             'referer': 'https://ecchi.iwara.tv/',
                             'header': [
                                 'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
-                                //,'Authorization:' + config.authorization
                             ]
                         }
                     )
