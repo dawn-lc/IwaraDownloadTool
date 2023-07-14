@@ -105,24 +105,11 @@ function serializeMetadata(metadata) {
 function mkdir(path) {
     return fs.existsSync(path) || fs.mkdirSync(path)
 }
-
-function addVersion(versionString) {
-    let version = versionString.split('.').map(Number);
-    version[version.length - 1] = version[version.length - 1] + 1;
-    return version.join('.');
-}
-
 const tempPath = path.join(root, 'temp');
 
 mkdir(tempPath);
 
-const packagePath = path.join(root, 'package.json');
 const sourcePath = path.join(root, 'src');
-
-let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-
-package.version = addVersion(package.version);
-fs.writeFileSync(packagePath, JSON.stringify(package, null, 2));
 
 const mataTemplatePath = path.join(sourcePath, 'userjs.mata');
 const mataTempPath= path.join(tempPath, 'mata.js');
