@@ -2,9 +2,10 @@ name: Release
 on:
   push:
     branches: 
-      - "master"
+      - master
     paths:
       - 'src/*'
+      - '.github/workflows/*'
       - 'package.json'
 jobs:
   UpdateVersion:
@@ -20,20 +21,20 @@ jobs:
     - name: 修改版本号
       run: npm version patch
     - run: |
-        git config user.name github-actions
-        git config user.email github-actions@github.com
         git add .
         git commit -m "UpdateVersion"
         git push
   Build:
+    needs: UpdateVersion
     if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: master
     - name: 初始化Node.js环境
       uses: actions/setup-node@v3
+    - name: 拉取最新代码
+      uses: actions/checkout@v3
+      with:
+        ref: master
     - name: 预处理
       run: npm run preprocess
     - name: 安装依赖项

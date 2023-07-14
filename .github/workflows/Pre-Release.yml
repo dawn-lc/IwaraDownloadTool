@@ -1,9 +1,11 @@
 name: Pre-Release
 on:
   push:
-    branches: ["dev"]
+    branches: 
+      - dev
     paths:
       - 'src/*'
+      - '.github/workflows/*'
       - 'package.json'
 jobs:
   UpdateVersion:
@@ -19,12 +21,11 @@ jobs:
     - name: 修改版本号
       run: npm version patch
     - run: |
-        git config user.name github-actions
-        git config user.email github-actions@github.com
         git add .
         git commit -m "UpdateVersion"
         git push
   Build:
+    needs: UpdateVersion
     if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
