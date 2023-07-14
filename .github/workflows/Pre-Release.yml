@@ -4,6 +4,7 @@ on:
     branches: ["dev"]
     paths:
       - 'src/*'
+      - 'package.json'
 jobs:
   UpdateVersion:
     if: github.actor != 'github-actions'
