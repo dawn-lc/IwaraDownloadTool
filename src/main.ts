@@ -1342,7 +1342,7 @@
         if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {
             return false
         }
-        const downloadLinkCharacteristics = [
+        return [
             'pan\.baidu',
             'mega\.nz',
             'drive\.google\.com',
@@ -1364,13 +1364,7 @@
             'onedrive',
             'pixeldrain\.com',
             'gigafile\.nu'
-        ]
-        for (let index = 0; index < downloadLinkCharacteristics.length; index++) {
-            if (comment.toLowerCase().includes(downloadLinkCharacteristics[index])) {
-                return true
-            }
-        }
-        return false
+        ].filter(i => comment.toLowerCase().includes(i)).any()
     }
 
 
