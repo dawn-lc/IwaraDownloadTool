@@ -9,6 +9,7 @@
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
+    Node.prototype.originalAppendChild = Node.prototype.appendChild
 
     const isNull = function (obj: any): boolean {
         return typeof obj === 'undefined' || obj === null
@@ -658,15 +659,15 @@
                     ]
                     switch (config.downloadType) {
                         case DownloadType.Aria2:
-                            downloadConfigInput.map(i => page.appendChild(i))
-                            aria2ConfigInput.map(i => page.appendChild(i))
+                            downloadConfigInput.map(i => page.originalAppendChild(i))
+                            aria2ConfigInput.map(i => page.originalAppendChild(i))
                             break
                         case DownloadType.IwaraDownloader:
-                            downloadConfigInput.map(i => page.appendChild(i))
-                            iwaraDownloaderConfigInput.map(i => page.appendChild(i))
+                            downloadConfigInput.map(i => page.originalAppendChild(i))
+                            iwaraDownloaderConfigInput.map(i => page.originalAppendChild(i))
                             break
                         default:
-                            BrowserConfigInput.map(i => page.appendChild(i))
+                            BrowserConfigInput.map(i => page.originalAppendChild(i))
                             break
                     }
                     break
@@ -845,7 +846,7 @@
                         save
                     ]
                 }) as HTMLElement
-                document.body.appendChild(editor)
+                document.body.originalAppendChild(editor)
                 this.configChange('downloadType')
             }
         }
@@ -1779,36 +1780,28 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
-    function injectCheckbox() {
-        if (document.querySelector('.selectButton')) {
-            return
-        }
-        let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox')
-        GM_getValue('isDebug') && console.log(compatibilityMode)
-        let videoNodes = document.querySelectorAll(`.videoTeaser`)
-        videoNodes.forEach((element) => {
-            let ID = (element.querySelector('a.videoTeaser__thumbnail')as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-            let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
-            let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
-            node.appendChild(renderNode({
-                nodeType: 'input',
-                attributes: Object.assign(
-                    videoList.has(ID) ? { checked: true } : {}, {
-                    type: 'checkbox',
-                    videoID: ID,
-                    videoName: Name
-                }),
-                className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
-                events: {
-                    click: (event: Event) => {
-                        (event.target as HTMLInputElement).checked ? videoList.set(ID, Name) : videoList.remove(ID)
-                        event.stopPropagation()
-                        event.stopImmediatePropagation()
-                        return false
-                    }
+    function injectCheckbox(element: Element, compatible: boolean) {
+        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
+        let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
+        let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
+        node.originalAppendChild(renderNode({
+            nodeType: 'input',
+            attributes: Object.assign(
+                videoList.has(ID) ? { checked: true } : {}, {
+                type: 'checkbox',
+                videoID: ID,
+                videoName: Name
+            }),
+            className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
+            events: {
+                click: (event: Event) => {
+                    (event.target as HTMLInputElement).checked ? videoList.set(ID, Name) : videoList.remove(ID)
+                    event.stopPropagation()
+                    event.stopImmediatePropagation()
+                    return false
                 }
-            }))
-        })
+            }
+        }))
     }
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
@@ -1835,7 +1828,7 @@
                 }
             }
         }) as HTMLButtonElement
-        document.body.appendChild(renderNode({
+        document.body.originalAppendChild(renderNode({
             nodeType: 'div',
             attributes: {
                 id: 'pluginOverlay'
@@ -1884,17 +1877,16 @@
             config.edit()
         } else {
             GM_setValue('version', GM_info.script.version)
+            let compatible = navigator.userAgent.toLowerCase().includes('firefox')
             if (config.autoInjectCheckbox) {
-                const observer = new MutationObserver( (mutationsList) => {
-                    mutationsList.forEach(mutation => {
-                        if (![...document.querySelectorAll('.selectButton')].any() && [...mutation.addedNodes].filter(i => i instanceof Element && i.querySelector('.videoTeaser')).any()){
-                            injectCheckbox()
-                        }
-                    })
-                })
-                observer.observe(document.querySelector('#app'), { childList: true, subtree: true })
+                Node.prototype.appendChild = function <T extends Node>(node: T): T {
+                    if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
+                        injectCheckbox(node, compatible)
+                    }
+                    return this.originalAppendChild(node)
+                }
             }
-            document.body.appendChild(renderNode({
+            document.body.originalAppendChild(renderNode({
                 nodeType: 'div',
                 attributes: {
                     id: 'pluginMenu'
@@ -1911,8 +1903,10 @@
                                         document.querySelectorAll('.selectButton').forEach((element) => {
                                             element.remove()
                                         })
-                                    }else{
-                                        injectCheckbox()
+                                    } else {
+                                        document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
+                                            injectCheckbox(element, compatible)
+                                        })
                                     }
                                 }
                             }
