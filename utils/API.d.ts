@@ -43,6 +43,11 @@ interface LocalPath {
     filename: string;
 }
 
+interface Node {
+    originalAppendChild<T extends Node>(node: T): T
+    originalInsertBefore<T extends Node>(node: T, child: Node): T
+}
+
 
 interface DownloadTask {
     id: string;
