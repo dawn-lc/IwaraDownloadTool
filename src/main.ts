@@ -857,7 +857,10 @@
         Name: string | null
         FileName: string
         Size: number
-        Tags: string[]
+        Tags: Array<{
+            id: string;
+            type: string;
+        }>
         Alias: string
         Author: string
         Private: boolean
@@ -889,7 +892,7 @@
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt)
-                this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
+                this.Tags = this.VideoInfoSource.tags
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0))
@@ -1612,7 +1615,10 @@
         return true
     }
     function aria2Download(videoInfo: VideoInfo) {
-        (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<string>, downloadUrl: string) {
+        (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
+            id: string;
+            type: string;
+        }>, downloadUrl: string) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
@@ -1730,7 +1736,10 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getDownloadUrl().toURL()))
     }
     function browserDownload(videoInfo: VideoInfo) {
-        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
+        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
+            id: string;
+            type: string;
+        }>, DownloadUrl: string) {
             function browserDownloadError(error: any) {
                 let toast = newToast(
                     ToastType.Error,
