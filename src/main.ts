@@ -9,6 +9,7 @@
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
+    Node.prototype.originalAppendChild = Node.prototype.appendChild
 
     const isNull = function (obj: any): boolean {
         return typeof obj === 'undefined' || obj === null
@@ -658,15 +659,15 @@
                     ]
                     switch (config.downloadType) {
                         case DownloadType.Aria2:
-                            downloadConfigInput.map(i => page.appendChild(i))
-                            aria2ConfigInput.map(i => page.appendChild(i))
+                            downloadConfigInput.map(i => page.originalAppendChild(i))
+                            aria2ConfigInput.map(i => page.originalAppendChild(i))
                             break
                         case DownloadType.IwaraDownloader:
-                            downloadConfigInput.map(i => page.appendChild(i))
-                            iwaraDownloaderConfigInput.map(i => page.appendChild(i))
+                            downloadConfigInput.map(i => page.originalAppendChild(i))
+                            iwaraDownloaderConfigInput.map(i => page.originalAppendChild(i))
                             break
                         default:
-                            BrowserConfigInput.map(i => page.appendChild(i))
+                            BrowserConfigInput.map(i => page.originalAppendChild(i))
                             break
                     }
                     break
@@ -845,7 +846,7 @@
                         save
                     ]
                 }) as HTMLElement
-                document.body.appendChild(editor)
+                document.body.originalAppendChild(editor)
                 this.configChange('downloadType')
             }
         }
@@ -857,7 +858,10 @@
         Name: string | null
         FileName: string
         Size: number
-        Tags: string[]
+        Tags: Array<{
+            id: string;
+            type: string;
+        }>
         Alias: string
         Author: string
         Private: boolean
@@ -889,7 +893,7 @@
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt)
-                this.Tags = this.VideoInfoSource.tags.map((i) => i.id)
+                this.Tags = this.VideoInfoSource.tags
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0))
@@ -947,7 +951,7 @@
                             ], '%#createTask#%'),
                         onClick() {
                             if (data.External) {
-                                GM_openInTab(data.VideoInfoSource.embedUrl, { active: true, insert: true, setParent: true })
+                                GM_openInTab(data.VideoInfoSource.embedUrl, { active: false, insert: true, setParent: true })
                             } else {
                                 analyzeDownloadTask(new Dictionary<string>([{ key: data.ID, value: data.Name }]))
                             }
@@ -1342,7 +1346,7 @@
         if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {
             return false
         }
-        const downloadLinkCharacteristics = [
+        return [
             'pan\.baidu',
             'mega\.nz',
             'drive\.google\.com',
@@ -1364,13 +1368,7 @@
             'onedrive',
             'pixeldrain\.com',
             'gigafile\.nu'
-        ]
-        for (let index = 0; index < downloadLinkCharacteristics.length; index++) {
-            if (comment.toLowerCase().includes(downloadLinkCharacteristics[index])) {
-                return true
-            }
-        }
-        return false
+        ].filter(i => comment.toLowerCase().includes(i)).any()
     }
 
 
@@ -1447,7 +1445,7 @@
                         `%#openVideoLink#%`
                     ], '%#createTask#%'),
                     onClick() {
-                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                         toast.hideToast()
                     }
                 }
@@ -1465,7 +1463,7 @@
                         `%#openVideoLink#%`
                     ], '%#createTask#%'),
                     onClick() {
-                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                         toast.hideToast()
                     }
                 }
@@ -1618,7 +1616,10 @@
         return true
     }
     function aria2Download(videoInfo: VideoInfo) {
-        (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<string>, downloadUrl: string) {
+        (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
+            id: string;
+            type: string;
+        }>, downloadUrl: string) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
@@ -1732,11 +1733,14 @@
                 }
             ).trim()).filename
             DownloadUrl.searchParams.set('download', filename)
-            GM_openInTab(DownloadUrl.href, { active: true, insert: true, setParent: true })
+            GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getDownloadUrl().toURL()))
     }
     function browserDownload(videoInfo: VideoInfo) {
-        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<string>, DownloadUrl: string) {
+        (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
+            id: string;
+            type: string;
+        }>, DownloadUrl: string) {
             function browserDownloadError(error: any) {
                 let toast = newToast(
                     ToastType.Error,
@@ -1776,37 +1780,28 @@
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
 
-    function injectCheckbox() {
-        if (document.querySelector('.selectButton')) {
-            return
-        }
-        let compatibilityMode = navigator.userAgent.toLowerCase().includes('firefox')
-        GM_getValue('isDebug') && console.log(compatibilityMode)
-        let videoNodes = document.querySelectorAll(`.videoTeaser`)
-        videoNodes.forEach((element) => {
-            let ID = (element.querySelector('a.videoTeaser__thumbnail')as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-            let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
-            let node = compatibilityMode ? element : element.querySelector('.videoTeaser__thumbnail')
-            node.appendChild(renderNode({
-                nodeType: 'input',
-                attributes: Object.assign(
-                    videoList.has(ID) ? { checked: true } : {}, {
-                    type: 'checkbox',
-                    videoID: ID,
-                    videoName: Name
-                }),
-                className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
-                events: {
-                    click: (event: Event) => {
-                        let target = event.target as HTMLInputElement
-                        target.checked ? videoList.set(ID, Name) : videoList.remove(ID)
-                        event.stopPropagation()
-                        event.stopImmediatePropagation()
-                        return false
-                    }
+    function injectCheckbox(element: Element, compatible: boolean) {
+        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
+        let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
+        let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
+        node.originalAppendChild(renderNode({
+            nodeType: 'input',
+            attributes: Object.assign(
+                videoList.has(ID) ? { checked: true } : {}, {
+                type: 'checkbox',
+                videoID: ID,
+                videoName: Name
+            }),
+            className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
+            events: {
+                click: (event: Event) => {
+                    (event.target as HTMLInputElement).checked ? videoList.set(ID, Name) : videoList.remove(ID)
+                    event.stopPropagation()
+                    event.stopImmediatePropagation()
+                    return false
                 }
-            }))
-        })
+            }
+        }))
     }
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
@@ -1833,7 +1828,7 @@
                 }
             }
         }) as HTMLButtonElement
-        document.body.appendChild(renderNode({
+        document.body.originalAppendChild(renderNode({
             nodeType: 'div',
             attributes: {
                 id: 'pluginOverlay'
@@ -1882,17 +1877,16 @@
             config.edit()
         } else {
             GM_setValue('version', GM_info.script.version)
+            let compatible = navigator.userAgent.toLowerCase().includes('firefox')
             if (config.autoInjectCheckbox) {
-                const observer = new MutationObserver( (mutationsList) => {
-                    mutationsList.forEach(mutation => {
-                        if (![...document.querySelectorAll('.selectButton')].any() && [...mutation.addedNodes].filter(i => i instanceof Element && i.querySelector('.videoTeaser')).any()){
-                            injectCheckbox()
-                        }
-                    })
-                })
-                observer.observe(document.querySelector('#app'), { childList: true, subtree: true })
+                Node.prototype.appendChild = function <T extends Node>(node: T): T {
+                    if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
+                        injectCheckbox(node, compatible)
+                    }
+                    return this.originalAppendChild(node)
+                }
             }
-            document.body.appendChild(renderNode({
+            document.body.originalAppendChild(renderNode({
                 nodeType: 'div',
                 attributes: {
                     id: 'pluginMenu'
@@ -1909,8 +1903,10 @@
                                         document.querySelectorAll('.selectButton').forEach((element) => {
                                             element.remove()
                                         })
-                                    }else{
-                                        injectCheckbox()
+                                    } else {
+                                        document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
+                                            injectCheckbox(element, compatible)
+                                        })
                                     }
                                 }
                             }
