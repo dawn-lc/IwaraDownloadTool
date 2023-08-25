@@ -55,7 +55,7 @@ body:
         - Tampermonkey Beta
         - ScriptCat
         - Violentmonkey
-        - Other
+        - 其他
     validations:
       required: true
   - type: input
