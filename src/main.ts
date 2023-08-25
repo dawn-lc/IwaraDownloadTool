@@ -947,7 +947,7 @@
                             ], '%#createTask#%'),
                         onClick() {
                             if (data.External) {
-                                GM_openInTab(data.VideoInfoSource.embedUrl, { active: true, insert: true, setParent: true })
+                                GM_openInTab(data.VideoInfoSource.embedUrl, { active: false, insert: true, setParent: true })
                             } else {
                                 analyzeDownloadTask(new Dictionary<string>([{ key: data.ID, value: data.Name }]))
                             }
@@ -1441,7 +1441,7 @@
                         `%#openVideoLink#%`
                     ], '%#createTask#%'),
                     onClick() {
-                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                         toast.hideToast()
                     }
                 }
@@ -1459,7 +1459,7 @@
                         `%#openVideoLink#%`
                     ], '%#createTask#%'),
                     onClick() {
-                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: true, insert: true, setParent: true })
+                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                         toast.hideToast()
                     }
                 }
@@ -1726,7 +1726,7 @@
                 }
             ).trim()).filename
             DownloadUrl.searchParams.set('download', filename)
-            GM_openInTab(DownloadUrl.href, { active: true, insert: true, setParent: true })
+            GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getDownloadUrl().toURL()))
     }
     function browserDownload(videoInfo: VideoInfo) {
@@ -1792,8 +1792,7 @@
                 className: compatibilityMode ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
                 events: {
                     click: (event: Event) => {
-                        let target = event.target as HTMLInputElement
-                        target.checked ? videoList.set(ID, Name) : videoList.remove(ID)
+                        (event.target as HTMLInputElement).checked ? videoList.set(ID, Name) : videoList.remove(ID)
                         event.stopPropagation()
                         event.stopImmediatePropagation()
                         return false
