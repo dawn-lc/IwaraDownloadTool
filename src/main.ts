@@ -1761,19 +1761,18 @@
                 )
                 toast.showToast()
             }
-            let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
-                {
-                    NowTime: new Date(),
-                    UploadTime: UploadTime,
-                    AUTHOR: Author,
-                    ID: ID,
-                    TITLE: Name
-                }
-            ).trim())
             GM_download({
                 url: DownloadUrl,
                 saveAs: false,
-                name: localPath.filename,
+                name: config.downloadPath.replaceVariable(
+                    {
+                        NowTime: new Date(),
+                        UploadTime: UploadTime,
+                        AUTHOR: Author,
+                        ID: ID,
+                        TITLE: Name
+                    }
+                ).trim(),
                 onerror: (err) => browserDownloadError(err),
                 ontimeout: () => browserDownloadError(new Error('Timeout'))
             })
