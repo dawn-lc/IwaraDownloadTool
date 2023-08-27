@@ -276,8 +276,8 @@
             injectCheckbox: '开关选择',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
-            useHelpForInjectCheckbox: `等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载复选框`,
-            useHelpForCheckDownloadLink: '下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，会在弹出提示，您可以点击提示打开视频页面。',
+            useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
+            useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
             downloadFailed: '下载失败！',
             tryRestartingDownload: '→ 点击此处重新解析 ←',
@@ -1677,7 +1677,7 @@
                     'authorization': config.authorization,
                     'size': videoInfo.Size,
                     'info': videoInfo.Comments,
-                    'tag': videoInfo.Tags
+                    'tags': videoInfo.Tags
                 },
                     config.downloadPath.isEmpty() ? {} : {
                         'path': config.downloadPath.replaceVariable(
