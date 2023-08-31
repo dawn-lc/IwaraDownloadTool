@@ -1665,32 +1665,36 @@
             let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
-                'data': Object.assign({
-                    'source': videoInfo.ID,
-                    'alias': videoInfo.Alias,
-                    'author': videoInfo.Author,
-                    'name': videoInfo.Name,
-                    'downloadTime': new Date(),
-                    'uploadTime': videoInfo.UploadTime,
-                    'downloadUrl': videoInfo.getDownloadUrl(),
-                    'downloadCookies': config.cookies,
-                    'authorization': config.authorization,
-                    'size': videoInfo.Size,
-                    'info': videoInfo.Comments,
-                    'tags': videoInfo.Tags
-                },
-                    config.downloadPath.isEmpty() ? {} : {
-                        'path': config.downloadPath.replaceVariable(
-                            {
-                                NowTime: new Date(),
-                                UploadTime: videoInfo.UploadTime,
-                                AUTHOR: videoInfo.Author,
-                                ID: videoInfo.ID,
-                                TITLE: videoInfo.Name
-                            }
-                        )
+                'data': {
+                    'info': Object.assign(
+                        {
+                            'name': videoInfo.Name,
+                            'url': videoInfo.getDownloadUrl(),
+                            'size': videoInfo.Size,
+                            'source': videoInfo.ID,
+                            'alias': videoInfo.Alias,
+                            'author': videoInfo.Author,
+                            'uploadTime': videoInfo.UploadTime,
+                            'comments': videoInfo.Comments,
+                            'tags': videoInfo.Tags
+                        },
+                        config.downloadPath.isEmpty() ? {} : {
+                            'path': config.downloadPath.replaceVariable(
+                                {
+                                    NowTime: new Date(),
+                                    UploadTime: videoInfo.UploadTime,
+                                    AUTHOR: videoInfo.Author,
+                                    ID: videoInfo.ID,
+                                    TITLE: videoInfo.Name
+                                }
+                            )
+                        }
+                    ),
+                    'option': {
+                        'proxy': config.downloadProxy,
+                        'cookies': config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
                     }
-                )
+                }
             },
                 config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
             )))
