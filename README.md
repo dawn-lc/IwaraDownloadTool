@@ -18,7 +18,7 @@
 * 直接安装
  **[点我](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
 * 直接安装\[开发版\]
- **[点我](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/Preview/IwaraDownloadTool.user.js)**
+ **[点我](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 * 从 GreasyFork 安装
  **[点我](https://sleazyfork.org/scripts/422239)**  
 * 从 ScriptCat 安装
