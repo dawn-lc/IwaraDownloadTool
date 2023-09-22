@@ -13,8 +13,7 @@
 
 	
 	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null;
-	const notNull = (obj: any): boolean => !isNull(obj);
-	const isObject = (obj: any): boolean => typeof obj === 'object' && !Array.isArray(obj);
+    const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj);
 
 	Array.prototype.any = function () {
         return this.prune().length > 0
@@ -22,25 +21,22 @@
     Array.prototype.prune = function () {
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
-
-	const prune = (obj: any): any => {
-		if(isNull(obj)) return;
-		if (obj instanceof Array && obj.any()) return obj.map(prune).prune()
-		if (obj instanceof String && obj.notEmpty()) return obj
-		if (isObject(obj)) return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => notNull(v)))
-		return obj
-	}
-
-
     String.prototype.isEmpty = function () {
-        return notNull(this) && this.trim().length === 0
+        return !isNull(this) && this.length === 0
     }
     String.prototype.notEmpty = function () {
-        return notNull(this) && this.trim().length !== 0
+        return !isNull(this) && this.length !== 0
     }
-   
+
+	const prune = (obj: any): any => {
+        if (isNull(obj)) return
+		if (obj instanceof Array && obj.any()) return obj.map(prune).prune()
+		if (obj instanceof String && obj.notEmpty()) return obj
+		if (isObject(obj)) return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v)))
+    }
+    
     const hasFunction = function (obj: any, method: string) {
-        return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false
+        return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
     }
     const getString = function (obj: any) {
         obj = obj instanceof Error ? String(obj) : obj
@@ -76,12 +72,6 @@
     
     Array.prototype.append = function (arr) {
         this.push(...arr)
-    }
-    Array.prototype.any = function () {
-        return this.prune().length > 0
-    }
-    Array.prototype.prune = function () {
-        return this.filter(i => i !== null && typeof i !== 'undefined')
     }
 
     Date.prototype.format = function (format?: string) {
@@ -119,9 +109,9 @@
     }
 
     const language = function () {
-        let env = (notNull(config) ? config.language :(navigator.language ?? navigator.languages[0] ?? 'en')) .replace('-', '_')
+        let env = (!isNull(config) ? config.language :(navigator.language ?? navigator.languages[0] ?? 'en')) .replace('-', '_')
         let main = env.split('_').shift() ?? 'en'
-        return (notNull(i18n[env]) ? env : notNull(i18n[main]) ? main : 'en')
+        return (!isNull(i18n[env]) ? env : !isNull(i18n[main]) ? main : 'en')
     }
 
     const renderNode = function (renderCode: RenderCode): Node | Element {
@@ -136,10 +126,10 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (notNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (notNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
-        (notNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
-        notNull(childs) && node.append(...[].concat(childs).map(renderNode))
+        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
+        !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
     }
 
@@ -153,7 +143,7 @@
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
                     onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
+                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
                 })
             })
             return data.responseText
@@ -181,7 +171,7 @@
                     }, headers),
                     data: body,
                     onload: response => resolve(response),
-                    onerror: error => reject(notNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
+                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
                 })
             })
             return data.responseText
@@ -901,7 +891,7 @@
                     throw new Error(i18n[language()].parsingFailed)
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(100)
-                this.External = notNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
+                this.External = !isNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
                     throw new Error(i18n[language()].externalVideo)
                 }
@@ -912,7 +902,7 @@
                 this.Tags = this.VideoInfoSource.tags
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.Size = this.VideoInfoSource.file.size
-                this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (notNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (notNull(config.priority[a.name]) ? config.priority[a.name] : 0))
+                this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error(i18n[language()].getVideoSourceFailed)
                 }
@@ -926,7 +916,7 @@
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
                     return JSON.parse(
-                        await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${notNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`.toURL(),
+                        await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`.toURL(),
                             unsafeWindow.location.href,
                             await getAuth()
                         )
@@ -1309,13 +1299,13 @@
                 'Cooike': config.cookies.map((i) => `${i.name}:${i.value}`).join('; '),
                 'Authorization': config.authorization
             },
-            notNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
+            !isNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
         )
     }
 
     async function addDownloadTask() {
         let data = prompt(i18n[language()].manualDownloadTips, '')
-        if (notNull(data) && !(data.isEmpty())) {
+        if (!isNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<string>()
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).prune().map(ID => IDList.set(ID, '手动解析'))
             analyzeDownloadTask(IDList)
@@ -1392,7 +1382,7 @@
         return renderNode({
             nodeType: 'div',
             childs: [
-                notNull(title) && !title.isEmpty() ? {
+                !isNull(title) && !title.isEmpty() ? {
                     nodeType: 'h3',
                     childs: `%#appName#% - ${title}`
                 } : {
@@ -1441,12 +1431,12 @@
                     background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
                 }
             },
-            notNull(params) && params
+            !isNull(params) && params
         )
-        if (notNull(params.text)) {
+        if (!isNull(params.text)) {
             params.text = params.text.replaceVariable(i18n[language()]).toString()
         }
-        logFunc((notNull(params.text) ? params.text : notNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
+        logFunc((!isNull(params.text) ? params.text : !isNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
         return Toastify(params)
     }
 
@@ -1645,28 +1635,25 @@
                     TITLE: name
                 }
             ).trim())
-            let json = JSON.stringify({
+            let json = JSON.stringify(prune({
                 'jsonrpc': '2.0',
                 'method': 'aria2.addUri',
                 'id': UUID(),
                 'params': [
                     'token:' + config.aria2Token,
                     [downloadUrl],
-                    Object.assign(
-                        config.downloadProxy.isEmpty() ? {} : { 'all-proxy': config.downloadProxy },
-                        config.downloadPath.isEmpty() ? {} : {
-                            'out': localPath.filename,
-                            'dir': localPath.fullPath.replace(localPath.filename, '')
-                        },
-                        {
-                            'referer': 'https://ecchi.iwara.tv/',
-                            'header': [
-                                'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
-                            ]
-                        }
-                    )
+                    {
+                        'all-proxy': config.downloadProxy,
+                        'out': localPath.filename,
+                        'dir': localPath.fullPath.replace(localPath.filename, ''),
+                        'referer': 'https://ecchi.iwara.tv/',
+                        'header': [
+                            'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
+                        ]
+                    }
+                    
                 ]
-            })
+            }))
             console.log(`Aria2 ${name} ${await post(config.aria2Path.toURL(), json)}`)
             newToast(
                 ToastType.Info,
@@ -1678,12 +1665,12 @@
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
-            let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(),prune({
+            let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
                 'token': config.iwaraDownloaderToken,
                 'data': {
-                    'info':{
+                    'info': {
                         'name': videoInfo.Name,
                         'url': videoInfo.getDownloadUrl(),
                         'size': videoInfo.Size,
@@ -1703,7 +1690,7 @@
                             }
                         )
                     },
-                    'option':{
+                    'option': {
                         'proxy': config.downloadProxy,
                         'cookies': config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
                     }
