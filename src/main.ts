@@ -625,7 +625,7 @@
                                     ),
                                     events: {
                                         change: (event: Event) => {
-                                            config.downloadProxy = (event.target as HTMLInputElement).value
+                                            config.iwaraDownloaderToken = (event.target as HTMLInputElement).value
                                         }
                                     }
                                 }
