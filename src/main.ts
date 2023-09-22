@@ -14,6 +14,9 @@
     const isNull = function (obj: any): boolean {
         return typeof obj === 'undefined' || obj === null
     }
+    const isObject = function (obj: any): boolean {
+        return typeof obj === 'object' && !Array.isArray(obj)
+    }
     const notNull = function (obj: any): boolean {
         return typeof obj !== 'undefined' && obj !== null
     }
@@ -22,6 +25,30 @@
     }
     String.prototype.notEmpty = function () {
         return notNull(this) && this.trim().length !== 0
+    }
+    const prune = function (obj: any): any{
+        if(isNull(obj)){
+            return
+        }
+        if (Array.isArray(obj)){
+            return obj.map(i => prune(i))
+        }
+        if (isObject(obj)) {
+            return Object.entries(obj).reduce((i:{[key: string]: any},[k,v]) => {
+                if (notNull(v)){
+                    if (v instanceof String && v.isEmpty()){
+                        i[k] = v
+                    }
+                    if (Array.isArray(v) && prune(v).any()){
+                        i[k] = prune(v)
+                    }
+                    if(isObject(v)){
+                        return i[k] = prune(v)
+                    }
+                }
+                return i;
+            }, {})
+        }
     }
     const hasFunction = function (obj: any, method: string) {
         return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false
@@ -1662,43 +1689,37 @@
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
-            let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
+            let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(),prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
+                'token': config.iwaraDownloaderToken,
                 'data': {
-                    'info': Object.assign(
-                        {
-                            'name': videoInfo.Name,
-                            'url': videoInfo.getDownloadUrl(),
-                            'size': videoInfo.Size,
-                            'source': videoInfo.ID,
-                            'alias': videoInfo.Alias,
-                            'author': videoInfo.Author,
-                            'uploadTime': videoInfo.UploadTime,
-                            'comments': videoInfo.Comments,
-                            'tags': videoInfo.Tags
-                        },
-                        config.downloadPath.isEmpty() ? {} : {
-                            'path': config.downloadPath.replaceVariable(
-                                {
-                                    NowTime: new Date(),
-                                    UploadTime: videoInfo.UploadTime,
-                                    AUTHOR: videoInfo.Author,
-                                    ID: videoInfo.ID,
-                                    TITLE: videoInfo.Name
-                                }
-                            )
-                        }
-                    ),
-                    'option': {
+                    'info':{
+                        'name': videoInfo.Name,
+                        'url': videoInfo.getDownloadUrl(),
+                        'size': videoInfo.Size,
+                        'source': videoInfo.ID,
+                        'alias': videoInfo.Alias,
+                        'author': videoInfo.Author,
+                        'uploadTime': videoInfo.UploadTime,
+                        'comments': videoInfo.Comments,
+                        'tags': videoInfo.Tags,
+                        'path': config.downloadPath.replaceVariable(
+                            {
+                                NowTime: new Date(),
+                                UploadTime: videoInfo.UploadTime,
+                                AUTHOR: videoInfo.Author,
+                                ID: videoInfo.ID,
+                                TITLE: videoInfo.Name
+                            }
+                        )
+                    },
+                    'option':{
                         'proxy': config.downloadProxy,
                         'cookies': config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
                     }
                 }
-            },
-                config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
-            )))
-
+            })))
             if (r.code == 0) {
                 console.log(`${videoInfo.Name} %#pushTaskSucceed#% ${r}`)
                 newToast(
