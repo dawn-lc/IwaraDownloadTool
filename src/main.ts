@@ -11,45 +11,34 @@
     }
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
-    const isNull = function (obj: any): boolean {
-        return typeof obj === 'undefined' || obj === null
+	
+	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null;
+	const notNull = (obj: any): boolean => !isNull(obj);
+	const isObject = (obj: any): boolean => typeof obj === 'object' && !Array.isArray(obj);
+
+	Array.prototype.any = function () {
+        return this.prune().length > 0
     }
-    const isObject = function (obj: any): boolean {
-        return typeof obj === 'object' && !Array.isArray(obj)
+    Array.prototype.prune = function () {
+        return this.filter(i => i !== null && typeof i !== 'undefined')
     }
-    const notNull = function (obj: any): boolean {
-        return typeof obj !== 'undefined' && obj !== null
-    }
+
+	const prune = (obj: any): any => {
+		if(isNull(obj)) return;
+		if (obj instanceof Array && obj.any()) return obj.map(prune).prune()
+		if (obj instanceof String && obj.notEmpty()) return obj
+		if (isObject(obj)) return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => notNull(v)))
+		return obj
+	}
+
+
     String.prototype.isEmpty = function () {
         return notNull(this) && this.trim().length === 0
     }
     String.prototype.notEmpty = function () {
         return notNull(this) && this.trim().length !== 0
     }
-    const prune = function (obj: any): any{
-        if(isNull(obj)){
-            return
-        }
-        if (Array.isArray(obj)){
-            return obj.map(i => prune(i))
-        }
-        if (isObject(obj)) {
-            return Object.entries(obj).reduce((i:{[key: string]: any},[k,v]) => {
-                if (notNull(v)){
-                    if (v instanceof String && v.isEmpty()){
-                        i[k] = v
-                    }
-                    if (Array.isArray(v) && prune(v).any()){
-                        i[k] = prune(v)
-                    }
-                    if(isObject(v)){
-                        return i[k] = prune(v)
-                    }
-                }
-                return i;
-            }, {})
-        }
-    }
+   
     const hasFunction = function (obj: any, method: string) {
         return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false
     }
