@@ -27,12 +27,12 @@
     String.prototype.notEmpty = function () {
         return !isNull(this) && this.length !== 0
     }
-
-	const prune = (obj: any): any => {
+    const prune = (obj: any): any => {
         if (isNull(obj)) return
-		if (obj instanceof Array && obj.any()) return obj.map(prune).prune()
-		if (obj instanceof String && obj.notEmpty()) return obj
-		if (isObject(obj)) return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v)))
+        if (isObject(obj)) return (s => Object.entries(s).any() ? s : null)(Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v))))
+        if (Array.isArray(obj)) return ((t => t.any() ? t : null)(obj.map(prune).prune()))
+        if (typeof obj === 'string') return obj.isEmpty() ? null : obj
+        return obj
     }
     
     const hasFunction = function (obj: any, method: string) {
