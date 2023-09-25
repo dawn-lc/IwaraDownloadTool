@@ -1466,10 +1466,10 @@
                     node: toastNode([
                         `${videoInfo.Name}[${videoInfo.ID}] %#downloadQualityError#%`,
                         { nodeType: 'br' },
-                        `%#openVideoLink#%`
+                        `%#tryRestartingDownload#%`
                     ], '%#createTask#%'),
                     onClick() {
-                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
+                        analyzeDownloadTask(new Dictionary<string>([{ key: videoInfo.ID, value: videoInfo.Name }]))
                         toast.hideToast()
                     }
                 }
