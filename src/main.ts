@@ -95,17 +95,12 @@
             replaceString.replaceVariable(replacements, count) : replaceString
     }
 
-    const delay = async function (ms: number) {
-        return new Promise(resolve => setTimeout(resolve, ms))
-    }
+
     const UUID = function () {
         return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
     }
     const ceilDiv = function (dividend: number, divisor: number): number {
         return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0)
-    }
-    const random = function (min: number, max: number): number {
-        return Math.floor(Math.random() * (max - min + 1)) + min
     }
 
     const language = function () {
