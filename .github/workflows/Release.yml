@@ -5,6 +5,8 @@ on:
       - master
     paths:
       - 'src/*'
+env:
+  release_tag: latest
 jobs:
   Release:
     if: github.actor != 'github-actions'
@@ -17,7 +19,7 @@ jobs:
       with:
         ref: master
     - name: 预处理
-      run: npm run preprocess
+      run: npm run preprocess -- $release_tag
     - name: 安装依赖项
       run: npm ci
     - name: 编译
@@ -30,7 +32,7 @@ jobs:
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest"
+        automatic_release_tag: "${{ env.release_tag }}"
         prerelease: false
         title: "[正式版] ${{ steps.package-version.outputs.current-version }}"
         files: |
