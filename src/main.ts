@@ -1365,7 +1365,7 @@
             'icerbox',
             'alfafile',
             'drv\.ms',
-            'onedrive',
+            'onedrive\.',
             'pixeldrain\.com',
             'gigafile\.nu'
         ].filter(i => comment.toLowerCase().includes(i)).any()
