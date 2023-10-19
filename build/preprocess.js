@@ -124,7 +124,7 @@ mata.version = package.version;
 mata.updateURL = mata.updateURL.replaceVariable({
     'release_tag': process.argv[2]
 });
-mata.downloadURL = mata.updateURL.replaceVariable({
+mata.downloadURL = mata.downloadURL.replaceVariable({
     'release_tag': process.argv[2]
 });
 
