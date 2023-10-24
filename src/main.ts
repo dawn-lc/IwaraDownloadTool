@@ -1640,7 +1640,7 @@
                         'all-proxy': config.downloadProxy,
                         'out': localPath.filename,
                         'dir': localPath.fullPath.replace(localPath.filename, ''),
-                        'referer': 'https://ecchi.iwara.tv/',
+                        'referer': window.location.hostname,
                         'header': [
                             'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
                         ]
