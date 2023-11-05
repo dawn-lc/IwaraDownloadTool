@@ -998,7 +998,7 @@
                 toast.showToast()
                 let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
                 button && button.checked && button.click()
-                selectList.remove(this.ID)
+                selectList.del(this.ID)
                 this.State = false
                 return this
             }
@@ -1824,7 +1824,7 @@
             className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
             events: {
                 click: (event: Event) => {
-                    (event.target as HTMLInputElement).checked ? selectList.set(ID, Name) : selectList.remove(ID)
+                    (event.target as HTMLInputElement).checked ? selectList.set(ID, Name) : selectList.del(ID)
                     event.stopPropagation()
                     event.stopImmediatePropagation()
                     return false
