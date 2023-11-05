@@ -413,7 +413,6 @@
         priority: Record<string, number>
         [key: string]: any
         constructor() {
-            this.selectList = []
             this.language = language()
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
@@ -1330,7 +1329,7 @@
         }
     }
 
-    async function analyzeDownloadTask(list: Dictionary<string> = config.selectList) {
+    async function analyzeDownloadTask(list: Dictionary<string> = selectList) {
         let size = list.size()
         let node = renderNode({
             nodeType: 'p',
@@ -1805,7 +1804,7 @@
         node.originalAppendChild(renderNode({
             nodeType: 'input',
             attributes: Object.assign(
-                config.selectList.has(ID) ? { checked: true } : {}, {
+                selectList.has(ID) ? { checked: true } : {}, {
                 type: 'checkbox',
                 videoID: ID,
                 videoName: Name
@@ -1813,7 +1812,7 @@
             className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
             events: {
                 click: (event: Event) => {
-                    (event.target as HTMLInputElement).checked ? config.selectList.set(ID, Name) : config.selectList.remove(ID)
+                    (event.target as HTMLInputElement).checked ? selectList.set(ID, Name) : selectList.remove(ID)
                     event.stopPropagation()
                     event.stopImmediatePropagation()
                     return false
