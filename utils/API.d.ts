@@ -22,6 +22,25 @@ interface String {
     trimTail(suffix: string): string;
 }
 
+interface Dictionary<T> {
+    [key: string]: any
+    set(key: string, value: T): void;
+    get(key: string): T | undefined;
+    has(key: string): boolean;
+    del(key: string): void;
+    get size(): number;
+    keys(): string[];
+    values(): T[];
+}
+
+
+
+interface ChannelMessage<T> {
+    id: string;
+    type: number;
+    data: T;
+}
+
 interface Array<T> {
     any(): boolean;
     prune(): Array<T>;
