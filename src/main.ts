@@ -211,18 +211,18 @@
         constructor(id: string) {
             this.timeStamp = Date.now()
             this.id = id
-            let items = GM_getValue(id, { TimeStamp: this.timeStamp, Data: {} })
+            let items = GM_getValue(id, { TimeStamp: this.timeStamp, Data: '{}' })
             if (items.TimeStamp <= this.timeStamp) {
-                GM_setValue(id, { TimeStamp: this.timeStamp, Data: {} })
+                GM_setValue(id, { TimeStamp: this.timeStamp, Data: '{}' })
             }
-            this.items = items.Data;
+            this.items = JSON.parse(items.Data) ;
             Channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as ChannelMessage<{ key: string, value: T | undefined }>
                 if (message.id === this.id) {
                     switch (message.type) {
                         case MessageType.Set:
                             if (items.TimeStamp <= this.timeStamp) {
-                                GM_setValue(id, { TimeStamp: this.timeStamp, Data: this.items })
+                                GM_setValue(id, { TimeStamp: this.timeStamp, Data: JSON.stringify(this.items) })
                             }
                             this.items[message.data.key] = message.data.value as T
                             let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
@@ -230,7 +230,7 @@
                             break;
                         case MessageType.Del:
                             if (items.TimeStamp <= this.timeStamp) {
-                                GM_setValue(id, { TimeStamp: this.timeStamp, Data: this.items })
+                                GM_setValue(id, { TimeStamp: this.timeStamp, Data: JSON.stringify(this.items) })
                             }
                             delete this.items[message.data.key]
                             let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
