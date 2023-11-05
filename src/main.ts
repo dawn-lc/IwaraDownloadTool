@@ -207,7 +207,7 @@
     class Sync<T> {
         [key: string]: any
         public id: string
-        public main: boolean
+        public isMain: boolean
         public items: { [key: string]: T }
         constructor(id: string) {
             this.main = true
@@ -230,7 +230,7 @@
                             if (!isNull(selectButtonB)) selectButtonB.checked = false;
                             break;
                         case MessageType.Clash:
-                            this.main = false;
+                            this.isMain = false;
                             break;
                         default:
                             break
@@ -238,12 +238,13 @@
                 }
             }
             Channel.onmessageerror = (event) => {
+                debugger
                 GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
             }
         }
         public set(key: string, value: T): void {
             this.items[key] = value
-            this.main && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
+            this.isMain && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
             Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
         }
         public get(key: string): T | undefined {
