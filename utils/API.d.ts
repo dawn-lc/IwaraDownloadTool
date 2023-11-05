@@ -22,6 +22,20 @@ interface String {
     trimTail(suffix: string): string;
 }
 
+interface Dictionary<T> {
+    [key: string]: any
+    public items: { [key: string]: T }
+    set(key: string, value: T): void;
+    get(key: string): T | undefined;
+    has(key: string): boolean;
+    remove(key: string): boolean;
+    size(): number;
+    keys(): string[];
+    values(): T[];
+    clear(): void;
+}
+
+
 interface Array<T> {
     any(): boolean;
     prune(): Array<T>;

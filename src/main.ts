@@ -197,7 +197,51 @@
         Error
     }
 
-    class Dictionary<T> {
+    class Storage<T> {
+        [key: string]: any
+        private name: string
+        public items: { [key: string]: T }
+        constructor(name: string ,data: Array<{ key: string, value: T }> = []) {
+            this.items = {}
+            data.map(i => this.set(i.key, i.value))
+            unsafeWindow.addEventListener('storage', (e) => {
+                if (name === e.key) this.items = JSON.parse(e.newValue)
+            })
+        }
+        public set(key: string, value: T): void {
+            this.items[key] = value
+            localStorage.setItem(this.name, JSON.stringify(this.items));
+        }
+        public get(key: string): T | undefined {
+            return this.has(key) ? this.items[key] : undefined
+        }
+        public has(key: string): boolean {
+            return this.items.hasOwnProperty(key)
+        }
+        public remove(key: string): boolean {
+            if (this.has(key)) {
+                delete this.items[key]
+                localStorage.setItem(this.name, JSON.stringify(this.items));
+                return true
+            }
+            return false
+        }
+        public size(): number {
+            return Object.keys(this.items).length
+        }
+        public keys(): string[] {
+            return Object.keys(this.items)
+        }
+        public values(): T[] {
+            return Object.values(this.items)
+        }
+        public clear(): void {
+            this.items = {}
+            localStorage.setItem(this.name, JSON.stringify(this.items));
+        }
+    }
+
+    class Dictionary<T>{
         [key: string]: any
         public items: { [key: string]: T }
         constructor(data: Array<{ key: string, value: T }> = []) {
@@ -220,7 +264,7 @@
             }
             return false
         }
-        public get size(): number {
+        public size(): number {
             return Object.keys(this.items).length
         }
         public keys(): string[] {
@@ -231,13 +275,6 @@
         }
         public clear(): void {
             this.items = {}
-        }
-        public forEach(callback: (key: string, value: T) => void): void {
-            for (let key in this.items) {
-                if (this.has(key)) {
-                    callback(key, this.items[key])
-                }
-            }
         }
     }
 
@@ -374,20 +411,19 @@
         iwaraDownloaderToken: string
         authorization: string
         priority: Record<string, number>
-        selectList: Dictionary<string>
         [key: string]: any
         constructor() {
-            this.selectList = new Dictionary<string>()
-            this.language = language() //GM_getValue('language', language()) 
-            this.autoInjectCheckbox = true // GM_getValue('autoInjectCheckbox', true)
-            this.checkDownloadLink = true // GM_getValue('checkDownloadLink', true)
-            this.downloadType = DownloadType.Others // GM_getValue('downloadType', DownloadType.Others)
-            this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4' // GM_getValue('downloadPath', '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
-            this.downloadProxy = '' // GM_getValue('downloadProxy', '')
-            this.aria2Path = 'http://127.0.0.1:6800/jsonrpc' // GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc')
-            this.aria2Token = '' // GM_getValue('aria2Token', '')
-            this.iwaraDownloaderPath = 'http://127.0.0.1:6800/jsonrpc'// GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800/jsonrpc')
-            this.iwaraDownloaderToken =''// GM_getValue('iwaraDownloaderToken', '')
+            this.selectList = []
+            this.language = language()
+            this.autoInjectCheckbox = true
+            this.checkDownloadLink = true
+            this.downloadType = DownloadType.Others
+            this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4'
+            this.downloadProxy = ''
+            this.aria2Path = 'http://127.0.0.1:6800/jsonrpc'
+            this.aria2Token = ''
+            this.iwaraDownloaderPath = 'http://127.0.0.1:6800/jsonrpc'
+            this.iwaraDownloaderToken = ''
             this.priority = {
                 'Source': 100,
                 '540': 2,
@@ -951,7 +987,7 @@
                 toast.showToast()
                 let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
                 button && button.checked && button.click()
-                config.selectList.remove(this.ID)
+                selectList.remove(this.ID)
                 this.State = false
                 return this
             }
@@ -960,6 +996,7 @@
 
     var i18n = new I18N()
     var config = new Config()
+    var selectList = new Storage<string>('selectList');
 
     const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
@@ -1294,7 +1331,7 @@
     }
 
     async function analyzeDownloadTask(list: Dictionary<string> = config.selectList) {
-        let size = list.size
+        let size = list.size()
         let node = renderNode({
             nodeType: 'p',
             childs: `%#parsingProgress#%[${list.size}/${size}]`
