@@ -207,7 +207,7 @@
     class Sync<T> {
         [key: string]: any
         public id: string
-        public isMain: boolean
+        public main: boolean
         public items: { [key: string]: T }
         constructor(id: string) {
             this.main = true
@@ -231,7 +231,7 @@
                             if (!isNull(selectButtonB)) selectButtonB.checked = false;
                             break;
                         case MessageType.Clash:
-                            this.isMain = false;
+                            this.main = false;
                             break;
                         default:
                             break
@@ -245,7 +245,7 @@
         }
         public set(key: string, value: T): void {
             this.items[key] = value
-            this.isMain && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
+            this.main && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
             Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
         }
         public get(key: string): T | undefined {
