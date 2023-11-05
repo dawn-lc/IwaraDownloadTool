@@ -213,6 +213,7 @@
             this.main = true
             this.time = Date.now()
             this.id = id
+            this.items = {}
             GM_getValue(this.id, []).map(d => { this.items[d.k] = d.v })
             Channel.postMessage({ id: this.id, type: MessageType.Clash, data: {} })
             Channel.onmessage = (event: MessageEvent) => {
