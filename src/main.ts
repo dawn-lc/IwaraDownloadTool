@@ -362,7 +362,6 @@
     }
 
     class Config {
-        cookies: Array<any>
         language: string
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
@@ -833,7 +832,7 @@
                     ]
                 }) as HTMLElement
                 document.body.originalAppendChild(editor)
-                this.configChange('downloadType')
+                //this.configChange('downloadType')
             }
         }
     }
@@ -1274,7 +1273,7 @@
     async function getAuth(url?: string) {
         return Object.assign(
             {
-                'Cooike': config.cookies.map((i) => `${i.name}:${i.value}`).join('; '),
+                'Cooike': document.cookie,
                 'Authorization': config.authorization
             },
             !isNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
@@ -1626,7 +1625,7 @@
                         'dir': localPath.fullPath.replace(localPath.filename, ''),
                         'referer': window.location.hostname,
                         'header': [
-                            'Cookie:' + config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
+                            'Cookie:' + document.cookie
                         ]
                     }
                     
@@ -1670,7 +1669,7 @@
                     },
                     'option': {
                         'proxy': config.downloadProxy,
-                        'cookies': config.cookies.map((i) => `${i.name}:${i.value}`).join('; ')
+                        'cookies': document.cookie
                     }
                 }
             })))
