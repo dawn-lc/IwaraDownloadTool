@@ -245,7 +245,7 @@
         }
         public set(key: string, value: T): void {
             this.items[key] = value
-            Channel.postMessage({ id: this.id, type: MessageType.Set, data: { k: key, v: value } })
+            Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
         }
         public get(key: string): T | undefined {
             return this.has(key) ? this.items[key] : undefined
@@ -255,7 +255,7 @@
         }
         public del(key: string): void {
             delete this.items[key]
-            Channel.postMessage({ id: this.id, type: MessageType.Del, data: { k: key } })
+            Channel.postMessage({ id: this.id, type: MessageType.Del, data: { key: key } })
         }
         public get size(): number {
             return Object.keys(this.items).length
