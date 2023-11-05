@@ -201,10 +201,9 @@
         [key: string]: any
         private name: string
         public items: { [key: string]: T }
-        constructor(name: string, data: Array<{ key: string, value: T }> = []) {
+        constructor(name: string) {
             this.name = name
-            this.items = {}
-            data.map(i => this.set(i.key, i.value))
+            this.items = JSON.parse(localStorage.getItem(name) ?? '{}')
             unsafeWindow.addEventListener('storage', (e) => {
                 if (name === e.key) this.items = JSON.parse(e.newValue)
             })
