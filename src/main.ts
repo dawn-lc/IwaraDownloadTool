@@ -225,9 +225,6 @@
                             let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false;
                             break;
-                        case MessageType.Clash:
-                            this.main = false;
-                            break;
                         default:
                             break
                     }
