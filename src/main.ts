@@ -216,16 +216,21 @@
                 GM_setValue(id, { TimeStamp: this.timeStamp, Data: {} })
             }
             this.items = items.Data;
-
             Channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as ChannelMessage<{ key: string, value: T | undefined }>
                 if (message.id === this.id) {
                     switch (message.type) {
                         case MessageType.Set:
+                            if (items.TimeStamp <= this.timeStamp) {
+                                GM_setValue(id, { TimeStamp: this.timeStamp, Data: this.items })
+                            }
                             this.items[message.data.key] = message.data.value as T
                             document.querySelector(`input.selectButton[videoid="${message.data.key}"]`)?.setAttribute('checked','true')
                             break;
                         case MessageType.Del:
+                            if (items.TimeStamp <= this.timeStamp) {
+                                GM_setValue(id, { TimeStamp: this.timeStamp, Data: this.items })
+                            }
                             delete this.items[message.data.key]
                             document.querySelector(`input.selectButton[videoid="${message.data.key}"]`)?.removeAttribute('checked')
                             break;
@@ -236,7 +241,7 @@
             }
             Channel.onmessageerror = (event) => {
                 GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
-            };
+            }
         }
         public set(key: string, value: T): void {
             this.items[key] = value
