@@ -205,11 +205,11 @@
 
     class Sync<T> {
         [key: string]: any
-        public timeStamp: Date
+        public timeStamp: number
         public id: string
         public items: { [key: string]: T }
         constructor(id: string) {
-            this.timeStamp = new Date()
+            this.timeStamp = Date.now()
             this.id = id
             let items = GM_getValue(id, { TimeStamp: this.timeStamp, Data: {} })
             if (items.TimeStamp <= this.timeStamp) {
