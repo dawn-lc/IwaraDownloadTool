@@ -248,6 +248,7 @@
         }
         public del(key: string): void {
             delete this.items[key]
+            GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
             Channel.postMessage({ id: this.id, type: MessageType.Del, data: { key: key } })
         }
         public get size(): number {
