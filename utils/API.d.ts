@@ -29,7 +29,7 @@ interface Dictionary<T> {
     get(key: string): T | undefined;
     has(key: string): boolean;
     remove(key: string): boolean;
-    size(): number;
+    get size(): number;
     keys(): string[];
     values(): T[];
     clear(): void;

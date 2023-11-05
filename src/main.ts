@@ -226,7 +226,7 @@
             }
             return false
         }
-        public size(): number {
+        public get size(): number {
             return Object.keys(this.items).length
         }
         public keys(): string[] {
@@ -264,7 +264,7 @@
             }
             return false
         }
-        public size(): number {
+        public get size(): number {
             return Object.keys(this.items).length
         }
         public keys(): string[] {
@@ -1330,7 +1330,7 @@
     }
 
     async function analyzeDownloadTask(list: Dictionary<string> = selectList) {
-        let size = list.size()
+        let size = list.size
         let node = renderNode({
             nodeType: 'p',
             childs: `%#parsingProgress#%[${list.size}/${size}]`
