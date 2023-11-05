@@ -375,58 +375,40 @@
         iwaraDownloaderToken: string
         authorization: string
         priority: Record<string, number>
+        selectList: Dictionary<string>
         [key: string]: any
         constructor() {
-            //初始化
-            this.language = GM_getValue('language', language())
-            this.autoInjectCheckbox = GM_getValue('autoInjectCheckbox', true)
-            this.checkDownloadLink = GM_getValue('checkDownloadLink', true)
-            this.downloadType = GM_getValue('downloadType', DownloadType.Others)
-            this.downloadPath = GM_getValue('downloadPath', '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
-            this.downloadProxy = GM_getValue('downloadProxy', '')
-            this.aria2Path = GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc')
-            this.aria2Token = GM_getValue('aria2Token', '')
-            this.iwaraDownloaderPath = GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800/jsonrpc')
-            this.iwaraDownloaderToken = GM_getValue('iwaraDownloaderToken', '')
-            this.priority = GM_getValue('priority', {
+            this.selectList = new Dictionary<string>()
+            this.language = language() //GM_getValue('language', language()) 
+            this.autoInjectCheckbox = true // GM_getValue('autoInjectCheckbox', true)
+            this.checkDownloadLink = true // GM_getValue('checkDownloadLink', true)
+            this.downloadType = DownloadType.Others // GM_getValue('downloadType', DownloadType.Others)
+            this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4' // GM_getValue('downloadPath', '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4')
+            this.downloadProxy = '' // GM_getValue('downloadProxy', '')
+            this.aria2Path = 'http://127.0.0.1:6800/jsonrpc' // GM_getValue('aria2Path', 'http://127.0.0.1:6800/jsonrpc')
+            this.aria2Token = '' // GM_getValue('aria2Token', '')
+            this.iwaraDownloaderPath = 'http://127.0.0.1:6800/jsonrpc'// GM_getValue('iwaraDownloaderPath', 'http://127.0.0.1:6800/jsonrpc')
+            this.iwaraDownloaderToken =''// GM_getValue('iwaraDownloaderToken', '')
+            this.priority = {
                 'Source': 100,
                 '540': 2,
                 '360': 1
-            })
-            //代理本页面的更改
+            }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
-                    GM_getValue('isDebug') && console.log(`get ${property.toString()}`)
-                    return target[property]
+                    return GM_getValue(property, target[property])
                 },
                 set: function (target, property: string, value) {
-                    if (target[property] !== value && GM_getValue('isFirstRun', true) !== true) {
-                        let setr = Reflect.set(target, property, value)
-                        GM_getValue('isDebug') && console.log(`set ${property.toString()} ${value} ${setr}`)
-                        GM_getValue(property.toString()) !== value && GM_setValue(property.toString(), value)
-                        target.configChange(property.toString())
-                        return setr
-                    } else {
-                        return true
-                    }
+                    GM_setValue(property, value)
+                    target.configChange(property)
+                    return true
                 }
             })
-            //同步其他页面脚本的更改
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                    if (remote && body[name] !== new_value && old_value !== new_value && !GM_getValue('isFirstRun', true)) {
-                        body[name] = new_value
-                    }
+                    if (remote) body.configChange(name)
                 })
             })
-            GM_info.scriptHandler === "Tampermonkey" ? GM_cookie('list', { domain: 'iwara.tv', httpOnly: true }, (list: any, error: any) => {
-                if (error) {
-                    console.log(error)
-                    body.cookies = []
-                } else {
-                    body.cookies = list
-                }
-            }) : body.cookies = []
             return body
         }
         public async check() {
@@ -471,206 +453,209 @@
                 ]
             }
         }
+        private downloadTypeChange() {
+            let page: HTMLElement = document.querySelector('#pluginConfigPage')
+            while (page.hasChildNodes()) {
+                page.removeChild(page.firstChild)
+            }
+            let variableInfo = renderNode({
+                nodeType: 'label',
+                childs: [
+                    '%#variable#% ',
+                    { nodeType: 'br' },
+                    '%#downloadTime#% %#NowTime#%',
+                    { nodeType: 'br' },
+                    '%#uploadTime#% %#UploadTime#%',
+                    { nodeType: 'br' },
+                    '%#TITLE#% | %#ID#% | %#AUTHOR#%',
+                    { nodeType: 'br' },
+                    '%#example#% %#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
+                    { nodeType: 'br' },
+                    `%#result#% ${'%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceVariable({
+                        NowTime: new Date(),
+                        AUTHOR: 'ExampleAuthorID',
+                        TITLE: 'ExampleTitle',
+                        ID: 'ExampleID'
+                    })}`
+                ]
+            })
+            let downloadConfigInput = [
+                renderNode({
+                    nodeType: 'label',
+                    childs: [
+                        `%#downloadPath#% `,
+                        {
+                            nodeType: 'input',
+                            attributes: Object.assign(
+                                {
+                                    name: 'DownloadPath',
+                                    type: 'Text',
+                                    value: config.downloadPath
+                                }
+                            ),
+                            events: {
+                                change: (event: Event) => {
+                                    config.downloadPath = (event.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    ]
+                }),
+                renderNode({
+                    nodeType: 'label',
+                    childs: [
+                        '%#downloadProxy#% ',
+                        {
+                            nodeType: 'input',
+                            attributes: Object.assign(
+                                {
+                                    name: 'DownloadProxy',
+                                    type: 'Text',
+                                    value: config.downloadProxy
+                                }
+                            ),
+                            events: {
+                                change: (event: Event) => {
+                                    config.downloadProxy = (event.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    ]
+                }),
+                variableInfo
+            ]
+            let aria2ConfigInput = [
+                renderNode({
+                    nodeType: 'label',
+                    childs: [
+                        'Aria2 RPC: ',
+                        {
+                            nodeType: 'input',
+                            attributes: Object.assign(
+                                {
+                                    name: 'Aria2Path',
+                                    type: 'Text',
+                                    value: config.aria2Path
+                                }
+                            ),
+                            events: {
+                                change: (event: Event) => {
+                                    config.aria2Path = (event.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    ]
+                }),
+                renderNode({
+                    nodeType: 'label',
+                    childs: [
+                        'Aria2 Token: ',
+                        {
+                            nodeType: 'input',
+                            attributes: Object.assign(
+                                {
+                                    name: 'Aria2Token',
+                                    type: 'Password',
+                                    value: config.aria2Token
+                                }
+                            ),
+                            events: {
+                                change: (event: Event) => {
+                                    config.aria2Token = (event.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    ]
+                }),
+                variableInfo
+            ]
+            let iwaraDownloaderConfigInput = [
+                renderNode({
+                    nodeType: 'label',
+                    childs: [
+                        'IwaraDownloader RPC: ',
+                        {
+                            nodeType: 'input',
+                            attributes: Object.assign(
+                                {
+                                    name: 'IwaraDownloaderPath',
+                                    type: 'Text',
+                                    value: config.iwaraDownloaderPath
+                                }
+                            ),
+                            events: {
+                                change: (event: Event) => {
+                                    config.iwaraDownloaderPath = (event.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    ]
+                }),
+                renderNode({
+                    nodeType: 'label',
+                    childs: [
+                        'IwaraDownloader Token: ',
+                        {
+                            nodeType: 'input',
+                            attributes: Object.assign(
+                                {
+                                    name: 'IwaraDownloaderToken',
+                                    type: 'Password',
+                                    value: config.iwaraDownloaderToken
+                                }
+                            ),
+                            events: {
+                                change: (event: Event) => {
+                                    config.iwaraDownloaderToken = (event.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    ]
+                }),
+                variableInfo
+            ]
+            let BrowserConfigInput = [
+                renderNode({
+                    nodeType: 'label',
+                    childs: [
+                        '%#rename#%',
+                        {
+                            nodeType: 'input',
+                            attributes: Object.assign(
+                                {
+                                    name: 'DownloadPath',
+                                    type: 'Text',
+                                    value: config.downloadPath
+                                }
+                            ),
+                            events: {
+                                change: (event: Event) => {
+                                    config.downloadPath = (event.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    ]
+                }),
+                variableInfo
+            ]
+            switch (config.downloadType) {
+                case DownloadType.Aria2:
+                    downloadConfigInput.map(i => page.originalAppendChild(i))
+                    aria2ConfigInput.map(i => page.originalAppendChild(i))
+                    break
+                case DownloadType.IwaraDownloader:
+                    downloadConfigInput.map(i => page.originalAppendChild(i))
+                    iwaraDownloaderConfigInput.map(i => page.originalAppendChild(i))
+                    break
+                default:
+                    BrowserConfigInput.map(i => page.originalAppendChild(i))
+                    break
+            }
+        }
         private configChange(item: string) {
             switch (item) {
                 case 'downloadType':
-                    let page: HTMLElement = document.querySelector('#pluginConfigPage')
-                    while (page.hasChildNodes()) {
-                        page.removeChild(page.firstChild)
-                    }
-                    let variableInfo = renderNode({
-                        nodeType: 'label',
-                        childs: [
-                            '%#variable#% ',
-                            { nodeType: 'br' },
-                            '%#downloadTime#% %#NowTime#%',
-                            { nodeType: 'br' },
-                            '%#uploadTime#% %#UploadTime#%',
-                            { nodeType: 'br' },
-                            '%#TITLE#% | %#ID#% | %#AUTHOR#%',
-                            { nodeType: 'br' },
-                            '%#example#% %#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
-                            { nodeType: 'br' },
-                            `%#result#% ${'%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceVariable({
-                                NowTime: new Date(),
-                                AUTHOR: 'ExampleAuthorID',
-                                TITLE: 'ExampleTitle',
-                                ID: 'ExampleID'
-                            })}`
-                        ]
-                    })
-                    let downloadConfigInput = [
-                        renderNode({
-                            nodeType: 'label',
-                            childs: [
-                                `%#downloadPath#% `,
-                                {
-                                    nodeType: 'input',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'DownloadPath',
-                                            type: 'Text',
-                                            value: config.downloadPath
-                                        }
-                                    ),
-                                    events: {
-                                        change: (event: Event) => {
-                                            config.downloadPath = (event.target as HTMLInputElement).value
-                                        }
-                                    }
-                                }
-                            ]
-                        }),
-                        renderNode({
-                            nodeType: 'label',
-                            childs: [
-                                '%#downloadProxy#% ',
-                                {
-                                    nodeType: 'input',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'DownloadProxy',
-                                            type: 'Text',
-                                            value: config.downloadProxy
-                                        }
-                                    ),
-                                    events: {
-                                        change: (event: Event) => {
-                                            config.downloadProxy = (event.target as HTMLInputElement).value
-                                        }
-                                    }
-                                }
-                            ]
-                        }),
-                        variableInfo
-                    ]
-                    let aria2ConfigInput = [
-                        renderNode({
-                            nodeType: 'label',
-                            childs: [
-                                'Aria2 RPC: ',
-                                {
-                                    nodeType: 'input',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'Aria2Path',
-                                            type: 'Text',
-                                            value: config.aria2Path
-                                        }
-                                    ),
-                                    events: {
-                                        change: (event: Event) => {
-                                            config.aria2Path = (event.target as HTMLInputElement).value
-                                        }
-                                    }
-                                }
-                            ]
-                        }),
-                        renderNode({
-                            nodeType: 'label',
-                            childs: [
-                                'Aria2 Token: ',
-                                {
-                                    nodeType: 'input',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'Aria2Token',
-                                            type: 'Password',
-                                            value: config.aria2Token
-                                        }
-                                    ),
-                                    events: {
-                                        change: (event: Event) => {
-                                            config.aria2Token = (event.target as HTMLInputElement).value
-                                        }
-                                    }
-                                }
-                            ]
-                        }),
-                        variableInfo
-                    ]
-                    let iwaraDownloaderConfigInput = [
-                        renderNode({
-                            nodeType: 'label',
-                            childs: [
-                                'IwaraDownloader RPC: ',
-                                {
-                                    nodeType: 'input',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'IwaraDownloaderPath',
-                                            type: 'Text',
-                                            value: config.iwaraDownloaderPath
-                                        }
-                                    ),
-                                    events: {
-                                        change: (event: Event) => {
-                                            config.iwaraDownloaderPath = (event.target as HTMLInputElement).value
-                                        }
-                                    }
-                                }
-                            ]
-                        }),
-                        renderNode({
-                            nodeType: 'label',
-                            childs: [
-                                'IwaraDownloader Token: ',
-                                {
-                                    nodeType: 'input',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'IwaraDownloaderToken',
-                                            type: 'Password',
-                                            value: config.iwaraDownloaderToken
-                                        }
-                                    ),
-                                    events: {
-                                        change: (event: Event) => {
-                                            config.iwaraDownloaderToken = (event.target as HTMLInputElement).value
-                                        }
-                                    }
-                                }
-                            ]
-                        }),
-                        variableInfo
-                    ]
-                    let BrowserConfigInput = [
-                        renderNode({
-                            nodeType: 'label',
-                            childs: [
-                                '%#rename#%',
-                                {
-                                    nodeType: 'input',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'DownloadPath',
-                                            type: 'Text',
-                                            value: config.downloadPath
-                                        }
-                                    ),
-                                    events: {
-                                        change: (event: Event) => {
-                                            config.downloadPath = (event.target as HTMLInputElement).value
-                                        }
-                                    }
-                                }
-                            ]
-                        }),
-                        variableInfo
-                    ]
-                    switch (config.downloadType) {
-                        case DownloadType.Aria2:
-                            downloadConfigInput.map(i => page.originalAppendChild(i))
-                            aria2ConfigInput.map(i => page.originalAppendChild(i))
-                            break
-                        case DownloadType.IwaraDownloader:
-                            downloadConfigInput.map(i => page.originalAppendChild(i))
-                            iwaraDownloaderConfigInput.map(i => page.originalAppendChild(i))
-                            break
-                        default:
-                            BrowserConfigInput.map(i => page.originalAppendChild(i))
-                            break
-                    }
+                    config.downloadTypeChange()
                     break
                 default:
                     break
@@ -963,7 +948,7 @@
                 toast.showToast()
                 let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
                 button && button.checked && button.click()
-                videoList.remove(this.ID)
+                config.selectList.remove(this.ID)
                 this.State = false
                 return this
             }
@@ -972,7 +957,6 @@
 
     var i18n = new I18N()
     var config = new Config()
-    var videoList = new Dictionary<string>()
 
     const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
@@ -1306,7 +1290,7 @@
         }
     }
 
-    async function analyzeDownloadTask(list: Dictionary<string> = videoList) {
+    async function analyzeDownloadTask(list: Dictionary<string> = config.selectList) {
         let size = list.size
         let node = renderNode({
             nodeType: 'p',
@@ -1781,7 +1765,7 @@
         node.originalAppendChild(renderNode({
             nodeType: 'input',
             attributes: Object.assign(
-                videoList.has(ID) ? { checked: true } : {}, {
+                config.selectList.has(ID) ? { checked: true } : {}, {
                 type: 'checkbox',
                 videoID: ID,
                 videoName: Name
@@ -1789,7 +1773,7 @@
             className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
             events: {
                 click: (event: Event) => {
-                    (event.target as HTMLInputElement).checked ? videoList.set(ID, Name) : videoList.remove(ID)
+                    (event.target as HTMLInputElement).checked ? config.selectList.set(ID, Name) : config.selectList.remove(ID)
                     event.stopPropagation()
                     event.stopImmediatePropagation()
                     return false
