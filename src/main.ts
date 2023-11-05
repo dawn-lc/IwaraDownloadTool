@@ -236,6 +236,7 @@
                         default:
                             break
                     }
+                    this.main && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
                 }
             }
             Channel.onmessageerror = (event) => {
