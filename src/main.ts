@@ -202,7 +202,71 @@
         Set,
         Del
     }
+    class Sync<T> {
+        [key: string]: any
+        public timeStamp: number
+        public id: string
+        public items: { [key: string]: T }
 
+        constructor(id: string) {
+            this.timeStamp = Date.now()
+            this.id = id
+            this.updateItems()
+            Channel.onmessage = (event: MessageEvent) => {
+                const message = event.data as ChannelMessage<{ key: string, value: T | undefined }>
+                if (message.id === this.id) {
+                    this.updateItems()
+                    this.items[message.data.key] = message.type === MessageType.Set ? message.data.value as T : undefined
+                    let selectButton = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                    if (!isNull(selectButton)) selectButton.checked = message.type === MessageType.Set;
+                }
+            }
+            Channel.onmessageerror = (event) => {
+                GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
+            }
+        }
+
+        private updateItems(): void {
+            let items = GM_getValue(this.id, { TimeStamp: this.timeStamp, Data: '{}' })
+            if (items.TimeStamp <= this.timeStamp) {
+                GM_setValue(this.id, { TimeStamp: this.timeStamp, Data: JSON.stringify(this.items) })
+            }
+            this.items = JSON.parse(items.Data)
+        }
+
+        public set(key: string, value: T): void {
+            this.items[key] = value
+            this.updateItems()
+            Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
+        }
+
+        public get(key: string): T | undefined {
+            return this.has(key) ? this.items[key] : undefined
+        }
+
+        public has(key: string): boolean {
+            return this.items.hasOwnProperty(key)
+        }
+
+        public del(key: string): void {
+            delete this.items[key]
+            Channel.postMessage({ id: this.id, type: MessageType.Del, data: { key: key } })
+        }
+
+        public get size(): number {
+            return Object.keys(this.items).length
+        }
+
+        public keys(): string[] {
+            return Object.keys(this.items)
+        }
+
+        public values(): T[] {
+            return Object.values(this.items)
+        }
+    }
+
+    /*
     class Sync<T> {
         [key: string]: any
         public timeStamp: number
@@ -272,7 +336,7 @@
             return Object.values(this.items)
         }
     }
-
+*/
     class Dictionary<T>{
         [key: string]: any
         public items: { [key: string]: T }
