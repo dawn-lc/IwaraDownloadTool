@@ -3,7 +3,9 @@
         debugger
     }
 
-    let unsafeWindow = window.unsafeWindow
+    const unsafeWindow = window.unsafeWindow
+
+    const Channel = new BroadcastChannel("IwaraDownloadTool")
 
     const originalAddEventListener = EventTarget.prototype.addEventListener
     EventTarget.prototype.addEventListener = function (type, listener, options) {
@@ -196,21 +198,46 @@
         Warn,
         Error
     }
+    enum MessageType {
+        Set,
+        Del
+    }
 
-    class Storage<T> {
+    class Sync<T> {
         [key: string]: any
-        private name: string
+        public timeStamp: Date
+        public id: string
         public items: { [key: string]: T }
-        constructor(name: string) {
-            this.name = name
-            this.items = JSON.parse(localStorage.getItem(name) ?? '{}')
-            unsafeWindow.addEventListener('storage', (e) => {
-                if (name === e.key) this.items = JSON.parse(e.newValue)
-            })
+        constructor(id: string) {
+            this.timeStamp = new Date()
+            this.id = id
+            let items = GM_getValue(id, { TimeStamp: this.timeStamp, Data: {} })
+            if (items.TimeStamp <= this.timeStamp) {
+                GM_setValue(id, { TimeStamp: this.timeStamp, Data: {} })
+            }
+            this.items = items.Data;
+            Channel.onmessage = (event: MessageEvent) => {
+                const message = event.data as ChannelMessage<{ key: string, value: T | undefined }>
+                if (message.id === this.id) {
+                    switch (message.type) {
+                        case MessageType.Set:
+                            this.items[message.data.key] = message.data.value as T
+                            break;
+                        case MessageType.Del:
+                            delete this.items[message.data.key]
+                            break;
+                        default:
+                            break
+                    }
+                }
+            }
+            Channel.onmessageerror = (event) => {
+                GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
+            };
         }
         public set(key: string, value: T): void {
             this.items[key] = value
-            localStorage.setItem(this.name, JSON.stringify(this.items));
+            Channel.postMessage({ id: this.id, type: MessageType.Set, data: { k: key, v: value } })
         }
         public get(key: string): T | undefined {
             return this.has(key) ? this.items[key] : undefined
@@ -218,13 +245,9 @@
         public has(key: string): boolean {
             return this.items.hasOwnProperty(key)
         }
-        public remove(key: string): boolean {
-            if (this.has(key)) {
-                delete this.items[key]
-                localStorage.setItem(this.name, JSON.stringify(this.items));
-                return true
-            }
-            return false
+        public del(key: string): void {
+            delete this.items[key]
+            Channel.postMessage({ id: this.id, type: MessageType.Del, data: { k: key } })
         }
         public get size(): number {
             return Object.keys(this.items).length
@@ -234,10 +257,6 @@
         }
         public values(): T[] {
             return Object.values(this.items)
-        }
-        public clear(): void {
-            this.items = {}
-            localStorage.setItem(this.name, JSON.stringify(this.items));
         }
     }
 
@@ -257,12 +276,8 @@
         public has(key: string): boolean {
             return this.items.hasOwnProperty(key)
         }
-        public remove(key: string): boolean {
-            if (this.has(key)) {
-                delete this.items[key]
-                return true
-            }
-            return false
+        public del(key: string): void {
+            delete this.items[key]
         }
         public get size(): number {
             return Object.keys(this.items).length
@@ -272,9 +287,6 @@
         }
         public values(): T[] {
             return Object.values(this.items)
-        }
-        public clear(): void {
-            this.items = {}
         }
     }
 
@@ -995,7 +1007,7 @@
 
     var i18n = new I18N()
     var config = new Config()
-    var selectList = new Storage<string>('selectList');
+    var selectList = new Sync<string>('selectList');
 
     const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
@@ -1801,7 +1813,7 @@
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
         let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
-        node.originalAppendChild(renderNode({
+        let selectButton = renderNode({
             nodeType: 'input',
             attributes: Object.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
@@ -1818,7 +1830,23 @@
                     return false
                 }
             }
-        }))
+        }) as HTMLInputElement
+        Channel.onmessage = (event: MessageEvent) => {
+            const message = event.data as ChannelMessage<{ key: string, value: any }>
+            if (message.id === 'selectList') {
+                switch (message.type) {
+                    case MessageType.Set:
+                        selectButton.checked = true
+                        break;
+                    case MessageType.Del:
+                        selectButton.checked = false
+                        break;
+                    default:
+                        break
+                }
+            }
+        }
+        node.originalAppendChild(selectButton)
     }
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {

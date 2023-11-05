@@ -24,17 +24,22 @@ interface String {
 
 interface Dictionary<T> {
     [key: string]: any
-    public items: { [key: string]: T }
     set(key: string, value: T): void;
     get(key: string): T | undefined;
     has(key: string): boolean;
-    remove(key: string): boolean;
+    del(key: string): void;
     get size(): number;
     keys(): string[];
     values(): T[];
-    clear(): void;
 }
 
+
+
+interface ChannelMessage<T> {
+    id: string;
+    type: number;
+    data: T;
+}
 
 interface Array<T> {
     any(): boolean;
