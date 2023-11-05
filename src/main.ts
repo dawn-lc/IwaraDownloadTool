@@ -200,22 +200,17 @@
     }
     enum MessageType {
         Set,
-        Del,
-        Clash
+        Del
     }
 
     class Sync<T> {
         [key: string]: any
         public id: string
-        public main: boolean
         public items: { [key: string]: T }
         constructor(id: string) {
-            this.main = true
-            this.time = Date.now()
             this.id = id
             this.items = {}
             GM_getValue(this.id, []).map(d => { this.items[d.k] = d.v })
-            Channel.postMessage({ id: this.id, type: MessageType.Clash, data: {} })
             Channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as ChannelMessage<{ key: string , value: T | number | undefined }>
                 if (message.id === this.id) {
@@ -236,7 +231,6 @@
                         default:
                             break
                     }
-                    this.main && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
                 }
             }
             Channel.onmessageerror = (event) => {
@@ -246,7 +240,7 @@
         }
         public set(key: string, value: T): void {
             this.items[key] = value
-            this.main && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
+            GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
             Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
         }
         public get(key: string): T | undefined {
