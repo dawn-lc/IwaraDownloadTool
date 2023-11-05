@@ -225,14 +225,16 @@
                                 GM_setValue(id, { TimeStamp: this.timeStamp, Data: this.items })
                             }
                             this.items[message.data.key] = message.data.value as T
-                            document.querySelector(`input.selectButton[videoid="${message.data.key}"]`)?.setAttribute('checked','true')
+                            let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            if (!isNull(selectButtonA)) selectButtonA.checked = true;
                             break;
                         case MessageType.Del:
                             if (items.TimeStamp <= this.timeStamp) {
                                 GM_setValue(id, { TimeStamp: this.timeStamp, Data: this.items })
                             }
                             delete this.items[message.data.key]
-                            document.querySelector(`input.selectButton[videoid="${message.data.key}"]`)?.removeAttribute('checked')
+                            let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            if (!isNull(selectButtonB)) selectButtonB.checked = false;
                             break;
                         default:
                             break
