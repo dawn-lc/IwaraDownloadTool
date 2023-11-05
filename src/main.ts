@@ -247,6 +247,9 @@
         }
         public set(key: string, value: T): void {
             this.items[key] = value
+            if (GM_getValue(this.id, { TimeStamp: this.timeStamp, Data: '{}'}).TimeStamp <= this.timeStamp) {
+                GM_setValue(this.id, { TimeStamp: this.timeStamp, Data: JSON.stringify(this.items) })
+            }
             Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
         }
         public get(key: string): T | undefined {
