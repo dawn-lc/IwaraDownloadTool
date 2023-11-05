@@ -200,24 +200,23 @@
     }
     enum MessageType {
         Set,
-        Del
+        Del,
+        Clash
     }
 
     class Sync<T> {
         [key: string]: any
-        public timeStamp: number
         public id: string
+        public main: boolean
         public items: { [key: string]: T }
         constructor(id: string) {
-            this.timeStamp = Date.now()
+            this.main = true
+            this.time = Date.now()
             this.id = id
-            let items = GM_getValue(id, { TimeStamp: this.timeStamp, Data: '{}' })
-            if (items.TimeStamp <= this.timeStamp) {
-                GM_setValue(id, { TimeStamp: this.timeStamp, Data: '{}' })
-            }
-            this.items = JSON.parse(items.Data ?? '{}') ;
+            GM_getValue(this.id, []).map(d => { this.items[d.k] = d.v })
+            Channel.postMessage({ id: this.id, type: MessageType.Clash, data: {} })
             Channel.onmessage = (event: MessageEvent) => {
-                const message = event.data as ChannelMessage<{ key: string, value: T | undefined }>
+                const message = event.data as ChannelMessage<{ key: string , value: T | number | undefined }>
                 if (message.id === this.id) {
                     switch (message.type) {
                         case MessageType.Set:
@@ -230,11 +229,11 @@
                             let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false;
                             break;
+                        case MessageType.Clash:
+                            this.main = false;
+                            break;
                         default:
                             break
-                    }
-                    if (items.TimeStamp <= this.timeStamp) {
-                        GM_setValue(id, { TimeStamp: this.timeStamp, Data: JSON.stringify(this.items) })
                     }
                 }
             }
@@ -244,9 +243,7 @@
         }
         public set(key: string, value: T): void {
             this.items[key] = value
-            if (GM_getValue(this.id, { TimeStamp: this.timeStamp, Data: '{}'}).TimeStamp <= this.timeStamp) {
-                GM_setValue(this.id, { TimeStamp: this.timeStamp, Data: JSON.stringify(this.items) })
-            }
+            this.main && GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
             Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
         }
         public get(key: string): T | undefined {
