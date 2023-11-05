@@ -395,16 +395,20 @@
             }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
-                    return GM_getValue(property, target[property])
+                    let value = GM_getValue(property, target[property]);
+                    GM_getValue('isDebug') && console.log(`get: ${property} ${value}`)
+                    return value
                 },
                 set: function (target, property: string, value) {
                     GM_setValue(property, value)
+                    GM_getValue('isDebug') && console.log(`set: ${property} ${value}`)
                     target.configChange(property)
                     return true
                 }
             })
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
+                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name} old: ${old_value} new: ${new_value}`)
                     if (remote) body.configChange(name)
                 })
             })
@@ -832,7 +836,7 @@
                     ]
                 }) as HTMLElement
                 document.body.originalAppendChild(editor)
-                //this.configChange('downloadType')
+                config.downloadTypeChange()
             }
         }
     }
