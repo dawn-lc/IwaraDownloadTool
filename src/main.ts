@@ -1367,7 +1367,7 @@
             videoInfo.State && await pustDownloadTask(videoInfo)
             let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
             button && button.checked && button.click()
-            list.remove(key)
+            list.del(key)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
