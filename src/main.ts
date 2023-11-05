@@ -4,9 +4,9 @@
     }
 
     const unsafeWindow = window.unsafeWindow
-
+    
     const Channel = new BroadcastChannel("IwaraDownloadTool")
-
+    
     const originalAddEventListener = EventTarget.prototype.addEventListener
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
@@ -216,15 +216,18 @@
                 GM_setValue(id, { TimeStamp: this.timeStamp, Data: {} })
             }
             this.items = items.Data;
+
             Channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as ChannelMessage<{ key: string, value: T | undefined }>
                 if (message.id === this.id) {
                     switch (message.type) {
                         case MessageType.Set:
                             this.items[message.data.key] = message.data.value as T
+                            document.querySelector(`input.selectButton[videoid="${message.data.key}"]`)?.setAttribute('checked','true')
                             break;
                         case MessageType.Del:
                             delete this.items[message.data.key]
+                            document.querySelector(`input.selectButton[videoid="${message.data.key}"]`)?.removeAttribute('checked')
                             break;
                         default:
                             break
@@ -1813,7 +1816,7 @@
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
         let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
-        let selectButton = renderNode({
+        node.originalAppendChild(renderNode({
             nodeType: 'input',
             attributes: Object.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
@@ -1830,23 +1833,7 @@
                     return false
                 }
             }
-        }) as HTMLInputElement
-        Channel.onmessage = (event: MessageEvent) => {
-            const message = event.data as ChannelMessage<{ key: string, value: any }>
-            if (message.id === 'selectList') {
-                switch (message.type) {
-                    case MessageType.Set:
-                        selectButton.checked = true
-                        break;
-                    case MessageType.Del:
-                        selectButton.checked = false
-                        break;
-                    default:
-                        break
-                }
-            }
-        }
-        node.originalAppendChild(selectButton)
+        }))
     }
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
