@@ -1,15 +1,6 @@
-// @ts-ignore
-declare function GM_cookie(any: any,any: any,any: any);
-
-interface Object {
-    getObjectString(): string;
-}
-
-
 interface Date{
     format(format?: string): String;
 }
-
 interface String {
     replaceVariable(replacements: Record<string, any>, count?: number): String;
     isEmpty(): boolean;
@@ -32,8 +23,6 @@ interface Dictionary<T> {
     keys(): string[];
     values(): T[];
 }
-
-
 
 interface ChannelMessage<T> {
     id: string;

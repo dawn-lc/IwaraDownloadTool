@@ -14,8 +14,8 @@
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
 	
-	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null;
-    const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj);
+	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
+    const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
 
 	Array.prototype.any = function () {
         return this.prune().length > 0
@@ -53,11 +53,11 @@
     }
     String.prototype.splitLimit = function (separator: string, limit?: number) {
         if (this.isEmpty() || isNull(separator)) {
-            throw new Error('Empty');
+            throw new Error('Empty')
         }
-        let body = this.split(separator);
-        return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body;
-    };
+        let body = this.split(separator)
+        return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body
+    }
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
     }
@@ -218,13 +218,13 @@
                         case MessageType.Set:
                             this.items[message.data.key] = message.data.value as T
                             let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
-                            if (!isNull(selectButtonA)) selectButtonA.checked = true;
-                            break;
+                            if (!isNull(selectButtonA)) selectButtonA.checked = true
+                            break
                         case MessageType.Del:
                             delete this.items[message.data.key]
                             let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
-                            if (!isNull(selectButtonB)) selectButtonB.checked = false;
-                            break;
+                            if (!isNull(selectButtonB)) selectButtonB.checked = false
+                            break
                         default:
                             break
                     }
@@ -442,7 +442,7 @@
             }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
-                    let value = GM_getValue(property, target[property]);
+                    let value = GM_getValue(property, target[property])
                     GM_getValue('isDebug') && console.log(`get: ${property} ${getString(value)}`)
                     return value
                 },
@@ -895,8 +895,8 @@
         FileName: string
         Size: number
         Tags: Array<{
-            id: string;
-            type: string;
+            id: string
+            type: string
         }>
         Alias: string
         Author: string
@@ -1007,7 +1007,7 @@
 
     var i18n = new I18N()
     var config = new Config()
-    var selectList = new Sync<string>('selectList');
+    var selectList = new Sync<string>('selectList')
 
     const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
@@ -1652,8 +1652,8 @@
     }
     function aria2Download(videoInfo: VideoInfo) {
         (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
-            id: string;
-            type: string;
+            id: string
+            type: string
         }>, downloadUrl: string) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
@@ -1768,8 +1768,8 @@
     }
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
-            id: string;
-            type: string;
+            id: string
+            type: string
         }>, DownloadUrl: string) {
             function browserDownloadError(error: any) {
                 let toast = newToast(
