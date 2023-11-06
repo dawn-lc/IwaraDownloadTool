@@ -231,7 +231,6 @@
                 }
             }
             Channel.onmessageerror = (event) => {
-                debugger
                 GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
             }
         }
