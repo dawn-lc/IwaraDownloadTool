@@ -1382,10 +1382,10 @@
             return false
         }
         return [
-            'pan\.baidu',
-            '\\s\\',
-            'mega\.nz',
-            'drive\.google\.com',
+            'pan.baidu',
+            '/s/',
+            'mega.nz',
+            'drive.google.com',
             'aliyundrive',
             'uploadgig',
             'katfile',
@@ -1394,16 +1394,16 @@
             'rapidgator',
             'filebe',
             'filespace',
-            'mexa\.sh',
+            'mexa.sh',
             'mexashare',
-            'mx-sh\.net',
-            '\.uploaded\.',
+            'mx-sh.net',
+            'uploaded.',
             'icerbox',
             'alfafile',
-            'drv\.ms',
-            'onedrive\.',
-            'pixeldrain\.com',
-            'gigafile\.nu'
+            'drv.ms',
+            'onedrive.',
+            'pixeldrain.',
+            'gigafile.nu'
         ].filter(i => comment.toLowerCase().includes(i)).any()
     }
 
