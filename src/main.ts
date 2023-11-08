@@ -1383,6 +1383,7 @@
         }
         return [
             'pan\.baidu',
+            '\\s\\',
             'mega\.nz',
             'drive\.google\.com',
             'aliyundrive',
@@ -1396,7 +1397,7 @@
             'mexa\.sh',
             'mexashare',
             'mx-sh\.net',
-            'uploaded\.',
+            '\.uploaded\.',
             'icerbox',
             'alfafile',
             'drv\.ms',
