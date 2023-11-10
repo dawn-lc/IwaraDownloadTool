@@ -23,6 +23,10 @@
     Array.prototype.prune = function () {
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
+    Array.prototype.unique = function () {
+        return Array.from(new Set(this))
+    }
+
     String.prototype.isEmpty = function () {
         return !isNull(this) && this.length === 0
     }
@@ -203,25 +207,25 @@
         Del
     }
 
-    class Sync<T> {
+    class SyncDictionary<T> {
         [key: string]: any
         public id: string
-        public items: { [key: string]: T }
-        constructor(id: string) {
+        private dictionary: Dictionary<T>
+        constructor(id: string, data: Array<{ key: string, value: T }> = [] ) {
             this.id = id
-            this.items = {}
-            GM_getValue(this.id, []).map(d => { this.items[d.k] = d.v })
+            this.dictionary = new Dictionary<T>(data)
+            GM_getValue(this.id, []).map(i => this.dictionary.set(i.key, i.value))
             Channel.onmessage = (event: MessageEvent) => {
-                const message = event.data as ChannelMessage<{ key: string , value: T | number | undefined }>
+                const message = event.data as IChannelMessage<{ key: string , value: T | number | undefined }>
                 if (message.id === this.id) {
                     switch (message.type) {
                         case MessageType.Set:
-                            this.items[message.data.key] = message.data.value as T
+                            this.dictionary.set(message.data.key, message.data.value as T)
                             let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
                             if (!isNull(selectButtonA)) selectButtonA.checked = true
                             break
                         case MessageType.Del:
-                            delete this.items[message.data.key]
+                            this.dictionary.del(message.data.key)
                             let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false
                             break
@@ -235,34 +239,37 @@
             }
         }
         public set(key: string, value: T): void {
-            this.items[key] = value
-            GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
+            this.dictionary.set(key, value)
             Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
+            GM_setValue(this.id, this.dictionary.toArray())
         }
         public get(key: string): T | undefined {
-            return this.has(key) ? this.items[key] : undefined
+            return this.dictionary.get(key)
         }
         public has(key: string): boolean {
-            return this.items.hasOwnProperty(key)
+            return this.dictionary.has(key)
         }
         public del(key: string): void {
-            delete this.items[key]
-            GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
+            this.dictionary.del(key)
             Channel.postMessage({ id: this.id, type: MessageType.Del, data: { key: key } })
+            GM_setValue(this.id, this.dictionary.toArray())
         }
         public get size(): number {
-            return Object.keys(this.items).length
+            return this.dictionary.size
         }
         public keys(): string[] {
-            return Object.keys(this.items)
+            return this.dictionary.keys()
         }
         public values(): T[] {
-            return Object.values(this.items)
+            return this.dictionary.values()
+        }
+        public toArray(): Array<{ key: string, value: T }> {
+            return this.dictionary.toArray()
         }
     }
-    class Dictionary<T>{
+    class Dictionary<T> {
         [key: string]: any
-        public items: { [key: string]: T }
+        items: { [key: string]: T }
         constructor(data: Array<{ key: string, value: T }> = []) {
             this.items = {}
             data.map(i => this.set(i.key, i.value))
@@ -270,14 +277,15 @@
         public set(key: string, value: T): void {
             this.items[key] = value
         }
+        public del(key: string): void {
+            delete this.items[key]
+            this.items = prune(this.items)
+        }
         public get(key: string): T | undefined {
             return this.has(key) ? this.items[key] : undefined
         }
         public has(key: string): boolean {
             return this.items.hasOwnProperty(key)
-        }
-        public del(key: string): void {
-            delete this.items[key]
         }
         public get size(): number {
             return Object.keys(this.items).length
@@ -287,6 +295,9 @@
         }
         public values(): T[] {
             return Object.values(this.items)
+        }
+        public toArray(): Array<{ key: string, value: T }> {
+            return this.keys().map(k => { return { key: k, value: this.items[k] } })
         }
     }
 
@@ -1007,7 +1018,7 @@
 
     var i18n = new I18N()
     var config = new Config()
-    var selectList = new Sync<string>('selectList')
+    var selectList = new SyncDictionary<string>('selectList')
 
     const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
@@ -1341,7 +1352,7 @@
         }
     }
 
-    async function analyzeDownloadTask(list: Dictionary<string> = selectList) {
+    async function analyzeDownloadTask(list: IDictionary<string> = selectList) {
         let size = list.size
         let node = renderNode({
             nodeType: 'p',
@@ -1352,7 +1363,7 @@
             duration: -1
         })
         start.showToast()
-        for (const key in list.items) {
+        for (const key in list.keys()) {
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             videoInfo.State && await pustDownloadTask(videoInfo)
             let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
