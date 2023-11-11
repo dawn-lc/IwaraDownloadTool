@@ -279,7 +279,6 @@
         }
         public del(key: string): void {
             delete this.items[key]
-            this.items = prune(this.items)
         }
         public get(key: string): T | undefined {
             return this.has(key) ? this.items[key] : undefined
