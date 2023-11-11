@@ -1,4 +1,6 @@
 (async function () {
+    const originalObject = Object
+
     if (GM_getValue('isDebug')) {
         debugger
     }
@@ -35,7 +37,7 @@
     }
     const prune = (obj: any): any => {
         if (isNull(obj)) return
-        if (isObject(obj)) return (s => Object.entries(s).any() ? s : null)(Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v))))
+        if (isObject(obj)) return (s => originalObject.entries(s).any() ? s : null)(originalObject.fromEntries(originalObject.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v))))
         if (Array.isArray(obj)) return ((t => t.any() ? t : null)(obj.map(prune).prune()))
         if (typeof obj === 'string') return obj.isEmpty() ? null : obj
         return obj
@@ -85,7 +87,7 @@
     }
 
     String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = Object.entries(replacements).reduce(
+        let replaceString = originalObject.entries(replacements).reduce(
             (str, [key, value]) => {
                 if (str.includes(`%#${key}:`)) {
                     let format = str.among(`%#${key}:`, '#%').toString()
@@ -97,7 +99,7 @@
             this.toString()
         )
         count++
-        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+        return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
             replaceString.replaceVariable(replacements, count) : replaceString
     }
 
@@ -127,8 +129,8 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (!isNull(attributes) && originalObject.keys(attributes).any()) && originalObject.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (!isNull(events) && originalObject.keys(events).any()) && originalObject.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
         (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
@@ -140,7 +142,7 @@
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: url.href,
-                    headers: Object.assign({
+                    headers: originalObject.assign({
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
                     onload: response => resolve(response),
@@ -150,7 +152,7 @@
             return data.responseText
         }
         return (await originFetch(url.href, {
-            'headers': Object.assign({
+            'headers': originalObject.assign({
                 'accept': 'application/json, text/plain, */*'
             }, headers),
             'referrer': referrer,
@@ -166,7 +168,7 @@
                 GM_xmlhttpRequest({
                     method: 'POST',
                     url: url.href,
-                    headers: Object.assign({
+                    headers: originalObject.assign({
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     }, headers),
@@ -178,7 +180,7 @@
             return data.responseText
         }
         return (await originFetch(url.href, {
-            'headers': Object.assign({
+            'headers': originalObject.assign({
                 'accept': 'application/json, text/plain, */*'
             }, headers),
             'referrer': referrer,
@@ -288,13 +290,13 @@
             return this.items.hasOwnProperty(key)
         }
         public get size(): number {
-            return Object.keys(this.items).length
+            return originalObject.keys(this.items).length
         }
         public keys(): string[] {
-            return Object.keys(this.items)
+            return originalObject.keys(this.items)
         }
         public values(): T[] {
-            return Object.values(this.items)
+            return originalObject.values(this.items)
         }
         public toArray(): Array<{ key: string, value: T }> {
             return this.keys().map(k => { return { key: k, value: this.items[k] } })
@@ -497,7 +499,7 @@
                     DownloadType[type],
                     {
                         nodeType: 'input',
-                        attributes: Object.assign(
+                        attributes: originalObject.assign(
                             {
                                 name: 'DownloadType',
                                 type: 'radio',
@@ -547,7 +549,7 @@
                         `%#downloadPath#% `,
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'DownloadPath',
                                     type: 'Text',
@@ -568,7 +570,7 @@
                         '%#downloadProxy#% ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'DownloadProxy',
                                     type: 'Text',
@@ -592,7 +594,7 @@
                         'Aria2 RPC: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'Aria2Path',
                                     type: 'Text',
@@ -613,7 +615,7 @@
                         'Aria2 Token: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'Aria2Token',
                                     type: 'Password',
@@ -637,7 +639,7 @@
                         'IwaraDownloader RPC: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'IwaraDownloaderPath',
                                     type: 'Text',
@@ -658,7 +660,7 @@
                         'IwaraDownloader Token: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'IwaraDownloaderToken',
                                     type: 'Password',
@@ -682,7 +684,7 @@
                         '%#rename#%',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'DownloadPath',
                                     type: 'Text',
@@ -759,7 +761,7 @@
                                         '%#language#% ',
                                         {
                                             nodeType: 'input',
-                                            attributes: Object.assign(
+                                            attributes: originalObject.assign(
                                                 {
                                                     name: 'Language',
                                                     type: 'Text',
@@ -779,7 +781,7 @@
                                     className: 'inputRadioLine',
                                     childs: [
                                         '%#downloadType#% ',
-                                        ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
+                                        ...originalObject.keys(DownloadType).map(i => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
                                     ]
                                 },
                                 {
@@ -794,7 +796,7 @@
                                                 '%#on#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'CheckDownloadLink',
                                                             type: 'radio'
@@ -815,7 +817,7 @@
                                                 '%#off#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'CheckDownloadLink',
                                                             type: 'radio'
@@ -844,7 +846,7 @@
                                                 '%#on#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'AutoInjectCheckbox',
                                                             type: 'radio'
@@ -865,7 +867,7 @@
                                                 '%#off#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'AutoInjectCheckbox',
                                                             type: 'radio'
@@ -1334,7 +1336,7 @@
 
 
     async function getAuth(url?: string) {
-        return Object.assign(
+        return originalObject.assign(
             {
                 'Cooike': document.cookie,
                 'Authorization': config.authorization
@@ -1454,7 +1456,7 @@
             [ToastType.Log]: console.log,
             [ToastType.Info]: console.info,
         }[type] || console.log
-        params = Object.assign({
+        params = originalObject.assign({
             newWindow: true,
             gravity: 'top',
             position: 'right',
@@ -1577,7 +1579,7 @@
         try {
             let pathTest = analyzeLocalPath(config.downloadPath)
             for (const key in pathTest) {
-                if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
+                if (!originalObject.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
                 }
             }
         } catch (error: any) {
@@ -1633,7 +1635,7 @@
     }
     async function iwaraDownloaderCheck(): Promise<boolean> {
         try {
-            let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
+            let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), originalObject.assign({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State'
             },
@@ -1827,7 +1829,7 @@
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
         node.originalAppendChild(renderNode({
             nodeType: 'input',
-            attributes: Object.assign(
+            attributes: originalObject.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
                 type: 'checkbox',
                 videoID: ID,
