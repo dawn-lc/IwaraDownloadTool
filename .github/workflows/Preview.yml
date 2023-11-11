@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/*'
       - 'build/*'
+      - 'utils/*'
 env:
   release_tag: preview
 jobs:

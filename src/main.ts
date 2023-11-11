@@ -1,20 +1,18 @@
 (async function () {
     const originalObject = Object
-
-    if (GM_getValue('isDebug')) {
-        debugger
-    }
-
-    const unsafeWindow = window.unsafeWindow
-    
-    const Channel = new BroadcastChannel("IwaraDownloadTool")
-    
     const originalAddEventListener = EventTarget.prototype.addEventListener
+    const unsafeWindow = window.unsafeWindow
+
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
+    if (GM_getValue('isDebug')) {
+        debugger
+    }
+    
+    const Channel = new BroadcastChannel("IwaraDownloadTool")
 	
 	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
