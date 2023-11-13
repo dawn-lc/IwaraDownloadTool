@@ -289,7 +289,7 @@
         public get size(): number {
             return originalObject.keys(this.items).length
         }
-        public keys(): string[] {
+        public keys(): string[] { 
             return originalObject.keys(this.items)
         }
         public values(): T[] {
@@ -1362,7 +1362,7 @@
             duration: -1
         })
         start.showToast()
-        for (const key in list.keys()) {
+        for (let key of list.keys()) {
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             videoInfo.State && await pustDownloadTask(videoInfo)
             let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
