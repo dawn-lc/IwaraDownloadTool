@@ -727,6 +727,9 @@
                     nodeType: 'button',
                     className: 'closeButton',
                     childs: '%#save#%',
+                    attributes: {
+                        title: i18n[language()].save
+                    },
                     events: {
                         click: async () => {
                             save.disabled = !save.disabled
@@ -1856,7 +1859,8 @@
         let confirmButton = renderNode({
             nodeType: 'button',
             attributes: {
-                disabled: true
+                disabled: true,
+                title: i18n[language()].ok
             },
             childs: '%#ok#%',
             events: {
