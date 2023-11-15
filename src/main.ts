@@ -1078,7 +1078,7 @@
         border: 1px solid #ccc;
         border-radius: 5px;
         box-shadow: 0 0 10px #ccc;
-        transform: translate(85%, -50%);
+        transform: translate(90%, -50%);
         transition: transform 0.5s cubic-bezier(0,1,.60,1);
     }
     #pluginMenu ul {
