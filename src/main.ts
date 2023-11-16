@@ -1,21 +1,21 @@
 (async function () {
-    if (GM_getValue('isDebug')) {
-        debugger
-    }
-
-    const unsafeWindow = window.unsafeWindow
-    
-    const Channel = new BroadcastChannel("IwaraDownloadTool")
-    
+    const originalObject = Object
     const originalAddEventListener = EventTarget.prototype.addEventListener
+    const unsafeWindow = window.unsafeWindow
+
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
+    if (GM_getValue('isDebug')) {
+        debugger
+    }
+    
+    const Channel = new BroadcastChannel("IwaraDownloadTool")
 	
-	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null;
-    const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj);
+	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
+    const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
 
 	Array.prototype.any = function () {
         return this.prune().length > 0
@@ -23,6 +23,10 @@
     Array.prototype.prune = function () {
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
+    Array.prototype.unique = function () {
+        return Array.from(new Set(this))
+    }
+
     String.prototype.isEmpty = function () {
         return !isNull(this) && this.length === 0
     }
@@ -31,7 +35,7 @@
     }
     const prune = (obj: any): any => {
         if (isNull(obj)) return
-        if (isObject(obj)) return (s => Object.entries(s).any() ? s : null)(Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v))))
+        if (isObject(obj)) return (s => originalObject.entries(s).any() ? s : null)(originalObject.fromEntries(originalObject.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v))))
         if (Array.isArray(obj)) return ((t => t.any() ? t : null)(obj.map(prune).prune()))
         if (typeof obj === 'string') return obj.isEmpty() ? null : obj
         return obj
@@ -53,11 +57,11 @@
     }
     String.prototype.splitLimit = function (separator: string, limit?: number) {
         if (this.isEmpty() || isNull(separator)) {
-            throw new Error('Empty');
+            throw new Error('Empty')
         }
-        let body = this.split(separator);
-        return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body;
-    };
+        let body = this.split(separator)
+        return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body
+    }
     String.prototype.truncate = function (maxLength) {
         return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
     }
@@ -81,7 +85,7 @@
     }
 
     String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = Object.entries(replacements).reduce(
+        let replaceString = originalObject.entries(replacements).reduce(
             (str, [key, value]) => {
                 if (str.includes(`%#${key}:`)) {
                     let format = str.among(`%#${key}:`, '#%').toString()
@@ -93,7 +97,7 @@
             this.toString()
         )
         count++
-        return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+        return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
             replaceString.replaceVariable(replacements, count) : replaceString
     }
 
@@ -123,8 +127,8 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (!isNull(attributes) && originalObject.keys(attributes).any()) && originalObject.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
+        (!isNull(events) && originalObject.keys(events).any()) && originalObject.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
         (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
@@ -136,7 +140,7 @@
                 GM_xmlhttpRequest({
                     method: 'GET',
                     url: url.href,
-                    headers: Object.assign({
+                    headers: originalObject.assign({
                         'Accept': 'application/json, text/plain, */*'
                     }, headers),
                     onload: response => resolve(response),
@@ -146,7 +150,7 @@
             return data.responseText
         }
         return (await originFetch(url.href, {
-            'headers': Object.assign({
+            'headers': originalObject.assign({
                 'accept': 'application/json, text/plain, */*'
             }, headers),
             'referrer': referrer,
@@ -162,7 +166,7 @@
                 GM_xmlhttpRequest({
                     method: 'POST',
                     url: url.href,
-                    headers: Object.assign({
+                    headers: originalObject.assign({
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'
                     }, headers),
@@ -174,7 +178,7 @@
             return data.responseText
         }
         return (await originFetch(url.href, {
-            'headers': Object.assign({
+            'headers': originalObject.assign({
                 'accept': 'application/json, text/plain, */*'
             }, headers),
             'referrer': referrer,
@@ -203,67 +207,69 @@
         Del
     }
 
-    class Sync<T> {
+    class SyncDictionary<T> {
         [key: string]: any
         public id: string
-        public items: { [key: string]: T }
-        constructor(id: string) {
+        private dictionary: Dictionary<T>
+        constructor(id: string, data: Array<{ key: string, value: T }> = [] ) {
             this.id = id
-            this.items = {}
-            GM_getValue(this.id, []).map(d => { this.items[d.k] = d.v })
+            this.dictionary = new Dictionary<T>(data)
+            GM_getValue(this.id, []).map(i => this.dictionary.set(i.key, i.value))
             Channel.onmessage = (event: MessageEvent) => {
-                const message = event.data as ChannelMessage<{ key: string , value: T | number | undefined }>
+                const message = event.data as IChannelMessage<{ key: string , value: T | number | undefined }>
                 if (message.id === this.id) {
                     switch (message.type) {
                         case MessageType.Set:
-                            this.items[message.data.key] = message.data.value as T
+                            this.dictionary.set(message.data.key, message.data.value as T)
                             let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
-                            if (!isNull(selectButtonA)) selectButtonA.checked = true;
-                            break;
+                            if (!isNull(selectButtonA)) selectButtonA.checked = true
+                            break
                         case MessageType.Del:
-                            delete this.items[message.data.key]
+                            this.dictionary.del(message.data.key)
                             let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
-                            if (!isNull(selectButtonB)) selectButtonB.checked = false;
-                            break;
+                            if (!isNull(selectButtonB)) selectButtonB.checked = false
+                            break
                         default:
                             break
                     }
                 }
             }
             Channel.onmessageerror = (event) => {
-                debugger
                 GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
             }
         }
         public set(key: string, value: T): void {
-            this.items[key] = value
-            GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
+            this.dictionary.set(key, value)
             Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
+            GM_setValue(this.id, this.dictionary.toArray())
         }
         public get(key: string): T | undefined {
-            return this.has(key) ? this.items[key] : undefined
+            return this.dictionary.get(key)
         }
         public has(key: string): boolean {
-            return this.items.hasOwnProperty(key)
+            return this.dictionary.has(key)
         }
         public del(key: string): void {
-            delete this.items[key]
-            GM_setValue(this.id, this.keys().map(key => { return { k: key, v: this.items[key] } }))
+            this.dictionary.del(key)
             Channel.postMessage({ id: this.id, type: MessageType.Del, data: { key: key } })
+            GM_setValue(this.id, this.dictionary.toArray())
         }
         public get size(): number {
-            return Object.keys(this.items).length
+            return this.dictionary.size
         }
         public keys(): string[] {
-            return Object.keys(this.items)
+            return this.dictionary.keys()
         }
         public values(): T[] {
-            return Object.values(this.items)
+            return this.dictionary.values()
+        }
+        public toArray(): Array<{ key: string, value: T }> {
+            return this.dictionary.toArray()
         }
     }
-    class Dictionary<T>{
+    class Dictionary<T> {
         [key: string]: any
-        public items: { [key: string]: T }
+        items: { [key: string]: T }
         constructor(data: Array<{ key: string, value: T }> = []) {
             this.items = {}
             data.map(i => this.set(i.key, i.value))
@@ -271,23 +277,26 @@
         public set(key: string, value: T): void {
             this.items[key] = value
         }
+        public del(key: string): void {
+            delete this.items[key]
+        }
         public get(key: string): T | undefined {
             return this.has(key) ? this.items[key] : undefined
         }
         public has(key: string): boolean {
             return this.items.hasOwnProperty(key)
         }
-        public del(key: string): void {
-            delete this.items[key]
-        }
         public get size(): number {
-            return Object.keys(this.items).length
+            return originalObject.keys(this.items).length
         }
-        public keys(): string[] {
-            return Object.keys(this.items)
+        public keys(): string[] { 
+            return originalObject.keys(this.items)
         }
         public values(): T[] {
-            return Object.values(this.items)
+            return originalObject.values(this.items)
+        }
+        public toArray(): Array<{ key: string, value: T }> {
+            return this.keys().map(k => { return { key: k, value: this.items[k] } })
         }
     }
 
@@ -443,7 +452,7 @@
             }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
-                    let value = GM_getValue(property, target[property]);
+                    let value = GM_getValue(property, target[property])
                     GM_getValue('isDebug') && console.log(`get: ${property} ${getString(value)}`)
                     return value
                 },
@@ -487,7 +496,7 @@
                     DownloadType[type],
                     {
                         nodeType: 'input',
-                        attributes: Object.assign(
+                        attributes: originalObject.assign(
                             {
                                 name: 'DownloadType',
                                 type: 'radio',
@@ -537,7 +546,7 @@
                         `%#downloadPath#% `,
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'DownloadPath',
                                     type: 'Text',
@@ -558,7 +567,7 @@
                         '%#downloadProxy#% ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'DownloadProxy',
                                     type: 'Text',
@@ -582,7 +591,7 @@
                         'Aria2 RPC: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'Aria2Path',
                                     type: 'Text',
@@ -603,7 +612,7 @@
                         'Aria2 Token: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'Aria2Token',
                                     type: 'Password',
@@ -627,7 +636,7 @@
                         'IwaraDownloader RPC: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'IwaraDownloaderPath',
                                     type: 'Text',
@@ -648,7 +657,7 @@
                         'IwaraDownloader Token: ',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'IwaraDownloaderToken',
                                     type: 'Password',
@@ -672,7 +681,7 @@
                         '%#rename#%',
                         {
                             nodeType: 'input',
-                            attributes: Object.assign(
+                            attributes: originalObject.assign(
                                 {
                                     name: 'DownloadPath',
                                     type: 'Text',
@@ -718,6 +727,9 @@
                     nodeType: 'button',
                     className: 'closeButton',
                     childs: '%#save#%',
+                    attributes: {
+                        title: i18n[language()].save
+                    },
                     events: {
                         click: async () => {
                             save.disabled = !save.disabled
@@ -749,7 +761,7 @@
                                         '%#language#% ',
                                         {
                                             nodeType: 'input',
-                                            attributes: Object.assign(
+                                            attributes: originalObject.assign(
                                                 {
                                                     name: 'Language',
                                                     type: 'Text',
@@ -769,7 +781,7 @@
                                     className: 'inputRadioLine',
                                     childs: [
                                         '%#downloadType#% ',
-                                        ...Object.keys(DownloadType).map(i => !Object.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
+                                        ...originalObject.keys(DownloadType).map(i => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
                                     ]
                                 },
                                 {
@@ -784,7 +796,7 @@
                                                 '%#on#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'CheckDownloadLink',
                                                             type: 'radio'
@@ -805,7 +817,7 @@
                                                 '%#off#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'CheckDownloadLink',
                                                             type: 'radio'
@@ -834,7 +846,7 @@
                                                 '%#on#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'AutoInjectCheckbox',
                                                             type: 'radio'
@@ -855,7 +867,7 @@
                                                 '%#off#%',
                                                 {
                                                     nodeType: 'input',
-                                                    attributes: Object.assign(
+                                                    attributes: originalObject.assign(
                                                         {
                                                             name: 'AutoInjectCheckbox',
                                                             type: 'radio'
@@ -896,8 +908,8 @@
         FileName: string
         Size: number
         Tags: Array<{
-            id: string;
-            type: string;
+            id: string
+            type: string
         }>
         Alias: string
         Author: string
@@ -1008,7 +1020,7 @@
 
     var i18n = new I18N()
     var config = new Config()
-    var selectList = new Sync<string>('selectList');
+    var selectList = new SyncDictionary<string>('selectList')
 
     const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
@@ -1066,7 +1078,7 @@
         border: 1px solid #ccc;
         border-radius: 5px;
         box-shadow: 0 0 10px #ccc;
-        transform: translate(85%, -50%);
+        transform: translate(90%, -50%);
         transition: transform 0.5s cubic-bezier(0,1,.60,1);
     }
     #pluginMenu ul {
@@ -1324,7 +1336,7 @@
 
 
     async function getAuth(url?: string) {
-        return Object.assign(
+        return originalObject.assign(
             {
                 'Cooike': document.cookie,
                 'Authorization': config.authorization
@@ -1342,7 +1354,7 @@
         }
     }
 
-    async function analyzeDownloadTask(list: Dictionary<string> = selectList) {
+    async function analyzeDownloadTask(list: IDictionary<string> = selectList) {
         let size = list.size
         let node = renderNode({
             nodeType: 'p',
@@ -1353,7 +1365,7 @@
             duration: -1
         })
         start.showToast()
-        for (const key in list.items) {
+        for (let key of list.keys()) {
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             videoInfo.State && await pustDownloadTask(videoInfo)
             let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
@@ -1383,9 +1395,10 @@
             return false
         }
         return [
-            'pan\.baidu',
-            'mega\.nz',
-            'drive\.google\.com',
+            'pan.baidu',
+            '/s/',
+            'mega.nz',
+            'drive.google.com',
             'aliyundrive',
             'uploadgig',
             'katfile',
@@ -1394,16 +1407,16 @@
             'rapidgator',
             'filebe',
             'filespace',
-            'mexa\.sh',
+            'mexa.sh',
             'mexashare',
-            'mx-sh\.net',
-            'uploaded\.',
+            'mx-sh.net',
+            'uploaded.',
             'icerbox',
             'alfafile',
-            'drv\.ms',
-            'onedrive\.',
-            'pixeldrain\.com',
-            'gigafile\.nu'
+            'drv.ms',
+            'onedrive.',
+            'pixeldrain.',
+            'gigafile.nu'
         ].filter(i => comment.toLowerCase().includes(i)).any()
     }
 
@@ -1443,7 +1456,7 @@
             [ToastType.Log]: console.log,
             [ToastType.Info]: console.info,
         }[type] || console.log
-        params = Object.assign({
+        params = originalObject.assign({
             newWindow: true,
             gravity: 'top',
             position: 'right',
@@ -1566,7 +1579,7 @@
         try {
             let pathTest = analyzeLocalPath(config.downloadPath)
             for (const key in pathTest) {
-                if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
+                if (!originalObject.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
                 }
             }
         } catch (error: any) {
@@ -1622,7 +1635,7 @@
     }
     async function iwaraDownloaderCheck(): Promise<boolean> {
         try {
-            let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), Object.assign({
+            let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), originalObject.assign({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State'
             },
@@ -1653,8 +1666,8 @@
     }
     function aria2Download(videoInfo: VideoInfo) {
         (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
-            id: string;
-            type: string;
+            id: string
+            type: string
         }>, downloadUrl: string) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
@@ -1769,8 +1782,8 @@
     }
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
-            id: string;
-            type: string;
+            id: string
+            type: string
         }>, DownloadUrl: string) {
             function browserDownloadError(error: any) {
                 let toast = newToast(
@@ -1816,7 +1829,7 @@
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
         node.originalAppendChild(renderNode({
             nodeType: 'input',
-            attributes: Object.assign(
+            attributes: originalObject.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
                 type: 'checkbox',
                 videoID: ID,
@@ -1846,7 +1859,8 @@
         let confirmButton = renderNode({
             nodeType: 'button',
             attributes: {
-                disabled: true
+                disabled: true,
+                title: i18n[language()].ok
             },
             childs: '%#ok#%',
             events: {

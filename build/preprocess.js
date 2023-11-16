@@ -99,7 +99,7 @@ function serializeMetadata(metadata) {
         return result;
     }, results);
     results.push('// ==/UserScript==');
-    return results.join('\n');
+    return results.join('\r\n');
 };
 
 function mkdir(path) {

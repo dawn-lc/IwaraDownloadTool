@@ -15,9 +15,7 @@
 // @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.mata.js
 // @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.user.js
 // @connect           iwara.tv
-// @connect           www.iwara.tv
-// @connect           api.iwara.tv
-// @connect           cdn.staticfile.org
+// @connect           *.iwara.tv
 // @connect           localhost
 // @connect           127.0.0.1
 // @connect           *

@@ -1,15 +1,6 @@
-// @ts-ignore
-declare function GM_cookie(any: any,any: any,any: any);
-
-interface Object {
-    getObjectString(): string;
-}
-
-
 interface Date{
     format(format?: string): String;
 }
-
 interface String {
     replaceVariable(replacements: Record<string, any>, count?: number): String;
     isEmpty(): boolean;
@@ -22,7 +13,7 @@ interface String {
     trimTail(suffix: string): string;
 }
 
-interface Dictionary<T> {
+interface IDictionary<T> {
     [key: string]: any
     set(key: string, value: T): void;
     get(key: string): T | undefined;
@@ -31,11 +22,10 @@ interface Dictionary<T> {
     get size(): number;
     keys(): string[];
     values(): T[];
+    toArray(): Array<{ key: string, value: T }>;
 }
 
-
-
-interface ChannelMessage<T> {
+interface IChannelMessage<T> {
     id: string;
     type: number;
     data: T;
@@ -44,6 +34,7 @@ interface ChannelMessage<T> {
 interface Array<T> {
     any(): boolean;
     prune(): Array<T>;
+    unique(): Array<T>;
     append(arr: Array<T>): void;
 }
 

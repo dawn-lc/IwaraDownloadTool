@@ -17,5 +17,5 @@ let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 let main = fs.readFileSync(mainTempPath, 'utf8');
 let mata = fs.readFileSync(mataTempPath, 'utf8');
 
-fs.writeFileSync(path.join(tempPath, `${package.displayName}.user.js`), [mata, main].join('\n'));
+fs.writeFileSync(path.join(tempPath, `${package.displayName}.user.js`), [mata, main].join('\r\n'));
 fs.writeFileSync(path.join(tempPath, `${package.displayName}.mata.js`), mata);
