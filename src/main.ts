@@ -982,7 +982,7 @@
                     comments.append(replies)
                     return comments.prune()
                 }
-                this.Comments = this.VideoInfoSource.body + (await getCommentDatas()).map(i => i.body).join('\n')
+                this.Comments = `${this.VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 this.State = true
                 return this
             } catch (error) {
