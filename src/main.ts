@@ -1070,7 +1070,6 @@
         }
     }
 
-
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
     .rainbow-text {
