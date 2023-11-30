@@ -301,9 +301,9 @@
     }
 
     class I18N {
-        [key: string]: { [key: string]: string }
+        [key: string]: { [key: string]: RenderCode | RenderCode[] }
         public zh_CN = this['zh']
-        public zh: { [key: string]: string } = {
+        public zh: { [key: string]: RenderCode | RenderCode[] } = {
             appName: 'Iwara 批量下载工具',
             language: '语言:',
             downloadPath: '下载到:',
@@ -340,6 +340,16 @@
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
+            useHelpForBugreport: [
+                '反馈遇到的BUG、使用问题等请前往：',
+                {
+                    nodeType: 'a',
+                    childs: 'Guthub',
+                    attributes: {
+                        href: 'https://github.com/dawn-lc/IwaraDownloadTool/issues/new/choose'
+                    }
+                }
+            ],
             downloadFailed: '下载失败！',
             tryRestartingDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
@@ -362,7 +372,7 @@
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
         }
-        public en: { [key: string]: string } = {
+        public en: { [key: string]: RenderCode | RenderCode[] } = {
             appName: 'Iwara Download Tool',
             language: 'Language:',
             downloadPath: 'Download to:',
@@ -399,6 +409,16 @@
             useHelpForInjectCheckbox: "After the video card is loaded, click [%#injectCheckbox#%] in the sidebar to enable the download checkbox",
             useHelpForCheckDownloadLink: "Before downloading the video, the video introduction and comments will be checked. If a suspected third-party download link is found in them, a prompt will pop up. You can click the prompt to open the video page.",
             useHelpForManualDownload: "Manual download requires you to provide a video ID! \r\nIf you need to batch download, please use '|' to separate IDs. For example:A|B|C...",
+            useHelpForBugreport: [
+                'Report bugs: ',
+                {
+                    nodeType: 'a',
+                    childs: 'Guthub',
+                    attributes: {
+                        href: 'https://github.com/dawn-lc/IwaraDownloadTool/issues/new/choose'
+                    }
+                }
+            ],
             downloadFailed: 'Download failed!',
             tryRestartingDownload: '→ Click here to re-parse ←',
             openVideoLink: '→ Enter video page ←',
@@ -983,12 +1003,12 @@
                 this.ID = ID.toLocaleLowerCase()
                 this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), unsafeWindow.location.href, await getAuth()))
                 if (this.VideoInfoSource.id === undefined) {
-                    throw new Error(i18n[language()].parsingFailed)
+                    throw new Error(i18n[language()].parsingFailed.toString())
                 }
-                this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).normalize('NFKC').truncate(100)
+                this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).normalize('NFKC').truncate(128)
                 this.External = !isNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
-                    throw new Error(i18n[language()].externalVideo)
+                    throw new Error(i18n[language()].externalVideo.toString())
                 }
                 this.Private = this.VideoInfoSource.private
                 this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_').normalize('NFKC')
@@ -999,14 +1019,14 @@
                 this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
-                    throw new Error(i18n[language()].getVideoSourceFailed)
+                    throw new Error(i18n[language()].getVideoSourceFailed.toString())
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name
                 this.getDownloadUrl = () => {
                     let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality)
-                    if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource)
+                    if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-                    if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable)
+                    if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
                     return decodeURIComponent(`https:${Source}`)
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
@@ -1069,6 +1089,7 @@
             }
         }
     }
+
 
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
@@ -1535,7 +1556,7 @@
     }
 
     async function addDownloadTask() {
-        let data = prompt(i18n[language()].manualDownloadTips, '')
+        let data = prompt(i18n[language()].manualDownloadTips.toString(), '')
         if (!isNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<string>()
             data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).prune().map(ID => IDList.set(ID, '手动解析'))
@@ -2073,7 +2094,8 @@
                     childs: [
                         { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                         { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' }
+                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
+                        { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
                     ]
                 },
                 {
@@ -2123,8 +2145,7 @@
                 text: `%#loadingCompleted#%`,
                 duration: 10000,
                 gravity: 'bottom',
-                position: 'center',
-                close: true
+                position: 'center'
             }).showToast()
         }
     }
