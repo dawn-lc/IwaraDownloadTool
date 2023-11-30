@@ -1,7 +1,7 @@
-name: 反馈BUG
-description: 反馈使用中遇到的BUG
-title: "[Bug]: "
-labels: ["BUG"]
+name: 咨询
+description: 询问如何使用，对当前提供的功能存在困惑等
+title: "[Question]: "
+labels: ["咨询"]
 assignees:
   - dawn-lc
 body:
@@ -19,19 +19,8 @@ body:
   - type: textarea
     id: describe
     attributes:
-      label: 描述你的问题
-      description: 简要描述你的问题
-    validations:
-      required: true
-  - type: textarea
-    id: reproduce
-    attributes:
-      label: 如何复现
-      description: 重现该行为的步骤
-      value: |
-        1. 前往 '...'
-        2. 点击 '....'
-        4. 出现问题
+      label: 描述你的疑惑
+      description: 简要描述你的疑惑
     validations:
       required: true
   - type: dropdown
