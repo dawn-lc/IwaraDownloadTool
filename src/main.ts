@@ -1018,37 +1018,6 @@
         }
     }
 
-    var i18n = new I18N()
-    var config = new Config()
-    var selectList = new SyncDictionary<string>('selectList')
-
-    const originFetch = fetch
-    const modifyFetch = async (url: any, options?: any) => {
-        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
-        if (options !== undefined && options.headers !== undefined) {
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "authorization") {
-                    if (config.authorization !== options.headers[key]) {
-                        let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
-                        if (playload['type'] === 'refresh_token') {
-                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`)
-                            isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop())
-                            break
-                        }
-                        if (playload['type'] === 'access_token') {
-                            config.authorization = `Bearer ${options.headers[key].split(' ').pop()}`
-                            GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
-                            GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
-                            break
-                        }
-                    }
-                }
-            }
-        }
-        return originFetch(url, options)
-    }
-    window.fetch = modifyFetch
-    unsafeWindow.fetch = modifyFetch
 
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
@@ -1068,7 +1037,7 @@
         }
     }
     #pluginMenu {
-        z-index: 4096;
+        z-index: 2147483647;
         color: white;
         position: fixed;
         top: 50%;
@@ -1289,6 +1258,175 @@
         margin: 0 ;
     }
     `)
+
+    var compatible = navigator.userAgent.toLowerCase().includes('firefox')
+    var i18n = new I18N()
+    var config = new Config()
+    var selectList = new SyncDictionary<string>('selectList')
+    var pluginMenu = renderNode({
+        nodeType: 'div',
+        attributes: {
+            id: 'pluginMenu'
+        },
+        childs: {
+            nodeType: 'ul',
+            childs: [
+                {
+                    nodeType: 'li',
+                    childs: '%#injectCheckbox#%',
+                    events: {
+                        click: () => {
+                            if (document.querySelector('.selectButton')) {
+                                document.querySelectorAll('.selectButton').forEach((element) => {
+                                    element.remove()
+                                })
+                            } else {
+                                document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
+                                    injectCheckbox(element, compatible)
+                                })
+                            }
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#downloadSelected#%',
+                    events: {
+                        click: (event: Event) => {
+                            analyzeDownloadTask()
+                            newToast(ToastType.Info, {
+                                text: `%#downloadingSelected#%`,
+                                close: true
+                            }).showToast()
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#selectAll#%',
+                    events: {
+                        click: (event: Event) => {
+                            document.querySelectorAll('.selectButton').forEach((element) => {
+                                let button = element as HTMLInputElement
+                                !button.checked && button.click()
+                            })
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#deselect#%',
+                    events: {
+                        click: (event: Event) => {
+                            document.querySelectorAll('.selectButton').forEach((element) => {
+                                let button = element as HTMLInputElement
+                                button.checked && button.click()
+                            })
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#reverseSelect#%',
+                    events: {
+                        click: (event: Event) => {
+                            document.querySelectorAll('.selectButton').forEach((element) => {
+                                (element as HTMLInputElement).click()
+                            })
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#manualDownload#%',
+                    events: {
+                        click: (event: Event) => {
+                            addDownloadTask()
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#downloadThis#%',
+                    events: {
+                        click: (event: Event) => {
+                            if (document.querySelector('.videoPlayer')) {
+                                let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
+                                let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
+                                let IDList = new Dictionary<string>()
+                                IDList.set(ID, Title)
+                                analyzeDownloadTask(IDList)
+                            } else {
+                                let toast = newToast(
+                                    ToastType.Warn,
+                                    {
+                                        node: toastNode(`%#downloadThisFailed#%`),
+                                        onClick() {
+                                            toast.hideToast()
+                                        }
+                                    }
+                                )
+                                toast.showToast()
+                            }
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#settings#%',
+                    events: {
+                        click: (event: Event) => {
+                            config.edit()
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                }
+            ]
+        }
+    })
+
+    const originFetch = fetch
+    const modifyFetch = async (url: any, options?: any) => {
+        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
+        if (options !== undefined && options.headers !== undefined) {
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "authorization") {
+                    if (config.authorization !== options.headers[key]) {
+                        let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
+                        if (playload['type'] === 'refresh_token') {
+                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`)
+                            isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop())
+                            break
+                        }
+                        if (playload['type'] === 'access_token') {
+                            config.authorization = `Bearer ${options.headers[key].split(' ').pop()}`
+                            GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
+                            GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        return originFetch(url, options)
+    }
+    window.fetch = modifyFetch
+    unsafeWindow.fetch = modifyFetch
+
+
 
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
@@ -1921,7 +2059,6 @@
             config.edit()
         } else {
             GM_setValue('version', GM_info.script.version)
-            let compatible = navigator.userAgent.toLowerCase().includes('firefox')
             if (config.autoInjectCheckbox) {
                 Node.prototype.appendChild = function <T extends Node>(node: T): T {
                     if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
@@ -1930,144 +2067,12 @@
                     return this.originalAppendChild(node)
                 }
             }
-            document.body.originalAppendChild(renderNode({
-                nodeType: 'div',
-                attributes: {
-                    id: 'pluginMenu'
-                },
-                childs: {
-                    nodeType: 'ul',
-                    childs: [
-                        {
-                            nodeType: 'li',
-                            childs: '%#injectCheckbox#%',
-                            events: {
-                                click: () => {
-                                    if (document.querySelector('.selectButton')) {
-                                        document.querySelectorAll('.selectButton').forEach((element) => {
-                                            element.remove()
-                                        })
-                                    } else {
-                                        document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
-                                            injectCheckbox(element, compatible)
-                                        })
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#downloadSelected#%',
-                            events: {
-                                click: (event: Event) => {
-                                    analyzeDownloadTask()
-                                    newToast(ToastType.Info, {
-                                        text: `%#downloadingSelected#%`,
-                                        close: true
-                                    }).showToast()
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#selectAll#%',
-                            events: {
-                                click: (event: Event) => {
-                                    document.querySelectorAll('.selectButton').forEach((element) => {
-                                        let button = element as HTMLInputElement
-                                        !button.checked && button.click()
-                                    })
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#deselect#%',
-                            events: {
-                                click: (event: Event) => {
-                                    document.querySelectorAll('.selectButton').forEach((element) => {
-                                        let button = element as HTMLInputElement
-                                        button.checked && button.click()
-                                    })
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#reverseSelect#%',
-                            events: {
-                                click: (event: Event) => {
-                                    document.querySelectorAll('.selectButton').forEach((element) => {
-                                        (element as HTMLInputElement).click()
-                                    })
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#manualDownload#%',
-                            events: {
-                                click: (event: Event) => {
-                                    addDownloadTask()
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#downloadThis#%',
-                            events: {
-                                click: (event: Event) => {
-                                    if (document.querySelector('.videoPlayer')) {
-                                        let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
-                                        let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
-                                        let IDList = new Dictionary<string>()
-                                        IDList.set(ID, Title)
-                                        analyzeDownloadTask(IDList)
-                                    } else {
-                                        let toast = newToast(
-                                            ToastType.Warn,
-                                            {
-                                                node: toastNode(`%#downloadThisFailed#%`),
-                                                onClick() {
-                                                    toast.hideToast()
-                                                }
-                                            }
-                                        )
-                                        toast.showToast()
-                                    }
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#settings#%',
-                            events: {
-                                click: (event: Event) => {
-                                    config.edit()
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        }
-                    ]
-                }
-            }))
+            document.body.originalAppendChild(pluginMenu)
             newToast(ToastType.Info, {
                 text: `%#loadingCompleted#%`,
                 duration: 10000,
                 gravity: 'bottom',
+                position: 'center',
                 close: true
             }).showToast()
         }
