@@ -1,5 +1,5 @@
-name: 反馈BUG
-description: 反馈使用中遇到的BUG
+name: Bug report
+description: Feedback on encountered BUGs, abnormal phenomena in use, etc.
 title: "[Bug]: "
 labels: ["BUG"]
 assignees:
@@ -8,67 +8,67 @@ body:
   - type: checkboxes
     id: checks
     attributes:
-      label: 在提问之前...
+      label: Before asking...
       options:
-      - label: 我已经搜索了现有的 issues
+      - label: I have searched the existing issues
         required: true
-      - label: 我在提问题之前至少花费了 5 分钟来思考和准备
+      - label: I spent at least 5 minutes thinking and preparing before asking
         required: true
-      - label: 我正在使用最新版的脚本
+      - label: I am using the latest version of the script
         required: false
   - type: textarea
     id: describe
     attributes:
-      label: 描述你的问题
-      description: 简要描述你的问题
+      label: Describe your issue
+      description: Briefly describe your issue
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
-      label: 如何复现
-      description: 重现该行为的步骤
+      label: How to reproduce
+      description: Steps to reproduce the behavior
       value: |
-        1. 前往 '...'
-        2. 点击 '....'
-        4. 出现问题
+        1. Go to '...'
+        2. Click on '....'
+        4. See error
     validations:
       required: true
   - type: dropdown
     id: browsers
     attributes:
-      label: 使用的浏览器是？
+      label: What browser are you using?
       options:
         - Firefox
         - Chrome
         - Safari
         - Microsoft Edge
-        - 其他（例如：XXX极速、XXX安全等）
+        - Other
     validations:
       required: true
   - type: dropdown
     id: scriptManager
     attributes:
-      label: 使用的脚本管理器是？
+      label: What script manager are you using?
       options:
         - Tampermonkey
         - Tampermonkey Beta
         - ScriptCat
         - Violentmonkey
-        - 其他
+        - Other
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: 脚本的版本是？
-      placeholder: 例如3.1.1
+      label: What is the version of the script?
+      placeholder: e.g., 3.1.1
     validations:
       required: true
   - type: dropdown
     id: downloadMode
     attributes:
-      label: 下载模式是？
+      label: What is the download mode?
       options:
         - Aria2
         - IwaraDownloader
@@ -79,26 +79,26 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: 相关日志
-      description: 请复制并粘贴任何相关的日志输出。
+      label: Related logs
+      description: Please copy and paste any relevant log output.
       render: Text
     validations:
       required: false
   - type: textarea
     id: screenshots
     attributes:
-      label: 截图
+      label: Screenshots
       description: |
-        如果有，添加屏幕截图以帮助解释你的问题。
-        提示: 可以通过点击这个区域，然后把文件拖进来添加图片或日志文件。
+        If applicable, add screenshots to help explain your problem.
+        Tip: You can add images or log files by clicking this area and then dragging the file in.
     validations:
       required: false
   - type: textarea
     id: others
     attributes:
-      label: 其他信息
+      label: Other information
       description: |
-        相关的配置？链接？参考资料？
-        任何能让我们对你所遇到的问题有更多了解的东西。
+        Related configuration? Links? References?
+        Anything that can give us a better understanding of the problem you are encountering.
     validations:
       required: false
