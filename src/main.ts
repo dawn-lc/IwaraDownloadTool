@@ -313,6 +313,7 @@
             ok: '确定',
             on: '开启',
             off: '关闭',
+            switchDebug: 'Debug模式:',
             downloadType: '下载方式:',
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
@@ -371,6 +372,7 @@
             ok: 'OK',
             on: 'On',
             off: 'Off',
+            switchDebug: 'Debug mode:',
             downloadType: 'Download type:',
             configurationIncompatible: 'An incompatible configuration file was detected, please reconfigure!',
             browserDownload: 'Browser download',
@@ -773,6 +775,56 @@
                                                     config.language = (event.target as HTMLInputElement).value
                                                 }
                                             }
+                                        }
+                                    ]
+                                },
+                                {
+                                    nodeType: 'p',
+                                    className: 'inputRadioLine',
+                                    childs: [
+                                        '%#switchDebug#% ',
+                                        {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                '%#on#%',
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: originalObject.assign(
+                                                        {
+                                                            name: 'IsDebug',
+                                                            type: 'radio'
+                                                        },
+                                                        GM_getValue('isDebug', false) ? { checked: true } : {}
+                                                    ),
+                                                    events: {
+                                                        change: () => {
+                                                            GM_setValue('isDebug', true)
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }, {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                '%#off#%',
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: originalObject.assign(
+                                                        {
+                                                            name: 'IsDebug',
+                                                            type: 'radio'
+                                                        },
+                                                        GM_getValue('isDebug', false) ? {} : { checked: true }
+                                                    ),
+                                                    events: {
+                                                        change: () => {
+                                                            GM_setValue('isDebug', false)
+                                                        }
+                                                    }
+                                                }
+                                            ]
                                         }
                                     ]
                                 },
