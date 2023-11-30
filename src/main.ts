@@ -313,6 +313,7 @@
             ok: '确定',
             on: '开启',
             off: '关闭',
+            switchDebug: 'Debug模式:',
             downloadType: '下载方式:',
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
@@ -371,6 +372,7 @@
             ok: 'OK',
             on: 'On',
             off: 'Off',
+            switchDebug: 'Debug mode:',
             downloadType: 'Download type:',
             configurationIncompatible: 'An incompatible configuration file was detected, please reconfigure!',
             browserDownload: 'Browser download',
@@ -780,6 +782,56 @@
                                     nodeType: 'p',
                                     className: 'inputRadioLine',
                                     childs: [
+                                        '%#switchDebug#% ',
+                                        {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                '%#on#%',
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: originalObject.assign(
+                                                        {
+                                                            name: 'IsDebug',
+                                                            type: 'radio'
+                                                        },
+                                                        GM_getValue('isDebug', false) ? { checked: true } : {}
+                                                    ),
+                                                    events: {
+                                                        change: () => {
+                                                            GM_setValue('isDebug', true)
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }, {
+                                            nodeType: 'label',
+                                            className: 'inputRadio',
+                                            childs: [
+                                                '%#off#%',
+                                                {
+                                                    nodeType: 'input',
+                                                    attributes: originalObject.assign(
+                                                        {
+                                                            name: 'IsDebug',
+                                                            type: 'radio'
+                                                        },
+                                                        GM_getValue('isDebug', false) ? {} : { checked: true }
+                                                    ),
+                                                    events: {
+                                                        change: () => {
+                                                            GM_setValue('isDebug', false)
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    nodeType: 'p',
+                                    className: 'inputRadioLine',
+                                    childs: [
                                         '%#downloadType#% ',
                                         ...originalObject.keys(DownloadType).map(i => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
                                     ]
@@ -933,17 +985,17 @@
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error(i18n[language()].parsingFailed)
                 }
-                this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(100)
+                this.Name = ((this.VideoInfoSource.title ?? this.Name).replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).normalize('NFKC').truncate(100)
                 this.External = !isNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
                 if (this.External) {
                     throw new Error(i18n[language()].externalVideo)
                 }
                 this.Private = this.VideoInfoSource.private
-                this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
+                this.Alias = this.VideoInfoSource.user.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_').normalize('NFKC')
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.UploadTime = new Date(this.VideoInfoSource.createdAt)
                 this.Tags = this.VideoInfoSource.tags
-                this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
+                this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_').normalize('NFKC') 
                 this.Size = this.VideoInfoSource.file.size
                 this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
@@ -982,7 +1034,7 @@
                     comments.append(replies)
                     return comments.prune()
                 }
-                this.Comments = this.VideoInfoSource.body + (await getCommentDatas()).map(i => i.body).join('\n')
+                this.Comments = `${this.VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 this.State = true
                 return this
             } catch (error) {
@@ -1018,38 +1070,6 @@
         }
     }
 
-    var i18n = new I18N()
-    var config = new Config()
-    var selectList = new SyncDictionary<string>('selectList')
-
-    const originFetch = fetch
-    const modifyFetch = async (url: any, options?: any) => {
-        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
-        if (options !== undefined && options.headers !== undefined) {
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "authorization") {
-                    if (config.authorization !== options.headers[key]) {
-                        let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
-                        if (playload['type'] === 'refresh_token') {
-                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`)
-                            isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop())
-                            break
-                        }
-                        if (playload['type'] === 'access_token') {
-                            config.authorization = `Bearer ${options.headers[key].split(' ').pop()}`
-                            GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
-                            GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
-                            break
-                        }
-                    }
-                }
-            }
-        }
-        return originFetch(url, options)
-    }
-    window.fetch = modifyFetch
-    unsafeWindow.fetch = modifyFetch
-
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
     .rainbow-text {
@@ -1068,7 +1088,7 @@
         }
     }
     #pluginMenu {
-        z-index: 4096;
+        z-index: 2147483647;
         color: white;
         position: fixed;
         top: 50%;
@@ -1289,6 +1309,175 @@
         margin: 0 ;
     }
     `)
+
+    var compatible = navigator.userAgent.toLowerCase().includes('firefox')
+    var i18n = new I18N()
+    var config = new Config()
+    var selectList = new SyncDictionary<string>('selectList')
+    var pluginMenu = renderNode({
+        nodeType: 'div',
+        attributes: {
+            id: 'pluginMenu'
+        },
+        childs: {
+            nodeType: 'ul',
+            childs: [
+                {
+                    nodeType: 'li',
+                    childs: '%#injectCheckbox#%',
+                    events: {
+                        click: () => {
+                            if (document.querySelector('.selectButton')) {
+                                document.querySelectorAll('.selectButton').forEach((element) => {
+                                    element.remove()
+                                })
+                            } else {
+                                document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
+                                    injectCheckbox(element, compatible)
+                                })
+                            }
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#downloadSelected#%',
+                    events: {
+                        click: (event: Event) => {
+                            analyzeDownloadTask()
+                            newToast(ToastType.Info, {
+                                text: `%#downloadingSelected#%`,
+                                close: true
+                            }).showToast()
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#selectAll#%',
+                    events: {
+                        click: (event: Event) => {
+                            document.querySelectorAll('.selectButton').forEach((element) => {
+                                let button = element as HTMLInputElement
+                                !button.checked && button.click()
+                            })
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#deselect#%',
+                    events: {
+                        click: (event: Event) => {
+                            document.querySelectorAll('.selectButton').forEach((element) => {
+                                let button = element as HTMLInputElement
+                                button.checked && button.click()
+                            })
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#reverseSelect#%',
+                    events: {
+                        click: (event: Event) => {
+                            document.querySelectorAll('.selectButton').forEach((element) => {
+                                (element as HTMLInputElement).click()
+                            })
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#manualDownload#%',
+                    events: {
+                        click: (event: Event) => {
+                            addDownloadTask()
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#downloadThis#%',
+                    events: {
+                        click: (event: Event) => {
+                            if (document.querySelector('.videoPlayer')) {
+                                let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
+                                let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
+                                let IDList = new Dictionary<string>()
+                                IDList.set(ID, Title)
+                                analyzeDownloadTask(IDList)
+                            } else {
+                                let toast = newToast(
+                                    ToastType.Warn,
+                                    {
+                                        node: toastNode(`%#downloadThisFailed#%`),
+                                        onClick() {
+                                            toast.hideToast()
+                                        }
+                                    }
+                                )
+                                toast.showToast()
+                            }
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                },
+                {
+                    nodeType: 'li',
+                    childs: '%#settings#%',
+                    events: {
+                        click: (event: Event) => {
+                            config.edit()
+                            event.stopPropagation()
+                            return false
+                        }
+                    }
+                }
+            ]
+        }
+    })
+
+    const originFetch = fetch
+    const modifyFetch = async (url: any, options?: any) => {
+        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
+        if (options !== undefined && options.headers !== undefined) {
+            for (const key in options.headers) {
+                if (key.toLocaleLowerCase() == "authorization") {
+                    if (config.authorization !== options.headers[key]) {
+                        let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
+                        if (playload['type'] === 'refresh_token') {
+                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`)
+                            isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop())
+                            break
+                        }
+                        if (playload['type'] === 'access_token') {
+                            config.authorization = `Bearer ${options.headers[key].split(' ').pop()}`
+                            GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
+                            GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        return originFetch(url, options)
+    }
+    window.fetch = modifyFetch
+    unsafeWindow.fetch = modifyFetch
+
+
 
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
@@ -1921,7 +2110,6 @@
             config.edit()
         } else {
             GM_setValue('version', GM_info.script.version)
-            let compatible = navigator.userAgent.toLowerCase().includes('firefox')
             if (config.autoInjectCheckbox) {
                 Node.prototype.appendChild = function <T extends Node>(node: T): T {
                     if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
@@ -1930,144 +2118,12 @@
                     return this.originalAppendChild(node)
                 }
             }
-            document.body.originalAppendChild(renderNode({
-                nodeType: 'div',
-                attributes: {
-                    id: 'pluginMenu'
-                },
-                childs: {
-                    nodeType: 'ul',
-                    childs: [
-                        {
-                            nodeType: 'li',
-                            childs: '%#injectCheckbox#%',
-                            events: {
-                                click: () => {
-                                    if (document.querySelector('.selectButton')) {
-                                        document.querySelectorAll('.selectButton').forEach((element) => {
-                                            element.remove()
-                                        })
-                                    } else {
-                                        document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
-                                            injectCheckbox(element, compatible)
-                                        })
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#downloadSelected#%',
-                            events: {
-                                click: (event: Event) => {
-                                    analyzeDownloadTask()
-                                    newToast(ToastType.Info, {
-                                        text: `%#downloadingSelected#%`,
-                                        close: true
-                                    }).showToast()
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#selectAll#%',
-                            events: {
-                                click: (event: Event) => {
-                                    document.querySelectorAll('.selectButton').forEach((element) => {
-                                        let button = element as HTMLInputElement
-                                        !button.checked && button.click()
-                                    })
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#deselect#%',
-                            events: {
-                                click: (event: Event) => {
-                                    document.querySelectorAll('.selectButton').forEach((element) => {
-                                        let button = element as HTMLInputElement
-                                        button.checked && button.click()
-                                    })
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#reverseSelect#%',
-                            events: {
-                                click: (event: Event) => {
-                                    document.querySelectorAll('.selectButton').forEach((element) => {
-                                        (element as HTMLInputElement).click()
-                                    })
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#manualDownload#%',
-                            events: {
-                                click: (event: Event) => {
-                                    addDownloadTask()
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#downloadThis#%',
-                            events: {
-                                click: (event: Event) => {
-                                    if (document.querySelector('.videoPlayer')) {
-                                        let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
-                                        let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
-                                        let IDList = new Dictionary<string>()
-                                        IDList.set(ID, Title)
-                                        analyzeDownloadTask(IDList)
-                                    } else {
-                                        let toast = newToast(
-                                            ToastType.Warn,
-                                            {
-                                                node: toastNode(`%#downloadThisFailed#%`),
-                                                onClick() {
-                                                    toast.hideToast()
-                                                }
-                                            }
-                                        )
-                                        toast.showToast()
-                                    }
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        },
-                        {
-                            nodeType: 'li',
-                            childs: '%#settings#%',
-                            events: {
-                                click: (event: Event) => {
-                                    config.edit()
-                                    event.stopPropagation()
-                                    return false
-                                }
-                            }
-                        }
-                    ]
-                }
-            }))
+            document.body.originalAppendChild(pluginMenu)
             newToast(ToastType.Info, {
                 text: `%#loadingCompleted#%`,
                 duration: 10000,
                 gravity: 'bottom',
+                position: 'center',
                 close: true
             }).showToast()
         }
