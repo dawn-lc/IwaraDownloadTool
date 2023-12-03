@@ -85,7 +85,7 @@
     }
 
     String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString
+        let replaceString = this.toString()
         try {
             replaceString = originalObject.entries(replacements).reduce(
                 (str, [key, value]) => {
@@ -96,7 +96,7 @@
                         return str.replaceAll(`%#${key}#%`, getString(value))
                     }
                 },
-                this.toString()
+                replaceString
             )
             count++
             return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
