@@ -101,6 +101,7 @@
             count++
             return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
         } catch (error) {
+            GM_getValue('isDebug') && console.log(`replace variable error: ${getString(error)}`)
             return replaceString
         }
     }
