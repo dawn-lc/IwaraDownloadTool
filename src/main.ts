@@ -85,20 +85,24 @@
     }
 
     String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = originalObject.entries(replacements).reduce(
-            (str, [key, value]) => {
-                if (str.includes(`%#${key}:`)) {
-                    let format = str.among(`%#${key}:`, '#%').toString()
-                    return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
-                } else {
-                    return str.replaceAll(`%#${key}#%`, getString(value))
-                }
-            },
-            this.toString()
-        )
-        count++
-        return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-            replaceString.replaceVariable(replacements, count) : replaceString
+        let replaceString
+        try {
+            replaceString = originalObject.entries(replacements).reduce(
+                (str, [key, value]) => {
+                    if (str.includes(`%#${key}:`)) {
+                        let format = str.among(`%#${key}:`, '#%').toString()
+                        return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
+                    } else {
+                        return str.replaceAll(`%#${key}#%`, getString(value))
+                    }
+                },
+                this.toString()
+            )
+            count++
+            return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
+        } catch (error) {
+            return replaceString
+        }
     }
 
 
