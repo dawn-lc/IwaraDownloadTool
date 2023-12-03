@@ -85,20 +85,25 @@
     }
 
     String.prototype.replaceVariable = function (replacements, count = 0) {
-        let replaceString = originalObject.entries(replacements).reduce(
-            (str, [key, value]) => {
-                if (str.includes(`%#${key}:`)) {
-                    let format = str.among(`%#${key}:`, '#%').toString()
-                    return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
-                } else {
-                    return str.replaceAll(`%#${key}#%`, getString(value))
-                }
-            },
-            this.toString()
-        )
-        count++
-        return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-            replaceString.replaceVariable(replacements, count) : replaceString
+        let replaceString = this.toString()
+        try {
+            replaceString = originalObject.entries(replacements).reduce(
+                (str, [key, value]) => {
+                    if (str.includes(`%#${key}:`)) {
+                        let format = str.among(`%#${key}:`, '#%').toString()
+                        return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
+                    } else {
+                        return str.replaceAll(`%#${key}#%`, getString(value))
+                    }
+                },
+                replaceString
+            )
+            count++
+            return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
+        } catch (error) {
+            GM_getValue('isDebug') && console.log(`replace variable error: ${getString(error)}`)
+            return replaceString
+        }
     }
 
 
@@ -1331,6 +1336,11 @@
     }
     `)
 
+
+    if (!String.prototype.replaceAll) {
+        alert(`不支持的浏览器内核版本，请尽快更新您的浏览器。\r\n ${i18n[language()].appName} 将不会加载！！！`)
+        return
+    }
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
@@ -1498,8 +1508,6 @@
     window.fetch = modifyFetch
     unsafeWindow.fetch = modifyFetch
 
-
-
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
         try {
@@ -1519,13 +1527,11 @@
             .map(b => b.toString(16).padStart(2, '0'))
             .join('')
     }
-
     enum VersionState {
         low,
         equal,
         high
     }
-
     function compareVersions(version1: string, version2: string): VersionState {
         const v1 = version1.split('.').map(Number)
         const v2 = version2.split('.').map(Number)
@@ -1543,8 +1549,6 @@
 
         return VersionState.equal
     }
-
-
     async function getAuth(url?: string) {
         return originalObject.assign(
             {
@@ -1554,7 +1558,6 @@
             !isNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
         )
     }
-
     async function addDownloadTask() {
         let data = prompt(i18n[language()].manualDownloadTips.toString(), '')
         if (!isNull(data) && !(data.isEmpty())) {
@@ -1563,7 +1566,6 @@
             analyzeDownloadTask(IDList)
         }
     }
-
     async function analyzeDownloadTask(list: IDictionary<string> = selectList) {
         let size = list.size
         let node = renderNode({
@@ -1599,7 +1601,6 @@
             completed.showToast()
         }
     }
-
     function checkIsHaveDownloadLink(comment: string): boolean {
         if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {
             return false
@@ -1629,8 +1630,6 @@
             'gigafile.nu'
         ].filter(i => comment.toLowerCase().includes(i)).any()
     }
-
-
     function toastNode(body: RenderCode | RenderCode[], title?: string): Element | Node {
         return renderNode({
             nodeType: 'div',
@@ -1692,7 +1691,6 @@
         logFunc((!isNull(params.text) ? params.text : !isNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
         return Toastify(params)
     }
-
     async function pustDownloadTask(videoInfo: VideoInfo) {
         if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
             let toast = newToast(
@@ -1745,7 +1743,6 @@
                 break
         }
     }
-
     function analyzeLocalPath(path: string): LocalPath {
         let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
         isNull(matchPath) ?? new Error(`%#downloadPathError#%["${path}"]`)
@@ -2032,7 +2029,6 @@
             })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
-
     function injectCheckbox(element: Element, compatible: boolean) {
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
         let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
@@ -2056,12 +2052,10 @@
             }
         }))
     }
-
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
         alert(i18n[language()].configurationIncompatible)
         GM_setValue('isFirstRun', true)
     }
-
     // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i))
