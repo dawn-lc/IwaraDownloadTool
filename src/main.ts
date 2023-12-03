@@ -304,7 +304,6 @@
             return this.keys().map(k => { return { key: k, value: this.items[k] } })
         }
     }
-
     class I18N {
         [key: string]: { [key: string]: RenderCode | RenderCode[] }
         public zh_CN = this['zh']
@@ -325,6 +324,13 @@
             checkDownloadLink: '高画质下载连接检查: ',
             autoInjectCheckbox: '自动注入选择框:',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
+            browserDownloadNotEnabled: `未启用下载功能！`,
+            browserDownloadNotWhitelisted: `请求的文件扩展名未列入白名单！`,
+            browserDownloadNotPermitted: `下载功能已启用，但未授予下载权限！`,
+            browserDownloadNotSupported: `目前浏览器/版本不支持下载功能！`,
+            browserDownloadNotSucceeded: `下载未开始或失败！`,
+            browserDownloadUnknownError: `未知错误，有可能是下载时提供的参数存在问题，请检查文件名是否合法！`,
+            browserDownloadTimeout: `下载超时，请检查网络环境是否正常！`,
             variable: '可用变量:',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
@@ -356,7 +362,8 @@
                 }
             ],
             downloadFailed: '下载失败！',
-            tryRestartingDownload: '→ 点击此处重新解析 ←',
+            tryRestartingDownload: '→ 点击此处重新下载 ←',
+            tryReparseDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
             downloadThisFailed: '未找到可供下载的视频！',
             pushTaskFailed: '推送下载任务失败！',
@@ -425,7 +432,8 @@
                 }
             ],
             downloadFailed: 'Download failed!',
-            tryRestartingDownload: '→ Click here to re-parse ←',
+            tryRestartingDownload: '→ Click here to restrat ←',
+            tryReparseDownload: '→ Click here to reparse ←',
             openVideoLink: '→ Enter video page ←',
             pushTaskFailed: 'Failed to push download task!',
             pushTaskSucceed: 'Pushed download task successfully!',
@@ -1073,7 +1081,7 @@
                                 { nodeType: 'br' },
                                 `${getString(error)}`,
                                 { nodeType: 'br' },
-                                this.External ? `%#openVideoLink#%` : `%#tryRestartingDownload#%`
+                                this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
                             ], '%#createTask#%'),
                         onClick() {
                             if (data.External) {
@@ -1717,7 +1725,7 @@
                     node: toastNode([
                         `${videoInfo.Name}[${videoInfo.ID}] %#downloadQualityError#%`,
                         { nodeType: 'br' },
-                        `%#tryRestartingDownload#%`
+                        `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     onClick() {
                         analyzeDownloadTask(new Dictionary<string>([{ key: videoInfo.ID, value: videoInfo.Name }]))
@@ -1992,18 +2000,27 @@
             id: string
             type: string
         }>, DownloadUrl: string) {
-            function browserDownloadError(error: any) {
+            function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
+                let errorInfo = getString(Error)
+                if (!(error instanceof Error)) {
+                    errorInfo = {
+                        'not_enabled': `%#browserDownloadNotEnabled#%`,
+                        'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
+                        'not_permitted': `%#browserDownloadNotPermitted#%`,
+                        'not_supported': `%#browserDownloadNotSupported#%`,
+                        'not_succeeded': `%#browserDownloadNotSucceeded#% ${error.details ?? getString(error.details)}`
+                    }[error.error] || `%#browserDownloadUnknownError#%`;
+                }
                 let toast = newToast(
                     ToastType.Error,
                     {
                         node: toastNode([
                             `${Name}[${ID}] %#downloadFailed#%`,
                             { nodeType: 'br' },
-                            getString(error),
+                            errorInfo,
                             { nodeType: 'br' },
                             `%#tryRestartingDownload#%`
                         ], '%#browserDownload#%'),
-                        position: 'center',
                         onClick() {
                             analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
                             toast.hideToast()
@@ -2025,7 +2042,7 @@
                     }
                 ).trim(),
                 onerror: (err) => browserDownloadError(err),
-                ontimeout: () => browserDownloadError(new Error('Timeout'))
+                ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
             })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
