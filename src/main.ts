@@ -2021,7 +2021,6 @@
                             { nodeType: 'br' },
                             `%#tryRestartingDownload#%`
                         ], '%#browserDownload#%'),
-                        position: 'center',
                         onClick() {
                             analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
                             toast.hideToast()
