@@ -356,7 +356,8 @@
                 }
             ],
             downloadFailed: '下载失败！',
-            tryRestartingDownload: '→ 点击此处重新解析 ←',
+            tryRestartingDownload: '→ 点击此处重新下载 ←',
+            tryReparseDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
             downloadThisFailed: '未找到可供下载的视频！',
             pushTaskFailed: '推送下载任务失败！',
@@ -425,7 +426,8 @@
                 }
             ],
             downloadFailed: 'Download failed!',
-            tryRestartingDownload: '→ Click here to re-parse ←',
+            tryRestartingDownload: '→ Click here to restrat ←',
+            tryReparseDownload: '→ Click here to reparse ←',
             openVideoLink: '→ Enter video page ←',
             pushTaskFailed: 'Failed to push download task!',
             pushTaskSucceed: 'Pushed download task successfully!',
@@ -1073,7 +1075,7 @@
                                 { nodeType: 'br' },
                                 `${getString(error)}`,
                                 { nodeType: 'br' },
-                                this.External ? `%#openVideoLink#%` : `%#tryRestartingDownload#%`
+                                this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
                             ], '%#createTask#%'),
                         onClick() {
                             if (data.External) {
@@ -1717,7 +1719,7 @@
                     node: toastNode([
                         `${videoInfo.Name}[${videoInfo.ID}] %#downloadQualityError#%`,
                         { nodeType: 'br' },
-                        `%#tryRestartingDownload#%`
+                        `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     onClick() {
                         analyzeDownloadTask(new Dictionary<string>([{ key: videoInfo.ID, value: videoInfo.Name }]))
