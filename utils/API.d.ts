@@ -145,3 +145,5 @@ interface VideoAPIRawData {
     deletedAt: string | null;
     fileUrl: string;
 }
+
+type ErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';

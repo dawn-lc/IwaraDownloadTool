@@ -304,7 +304,6 @@
             return this.keys().map(k => { return { key: k, value: this.items[k] } })
         }
     }
-
     class I18N {
         [key: string]: { [key: string]: RenderCode | RenderCode[] }
         public zh_CN = this['zh']
@@ -325,6 +324,13 @@
             checkDownloadLink: '高画质下载连接检查: ',
             autoInjectCheckbox: '自动注入选择框:',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
+            browserDownloadNotEnabled: `未启用下载功能`,
+            browserDownloadNotWhitelisted: `请求的文件扩展名未列入白名单`,
+            browserDownloadNotPermitted: `下载功能已启用，但未授予下载权限`,
+            browserDownloadNotSupported: `目前浏览器/版本不支持下载功能`,
+            browserDownloadNotSucceeded: `下载未开始或失败，详细信息: `,
+            browserDownloadUnknownError: `未知错误，有可能是下载时提供的参数存在问题，请检查文件名是否合法！详细信息: `,
+            browserDownloadTimeout: `下载超时，请检查网络环境是否正常！`,
             variable: '可用变量:',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
@@ -1994,14 +2000,24 @@
             id: string
             type: string
         }>, DownloadUrl: string) {
-            function browserDownloadError(error: any) {
+            function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
+                let errorInfo = getString(Error)
+                if (!(error instanceof Error)) {
+                    errorInfo = {
+                        'not_enabled': `%#browserDownloadNotEnabled#%`,
+                        'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
+                        'not_permitted': `%#browserDownloadNotPermitted#%`,
+                        'not_supported': `%#browserDownloadNotSupported#%`,
+                        'not_succeeded': `%#browserDownloadNotSucceeded#%${getString(error.details)}`
+                    }[error.error] || `%#browserDownloadUnknownError#%${getString(error.details)}`;
+                }
                 let toast = newToast(
                     ToastType.Error,
                     {
                         node: toastNode([
                             `${Name}[${ID}] %#downloadFailed#%`,
                             { nodeType: 'br' },
-                            getString(error),
+                            errorInfo,
                             { nodeType: 'br' },
                             `%#tryRestartingDownload#%`
                         ], '%#browserDownload#%'),
@@ -2027,7 +2043,7 @@
                     }
                 ).trim(),
                 onerror: (err) => browserDownloadError(err),
-                ontimeout: () => browserDownloadError(new Error('Timeout'))
+                ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
             })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
     }
