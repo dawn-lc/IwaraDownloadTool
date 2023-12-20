@@ -1,8 +1,7 @@
 (async function () {
+
     const originalObject = Object
     const originalAddEventListener = EventTarget.prototype.addEventListener
-    const unsafeWindow = window.unsafeWindow
-
     const document = unsafeWindow.document;
 
     EventTarget.prototype.addEventListener = function (type, listener, options) {
@@ -2073,11 +2072,7 @@
         }))
     }
 
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
-        GM_setValue('isFirstRun', true)
-        alert(i18n[language()].configurationIncompatible)
-    }
-    document.addEventListener("DOMContentLoaded", function () {
+    function firstRun() {
         if (GM_getValue('isFirstRun', true)) {
             console.log('First run config reset!')
             GM_listValues().forEach(i => GM_deleteValue(i))
@@ -2140,7 +2135,20 @@
                 ]
             }))
         }
-    })
+    }
+
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
+        GM_setValue('isFirstRun', true)
+        alert(i18n[language()].configurationIncompatible)
+    }
+
+    if (isNull(document.body)) {
+        originalAddEventListener.call(document, "DOMContentLoaded", function () {
+            firstRun()
+        })
+    } else {
+        firstRun()
+    }
     
     if (!GM_getValue('isFirstRun', true)) {
         if (!await config.check()) {
