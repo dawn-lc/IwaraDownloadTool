@@ -9,16 +9,10 @@
     }
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
-    if (GM_getValue('isDebug')) {
-        debugger
-    }
-    
-    const Channel = new BroadcastChannel("IwaraDownloadTool")
-	
-	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
+    const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
 
-	Array.prototype.any = function () {
+    Array.prototype.any = function () {
         return this.prune().length > 0
     }
     Array.prototype.prune = function () {
@@ -41,7 +35,7 @@
         if (typeof obj === 'string') return obj.isEmpty() ? null : obj
         return obj
     }
-    
+
     const hasFunction = function (obj: any, method: string) {
         return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
     }
@@ -76,7 +70,7 @@
     String.prototype.toURL = function () {
         return new URL(this.toString())
     }
-    
+
     Array.prototype.append = function (arr) {
         this.push(...arr)
     }
@@ -116,7 +110,7 @@
     }
 
     const language = function () {
-        let env = (!isNull(config) ? config.language :(navigator.language ?? navigator.languages[0] ?? 'en')) .replace('-', '_')
+        let env = (!isNull(config) ? config.language : (navigator.language ?? navigator.languages[0] ?? 'en')).replace('-', '_')
         let main = env.split('_').shift() ?? 'en'
         return (!isNull(i18n[env]) ? env : !isNull(i18n[main]) ? main : 'en')
     }
@@ -139,7 +133,6 @@
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
     }
-
     async function get(url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}): Promise<string> {
         if (url.hostname !== unsafeWindow.location.hostname) {
             let data: any = await new Promise(async (resolve, reject) => {
@@ -165,6 +158,7 @@
             'credentials': 'include'
         })).text()
     }
+
     async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
         if (url.hostname !== unsafeWindow.location.hostname) {
@@ -194,6 +188,13 @@
             'credentials': 'include'
         })).text()
     }
+
+    if (GM_getValue('isDebug')) {
+        console.log(getString(GM_info))
+        debugger
+    }
+    
+    const Channel = new BroadcastChannel("IwaraDownloadTool")
 
     enum DownloadType {
         Aria2,
@@ -2149,7 +2150,7 @@
     } else {
         firstRun()
     }
-    
+
     if (!GM_getValue('isFirstRun', true)) {
         if (!await config.check()) {
             newToast(ToastType.Info, {
