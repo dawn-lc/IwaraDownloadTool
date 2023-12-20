@@ -2077,28 +2077,27 @@
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
-
-    if (GM_getValue('isFirstRun', true)) {
-        console.log('First run config reset!')
-        GM_listValues().forEach(i => GM_deleteValue(i))
-        config = new Config()
-        let confirmButton = renderNode({
-            nodeType: 'button',
-            attributes: {
-                disabled: true,
-                title: i18n[language()].ok
-            },
-            childs: '%#ok#%',
-            events: {
-                click: () => {
-                    GM_setValue('isFirstRun', false)
-                    GM_setValue('version', GM_info.script.version)
-                    document.querySelector('#pluginOverlay').remove()
-                    config.edit()
+    document.addEventListener("DOMContentLoaded", function () {
+        if (GM_getValue('isFirstRun', true)) {
+            console.log('First run config reset!')
+            GM_listValues().forEach(i => GM_deleteValue(i))
+            config = new Config()
+            let confirmButton = renderNode({
+                nodeType: 'button',
+                attributes: {
+                    disabled: true,
+                    title: i18n[language()].ok
+                },
+                childs: '%#ok#%',
+                events: {
+                    click: () => {
+                        GM_setValue('isFirstRun', false)
+                        GM_setValue('version', GM_info.script.version)
+                        document.querySelector('#pluginOverlay').remove()
+                        config.edit()
+                    }
                 }
-            }
-        }) as HTMLButtonElement
-        document.addEventListener("DOMContentLoaded", async () => {
+            }) as HTMLButtonElement
             document.body.originalAppendChild(renderNode({
                 nodeType: 'div',
                 attributes: {
@@ -2140,33 +2139,33 @@
                     confirmButton
                 ]
             }))
-        })
-        return
-    }
-    
-    if (!await config.check()) {
-        newToast(ToastType.Info, {
-            text: `%#configError#%`,
-            duration: 60 * 1000,
-        }).showToast()
-        config.edit()
-    } else {
-        GM_setValue('version', GM_info.script.version)
-        if (config.autoInjectCheckbox) {
-            Node.prototype.appendChild = function <T extends Node>(node: T): T {
-                if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
-                    injectCheckbox(node, compatible)
-                }
-                return this.originalAppendChild(node)
-            }
         }
-        document.body.originalAppendChild(pluginMenu)
-        newToast(ToastType.Info, {
-            text: `%#loadingCompleted#%`,
-            duration: 10000,
-            gravity: 'bottom',
-            position: 'center'
-        }).showToast()
-    }
+    })
     
+    if (!GM_getValue('isFirstRun', true)) {
+        if (!await config.check()) {
+            newToast(ToastType.Info, {
+                text: `%#configError#%`,
+                duration: 60 * 1000,
+            }).showToast()
+            config.edit()
+        } else {
+            GM_setValue('version', GM_info.script.version)
+            if (config.autoInjectCheckbox) {
+                Node.prototype.appendChild = function <T extends Node>(node: T): T {
+                    if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
+                        injectCheckbox(node, compatible)
+                    }
+                    return this.originalAppendChild(node)
+                }
+            }
+            document.body.originalAppendChild(pluginMenu)
+            newToast(ToastType.Info, {
+                text: `%#loadingCompleted#%`,
+                duration: 10000,
+                gravity: 'bottom',
+                position: 'center'
+            }).showToast()
+        }
+    }
 })()
