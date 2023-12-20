@@ -1,7 +1,8 @@
 (async function () {
+
     const originalObject = Object
     const originalAddEventListener = EventTarget.prototype.addEventListener
-    const unsafeWindow = window.unsafeWindow
+    const document = unsafeWindow.document;
 
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
@@ -1632,7 +1633,7 @@
             'uploaded.',
             'icerbox',
             'alfafile',
-            'drv.ms',
+            '1drv.ms',
             'onedrive.',
             'pixeldrain.',
             'gigafile.nu'
@@ -1795,6 +1796,7 @@
             let pathTest = analyzeLocalPath(config.downloadPath)
             for (const key in pathTest) {
                 if (!originalObject.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
+                    //todo localPathCheck
                 }
             }
         } catch (error: any) {
@@ -2069,72 +2071,86 @@
             }
         }))
     }
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
-        alert(i18n[language()].configurationIncompatible)
-        GM_setValue('isFirstRun', true)
-    }
-    // 检查是否是首次运行脚本
-    if (GM_getValue('isFirstRun', true)) {
-        GM_listValues().forEach(i => GM_deleteValue(i))
-        config = new Config()
-        let confirmButton = renderNode({
-            nodeType: 'button',
-            attributes: {
-                disabled: true,
-                title: i18n[language()].ok
-            },
-            childs: '%#ok#%',
-            events: {
-                click: () => {
-                    GM_setValue('isFirstRun', false)
-                    GM_setValue('version', GM_info.script.version)
-                    document.querySelector('#pluginOverlay').remove()
-                    config.edit()
-                }
-            }
-        }) as HTMLButtonElement
-        document.body.originalAppendChild(renderNode({
-            nodeType: 'div',
-            attributes: {
-                id: 'pluginOverlay'
-            },
-            childs: [
-                {
-                    nodeType: 'div',
-                    className: 'main',
-                    childs: [
-                        { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
-                        { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
-                        { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
-                    ]
+
+    function firstRun() {
+        if (GM_getValue('isFirstRun', true)) {
+            console.log('First run config reset!')
+            GM_listValues().forEach(i => GM_deleteValue(i))
+            config = new Config()
+            let confirmButton = renderNode({
+                nodeType: 'button',
+                attributes: {
+                    disabled: true,
+                    title: i18n[language()].ok
                 },
-                {
-                    nodeType: 'div',
-                    className: 'checkbox-container',
-                    childs: {
-                        nodeType: 'label',
-                        className: ['checkbox-label', 'rainbow-text'],
-                        childs: [{
-                            nodeType: 'input',
-                            className: 'checkbox',
-                            attributes: {
-                                type: 'checkbox',
-                                name: 'agree-checkbox'
-                            },
-                            events: {
-                                change: (event: Event) => {
-                                    confirmButton.disabled = !(event.target as HTMLInputElement).checked
-                                }
-                            }
-                        }, '%#alreadyKnowHowToUse#%'
-                        ]
+                childs: '%#ok#%',
+                events: {
+                    click: () => {
+                        GM_setValue('isFirstRun', false)
+                        GM_setValue('version', GM_info.script.version)
+                        document.querySelector('#pluginOverlay').remove()
+                        config.edit()
                     }
+                }
+            }) as HTMLButtonElement
+            document.body.originalAppendChild(renderNode({
+                nodeType: 'div',
+                attributes: {
+                    id: 'pluginOverlay'
                 },
-                confirmButton
-            ]
-        }))
+                childs: [
+                    {
+                        nodeType: 'div',
+                        className: 'main',
+                        childs: [
+                            { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
+                            { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
+                            { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
+                            { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
+                        ]
+                    },
+                    {
+                        nodeType: 'div',
+                        className: 'checkbox-container',
+                        childs: {
+                            nodeType: 'label',
+                            className: ['checkbox-label', 'rainbow-text'],
+                            childs: [{
+                                nodeType: 'input',
+                                className: 'checkbox',
+                                attributes: {
+                                    type: 'checkbox',
+                                    name: 'agree-checkbox'
+                                },
+                                events: {
+                                    change: (event: Event) => {
+                                        confirmButton.disabled = !(event.target as HTMLInputElement).checked
+                                    }
+                                }
+                            }, '%#alreadyKnowHowToUse#%'
+                            ]
+                        }
+                    },
+                    confirmButton
+                ]
+            }))
+        }
+    }
+
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
+        GM_setValue('isFirstRun', true)
+        alert(i18n[language()].configurationIncompatible)
+    }
+
+    if (isNull(document.body)) {
+        originalAddEventListener.call(document, "DOMContentLoaded", function () {
+            firstRun()
+        })
     } else {
+        firstRun()
+    }
+    
+    if (!GM_getValue('isFirstRun', true)) {
         if (!await config.check()) {
             newToast(ToastType.Info, {
                 text: `%#configError#%`,

@@ -8,6 +8,7 @@
     "strict": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
+    "removeComments": true,
     "outFile": "temp/main.js"
   },
   "include": [
