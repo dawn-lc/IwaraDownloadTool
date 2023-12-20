@@ -3,6 +3,8 @@
     const originalAddEventListener = EventTarget.prototype.addEventListener
     const unsafeWindow = window.unsafeWindow
 
+    const document = unsafeWindow.document;
+
     EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
@@ -1632,7 +1634,7 @@
             'uploaded.',
             'icerbox',
             'alfafile',
-            'drv.ms',
+            '1drv.ms',
             'onedrive.',
             'pixeldrain.',
             'gigafile.nu'
@@ -1795,6 +1797,7 @@
             let pathTest = analyzeLocalPath(config.downloadPath)
             for (const key in pathTest) {
                 if (!originalObject.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
+                    //todo localPathCheck
                 }
             }
         } catch (error: any) {
@@ -2070,10 +2073,9 @@
         }))
     }
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
-        alert(i18n[language()].configurationIncompatible)
         GM_setValue('isFirstRun', true)
+        alert(i18n[language()].configurationIncompatible)
     }
-    // 检查是否是首次运行脚本
     if (GM_getValue('isFirstRun', true)) {
         GM_listValues().forEach(i => GM_deleteValue(i))
         config = new Config()
