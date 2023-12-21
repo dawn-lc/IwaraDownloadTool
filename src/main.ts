@@ -1344,6 +1344,7 @@
         height: 38px;
         bottom: 24px;
         right: 0px;
+        cursor:pointer;
     }
     .selectButtonCompatible {
         width: 32px;
@@ -1353,6 +1354,7 @@
         transform: translate(-50%, -50%);
         margin: 0;
         padding: 0;
+        cursor:pointer;
     }
 
     .toastify h3 {
