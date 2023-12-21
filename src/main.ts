@@ -535,12 +535,13 @@
         }
     }
     class configEdit {
+        source: configEdit
         interface: HTMLElement
         interfacePage: HTMLElement
         target: Config
         constructor(config: Config) {
             this.target = config;
-            this.target.configChange = this.configChange
+            this.target.configChange = (item: string) => { this.configChange.call(this, item) } 
             this.interfacePage = renderNode({
                 nodeType: 'p'
             }) as HTMLElement
