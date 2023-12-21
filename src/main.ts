@@ -499,6 +499,7 @@
                 },
                 set: function (target, property: string, value) {
                     if (property == 'configChange') {
+                        target.configChange = value
                         return true
                     }
                     GM_setValue(property, value)
