@@ -980,7 +980,7 @@
                 }),
                 variableInfo
             ]
-            switch (config.downloadType) {
+            switch (this.target.downloadType) {
                 case DownloadType.Aria2:
                     downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
                     aria2ConfigInput.map(i => this.interfacePage.originalAppendChild(i))
