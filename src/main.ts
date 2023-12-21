@@ -2190,5 +2190,6 @@
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
-    (isNull(document.body) ? Promise.resolve() : new Promise(resolve => document.addEventListener("DOMContentLoaded", resolve))).then(main)
+    
+    (document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(document, "DOMContentLoaded", resolve))).then(main)
 })()
