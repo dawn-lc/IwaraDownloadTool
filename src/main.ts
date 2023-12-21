@@ -9,16 +9,10 @@
     }
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
-    if (GM_getValue('isDebug')) {
-        debugger
-    }
-    
-    const Channel = new BroadcastChannel("IwaraDownloadTool")
-	
-	const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
+    const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
 
-	Array.prototype.any = function () {
+    Array.prototype.any = function () {
         return this.prune().length > 0
     }
     Array.prototype.prune = function () {
@@ -41,7 +35,7 @@
         if (typeof obj === 'string') return obj.isEmpty() ? null : obj
         return obj
     }
-    
+
     const hasFunction = function (obj: any, method: string) {
         return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
     }
@@ -76,7 +70,7 @@
     String.prototype.toURL = function () {
         return new URL(this.toString())
     }
-    
+
     Array.prototype.append = function (arr) {
         this.push(...arr)
     }
@@ -116,7 +110,7 @@
     }
 
     const language = function () {
-        let env = (!isNull(config) ? config.language :(navigator.language ?? navigator.languages[0] ?? 'en')) .replace('-', '_')
+        let env = (!isNull(config) ? config.language : (navigator.language ?? navigator.languages[0] ?? 'en')).replace('-', '_')
         let main = env.split('_').shift() ?? 'en'
         return (!isNull(i18n[env]) ? env : !isNull(i18n[main]) ? main : 'en')
     }
@@ -139,7 +133,6 @@
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
     }
-
     async function get(url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}): Promise<string> {
         if (url.hostname !== unsafeWindow.location.hostname) {
             let data: any = await new Promise(async (resolve, reject) => {
@@ -165,6 +158,7 @@
             'credentials': 'include'
         })).text()
     }
+
     async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
         if (url.hostname !== unsafeWindow.location.hostname) {
@@ -194,6 +188,13 @@
             'credentials': 'include'
         })).text()
     }
+
+    if (GM_getValue('isDebug')) {
+        console.log(getString(GM_info))
+        debugger
+    }
+    
+    const Channel = new BroadcastChannel("IwaraDownloadTool")
 
     enum DownloadType {
         Aria2,
@@ -457,6 +458,7 @@
     }
 
     class Config {
+        configChange: Function
         language: string
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
@@ -488,11 +490,18 @@
             }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
+                    if (property == 'configChange') {
+                        return target.configChange
+                    }
                     let value = GM_getValue(property, target[property])
                     GM_getValue('isDebug') && console.log(`get: ${property} ${getString(value)}`)
                     return value
                 },
                 set: function (target, property: string, value) {
+                    if (property == 'configChange') {
+                        target.configChange = value
+                        return true
+                    }
                     GM_setValue(property, value)
                     GM_getValue('isDebug') && console.log(`set: ${property} ${getString(value) }`)
                     target.configChange(property)
@@ -502,14 +511,14 @@
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
                     GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name} old: ${getString(old_value)} new: ${getString(new_value) }`)
-                    if (remote) body.configChange(name)
+                    if (remote && !isNull(body.configChange)) body.configChange(name)
                 })
             })
             return body
         }
         public async check() {
             if (await localPathCheck()) {
-                switch (config.downloadType) {
+                switch (this.downloadType) {
                     case DownloadType.Aria2:
                         return await aria2Check()
                     case DownloadType.IwaraDownloader:
@@ -524,6 +533,245 @@
                 return false
             }
         }
+    }
+    class configEdit {
+        source: configEdit
+        interface: HTMLElement
+        interfacePage: HTMLElement
+        target: Config
+        constructor(config: Config) {
+            this.target = config;
+            this.target.configChange = (item: string) => { this.configChange.call(this, item) } 
+            this.interfacePage = renderNode({
+                nodeType: 'p'
+            }) as HTMLElement
+            let save = renderNode({
+                nodeType: 'button',
+                className: 'closeButton',
+                childs: '%#save#%',
+                attributes: {
+                    title: i18n[language()].save
+                },
+                events: {
+                    click: async () => {
+                        save.disabled = !save.disabled
+                        if (await this.target.check()) {
+                            unsafeWindow.location.reload()
+                        }
+                        save.disabled = !save.disabled
+                    }
+                }
+            }) as HTMLButtonElement
+            this.interface = renderNode({
+                nodeType: 'div',
+                attributes: {
+                    id: 'pluginConfig'
+                },
+                childs: [
+                    {
+                        nodeType: 'div',
+                        className: 'main',
+                        childs: [
+                            {
+                                nodeType: 'h2',
+                                childs: '%#appName#%'
+                            },
+                            {
+                                nodeType: 'label',
+                                childs: [
+                                    '%#language#% ',
+                                    {
+                                        nodeType: 'input',
+                                        attributes: originalObject.assign(
+                                            {
+                                                name: 'Language',
+                                                type: 'Text',
+                                                value: this.target.language
+                                            }
+                                        ),
+                                        events: {
+                                            change: (event: Event) => {
+                                                this.target.language = (event.target as HTMLInputElement).value
+                                            }
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                nodeType: 'p',
+                                className: 'inputRadioLine',
+                                childs: [
+                                    '%#switchDebug#% ',
+                                    {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#on#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'IsDebug',
+                                                        type: 'radio'
+                                                    },
+                                                    GM_getValue('isDebug', false) ? { checked: true } : {}
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        GM_setValue('isDebug', true)
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }, {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#off#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'IsDebug',
+                                                        type: 'radio'
+                                                    },
+                                                    GM_getValue('isDebug', false) ? {} : { checked: true }
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        GM_setValue('isDebug', false)
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                nodeType: 'p',
+                                className: 'inputRadioLine',
+                                childs: [
+                                    '%#downloadType#% ',
+                                    ...originalObject.keys(DownloadType).map(i => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
+                                ]
+                            },
+                            {
+                                nodeType: 'p',
+                                className: 'inputRadioLine',
+                                childs: [
+                                    '%#checkDownloadLink#% ',
+                                    {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#on#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'CheckDownloadLink',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.checkDownloadLink ? { checked: true } : {}
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.checkDownloadLink = true
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }, {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#off#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'CheckDownloadLink',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.checkDownloadLink ? {} : { checked: true }
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.checkDownloadLink = false
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                nodeType: 'p',
+                                className: 'inputRadioLine',
+                                childs: [
+                                    '%#autoInjectCheckbox#% ',
+                                    {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#on#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'AutoInjectCheckbox',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.autoInjectCheckbox ? { checked: true } : {}
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.autoInjectCheckbox = true
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }, {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#off#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'AutoInjectCheckbox',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.autoInjectCheckbox ? {} : { checked: true }
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.autoInjectCheckbox = false
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            this.interfacePage
+                        ]
+                    },
+                    save
+                ]
+            }) as HTMLElement
+        }
+        private configChange(item: string) {
+            switch (item) {
+                case 'downloadType':
+                    this.downloadTypeChange()
+                    break
+                default:
+                    break
+            }
+        }
+        
         private downloadTypeItem(type: DownloadType): RenderCode {
             return {
                 nodeType: 'label',
@@ -538,11 +786,11 @@
                                 type: 'radio',
                                 value: type
                             },
-                            config.downloadType == type ? { checked: true } : {}
+                            this.target.downloadType == type ? { checked: true } : {}
                         ),
                         events: {
                             change: () => {
-                                config.downloadType = type
+                                this.target.downloadType = type
                             }
                         }
                     }
@@ -550,9 +798,8 @@
             }
         }
         private downloadTypeChange() {
-            let page: HTMLElement = document.querySelector('#pluginConfigPage')
-            while (page.hasChildNodes()) {
-                page.removeChild(page.firstChild)
+            while (this.interfacePage.hasChildNodes()) {
+                this.interfacePage.removeChild(this.interfacePage.firstChild)
             }
             let variableInfo = renderNode({
                 nodeType: 'label',
@@ -586,12 +833,12 @@
                                 {
                                     name: 'DownloadPath',
                                     type: 'Text',
-                                    value: config.downloadPath
+                                    value: this.target.downloadPath
                                 }
                             ),
                             events: {
                                 change: (event: Event) => {
-                                    config.downloadPath = (event.target as HTMLInputElement).value
+                                    this.target.downloadPath = (event.target as HTMLInputElement).value
                                 }
                             }
                         }
@@ -607,12 +854,12 @@
                                 {
                                     name: 'DownloadProxy',
                                     type: 'Text',
-                                    value: config.downloadProxy
+                                    value: this.target.downloadProxy
                                 }
                             ),
                             events: {
                                 change: (event: Event) => {
-                                    config.downloadProxy = (event.target as HTMLInputElement).value
+                                    this.target.downloadProxy = (event.target as HTMLInputElement).value
                                 }
                             }
                         }
@@ -631,12 +878,12 @@
                                 {
                                     name: 'Aria2Path',
                                     type: 'Text',
-                                    value: config.aria2Path
+                                    value: this.target.aria2Path
                                 }
                             ),
                             events: {
                                 change: (event: Event) => {
-                                    config.aria2Path = (event.target as HTMLInputElement).value
+                                    this.target.aria2Path = (event.target as HTMLInputElement).value
                                 }
                             }
                         }
@@ -652,12 +899,12 @@
                                 {
                                     name: 'Aria2Token',
                                     type: 'Password',
-                                    value: config.aria2Token
+                                    value: this.target.aria2Token
                                 }
                             ),
                             events: {
                                 change: (event: Event) => {
-                                    config.aria2Token = (event.target as HTMLInputElement).value
+                                    this.target.aria2Token = (event.target as HTMLInputElement).value
                                 }
                             }
                         }
@@ -676,12 +923,12 @@
                                 {
                                     name: 'IwaraDownloaderPath',
                                     type: 'Text',
-                                    value: config.iwaraDownloaderPath
+                                    value: this.target.iwaraDownloaderPath
                                 }
                             ),
                             events: {
                                 change: (event: Event) => {
-                                    config.iwaraDownloaderPath = (event.target as HTMLInputElement).value
+                                    this.target.iwaraDownloaderPath = (event.target as HTMLInputElement).value
                                 }
                             }
                         }
@@ -697,12 +944,12 @@
                                 {
                                     name: 'IwaraDownloaderToken',
                                     type: 'Password',
-                                    value: config.iwaraDownloaderToken
+                                    value: this.target.iwaraDownloaderToken
                                 }
                             ),
                             events: {
                                 change: (event: Event) => {
-                                    config.iwaraDownloaderToken = (event.target as HTMLInputElement).value
+                                    this.target.iwaraDownloaderToken = (event.target as HTMLInputElement).value
                                 }
                             }
                         }
@@ -721,12 +968,12 @@
                                 {
                                     name: 'DownloadPath',
                                     type: 'Text',
-                                    value: config.downloadPath
+                                    value: this.target.downloadPath
                                 }
                             ),
                             events: {
                                 change: (event: Event) => {
-                                    config.downloadPath = (event.target as HTMLInputElement).value
+                                    this.target.downloadPath = (event.target as HTMLInputElement).value
                                 }
                             }
                         }
@@ -734,258 +981,29 @@
                 }),
                 variableInfo
             ]
-            switch (config.downloadType) {
+            switch (this.target.downloadType) {
                 case DownloadType.Aria2:
-                    downloadConfigInput.map(i => page.originalAppendChild(i))
-                    aria2ConfigInput.map(i => page.originalAppendChild(i))
+                    downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
+                    aria2ConfigInput.map(i => this.interfacePage.originalAppendChild(i))
                     break
                 case DownloadType.IwaraDownloader:
-                    downloadConfigInput.map(i => page.originalAppendChild(i))
-                    iwaraDownloaderConfigInput.map(i => page.originalAppendChild(i))
+                    downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
+                    iwaraDownloaderConfigInput.map(i => this.interfacePage.originalAppendChild(i))
                     break
                 default:
-                    BrowserConfigInput.map(i => page.originalAppendChild(i))
+                    BrowserConfigInput.map(i => this.interfacePage.originalAppendChild(i))
                     break
             }
         }
-        private configChange(item: string) {
-            switch (item) {
-                case 'downloadType':
-                    config.downloadTypeChange()
-                    break
-                default:
-                    break
-            }
-        }
-        public edit() {
+        public inject() {
             if (!document.querySelector('#pluginConfig')) {
-                let save = renderNode({
-                    nodeType: 'button',
-                    className: 'closeButton',
-                    childs: '%#save#%',
-                    attributes: {
-                        title: i18n[language()].save
-                    },
-                    events: {
-                        click: async () => {
-                            save.disabled = !save.disabled
-                            if (await this.check()) {
-                                editor.remove()
-                                unsafeWindow.location.reload()
-                            }
-                            save.disabled = !save.disabled
-                        }
-                    }
-                }) as HTMLButtonElement
-                let editor = renderNode({
-                    nodeType: 'div',
-                    attributes: {
-                        id: 'pluginConfig'
-                    },
-                    childs: [
-                        {
-                            nodeType: 'div',
-                            className: 'main',
-                            childs: [
-                                {
-                                    nodeType: 'h2',
-                                    childs: '%#appName#%'
-                                },
-                                {
-                                    nodeType: 'label',
-                                    childs: [
-                                        '%#language#% ',
-                                        {
-                                            nodeType: 'input',
-                                            attributes: originalObject.assign(
-                                                {
-                                                    name: 'Language',
-                                                    type: 'Text',
-                                                    value: config.language
-                                                }
-                                            ),
-                                            events: {
-                                                change: (event: Event) => {
-                                                    config.language = (event.target as HTMLInputElement).value
-                                                }
-                                            }
-                                        }
-                                    ]
-                                },
-                                {
-                                    nodeType: 'p',
-                                    className: 'inputRadioLine',
-                                    childs: [
-                                        '%#switchDebug#% ',
-                                        {
-                                            nodeType: 'label',
-                                            className: 'inputRadio',
-                                            childs: [
-                                                '%#on#%',
-                                                {
-                                                    nodeType: 'input',
-                                                    attributes: originalObject.assign(
-                                                        {
-                                                            name: 'IsDebug',
-                                                            type: 'radio'
-                                                        },
-                                                        GM_getValue('isDebug', false) ? { checked: true } : {}
-                                                    ),
-                                                    events: {
-                                                        change: () => {
-                                                            GM_setValue('isDebug', true)
-                                                        }
-                                                    }
-                                                }
-                                            ]
-                                        }, {
-                                            nodeType: 'label',
-                                            className: 'inputRadio',
-                                            childs: [
-                                                '%#off#%',
-                                                {
-                                                    nodeType: 'input',
-                                                    attributes: originalObject.assign(
-                                                        {
-                                                            name: 'IsDebug',
-                                                            type: 'radio'
-                                                        },
-                                                        GM_getValue('isDebug', false) ? {} : { checked: true }
-                                                    ),
-                                                    events: {
-                                                        change: () => {
-                                                            GM_setValue('isDebug', false)
-                                                        }
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    nodeType: 'p',
-                                    className: 'inputRadioLine',
-                                    childs: [
-                                        '%#downloadType#% ',
-                                        ...originalObject.keys(DownloadType).map(i => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
-                                    ]
-                                },
-                                {
-                                    nodeType: 'p',
-                                    className: 'inputRadioLine',
-                                    childs: [
-                                        '%#checkDownloadLink#% ',
-                                        {
-                                            nodeType: 'label',
-                                            className: 'inputRadio',
-                                            childs: [
-                                                '%#on#%',
-                                                {
-                                                    nodeType: 'input',
-                                                    attributes: originalObject.assign(
-                                                        {
-                                                            name: 'CheckDownloadLink',
-                                                            type: 'radio'
-                                                        },
-                                                        config.checkDownloadLink ? { checked: true } : {}
-                                                    ),
-                                                    events: {
-                                                        change: () => {
-                                                            config.checkDownloadLink = true
-                                                        }
-                                                    }
-                                                }
-                                            ]
-                                        }, {
-                                            nodeType: 'label',
-                                            className: 'inputRadio',
-                                            childs: [
-                                                '%#off#%',
-                                                {
-                                                    nodeType: 'input',
-                                                    attributes: originalObject.assign(
-                                                        {
-                                                            name: 'CheckDownloadLink',
-                                                            type: 'radio'
-                                                        },
-                                                        config.checkDownloadLink ? {} : { checked: true }
-                                                    ),
-                                                    events: {
-                                                        change: () => {
-                                                            config.checkDownloadLink = false
-                                                        }
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    nodeType: 'p',
-                                    className: 'inputRadioLine',
-                                    childs: [
-                                        '%#autoInjectCheckbox#% ',
-                                        {
-                                            nodeType: 'label',
-                                            className: 'inputRadio',
-                                            childs: [
-                                                '%#on#%',
-                                                {
-                                                    nodeType: 'input',
-                                                    attributes: originalObject.assign(
-                                                        {
-                                                            name: 'AutoInjectCheckbox',
-                                                            type: 'radio'
-                                                        },
-                                                        config.autoInjectCheckbox ? { checked: true } : {}
-                                                    ),
-                                                    events: {
-                                                        change: () => {
-                                                            config.autoInjectCheckbox = true
-                                                        }
-                                                    }
-                                                }
-                                            ]
-                                        }, {
-                                            nodeType: 'label',
-                                            className: 'inputRadio',
-                                            childs: [
-                                                '%#off#%',
-                                                {
-                                                    nodeType: 'input',
-                                                    attributes: originalObject.assign(
-                                                        {
-                                                            name: 'AutoInjectCheckbox',
-                                                            type: 'radio'
-                                                        },
-                                                        config.autoInjectCheckbox ? {} : { checked: true }
-                                                    ),
-                                                    events: {
-                                                        change: () => {
-                                                            config.autoInjectCheckbox = false
-                                                        }
-                                                    }
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                                {
-                                    nodeType: 'p',
-                                    attributes: {
-                                        id: 'pluginConfigPage'
-                                    }
-                                }
-                            ]
-                        },
-                        save
-                    ]
-                }) as HTMLElement
-                document.body.originalAppendChild(editor)
-                config.downloadTypeChange()
+                document.body.originalAppendChild(this.interface)
+                this.downloadTypeChange()
             }
         }
     }
+
+
 
     class VideoInfo {
         ID: string
@@ -1353,6 +1371,7 @@
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
+    var editConfig = new configEdit(config)
     var selectList = new SyncDictionary<string>('selectList')
     var pluginMenu = renderNode({
         nodeType: 'div',
@@ -1479,7 +1498,7 @@
                     childs: '%#settings#%',
                     events: {
                         click: (event: Event) => {
-                            config.edit()
+                            editConfig.inject()
                             event.stopPropagation()
                             return false
                         }
@@ -2073,107 +2092,104 @@
     }
 
     function firstRun() {
-        if (GM_getValue('isFirstRun', true)) {
-            console.log('First run config reset!')
-            GM_listValues().forEach(i => GM_deleteValue(i))
-            config = new Config()
-            let confirmButton = renderNode({
-                nodeType: 'button',
-                attributes: {
-                    disabled: true,
-                    title: i18n[language()].ok
-                },
-                childs: '%#ok#%',
-                events: {
-                    click: () => {
-                        GM_setValue('isFirstRun', false)
-                        GM_setValue('version', GM_info.script.version)
-                        document.querySelector('#pluginOverlay').remove()
-                        config.edit()
-                    }
+        console.log('First run config reset!')
+        GM_listValues().forEach(i => GM_deleteValue(i))
+        config = new Config()
+        editConfig = new configEdit(config)
+        let confirmButton = renderNode({
+            nodeType: 'button',
+            attributes: {
+                disabled: true,
+                title: i18n[language()].ok
+            },
+            childs: '%#ok#%',
+            events: {
+                click: () => {
+                    GM_setValue('isFirstRun', false)
+                    GM_setValue('version', GM_info.script.version)
+                    document.querySelector('#pluginOverlay').remove()
+                    editConfig.inject()
                 }
-            }) as HTMLButtonElement
-            document.body.originalAppendChild(renderNode({
-                nodeType: 'div',
-                attributes: {
-                    id: 'pluginOverlay'
+            }
+        }) as HTMLButtonElement
+        document.body.originalAppendChild(renderNode({
+            nodeType: 'div',
+            attributes: {
+                id: 'pluginOverlay'
+            },
+            childs: [
+                {
+                    nodeType: 'div',
+                    className: 'main',
+                    childs: [
+                        { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
+                        { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
+                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
+                        { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
+                    ]
                 },
-                childs: [
-                    {
-                        nodeType: 'div',
-                        className: 'main',
-                        childs: [
-                            { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
-                            { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                            { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
-                            { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
-                        ]
-                    },
-                    {
-                        nodeType: 'div',
-                        className: 'checkbox-container',
-                        childs: {
-                            nodeType: 'label',
-                            className: ['checkbox-label', 'rainbow-text'],
-                            childs: [{
-                                nodeType: 'input',
-                                className: 'checkbox',
-                                attributes: {
-                                    type: 'checkbox',
-                                    name: 'agree-checkbox'
-                                },
-                                events: {
-                                    change: (event: Event) => {
-                                        confirmButton.disabled = !(event.target as HTMLInputElement).checked
-                                    }
+                {
+                    nodeType: 'div',
+                    className: 'checkbox-container',
+                    childs: {
+                        nodeType: 'label',
+                        className: ['checkbox-label', 'rainbow-text'],
+                        childs: [{
+                            nodeType: 'input',
+                            className: 'checkbox',
+                            attributes: {
+                                type: 'checkbox',
+                                name: 'agree-checkbox'
+                            },
+                            events: {
+                                change: (event: Event) => {
+                                    confirmButton.disabled = !(event.target as HTMLInputElement).checked
                                 }
-                            }, '%#alreadyKnowHowToUse#%'
-                            ]
-                        }
-                    },
-                    confirmButton
-                ]
-            }))
+                            }
+                        }, '%#alreadyKnowHowToUse#%'
+                        ]
+                    }
+                },
+                confirmButton
+            ]
+        }))
+    }
+
+    async function main() {
+        if (GM_getValue('isFirstRun', true)) {
+            firstRun()
+            return
         }
+        if (!await config.check()) {
+            newToast(ToastType.Info, {
+                text: `%#configError#%`,
+                duration: 60 * 1000,
+            }).showToast()
+            editConfig.inject()
+            return
+        }
+        GM_setValue('version', GM_info.script.version)
+        if (config.autoInjectCheckbox) {
+            Node.prototype.appendChild = function <T extends Node>(node: T): T {
+                if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
+                    injectCheckbox(node, compatible)
+                }
+                return this.originalAppendChild(node)
+            }
+        }
+        document.body.originalAppendChild(pluginMenu)
+        newToast(ToastType.Info, {
+            text: `%#loadingCompleted#%`,
+            duration: 10000,
+            gravity: 'bottom',
+            position: 'center'
+        }).showToast()
     }
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
-
-    if (isNull(document.body)) {
-        originalAddEventListener.call(document, "DOMContentLoaded", function () {
-            firstRun()
-        })
-    } else {
-        firstRun()
-    }
     
-    if (!GM_getValue('isFirstRun', true)) {
-        if (!await config.check()) {
-            newToast(ToastType.Info, {
-                text: `%#configError#%`,
-                duration: 60 * 1000,
-            }).showToast()
-            config.edit()
-        } else {
-            GM_setValue('version', GM_info.script.version)
-            if (config.autoInjectCheckbox) {
-                Node.prototype.appendChild = function <T extends Node>(node: T): T {
-                    if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
-                        injectCheckbox(node, compatible)
-                    }
-                    return this.originalAppendChild(node)
-                }
-            }
-            document.body.originalAppendChild(pluginMenu)
-            newToast(ToastType.Info, {
-                text: `%#loadingCompleted#%`,
-                duration: 10000,
-                gravity: 'bottom',
-                position: 'center'
-            }).showToast()
-        }
-    }
+    (document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(document, "DOMContentLoaded", resolve))).then(main)
 })()
