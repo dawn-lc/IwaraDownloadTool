@@ -997,7 +997,7 @@
         public inject() {
             if (!document.querySelector('#pluginConfig')) {
                 document.body.originalAppendChild(this.interface)
-                config.downloadTypeChange()
+                this.downloadTypeChange()
             }
         }
     }
