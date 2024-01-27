@@ -1,5 +1,4 @@
 (async function () {
-
     const originalObject = Object
     const originalAddEventListener = EventTarget.prototype.addEventListener
     const document = unsafeWindow.document;
@@ -324,6 +323,7 @@
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
             checkDownloadLink: '高画质下载连接检查: ',
+            checkPrioritySource: '源画质检查: ',
             autoInjectCheckbox: '自动注入选择框:',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
             browserDownloadNotEnabled: `未启用下载功能！`,
@@ -462,6 +462,7 @@
         language: string
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
+        checkPrioritySource: boolean
         downloadType: DownloadType
         downloadPath: string
         downloadProxy: string
@@ -476,6 +477,7 @@
             this.language = language()
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
+            this.checkPrioritySource = true
             this.downloadType = DownloadType.Others
             this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4'
             this.downloadProxy = ''
@@ -698,6 +700,56 @@
                                                 events: {
                                                     change: () => {
                                                         this.target.checkDownloadLink = false
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                nodeType: 'p',
+                                className: 'inputRadioLine',
+                                childs: [
+                                    '%#checkPrioritySource#% ',
+                                    {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#on#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'CheckPrioritySource',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.checkPrioritySource ? { checked: true } : {}
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.checkPrioritySource = true
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }, {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#off#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'CheckPrioritySource',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.checkPrioritySource ? {} : { checked: true }
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.checkPrioritySource = false
                                                     }
                                                 }
                                             }
@@ -1535,7 +1587,6 @@
         }
         return originFetch(url, options)
     }
-    window.fetch = modifyFetch
     unsafeWindow.fetch = modifyFetch
 
     async function refreshToken(): Promise<string> {
@@ -1740,7 +1791,7 @@
             toast.showToast()
             return
         }
-        if (config.checkDownloadLink && videoInfo.DownloadQuality != 'Source') {
+        if (config.checkPrioritySource && videoInfo.DownloadQuality != 'Source') {
             let toast = newToast(
                 ToastType.Warn,
                 {
