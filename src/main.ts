@@ -862,15 +862,16 @@
                     { nodeType: 'br' },
                     '%#uploadTime#% %#UploadTime#%',
                     { nodeType: 'br' },
-                    '%#TITLE#% | %#ID#% | %#AUTHOR#%',
+                    '%#TITLE#% | %#ID#% | %#AUTHOR#% | %#QUALITY#%',
                     { nodeType: 'br' },
-                    '%#example#% %#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4',
+                    '%#example#% %#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4',
                     { nodeType: 'br' },
-                    `%#result#% ${'%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%[%#ID#%].MP4'.replaceVariable({
+                    `%#result#% ${'%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4'.replaceVariable({
                         NowTime: new Date(),
                         AUTHOR: 'ExampleAuthorID',
                         TITLE: 'ExampleTitle',
-                        ID: 'ExampleID'
+                        ID: 'ExampleID',
+                        QUALITY: 'Source'
                     })}`
                 ]
             })
@@ -1957,14 +1958,15 @@
         (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
             id: string
             type: string
-        }>, downloadUrl: string) {
+        }>, quality: string, downloadUrl: string) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
                     UploadTime : uploadTime,
                     AUTHOR: author,
                     ID: id,
-                    TITLE: name
+                    TITLE: name,
+                    QUALITY: quality
                 }
             ).trim())
             let json = JSON.stringify(prune({
@@ -1993,7 +1995,7 @@
                     node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.getDownloadUrl()))
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
@@ -2018,7 +2020,8 @@
                                 UploadTime: videoInfo.UploadTime,
                                 AUTHOR: videoInfo.Author,
                                 ID: videoInfo.ID,
-                                TITLE: videoInfo.Name
+                                TITLE: videoInfo.Name,
+                                QUALITY: videoInfo.DownloadQuality
                             }
                         )
                     },
@@ -2055,25 +2058,26 @@
         }(videoInfo))
     }
     function othersDownload(videoInfo: VideoInfo) {
-        (async function (ID: string, Author: string, Name: string, UploadTime: Date,  DownloadUrl: URL) {
+        (async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, DownloadUrl: URL) {
             let filename = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
                     UploadTime: UploadTime,
                     AUTHOR: Author,
                     ID: ID,
-                    TITLE: Name
+                    TITLE: Name,
+                    QUALITY: DownloadQuality
                 }
             ).trim()).filename
             DownloadUrl.searchParams.set('download', filename)
             GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.getDownloadUrl().toURL()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.getDownloadUrl().toURL()))
     }
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
             id: string
             type: string
-        }>, DownloadUrl: string) {
+        }>, DownloadQuality: string, DownloadUrl: string) {
             function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
                 let errorInfo = getString(Error)
                 if (!(error instanceof Error)) {
@@ -2112,13 +2116,14 @@
                         UploadTime: UploadTime,
                         AUTHOR: Author,
                         ID: ID,
-                        TITLE: Name
+                        TITLE: Name,
+                        QUALITY: DownloadQuality
                     }
                 ).trim(),
                 onerror: (err) => browserDownloadError(err),
                 ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
             })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.getDownloadUrl()))
     }
     function injectCheckbox(element: Element, compatible: boolean) {
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
