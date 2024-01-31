@@ -1750,7 +1750,7 @@
         params = originalObject.assign({
             newWindow: true,
             gravity: 'top',
-            position: 'right',
+            position: 'left',
             stopOnFocus: true
         },
             type === ToastType.Warn && {
