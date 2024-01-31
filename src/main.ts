@@ -2244,7 +2244,7 @@
         }).showToast()
     }
 
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.164') === VersionState.low) {
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.227') === VersionState.low) {
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
