@@ -58,6 +58,11 @@ interface Node {
     originalInsertBefore<T extends Node>(node: T, child: Node): T
 }
 
+interface Position {
+    X: number;
+    Y: number;
+    element: Element;
+}
 
 interface DownloadTask {
     id: string;

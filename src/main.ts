@@ -158,6 +158,13 @@
         })).text()
     }
 
+    function findElement(element: Element, condition: string) {
+        while (element && !element.matches(condition)) {
+            element = element.parentElement;
+        }
+        return element;
+    }
+    
     async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
         if (url.hostname !== unsafeWindow.location.hostname) {
@@ -1423,6 +1430,7 @@
         alert(`不支持的浏览器内核版本，请尽快更新您的浏览器。\r\n ${i18n[language()].appName} 将不会加载！！！`)
         return
     }
+    var mousePosition: Position = { X: -1, Y: -1, element: undefined}
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
@@ -2235,13 +2243,33 @@
                 return this.originalAppendChild(node)
             }
         }
-        document.body.originalAppendChild(pluginMenu)
+        document.body.originalAppendChild(pluginMenu) 
+        
+        window.onmousemove = (event: MouseEvent) => {
+            mousePosition.X = event.clientX
+            mousePosition.Y = event.clientY
+            var elementMouseIsOver = document.elementFromPoint(mousePosition.X, mousePosition.Y);
+            if (elementMouseIsOver === mousePosition.element) {
+                return
+            }
+            mousePosition.element = elementMouseIsOver
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.code === 'Space') {
+                let element = findElement(mousePosition.element, '.videoTeaser')
+                let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
+                button && (button as HTMLInputElement).click()
+            }
+        })
+
         newToast(ToastType.Info, {
             text: `%#loadingCompleted#%`,
             duration: 10000,
             gravity: 'bottom',
             position: 'center'
         }).showToast()
+
     }
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.227') === VersionState.low) {
