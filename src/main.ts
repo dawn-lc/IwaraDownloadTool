@@ -164,7 +164,7 @@
         }
         return element;
     }
-    
+
     async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
         if (typeof body !== 'string') body = JSON.stringify(body)
         if (url.hostname !== unsafeWindow.location.hostname) {
@@ -2260,6 +2260,7 @@
                 let element = findElement(mousePosition.element, '.videoTeaser')
                 let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
                 button && (button as HTMLInputElement).click()
+                button && e.preventDefault()
             }
         })
 
