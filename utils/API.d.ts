@@ -61,7 +61,6 @@ interface Node {
 interface Position {
     X: number;
     Y: number;
-    element: Element;
 }
 
 interface DownloadTask {

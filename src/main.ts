@@ -1430,7 +1430,7 @@
         alert(`不支持的浏览器内核版本，请尽快更新您的浏览器。\r\n ${i18n[language()].appName} 将不会加载！！！`)
         return
     }
-    var mousePosition: Position = { X: -1, Y: -1, element: undefined}
+    var mousePosition: Position = { X: -1, Y: -1}
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
@@ -2245,19 +2245,14 @@
         }
         document.body.originalAppendChild(pluginMenu) 
         
-        window.onmousemove = (event: MouseEvent) => {
+        unsafeWindow.onmousemove = (event: MouseEvent) => {
             mousePosition.X = event.clientX
             mousePosition.Y = event.clientY
-            var elementMouseIsOver = document.elementFromPoint(mousePosition.X, mousePosition.Y);
-            if (elementMouseIsOver === mousePosition.element) {
-                return
-            }
-            mousePosition.element = elementMouseIsOver
         }
 
         document.addEventListener('keydown', function (e) {
             if (e.code === 'Space') {
-                let element = findElement(mousePosition.element, '.videoTeaser')
+                let element = findElement(document.elementFromPoint(mousePosition.X, mousePosition.Y), '.videoTeaser')
                 let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
                 button && (button as HTMLInputElement).click()
                 button && e.preventDefault()
