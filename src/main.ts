@@ -1,15 +1,73 @@
-(async function () {
-    const originalObject = Object
-    const originalAddEventListener = EventTarget.prototype.addEventListener
-    const document = unsafeWindow.document;
+(function () {
 
-    EventTarget.prototype.addEventListener = function (type, listener, options) {
+    const originalWindow = unsafeWindow
+
+    //@ts-ignore
+    unsafeWindow.originalWindow = originalWindow
+
+    //@ts-ignore
+    unsafeWindow._paq = unsafeWindow.Matomo = unsafeWindow.Piwik = new Proxy({}, {
+        get: undefined,
+        set: undefined,
+        deleteProperty: undefined,
+        ownKeys: undefined,
+        has: undefined,
+        defineProperty: undefined,
+        getOwnPropertyDescriptor: undefined
+    });
+    //@ts-ignore
+    observer.disconnect()
+
+    //@ts-ignore
+    const originalObject = originalWindow.Object
+    const originalFetch = originalWindow.fetch
+    const document = originalWindow.document
+
+    //@ts-ignore
+    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
+    //@ts-ignore
+    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
+    }
+
+    //@ts-ignore
+    const originalforEach = unsafeWindow.Array.prototype.forEach
+    //@ts-ignore
+    unsafeWindow.Array.prototype.forEach = function (...args) {
+        let err = new Error()
+        if (err.stack.match(/main\..*\.js/img)) {
+            GM_xmlhttpRequest({
+                url: ([...document.head.children].filter((i: Element) => i instanceof HTMLScriptElement && i.src.includes('main')).pop() as HTMLScriptElement).src,
+                method: 'GET',
+                headers: {
+                   'Content-type': 'application/x-www-form-urlencoded'
+                },
+                onload: function (xhr) {
+                    //@ts-ignore
+                    GM_addElement('script', {
+                        textContent: xhr.responseText.replace('An({', 'false && An({')
+                    })
+                    //@ts-ignore
+                    unsafeWindow.Array.prototype.forEach = originalforEach
+                }
+            })
+            throw err
+        }
+        //@ts-ignore
+        return originalforEach.call(this, ...args)
     }
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
     const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
+
+    const hasFunction = function (obj: any, method: string) {
+        return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
+    }
+    const getString = function (obj: any) {
+        obj = obj instanceof Error ? String(obj) : obj
+        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
+    }
 
     Array.prototype.any = function () {
         return this.prune().length > 0
@@ -26,21 +84,6 @@
     }
     String.prototype.notEmpty = function () {
         return !isNull(this) && this.length !== 0
-    }
-    const prune = (obj: any): any => {
-        if (isNull(obj)) return
-        if (isObject(obj)) return (s => originalObject.entries(s).any() ? s : null)(originalObject.fromEntries(originalObject.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v))))
-        if (Array.isArray(obj)) return ((t => t.any() ? t : null)(obj.map(prune).prune()))
-        if (typeof obj === 'string') return obj.isEmpty() ? null : obj
-        return obj
-    }
-
-    const hasFunction = function (obj: any, method: string) {
-        return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
-    }
-    const getString = function (obj: any) {
-        obj = obj instanceof Error ? String(obj) : obj
-        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
     }
     String.prototype.among = function (start: string, end: string) {
         if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
@@ -82,7 +125,7 @@
         let replaceString = this.toString()
         try {
             replaceString = originalObject.entries(replacements).reduce(
-                (str, [key, value]) => {
+                (str: { includes: (arg0: string) => any; among: (arg0: string, arg1: string) => { (): any; new(): any; toString: { (): any; new(): any; }; }; replaceAll: (arg0: string, arg1: string) => any; }, [key, value]: any) => {
                     if (str.includes(`%#${key}:`)) {
                         let format = str.among(`%#${key}:`, '#%').toString()
                         return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
@@ -93,13 +136,74 @@
                 replaceString
             )
             count++
-            return originalObject.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
+            return originalObject.keys(replacements).map((key: any) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
         } catch (error) {
             GM_getValue('isDebug') && console.log(`replace variable error: ${getString(error)}`)
             return replaceString
         }
     }
+    const prune = (obj: any): any => {
+        if (isNull(obj)) return
+        if (isObject(obj)) return (s => originalObject.entries(s).any() ? s : null)(originalObject.fromEntries(originalObject.entries(obj).map(([k, v]: any) => [k, prune(v)]).filter(([k, v]: any) => !isNull(v))))
+        if (Array.isArray(obj)) return ((t => t.any() ? t : null)(obj.map(prune).prune()))
+        if (typeof obj === 'string') return obj.isEmpty() ? null : obj
+        return obj
+    }
+    const get = async function (url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}, force: boolean = false): Promise<string> {
+        if (force || url.hostname !== unsafeWindow.location.hostname ) {
+            let data: any = await new Promise(async (resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'GET',
+                    url: url.href,
+                    headers: originalObject.assign({
+                        'Accept': 'application/json, text/plain, */*'
+                    }, headers),
+                    onload: response => resolve(response),
+                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
+                })
+            })
+            return data.responseText
+        }
+        return (await originalFetch(url.href, {
+            'headers': originalObject.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'method': 'GET',
+            'mode': 'cors',
+            'credentials': 'include'
+        })).text()
+    }
 
+    const post = async function(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
+        if (typeof body !== 'string') body = JSON.stringify(body)
+        if (url.hostname !== unsafeWindow.location.hostname) {
+            let data: any = await new Promise(async (resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: 'POST',
+                    url: url.href,
+                    headers: originalObject.assign({
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }, headers),
+                    data: body,
+                    onload: response => resolve(response),
+                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
+                })
+            })
+            return data.responseText
+        }
+        return (await originalFetch(url.href, {
+            'headers': originalObject.assign({
+                'accept': 'application/json, text/plain, */*'
+            }, headers),
+            'referrer': referrer,
+            'body': body,
+            'method': 'POST',
+            'mode': 'cors',
+            'credentials': 'include'
+        })).text()
+    }
 
     const UUID = function () {
         return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
@@ -126,80 +230,24 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (!isNull(attributes) && originalObject.keys(attributes).any()) && originalObject.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-        (!isNull(events) && originalObject.keys(events).any()) && originalObject.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler));
+        (!isNull(attributes) && originalObject.keys(attributes).any()) && originalObject.entries(attributes).forEach(([key, value]: any) => node.setAttribute(key, value));
+        (!isNull(events) && originalObject.keys(events).any()) && originalObject.entries(events).forEach(([eventName, eventHandler]: any) => originalAddEventListener.call(node, eventName, eventHandler));
         (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
     }
-    async function get(url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}): Promise<string> {
-        if (url.hostname !== unsafeWindow.location.hostname) {
-            let data: any = await new Promise(async (resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url.href,
-                    headers: originalObject.assign({
-                        'Accept': 'application/json, text/plain, */*'
-                    }, headers),
-                    onload: response => resolve(response),
-                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
-                })
-            })
-            return data.responseText
-        }
-        return (await originFetch(url.href, {
-            'headers': originalObject.assign({
-                'accept': 'application/json, text/plain, */*'
-            }, headers),
-            'referrer': referrer,
-            'method': 'GET',
-            'mode': 'cors',
-            'credentials': 'include'
-        })).text()
-    }
-
-    function findElement(element: Element, condition: string) {
+    const findElement = function(element: Element, condition: string) {
         while (element && !element.matches(condition)) {
             element = element.parentElement;
         }
         return element;
     }
 
-    async function post(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
-        if (typeof body !== 'string') body = JSON.stringify(body)
-        if (url.hostname !== unsafeWindow.location.hostname) {
-            let data: any = await new Promise(async (resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: url.href,
-                    headers: originalObject.assign({
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }, headers),
-                    data: body,
-                    onload: response => resolve(response),
-                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
-                })
-            })
-            return data.responseText
-        }
-        return (await originFetch(url.href, {
-            'headers': originalObject.assign({
-                'accept': 'application/json, text/plain, */*'
-            }, headers),
-            'referrer': referrer,
-            'body': body,
-            'method': 'POST',
-            'mode': 'cors',
-            'credentials': 'include'
-        })).text()
-    }
-
     if (GM_getValue('isDebug')) {
         console.log(getString(GM_info))
         debugger
     }
-    
+
     const Channel = new BroadcastChannel("IwaraDownloadTool")
 
     enum DownloadType {
@@ -357,6 +405,7 @@
             injectCheckbox: '开关选择',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
+            notice: '暂无。',
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
@@ -661,7 +710,7 @@
                                 className: 'inputRadioLine',
                                 childs: [
                                     '%#downloadType#% ',
-                                    ...originalObject.keys(DownloadType).map(i => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
+                                    ...originalObject.keys(DownloadType).map((i: any) => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
                                 ]
                             },
                             {
@@ -1430,7 +1479,7 @@
         alert(`不支持的浏览器内核版本，请尽快更新您的浏览器。\r\n ${i18n[language()].appName} 将不会加载！！！`)
         return
     }
-    var mousePosition: Position = { X: -1, Y: -1}
+    var mouseTarget: Element = null
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
@@ -1571,7 +1620,6 @@
         }
     })
 
-    const originFetch = fetch
     const modifyFetch = async (url: any, options?: any) => {
         GM_getValue('isDebug') && console.log(`Fetch ${url}`)
         if (options !== undefined && options.headers !== undefined) {
@@ -1594,9 +1642,10 @@
                 }
             }
         }
-        return originFetch(url, options)
+        return originalFetch(url, options)
     }
     unsafeWindow.fetch = modifyFetch
+
 
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
@@ -2243,35 +2292,41 @@
                 return this.originalAppendChild(node)
             }
         }
-        document.body.originalAppendChild(pluginMenu) 
-        
-        unsafeWindow.onmousemove = (event: MouseEvent) => {
-            mousePosition.X = event.clientX
-            mousePosition.Y = event.clientY
-        }
+        document.body.originalAppendChild(pluginMenu)
+
+        originalAddEventListener('mouseover', (event: Event) => {
+            mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
+        })
 
         document.addEventListener('keydown', function (e) {
-            if (e.code === 'Space') {
-                let element = findElement(document.elementFromPoint(mousePosition.X, mousePosition.Y), '.videoTeaser')
+            if (e.code === 'Space' && !isNull(mouseTarget)) {
+                let element = findElement(mouseTarget, '.videoTeaser')
                 let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
                 button && (button as HTMLInputElement).click()
                 button && e.preventDefault()
             }
         })
 
-        newToast(ToastType.Info, {
-            text: `%#loadingCompleted#%`,
-            duration: 10000,
-            gravity: 'bottom',
-            position: 'center'
-        }).showToast()
 
+        newToast(
+            ToastType.Info,
+            {
+                node: toastNode([
+                    `加载完成`,
+                    { nodeType: 'br' },
+                    `公告：%#notice#%`
+                ]),
+                duration: 10000,
+                gravity: 'bottom',
+                position: 'center'
+            }
+        ).showToast()
     }
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.227') === VersionState.low) {
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
-    
-    (document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(document, "DOMContentLoaded", resolve))).then(main)
+
+    (document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(document, "DOMContentLoaded", resolve))).then(main)    
 })()

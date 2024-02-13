@@ -26,6 +26,7 @@
 // @grant             GM_deleteValue
 // @grant             GM_addValueChangeListener
 // @grant             GM_addStyle
+// @grant             GM_addElement
 // @grant             GM_getResourceText
 // @grant             GM_download
 // @grant             GM_xmlhttpRequest
