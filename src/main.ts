@@ -7,7 +7,11 @@
 
     //@ts-ignore
     unsafeWindow._paq = unsafeWindow.Matomo = unsafeWindow.Piwik = new Proxy({}, {
-        get: undefined,
+        get: (target: {}, p: string | symbol, receiver: any) => {
+            //@ts-ignore
+            observer && observer.disconnect()
+            return undefined
+        },
         set: undefined,
         deleteProperty: undefined,
         ownKeys: undefined,
@@ -15,8 +19,7 @@
         defineProperty: undefined,
         getOwnPropertyDescriptor: undefined
     });
-    //@ts-ignore
-    observer.disconnect()
+    
 
     //@ts-ignore
     const originalObject = originalWindow.Object
