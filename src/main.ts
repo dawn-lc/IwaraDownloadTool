@@ -4,7 +4,6 @@
 
     //@ts-ignore
     unsafeWindow.originalWindow = originalWindow
-
     //@ts-ignore
     unsafeWindow._paq = unsafeWindow.Matomo = unsafeWindow.Piwik = new Proxy({}, {
         get: (target: {}, p: string | symbol, receiver: any) => {
@@ -20,7 +19,6 @@
         getOwnPropertyDescriptor: undefined
     });
     
-
     //@ts-ignore
     const originalObject = originalWindow.Object
     const originalFetch = originalWindow.fetch
@@ -32,7 +30,7 @@
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
-
+    /*
     //@ts-ignore
     const originalforEach = unsafeWindow.Array.prototype.forEach
     //@ts-ignore
@@ -59,15 +57,18 @@
         //@ts-ignore
         return originalforEach.call(this, ...args)
     }
+    */
+    
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
-    const isNull = (obj: any): boolean => typeof obj === 'undefined' || obj === null
-    const isObject = (obj: any): boolean => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
+    const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
+    const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
+    const isStringTupleArray = (obj: any): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 
-    const hasFunction = function (obj: any, method: string) {
+    const hasFunction = (obj: any, method: string): boolean => {
         return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
     }
-    const getString = function (obj: any) {
+    const getString = (obj: any): string => {
         obj = obj instanceof Error ? String(obj) : obj
         return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
     }
@@ -1623,29 +1624,39 @@
         }
     })
 
-    const modifyFetch = async (url: any, options?: any) => {
-        GM_getValue('isDebug') && console.log(`Fetch ${url}`)
-        if (options !== undefined && options.headers !== undefined) {
-            for (const key in options.headers) {
-                if (key.toLocaleLowerCase() == "authorization") {
-                    if (config.authorization !== options.headers[key]) {
-                        let playload = JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(options.headers[key].split(' ').pop().split('.')[1]))))
-                        if (playload['type'] === 'refresh_token') {
-                            GM_getValue('isDebug') && console.log(`refresh_token: ${options.headers[key].split(' ').pop()}`)
-                            isNull(localStorage.getItem('token')) && localStorage.setItem('token', options.headers[key].split(' ').pop())
-                            break
-                        }
-                        if (playload['type'] === 'access_token') {
-                            config.authorization = `Bearer ${options.headers[key].split(' ').pop()}`
-                            GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
-                            GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
-                            break
-                        }
+    function getPlayload(authorization: string) {
+        return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop().split('.')[1]))))
+    } 
+
+    const modifyFetch = async (input: Request | string | URL, init?: RequestInit) => {
+        GM_getValue('isDebug') && console.log(`Fetch ${input}`)
+        if ((input instanceof Request ? input.url : input instanceof URL ? input.href : input).toLowerCase().includes('sentry.io')) return undefined
+        if (!isNull(init) && !isNull(init.headers) && !isStringTupleArray(init.headers)) {
+            let authorization = null
+            if (init.headers instanceof Headers) {
+                authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
+            } else {
+                for (const key in init.headers) {
+                    if (key.toLocaleLowerCase() == "authorization") {
+                        authorization = init.headers[key]
+                        break
                     }
                 }
             }
+            if (!isNull(authorization) && authorization !== config.authorization) {
+                let playload = getPlayload(authorization)
+                if (playload['type'] === 'refresh_token') {
+                    GM_getValue('isDebug') && console.log(`refresh_token: ${authorization.split(' ').pop()}`)
+                    isNull(localStorage.getItem('token')) && localStorage.setItem('token', authorization.split(' ').pop())
+                }
+                if (playload['type'] === 'access_token') {
+                    config.authorization = `Bearer ${authorization.split(' ').pop()}`
+                    GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
+                    GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
+                }
+            }
         }
-        return originalFetch(url, options)
+        return originalFetch(input, init)
     }
     unsafeWindow.fetch = modifyFetch
 
