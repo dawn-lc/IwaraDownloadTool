@@ -58,7 +58,7 @@
         return originalforEach.call(this, ...args)
     }
     */
-    
+
     Node.prototype.originalAppendChild = Node.prototype.appendChild
 
     const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
