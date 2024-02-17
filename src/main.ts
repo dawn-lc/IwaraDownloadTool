@@ -1942,7 +1942,7 @@
             return
         }
         if (config.autoFollow && !videoInfo.Following) {
-            await post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), {}, unsafeWindow.location.href, await getAuth()) ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true})
+            await post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), {}, unsafeWindow.location.href, await getAuth()) ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true}).showToast()
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
