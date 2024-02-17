@@ -381,6 +381,7 @@
             downloadType: '下载方式:',
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'iwaraDownloader下载',
+            autoFollow: '自动关注选中的视频作者: ',
             checkDownloadLink: '高画质下载连接检查: ',
             checkPrioritySource: '源画质检查: ',
             autoInjectCheckbox: '自动注入选择框:',
@@ -409,7 +410,7 @@
             injectCheckbox: '开关选择',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
-            notice: '最新功能鼠标至视频上方按空格选中/撤销',
+            notice: '新增自动关注选中的视频作者功能，该功能默认关闭',
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
@@ -520,6 +521,7 @@
     class Config {
         configChange: Function
         language: string
+        autoFollow: boolean
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
         checkPrioritySource: boolean
@@ -535,6 +537,7 @@
         [key: string]: any
         constructor() {
             this.language = language()
+            this.autoFollow = false
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
             this.checkPrioritySource = true
@@ -760,6 +763,56 @@
                                                 events: {
                                                     change: () => {
                                                         this.target.checkDownloadLink = false
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                nodeType: 'p',
+                                className: 'inputRadioLine',
+                                childs: [
+                                    '%#autoFollow#% ',
+                                    {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#on#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'AutoFollow',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.autoFollow ? { checked: true } : {}
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.autoFollow = true
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }, {
+                                        nodeType: 'label',
+                                        className: 'inputRadio',
+                                        childs: [
+                                            '%#off#%',
+                                            {
+                                                nodeType: 'input',
+                                                attributes: originalObject.assign(
+                                                    {
+                                                        name: 'AutoFollow',
+                                                        type: 'radio'
+                                                    },
+                                                    this.target.autoFollow ? {} : { checked: true }
+                                                ),
+                                                events: {
+                                                    change: () => {
+                                                        this.target.autoFollow = false
                                                     }
                                                 }
                                             }
@@ -1128,8 +1181,11 @@
             id: string
             type: string
         }>
+        Following: boolean
+        Friend: boolean
         Alias: string
         Author: string
+        AuthorID: string
         Private: boolean
         VideoInfoSource: VideoAPIRawData
         VideoFileSource: VideoFileAPIRawDataList
@@ -1155,6 +1211,9 @@
                 if (this.External) {
                     throw new Error(i18n[language()].externalVideo.toString())
                 }
+                this.AuthorID = this.VideoInfoSource.user.id
+                this.Following = this.VideoInfoSource.user.following
+                this.Friend = this.VideoInfoSource.user.friend
                 this.Private = this.VideoInfoSource.private
                 this.Alias = this.VideoInfoSource.user.name
                 this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
@@ -1880,6 +1939,9 @@
             )
             toast.showToast()
             return
+        }
+        if (config.autoFollow && !videoInfo.Following) {
+            post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), null)
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:

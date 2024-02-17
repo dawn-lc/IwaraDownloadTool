@@ -141,6 +141,9 @@ interface VideoAPIRawData {
         id: string;
         name: string;
         username: string;
+        followedBy: boolean,
+        following: boolean,
+        friend: boolean,
     };
     tags: Array<{
         id: string;
