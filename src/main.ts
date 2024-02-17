@@ -1941,7 +1941,7 @@
             return
         }
         if (config.autoFollow && !videoInfo.Following) {
-            post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), null)
+            post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), null, unsafeWindow.location.href, await getAuth())
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
