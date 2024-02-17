@@ -434,6 +434,7 @@
             connectionTest: '连接测试',
             settingsCheck: '配置检查',
             parsingFailed: '视频信息解析失败！',
+            autoFollowFailed: '自动关注视频作者失败！',
             createTask: '创建任务',
             downloadPathError: '下载路径错误!',
             browserDownloadModeError: '请启用脚本管理器的浏览器API下载模式!',
@@ -1941,7 +1942,7 @@
             return
         }
         if (config.autoFollow && !videoInfo.Following) {
-            post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), null, unsafeWindow.location.href, await getAuth())
+            await post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), {}, unsafeWindow.location.href, await getAuth()) ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true})
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
