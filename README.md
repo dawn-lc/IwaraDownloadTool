@@ -34,6 +34,20 @@
 
 * Windows、MacOS、Linux 等支持 Chrome 或 Firefox 浏览器的所有操作系统 <sup>*移动平台如 iOS、Android 除外</sup>
 
+#### 路径可用变量
+
+* 下载时间 %#NowTime#%
+* 发布时间 %#UploadTime#%
+* 视频标题 %#TITLE#%
+* 视频ID %#ID#%
+* 视频作者 %#AUTHOR#%
+* 画质 %#QUALITY#%
+
+  %#NowTime:YYYY-MM-DD#%\_%\#AUTHOR\#%\_%\#TITLE\#%\_%\#QUALITY\#%[%#ID#%].MP4
+
+  输出：
+
+  2024-02-19_ExampleAuthorID_ExampleTitle_Source[ExampleID].MP4
 
 ## 依赖库
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)

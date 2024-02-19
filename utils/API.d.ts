@@ -126,6 +126,7 @@ interface VideoAPIRawData {
     embedUrl: string;
     private: boolean;
     unlisted: boolean;
+    liked: boolean;
     numComments: number;
     file: {
         id: string;
