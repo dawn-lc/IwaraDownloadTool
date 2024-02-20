@@ -296,6 +296,30 @@
         Del
     }
 
+    enum VersionState {
+        low,
+        equal,
+        high
+    }
+
+    function compareVersions(version1: string, version2: string): VersionState {
+        const v1 = version1.split('.').map(Number)
+        const v2 = version2.split('.').map(Number)
+
+        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+            const num1 = v1[i] || 0
+            const num2 = v2[i] || 0
+
+            if (num1 < num2) {
+                return VersionState.low
+            } else if (num1 > num2) {
+                return VersionState.high
+            }
+        }
+
+        return VersionState.equal
+    }
+
     class SyncDictionary<T> {
         [key: string]: any
         public id: string
@@ -410,6 +434,7 @@
             browserDownload: '浏览器下载',
             iwaraDownloaderDownload: 'IwaraDownloader下载',
             autoFollow: '自动关注选中的视频作者',
+            autoLike: '自动点赞选中的视频',
             checkDownloadLink: '高画质下载连接检查',
             checkPrioritySource: '源画质检查',
             autoInjectCheckbox: '自动注入选择框',
@@ -452,17 +477,12 @@
                     }
                 }
             ],
-            downloadFailed: '下载失败！',
             tryRestartingDownload: '→ 点击此处重新下载 ←',
             tryReparseDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
-            downloadThisFailed: '未找到可供下载的视频！',
-            pushTaskFailed: '推送下载任务失败！',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
             settingsCheck: '配置检查',
-            parsingFailed: '视频信息解析失败！',
-            autoFollowFailed: '自动关注视频作者失败！',
             createTask: '创建任务',
             downloadPathError: '下载路径错误!',
             browserDownloadModeError: '请启用脚本管理器的浏览器API下载模式!',
@@ -472,9 +492,15 @@
             parsingProgress: '解析进度: ',
             manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...',
             externalVideo: `非本站视频`,
-            getVideoSourceFailed: '获取视频源失败',
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
+            getVideoSourceFailed: '获取视频源失败',
+            downloadFailed: '下载失败！',
+            downloadThisFailed: '未找到可供下载的视频！',
+            pushTaskFailed: '推送下载任务失败！',
+            parsingFailed: '视频信息解析失败！',
+            autoFollowFailed: '自动关注视频作者失败！',
+            autoLikeFailed: '自动点赞视频失败！',
         }
         public en: { [key: string]: RenderCode | RenderCode[] } = {
             appName: 'Iwara Download Tool',
@@ -551,6 +577,7 @@
         configChange: Function
         language: string
         autoFollow: boolean
+        autoLike: boolean
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
         checkPrioritySource: boolean
@@ -567,6 +594,7 @@
         constructor() {
             this.language = language()
             this.autoFollow = false
+            this.autoLike = false
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
             this.checkPrioritySource = true
@@ -628,15 +656,16 @@
             }
         }
     }
+
     class configEdit {
         source: configEdit
         interface: HTMLElement
         interfacePage: HTMLElement
         target: Config
-        
+
         constructor(config: Config) {
             this.target = config;
-            this.target.configChange = (item: string) => { this.configChange.call(this, item) } 
+            this.target.configChange = (item: string) => { this.configChange.call(this, item) }
             this.interfacePage = renderNode({
                 nodeType: 'p'
             }) as HTMLElement
@@ -693,9 +722,10 @@
                                     }
                                 ]
                             },
-                            this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }),
+                            this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
                             this.switchButton('checkDownloadLink'),
                             this.switchButton('autoFollow'),
+                            this.switchButton('autoLike'),
                             this.switchButton('checkPrioritySource'),
                             this.switchButton('autoInjectCheckbox'),
                             this.downloadTypeSelect(),
@@ -706,24 +736,24 @@
                 ]
             }) as HTMLElement
         }
-        private switchButton(name: string, get?: (name: string) => void, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
-            return {
+        private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
+            let button = renderNode({
                 nodeType: 'p',
                 className: 'inputRadioLine',
                 childs: [
                     {
-                    nodeType: 'label',
-                    childs: `%#${name}#%`,
-                    attributes: {
-                        for: name
-                    }
+                        nodeType: 'label',
+                        childs: `%#${name}#%`,
+                        attributes: {
+                            for: name
+                        }
                     }, {
                         nodeType: 'input',
                         className: 'switch',
-                        attributes: originalObject.assign(get !== undefined ? get(name) : this.target[name] ?? defaultValue ?? false ? { checked: true } : {}, {
+                        attributes: {
                             type: 'checkbox',
                             name: name,
-                        }),
+                        },
                         events: {
                             change: (e: Event) => {
                                 if (set !== undefined) {
@@ -735,8 +765,10 @@
                             }
                         }
                     }
-                ] 
-            }
+                ]
+            }) as HTMLElement
+            (button.querySelector(`[name='${name}']`) as HTMLInputElement).checked = get !== undefined ? get(name, defaultValue) : this.target[name] ?? defaultValue ?? false
+            return button
         }
         private inputComponent(name: string, type?: string, get?: (name: string) => void, set?: (name: string, e: Event) => void): RenderCode {
             return {
@@ -765,9 +797,9 @@
                     }
                 ]
             }
-        } 
+        }
         private downloadTypeSelect(): RenderCode {
-            return {
+            let select = renderNode({
                 nodeType: 'p',
                 className: 'inputRadioLine',
                 childs: [
@@ -779,8 +811,7 @@
                             childs: i
                         })),
                         attributes: {
-                            name: 'downloadType',
-                            selectedIndex: this.target.downloadType
+                            name: 'downloadType'
                         },
                         events: {
                             change: (e) => {
@@ -789,12 +820,14 @@
                         }
                     }
                 ]
-            }
+            }) as HTMLSelectElement
+            select.selectedIndex = Number(this.target.downloadType)
+            return select
         }
         private configChange(item: string) {
             switch (item) {
                 case 'downloadType':
-                    (this.interface.querySelector(`[name=${item}]`) as HTMLSelectElement).selectedIndex = this.target.downloadType
+                    (this.interface.querySelector(`[name=${item}]`) as HTMLSelectElement).selectedIndex = Number(this.target.downloadType)
                     this.downloadTypeChange()
                     break
                 default:
@@ -817,7 +850,7 @@
                     }
                     break
             }
-        }     
+        }
         private downloadTypeChange() {
             while (this.interfacePage.hasChildNodes()) {
                 this.interfacePage.removeChild(this.interfacePage.firstChild)
@@ -863,7 +896,7 @@
         public inject() {
             if (!document.querySelector('#pluginConfig')) {
                 document.body.originalAppendChild(this.interface)
-                this.downloadTypeChange()
+                this.configChange('downloadType')
             }
         }
     }
@@ -1008,6 +1041,7 @@
                 background-position: 100% 0%;
             }
         }
+
         #pluginMenu {
             z-index: 2147483645;
             color: white;
@@ -1063,13 +1097,15 @@
         #pluginMenu:not(:hover).moving-in {
             transition-delay: 0.5s;
         }
+
         #pluginConfig {
+            color: var(--text);
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(128, 128, 128, 0.8);
+            background-color: rgba(0, 0, 0, 0.75);
             z-index: 2147483647; 
             display: flex;
             flex-direction: column;
@@ -1077,11 +1113,11 @@
             justify-content: center;
         }
         #pluginConfig .main {
-            color: white;
-            background-color: rgb(64,64,64,0.7);
+            background-color: var(--body);
             padding: 24px;
             margin: 10px;
             overflow-y: auto;
+            width: 400px;
         }
         @media (max-width: 640px) {
             #pluginConfig .main {
@@ -1110,10 +1146,8 @@
         }
         #pluginConfig p label{
             display: flex;
-        }
-        #pluginConfig p label input{
-            flex-grow: 1;
-            margin-left: 10px;
+            flex-direction: column;
+            margin: 5px;
         }
         #pluginConfig .inputRadioLine {
             display: flex;
@@ -1121,11 +1155,19 @@
             flex-direction: row;
             justify-content: space-between;
         }
-        #pluginConfig .inputRadio {
-            display: flex;
-            align-items: center;
-            flex-direction: row-reverse;
-            margin-right: 10px;
+        #pluginConfig input[type="text"], #pluginConfig input[type="password"] {
+            outline: none;
+            border-top: none;
+            border-right: none;
+            border-left: none;
+            border-image: initial;
+            border-bottom: 1px solid var(--body-dark);
+            line-height: 1;
+            height: 30px;
+            box-sizing: border-box;
+            width: 100%;
+            background-color: var(--body);
+            color: var(--text);
         }
         #pluginConfig input[type='checkbox'].switch{
             outline: none;
@@ -1150,7 +1192,7 @@
             transition: .2s;
             top: 2px;
             position: absolute;
-            left: 55%;
+            right: 55%;
         }
         #pluginConfig input[type='checkbox'].switch:checked {
             background: rgb(19, 206, 102);
@@ -1158,9 +1200,10 @@
         #pluginConfig input[type='checkbox'].switch:checked::after {
             content: '';
             position: absolute;
-            left: 2px;
+            right: 2px;
             top: 2px;
         }
+
         #pluginOverlay {
             position: fixed;
             top: 0;
@@ -1222,6 +1265,7 @@
             display: flex;
             align-items: center;
         }
+
         .selectButton {
             position: absolute;
             width: 38px;
@@ -1240,6 +1284,7 @@
             padding: 0;
             cursor:pointer;
         }
+
         .toastify h3 {
             margin: 0 0 10px 0;
         }
@@ -1257,8 +1302,8 @@
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
-    var editConfig = new configEdit(config)
     var selectList = new SyncDictionary<string>('selectList')
+    var editConfig = new configEdit(config)
     var pluginMenu = renderNode({
         nodeType: 'div',
         attributes: {
@@ -1453,28 +1498,6 @@
             .map(b => b.toString(16).padStart(2, '0'))
             .join('')
     }
-    enum VersionState {
-        low,
-        equal,
-        high
-    }
-    function compareVersions(version1: string, version2: string): VersionState {
-        const v1 = version1.split('.').map(Number)
-        const v2 = version2.split('.').map(Number)
-
-        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-            const num1 = v1[i] || 0
-            const num2 = v2[i] || 0
-
-            if (num1 < num2) {
-                return VersionState.low
-            } else if (num1 > num2) {
-                return VersionState.high
-            }
-        }
-
-        return VersionState.equal
-    }
     async function getAuth(url?: string) {
         return originalObject.assign(
             {
@@ -1656,6 +1679,9 @@
         }
         if (config.autoFollow && !videoInfo.Following) {
             await (await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, { method: 'POST', headers: await getAuth() })).text() ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true}).showToast()
+        }
+        if (config.autoLike && !videoInfo.Liked) {
+            await (await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, { method: 'POST', headers: await getAuth() })).text() ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoLikeFailed#%`, close: true }).showToast()
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
@@ -2123,6 +2149,7 @@
             }
         ).showToast()
     }
+
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.227') === VersionState.low) {
         GM_setValue('isFirstRun', true)
