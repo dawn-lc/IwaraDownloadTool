@@ -1161,7 +1161,7 @@
             border-right: none;
             border-left: none;
             border-image: initial;
-            border-bottom: 1px solid var(--body-dark);
+            border-bottom: 1px solid var(--muted);
             line-height: 1;
             height: 30px;
             box-sizing: border-box;
