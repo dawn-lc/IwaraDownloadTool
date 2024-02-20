@@ -2,17 +2,32 @@ const path = require('path');
 const fs = require('fs');
 const root = process.cwd();
 
-const isNull = function (obj) {
-    return typeof obj === 'undefined' || obj === null;
+const isNull = (obj) => typeof obj === 'undefined' || obj === null;
+const isObject = (obj) => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj);
+const hasFunction = (obj, method) => {
+    return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false;
 };
-const notNull = function (obj) {
-    return typeof obj !== 'undefined' && obj !== null;
+const getString = (obj) => {
+    obj = obj instanceof Error ? String(obj) : obj;
+    return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj);
+};
+Array.prototype.any = function () {
+    return this.prune().length > 0;
+};
+Array.prototype.prune = function () {
+    return this.filter(i => i !== null && typeof i !== 'undefined');
+};
+Array.prototype.unique = function () {
+    return Array.from(new Set(this));
+};
+Array.prototype.append = function (arr) {
+    this.push(...arr);
 };
 String.prototype.isEmpty = function () {
-    return notNull(this) && this.trim().length === 0;
+    return !isNull(this) && this.length === 0;
 };
 String.prototype.notEmpty = function () {
-    return notNull(this) && this.trim().length !== 0;
+    return !isNull(this) && this.length !== 0;
 };
 String.prototype.among = function (start, end) {
     if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
@@ -28,44 +43,53 @@ String.prototype.splitLimit = function (separator, limit) {
     let body = this.split(separator);
     return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body;
 };
+String.prototype.truncate = function (maxLength) {
+    return this.length > maxLength ? this.substring(0, maxLength) : this.toString();
+};
 String.prototype.trimHead = function (prefix) {
     return this.startsWith(prefix) ? this.slice(prefix.length) : this.toString();
 };
 String.prototype.trimTail = function (suffix) {
     return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString();
 };
-const hasFunction = function (obj, method) {
-    return method.notEmpty() && notNull(obj) ? method in obj && typeof obj[method] === 'function' : false;
-};
-const getString = function (obj) {
-    obj = obj instanceof Error ? String(obj) : obj;
-    return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj);
+String.prototype.among = function (start, end) {
+    if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
+        throw new Error('Empty');
+    }
+    let body = this.split(start).pop().notEmpty() ? this.split(start).pop() : '';
+    return body.split(end).shift().notEmpty() ? body.split(end).shift() : '';
 };
 String.prototype.replaceVariable = function (replacements, count = 0) {
-    let replaceString = Object.entries(replacements).reduce(
-        (str, [key, value]) => {
+    let replaceString = this.toString();
+    try {
+        replaceString = originalObject.entries(replacements).reduce((str, [key, value]) => {
             if (str.includes(`%#${key}:`)) {
                 let format = str.among(`%#${key}:`, '#%').toString();
                 return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value));
-            } else {
+            }
+            else {
                 return str.replaceAll(`%#${key}#%`, getString(value));
             }
-        },
-        this.toString()
-    );
-    count++;
-    return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
-        replaceString.replaceVariable(replacements, count) : replaceString;
+        }, replaceString);
+        count++;
+        return originalObject.keys(replacements).map((key) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString;
+    }
+    catch (error) {
+        return replaceString;
+    }
 };
-Array.prototype.any = function () {
-    return this.prune().length > 0;
+const prune = (obj) => {
+    if (isNull(obj))
+        return;
+    if (isObject(obj))
+        return (s => originalObject.entries(s).any() ? s : null)(originalObject.fromEntries(originalObject.entries(obj).map(([k, v]) => [k, prune(v)]).filter(([k, v]) => !isNull(v))));
+    if (Array.isArray(obj))
+        return ((t => t.any() ? t : null)(obj.map(prune).prune()));
+    if (typeof obj === 'string')
+        return obj.isEmpty() ? null : obj;
+    return obj;
 };
-Array.prototype.prune = function () {
-    return this.filter(i => i !== null && typeof i !== 'undefined');
-};
-Array.prototype.append = function (arr) {
-    this.push(...arr);
-};
+
 function parseMetadata(content) {
     const lines = content
         .among('// ==UserScript==', '// ==/UserScript==')
@@ -79,7 +103,7 @@ function parseMetadata(content) {
     lines.reduce((result, line) => {
         const [key, value] = line.splitLimit(' ', 1).map(i=> i.trim()).filter(i => i.notEmpty());
         key.notEmpty() && value.notEmpty() &&
-            (notNull(result[key])
+            (!isNull(result[key])
                 ? Array.isArray(result[key])
                     ? result[key].push(value)
                     : result[key] = [result[key], value]
