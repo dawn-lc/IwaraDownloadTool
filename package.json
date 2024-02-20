@@ -1,7 +1,7 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.1.321",
+  "version": "3.1.322",
   "private": true,
   "scripts": {
     "build": "node ./build/build.js",
