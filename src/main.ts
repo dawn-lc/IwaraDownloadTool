@@ -1,9 +1,6 @@
 (function () {
 
     const originalWindow = unsafeWindow
-
-    //@ts-ignore
-    unsafeWindow.originalWindow = originalWindow
     //@ts-ignore
     unsafeWindow._paq = unsafeWindow.Matomo = unsafeWindow.Piwik = new Proxy({}, {
         get: (target: {}, p: string | symbol, receiver: any) => {
@@ -44,7 +41,6 @@
                    'Content-type': 'application/x-www-form-urlencoded'
                 },
                 onload: function (xhr) {
-                    //@ts-ignore
                     GM_addElement('script', {
                         textContent: xhr.responseText.replace('An({', 'false && An({')
                     })
@@ -153,6 +149,34 @@
         if (typeof obj === 'string') return obj.isEmpty() ? null : obj
         return obj
     }
+
+    const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean ): Promise<Response> => {
+        if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
+        if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
+        return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
+            GM_xmlhttpRequest(prune({
+                method: (init && init.method) as "GET" | "HEAD" | "POST" || 'GET',
+                url: typeof input === 'string' ? input : input.url,
+                headers: (init && init.headers) as Tampermonkey.RequestHeaders || {},
+                data: ((init && init.body) || null) as string,
+                onload: function (response: Tampermonkey.ResponseBase) {
+                    resolve(new Response(response.responseText, {
+                        status: response.status,
+                        statusText: response.statusText,
+                    }))
+                },
+                onerror: function (error: Error) {
+                    reject(error)
+                }
+            }))
+        }) : originalFetch(input, init)
+    }
+
+
+
+
+/*
+
     const get = async function (url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}, force: boolean = false): Promise<string> {
         if (force || url.hostname !== unsafeWindow.location.hostname ) {
             let data: any = await new Promise(async (resolve, reject) => {
@@ -160,7 +184,7 @@
                     method: 'GET',
                     url: url.href,
                     headers: originalObject.assign({
-                        'Accept': 'application/json, text/plain, */*'
+                        'Accept': 'application/json, text/plain'
                     }, headers),
                     onload: response => resolve(response),
                     onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
@@ -170,7 +194,7 @@
         }
         return (await originalFetch(url.href, {
             'headers': originalObject.assign({
-                'accept': 'application/json, text/plain, */*'
+                'accept': 'application/json, text/plain'
             }, headers),
             'referrer': referrer,
             'method': 'GET',
@@ -199,7 +223,7 @@
         }
         return (await originalFetch(url.href, {
             'headers': originalObject.assign({
-                'accept': 'application/json, text/plain, */*'
+                'accept': 'application/json, text/plain'
             }, headers),
             'referrer': referrer,
             'body': body,
@@ -208,7 +232,7 @@
             'credentials': 'include'
         })).text()
     }
-
+*/
     const UUID = function () {
         return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
     }
@@ -270,6 +294,30 @@
     enum MessageType {
         Set,
         Del
+    }
+
+    enum VersionState {
+        low,
+        equal,
+        high
+    }
+
+    function compareVersions(version1: string, version2: string): VersionState {
+        const v1 = version1.split('.').map(Number)
+        const v2 = version2.split('.').map(Number)
+
+        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+            const num1 = v1[i] || 0
+            const num2 = v2[i] || 0
+
+            if (num1 < num2) {
+                return VersionState.low
+            } else if (num1 > num2) {
+                return VersionState.high
+            }
+        }
+
+        return VersionState.equal
     }
 
     class SyncDictionary<T> {
@@ -369,22 +417,27 @@
         public zh_CN = this['zh']
         public zh: { [key: string]: RenderCode | RenderCode[] } = {
             appName: 'Iwara 批量下载工具',
-            language: '语言:',
-            downloadPath: '下载到:',
-            downloadProxy: '下载代理:',
-            rename: '重命名: ',
+            language: '语言: ',
+            downloadPath: '下载到: ',
+            downloadProxy: '下载代理: ',
+            aria2Path: 'Aria2 RPC: ',
+            aria2Token: 'Aria2 密钥: ',
+            iwaraDownloaderPath: 'IwaraDownloader RPC: ',
+            iwaraDownloaderToken: 'IwaraDownloader 密钥: ',
+            rename: '重命名',
             save: '保存',
             ok: '确定',
             on: '开启',
             off: '关闭',
-            switchDebug: 'Debug模式:',
-            downloadType: '下载方式:',
+            isDebug: '调试模式',
+            downloadType: '下载方式',
             browserDownload: '浏览器下载',
-            iwaraDownloaderDownload: 'iwaraDownloader下载',
-            autoFollow: '自动关注选中的视频作者: ',
-            checkDownloadLink: '高画质下载连接检查: ',
-            checkPrioritySource: '源画质检查: ',
-            autoInjectCheckbox: '自动注入选择框:',
+            iwaraDownloaderDownload: 'IwaraDownloader下载',
+            autoFollow: '自动关注选中的视频作者',
+            autoLike: '自动点赞选中的视频',
+            checkDownloadLink: '高画质下载连接检查',
+            checkPrioritySource: '源画质检查',
+            autoInjectCheckbox: '自动注入选择框',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
             browserDownloadNotEnabled: `未启用下载功能！`,
             browserDownloadNotWhitelisted: `请求的文件扩展名未列入白名单！`,
@@ -393,7 +446,7 @@
             browserDownloadNotSucceeded: `下载未开始或失败！`,
             browserDownloadUnknownError: `未知错误，有可能是下载时提供的参数存在问题，请检查文件名是否合法！`,
             browserDownloadTimeout: `下载超时，请检查网络环境是否正常！`,
-            variable: '可用变量:',
+            variable: '查看可用变量',
             downloadTime: '下载时间 ',
             uploadTime: '发布时间 ',
             example: '示例: ',
@@ -410,12 +463,12 @@
             injectCheckbox: '开关选择',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
-            notice: '新增自动关注选中的视频作者功能，该功能默认关闭',
+            notice: '重构以及调整配置界面，新增自动点赞功能，因存在违规风险，该功能默认关闭！如需使用请手动开启，你已经被警告过了！',
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
             useHelpForBugreport: [
-                '反馈遇到的BUG、使用问题等请前往：',
+                '反馈遇到的BUG、使用问题等请前往: ',
                 {
                     nodeType: 'a',
                     childs: 'Guthub',
@@ -424,17 +477,12 @@
                     }
                 }
             ],
-            downloadFailed: '下载失败！',
             tryRestartingDownload: '→ 点击此处重新下载 ←',
             tryReparseDownload: '→ 点击此处重新解析 ←',
             openVideoLink: '→ 进入视频页面 ←',
-            downloadThisFailed: '未找到可供下载的视频！',
-            pushTaskFailed: '推送下载任务失败！',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
             settingsCheck: '配置检查',
-            parsingFailed: '视频信息解析失败！',
-            autoFollowFailed: '自动关注视频作者失败！',
             createTask: '创建任务',
             downloadPathError: '下载路径错误!',
             browserDownloadModeError: '请启用脚本管理器的浏览器API下载模式!',
@@ -444,9 +492,15 @@
             parsingProgress: '解析进度: ',
             manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...',
             externalVideo: `非本站视频`,
-            getVideoSourceFailed: '获取视频源失败',
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
+            getVideoSourceFailed: '获取视频源失败',
+            downloadFailed: '下载失败！',
+            downloadThisFailed: '未找到可供下载的视频！',
+            pushTaskFailed: '推送下载任务失败！',
+            parsingFailed: '视频信息解析失败！',
+            autoFollowFailed: '自动关注视频作者失败！',
+            autoLikeFailed: '自动点赞视频失败！',
         }
         public en: { [key: string]: RenderCode | RenderCode[] } = {
             appName: 'Iwara Download Tool',
@@ -523,6 +577,7 @@
         configChange: Function
         language: string
         autoFollow: boolean
+        autoLike: boolean
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
         checkPrioritySource: boolean
@@ -539,6 +594,7 @@
         constructor() {
             this.language = language()
             this.autoFollow = false
+            this.autoLike = false
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
             this.checkPrioritySource = true
@@ -600,14 +656,16 @@
             }
         }
     }
+
     class configEdit {
         source: configEdit
         interface: HTMLElement
         interfacePage: HTMLElement
         target: Config
+
         constructor(config: Config) {
             this.target = config;
-            this.target.configChange = (item: string) => { this.configChange.call(this, item) } 
+            this.target.configChange = (item: string) => { this.configChange.call(this, item) }
             this.interfacePage = renderNode({
                 nodeType: 'p'
             }) as HTMLElement
@@ -648,10 +706,11 @@
                                     '%#language#% ',
                                     {
                                         nodeType: 'input',
+                                        className: 'inputRadioLine',
                                         attributes: originalObject.assign(
                                             {
-                                                name: 'Language',
-                                                type: 'Text',
+                                                name: 'language',
+                                                type: 'text',
                                                 value: this.target.language
                                             }
                                         ),
@@ -663,264 +722,13 @@
                                     }
                                 ]
                             },
-                            {
-                                nodeType: 'p',
-                                className: 'inputRadioLine',
-                                childs: [
-                                    '%#switchDebug#% ',
-                                    {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#on#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'IsDebug',
-                                                        type: 'radio'
-                                                    },
-                                                    GM_getValue('isDebug', false) ? { checked: true } : {}
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        GM_setValue('isDebug', true)
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }, {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#off#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'IsDebug',
-                                                        type: 'radio'
-                                                    },
-                                                    GM_getValue('isDebug', false) ? {} : { checked: true }
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        GM_setValue('isDebug', false)
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                nodeType: 'p',
-                                className: 'inputRadioLine',
-                                childs: [
-                                    '%#downloadType#% ',
-                                    ...originalObject.keys(DownloadType).map((i: any) => !originalObject.is(Number(i), NaN) ? this.downloadTypeItem(Number(i)) : undefined).prune()
-                                ]
-                            },
-                            {
-                                nodeType: 'p',
-                                className: 'inputRadioLine',
-                                childs: [
-                                    '%#checkDownloadLink#% ',
-                                    {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#on#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'CheckDownloadLink',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.checkDownloadLink ? { checked: true } : {}
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.checkDownloadLink = true
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }, {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#off#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'CheckDownloadLink',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.checkDownloadLink ? {} : { checked: true }
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.checkDownloadLink = false
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                nodeType: 'p',
-                                className: 'inputRadioLine',
-                                childs: [
-                                    '%#autoFollow#% ',
-                                    {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#on#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'AutoFollow',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.autoFollow ? { checked: true } : {}
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.autoFollow = true
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }, {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#off#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'AutoFollow',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.autoFollow ? {} : { checked: true }
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.autoFollow = false
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                nodeType: 'p',
-                                className: 'inputRadioLine',
-                                childs: [
-                                    '%#checkPrioritySource#% ',
-                                    {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#on#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'CheckPrioritySource',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.checkPrioritySource ? { checked: true } : {}
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.checkPrioritySource = true
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }, {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#off#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'CheckPrioritySource',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.checkPrioritySource ? {} : { checked: true }
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.checkPrioritySource = false
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            {
-                                nodeType: 'p',
-                                className: 'inputRadioLine',
-                                childs: [
-                                    '%#autoInjectCheckbox#% ',
-                                    {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#on#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'AutoInjectCheckbox',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.autoInjectCheckbox ? { checked: true } : {}
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.autoInjectCheckbox = true
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }, {
-                                        nodeType: 'label',
-                                        className: 'inputRadio',
-                                        childs: [
-                                            '%#off#%',
-                                            {
-                                                nodeType: 'input',
-                                                attributes: originalObject.assign(
-                                                    {
-                                                        name: 'AutoInjectCheckbox',
-                                                        type: 'radio'
-                                                    },
-                                                    this.target.autoInjectCheckbox ? {} : { checked: true }
-                                                ),
-                                                events: {
-                                                    change: () => {
-                                                        this.target.autoInjectCheckbox = false
-                                                    }
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
+                            this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
+                            this.switchButton('checkDownloadLink'),
+                            this.switchButton('autoFollow'),
+                            this.switchButton('autoLike'),
+                            this.switchButton('checkPrioritySource'),
+                            this.switchButton('autoInjectCheckbox'),
+                            this.downloadTypeSelect(),
                             this.interfacePage
                         ]
                     },
@@ -928,39 +736,119 @@
                 ]
             }) as HTMLElement
         }
-        private configChange(item: string) {
-            switch (item) {
-                case 'downloadType':
-                    this.downloadTypeChange()
-                    break
-                default:
-                    break
-            }
-        }
-        
-        private downloadTypeItem(type: DownloadType): RenderCode {
-            return {
-                nodeType: 'label',
-                className: 'inputRadio',
+        private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
+            let button = renderNode({
+                nodeType: 'p',
+                className: 'inputRadioLine',
                 childs: [
-                    DownloadType[type],
                     {
+                        nodeType: 'label',
+                        childs: `%#${name}#%`,
+                        attributes: {
+                            for: name
+                        }
+                    }, {
                         nodeType: 'input',
-                        attributes: originalObject.assign(
-                            {
-                                name: 'DownloadType',
-                                type: 'radio',
-                                value: type
-                            },
-                            this.target.downloadType == type ? { checked: true } : {}
-                        ),
+                        className: 'switch',
+                        attributes: {
+                            type: 'checkbox',
+                            name: name,
+                        },
                         events: {
-                            change: () => {
-                                this.target.downloadType = type
+                            change: (e: Event) => {
+                                if (set !== undefined) {
+                                    set(name, e)
+                                    return
+                                } else {
+                                    this.target[name] = (e.target as HTMLInputElement).checked
+                                }
                             }
                         }
                     }
                 ]
+            }) as HTMLElement
+            (button.querySelector(`[name='${name}']`) as HTMLInputElement).checked = get !== undefined ? get(name, defaultValue) : this.target[name] ?? defaultValue ?? false
+            return button
+        }
+        private inputComponent(name: string, type?: string, get?: (name: string) => void, set?: (name: string, e: Event) => void): RenderCode {
+            return {
+                nodeType: 'label',
+                childs: [
+                    `%#${name}#% `,
+                    {
+                        nodeType: 'input',
+                        attributes: originalObject.assign(
+                            {
+                                name: name,
+                                type: type ?? 'text',
+                                value: get !== undefined ? get(name) : this.target[name]
+                            }
+                        ),
+                        events: {
+                            change: (e: Event) => {
+                                if (set !== undefined) {
+                                    set(name, e)
+                                    return
+                                } else {
+                                    this.target[name] = (e.target as HTMLInputElement).value
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        private downloadTypeSelect(): RenderCode {
+            let select = renderNode({
+                nodeType: 'p',
+                className: 'inputRadioLine',
+                childs: [
+                    `%#downloadType#%`,
+                    {
+                        nodeType: 'select',
+                        childs: originalObject.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((i: string) => renderNode({
+                            nodeType: 'option',
+                            childs: i
+                        })),
+                        attributes: {
+                            name: 'downloadType'
+                        },
+                        events: {
+                            change: (e) => {
+                                this.target.downloadType = (e.target as HTMLSelectElement).selectedIndex
+                            }
+                        }
+                    }
+                ]
+            }) as HTMLSelectElement
+            select.selectedIndex = Number(this.target.downloadType)
+            return select
+        }
+        private configChange(item: string) {
+            switch (item) {
+                case 'downloadType':
+                    (this.interface.querySelector(`[name=${item}]`) as HTMLSelectElement).selectedIndex = Number(this.target.downloadType)
+                    this.downloadTypeChange()
+                    break
+                default:
+                    let element = this.interface.querySelector(`[name=${item}]`) as HTMLInputElement
+                    if (element) {
+                        switch (element.type) {
+                            case 'radio':
+                                element.value = this.target[item]
+                                break;
+                            case 'checkbox':
+                                element.checked = this.target[item]
+                                break;
+                            case 'text':
+                            case 'password':
+                                element.value = this.target[item]
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    break
             }
         }
         private downloadTypeChange() {
@@ -968,185 +856,28 @@
                 this.interfacePage.removeChild(this.interfacePage.firstChild)
             }
             let variableInfo = renderNode({
-                nodeType: 'label',
-                childs: [
-                    '%#variable#% ',
-                    { nodeType: 'br' },
-                    '%#downloadTime#% %#NowTime#%',
-                    { nodeType: 'br' },
-                    '%#uploadTime#% %#UploadTime#%',
-                    { nodeType: 'br' },
-                    '%#TITLE#% | %#ID#% | %#AUTHOR#% | %#QUALITY#%',
-                    { nodeType: 'br' },
-                    '%#example#% %#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4',
-                    { nodeType: 'br' },
-                    `%#result#% ${'%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4'.replaceVariable({
-                        NowTime: new Date(),
-                        AUTHOR: 'ExampleAuthorID',
-                        TITLE: 'ExampleTitle',
-                        ID: 'ExampleID',
-                        QUALITY: 'Source'
-                    })}`
-                ]
+                nodeType: 'a',
+                childs: '%#variable#%',
+                attributes: {
+                    href: 'https://github.com/dawn-lc/IwaraDownloadTool#路径可用变量'
+                }
             })
             let downloadConfigInput = [
-                renderNode({
-                    nodeType: 'label',
-                    childs: [
-                        `%#downloadPath#% `,
-                        {
-                            nodeType: 'input',
-                            attributes: originalObject.assign(
-                                {
-                                    name: 'DownloadPath',
-                                    type: 'Text',
-                                    value: this.target.downloadPath
-                                }
-                            ),
-                            events: {
-                                change: (event: Event) => {
-                                    this.target.downloadPath = (event.target as HTMLInputElement).value
-                                }
-                            }
-                        }
-                    ]
-                }),
-                renderNode({
-                    nodeType: 'label',
-                    childs: [
-                        '%#downloadProxy#% ',
-                        {
-                            nodeType: 'input',
-                            attributes: originalObject.assign(
-                                {
-                                    name: 'DownloadProxy',
-                                    type: 'Text',
-                                    value: this.target.downloadProxy
-                                }
-                            ),
-                            events: {
-                                change: (event: Event) => {
-                                    this.target.downloadProxy = (event.target as HTMLInputElement).value
-                                }
-                            }
-                        }
-                    ]
-                }),
-                variableInfo
+                variableInfo,
+                renderNode(this.inputComponent('downloadPath')),
+                renderNode(this.inputComponent('downloadProxy'))
             ]
             let aria2ConfigInput = [
-                renderNode({
-                    nodeType: 'label',
-                    childs: [
-                        'Aria2 RPC: ',
-                        {
-                            nodeType: 'input',
-                            attributes: originalObject.assign(
-                                {
-                                    name: 'Aria2Path',
-                                    type: 'Text',
-                                    value: this.target.aria2Path
-                                }
-                            ),
-                            events: {
-                                change: (event: Event) => {
-                                    this.target.aria2Path = (event.target as HTMLInputElement).value
-                                }
-                            }
-                        }
-                    ]
-                }),
-                renderNode({
-                    nodeType: 'label',
-                    childs: [
-                        'Aria2 Token: ',
-                        {
-                            nodeType: 'input',
-                            attributes: originalObject.assign(
-                                {
-                                    name: 'Aria2Token',
-                                    type: 'Password',
-                                    value: this.target.aria2Token
-                                }
-                            ),
-                            events: {
-                                change: (event: Event) => {
-                                    this.target.aria2Token = (event.target as HTMLInputElement).value
-                                }
-                            }
-                        }
-                    ]
-                }),
-                variableInfo
+                renderNode(this.inputComponent('aria2Path')),
+                renderNode(this.inputComponent('aria2Token', 'password'))
             ]
             let iwaraDownloaderConfigInput = [
-                renderNode({
-                    nodeType: 'label',
-                    childs: [
-                        'IwaraDownloader RPC: ',
-                        {
-                            nodeType: 'input',
-                            attributes: originalObject.assign(
-                                {
-                                    name: 'IwaraDownloaderPath',
-                                    type: 'Text',
-                                    value: this.target.iwaraDownloaderPath
-                                }
-                            ),
-                            events: {
-                                change: (event: Event) => {
-                                    this.target.iwaraDownloaderPath = (event.target as HTMLInputElement).value
-                                }
-                            }
-                        }
-                    ]
-                }),
-                renderNode({
-                    nodeType: 'label',
-                    childs: [
-                        'IwaraDownloader Token: ',
-                        {
-                            nodeType: 'input',
-                            attributes: originalObject.assign(
-                                {
-                                    name: 'IwaraDownloaderToken',
-                                    type: 'Password',
-                                    value: this.target.iwaraDownloaderToken
-                                }
-                            ),
-                            events: {
-                                change: (event: Event) => {
-                                    this.target.iwaraDownloaderToken = (event.target as HTMLInputElement).value
-                                }
-                            }
-                        }
-                    ]
-                }),
-                variableInfo
+                renderNode(this.inputComponent('iwaraDownloaderPath')),
+                renderNode(this.inputComponent('iwaraDownloaderToken', 'password'))
             ]
             let BrowserConfigInput = [
-                renderNode({
-                    nodeType: 'label',
-                    childs: [
-                        '%#rename#%',
-                        {
-                            nodeType: 'input',
-                            attributes: originalObject.assign(
-                                {
-                                    name: 'DownloadPath',
-                                    type: 'Text',
-                                    value: this.target.downloadPath
-                                }
-                            ),
-                            events: {
-                                change: (event: Event) => {
-                                    this.target.downloadPath = (event.target as HTMLInputElement).value
-                                }
-                            }
-                        }
-                    ]
-                }),
-                variableInfo
+                variableInfo,
+                renderNode(this.inputComponent('downloadPath'))
             ]
             switch (this.target.downloadType) {
                 case DownloadType.Aria2:
@@ -1165,12 +896,10 @@
         public inject() {
             if (!document.querySelector('#pluginConfig')) {
                 document.body.originalAppendChild(this.interface)
-                this.downloadTypeChange()
+                this.configChange('downloadType')
             }
         }
     }
-
-
 
     class VideoInfo {
         ID: string
@@ -1182,6 +911,7 @@
             id: string
             type: string
         }>
+        Liked: boolean
         Following: boolean
         Friend: boolean
         Alias: string
@@ -1203,7 +933,9 @@
             try {
                 config.authorization = `Bearer ${await refreshToken()}`
                 this.ID = ID.toLocaleLowerCase()
-                this.VideoInfoSource = JSON.parse(await get(`https://api.iwara.tv/video/${this.ID}`.toURL(), unsafeWindow.location.href, await getAuth()))
+                this.VideoInfoSource =await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
+                    headers: await getAuth()
+                })).json()
                 if (this.VideoInfoSource.id === undefined) {
                     throw new Error(i18n[language()].parsingFailed.toString())
                 }
@@ -1214,6 +946,7 @@
                 }
                 this.AuthorID = this.VideoInfoSource.user.id
                 this.Following = this.VideoInfoSource.user.following
+                this.Liked = this.VideoInfoSource.liked
                 this.Friend = this.VideoInfoSource.user.friend
                 this.Private = this.VideoInfoSource.private
                 this.Alias = this.VideoInfoSource.user.name
@@ -1222,7 +955,7 @@
                 this.Tags = this.VideoInfoSource.tags
                 this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
                 this.Size = this.VideoInfoSource.file.size
-                this.VideoFileSource = (JSON.parse(await get(this.VideoInfoSource.fileUrl.toURL(), unsafeWindow.location.href, await getAuth(this.VideoInfoSource.fileUrl))) as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
+                this.VideoFileSource = (await (await fetch(this.VideoInfoSource.fileUrl, { headers: await getAuth(this.VideoInfoSource.fileUrl) })).json() as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
                     throw new Error(i18n[language()].getVideoSourceFailed.toString())
                 }
@@ -1235,12 +968,7 @@
                     return decodeURIComponent(`https:${Source}`)
                 }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
-                    return JSON.parse(
-                        await get(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`.toURL(),
-                            unsafeWindow.location.href,
-                            await getAuth()
-                        )
-                    ) as VideoCommentAPIRawData
+                    return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as VideoCommentAPIRawData
                 }
                 const getCommentDatas = async (commentID: string = null): Promise<VideoCommentAPIRawData["results"]> => {
                     let comments: VideoCommentAPIRawData["results"] = []
@@ -1298,244 +1026,271 @@
 
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
-    .rainbow-text {
-        background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-size: 600% 100%;
-        animation: rainbow 0.5s infinite linear;
-    }
-    @keyframes rainbow {
-        0% {
-            background-position: 0% 0%;
+        .rainbow-text {
+            background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 600% 100%;
+            animation: rainbow 0.5s infinite linear;
         }
-        100% {
-            background-position: 100% 0%;
+        @keyframes rainbow {
+            0% {
+                background-position: 0% 0%;
+            }
+            100% {
+                background-position: 100% 0%;
+            }
         }
-    }
-    #pluginMenu {
-        z-index: 2147483647;
-        color: white;
-        position: fixed;
-        top: 50%;
-        right: 0px;
-        padding: 10px;
-        background-color: #565656;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 0 10px #ccc;
-        transform: translate(85%, -50%);
-        transition: transform 0.5s cubic-bezier(0,1,.60,1);
-    }
-    #pluginMenu ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-    }
-    #pluginMenu li {
-        padding: 5px 10px;
-        cursor: pointer;
-        text-align: center;
-        user-select: none;
-    }
-    #pluginMenu li:hover {
-        background-color: #000000cc;
-        border-radius: 3px;
-    }
 
-    #pluginMenu:hover {
-        transform: translate(0%, -50%);
-        transition-delay: 0.5s;
-    }
+        #pluginMenu {
+            z-index: 2147483645;
+            color: white;
+            position: fixed;
+            top: 50%;
+            right: 0px;
+            padding: 10px;
+            background-color: #565656;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #ccc;
+            transform: translate(85%, -50%);
+            transition: transform 0.5s cubic-bezier(0,1,.60,1);
+        }
+        #pluginMenu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        #pluginMenu li {
+            padding: 5px 10px;
+            cursor: pointer;
+            text-align: center;
+            user-select: none;
+        }
+        #pluginMenu li:hover {
+            background-color: #000000cc;
+            border-radius: 3px;
+        }
+        #pluginMenu:hover {
+            transform: translate(0%, -50%);
+            transition-delay: 0.5s;
+        }
+        #pluginMenu:not(:hover) {
+            transition-delay: 0s;
+        }
+        #pluginMenu.moving-out {
+            transform: translate(0%, -50%);
+        }
+        #pluginMenu.moving-in {
+            transform: translate(85%, -50%);
+        }
+        #pluginMenu:not(.moving-out):not(.moving-in) {
+            transition-delay: 0s;
+        }
+        #pluginMenu:hover,
+        #pluginMenu:hover ~ #pluginMenu {
+            transition-delay: 0s;
+        }
+        #pluginMenu:hover {
+            transition-duration: 0.5s;
+        }
+        #pluginMenu:not(:hover).moving-in {
+            transition-delay: 0.5s;
+        }
 
-    #pluginMenu:not(:hover) {
-        transition-delay: 0s;
-    }
-
-    #pluginMenu.moving-out {
-        transform: translate(0%, -50%);
-    }
-
-    #pluginMenu.moving-in {
-        transform: translate(85%, -50%);
-    }
-
-    /* 以下为兼容性处理 */
-    #pluginMenu:not(.moving-out):not(.moving-in) {
-        transition-delay: 0s;
-    }
-
-    #pluginMenu:hover,
-    #pluginMenu:hover ~ #pluginMenu {
-        transition-delay: 0s;
-    }
-
-    #pluginMenu:hover {
-        transition-duration: 0.5s;
-    }
-
-    #pluginMenu:not(:hover).moving-in {
-        transition-delay: 0.5s;
-    }
-
-
-    #pluginConfig {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(128, 128, 128, 0.8);
-        z-index: 8192; 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-    #pluginConfig .main {
-        color: white;
-        background-color: rgb(64,64,64,0.7);
-        padding: 24px;
-        margin: 10px;
-        overflow-y: auto;
-    }
-    @media (max-width: 640px) {
+        #pluginConfig {
+            color: var(--text);
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            z-index: 2147483647; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
         #pluginConfig .main {
-            width: 100%;
+            background-color: var(--body);
+            padding: 24px;
+            margin: 10px;
+            overflow-y: auto;
+            width: 400px;
         }
-    }
-    #pluginConfig button {
-        background-color: blue;
-        padding: 10px 20px;
-        color: white;
-        font-size: 18px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    #pluginConfig button {
-        background-color: blue;
-    }
-    #pluginConfig button[disabled] {
-        background-color: darkgray;
-        cursor: not-allowed;
-    }
-    #pluginConfig p {
-        display: flex;
-        flex-direction: column;
-    }
-    #pluginConfig p label{
-        display: flex;
-    }
-    #pluginConfig p label input{
-        flex-grow: 1;
-        margin-left: 10px;
-    }
-    #pluginConfig .inputRadioLine {
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        margin-right: 10px;
-    }
-    #pluginConfig .inputRadio {
-        display: flex;
-        align-items: center;
-        flex-direction: row-reverse;
-        margin-right: 10px;
-    }
+        @media (max-width: 640px) {
+            #pluginConfig .main {
+                width: 100%;
+            }
+        }
+        #pluginConfig button {
+            background-color: blue;
+            padding: 10px 20px;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #pluginConfig button {
+            background-color: blue;
+        }
+        #pluginConfig button[disabled] {
+            background-color: darkgray;
+            cursor: not-allowed;
+        }
+        #pluginConfig p {
+            display: flex;
+            flex-direction: column;
+        }
+        #pluginConfig p label{
+            display: flex;
+            flex-direction: column;
+            margin: 5px;
+        }
+        #pluginConfig .inputRadioLine {
+            display: flex;
+            align-items: center;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        #pluginConfig input[type="text"], #pluginConfig input[type="password"] {
+            outline: none;
+            border-top: none;
+            border-right: none;
+            border-left: none;
+            border-image: initial;
+            border-bottom: 1px solid var(--muted);
+            line-height: 1;
+            height: 30px;
+            box-sizing: border-box;
+            width: 100%;
+            background-color: var(--body);
+            color: var(--text);
+        }
+        #pluginConfig input[type='checkbox'].switch{
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 10px;
+            transition: border-color .2s, background-color .2s;
+        }
+        #pluginConfig input[type='checkbox'].switch::after {
+            content: '';
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0, 0, 2px, #999;
+            transition: .2s;
+            top: 2px;
+            position: absolute;
+            right: 55%;
+        }
+        #pluginConfig input[type='checkbox'].switch:checked {
+            background: rgb(19, 206, 102);
+        }
+        #pluginConfig input[type='checkbox'].switch:checked::after {
+            content: '';
+            position: absolute;
+            right: 2px;
+            top: 2px;
+        }
 
-    #pluginOverlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(128, 128, 128, 0.8);
-        z-index: 8192; 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    #pluginOverlay .main {
-        color: white;
-        font-size: 24px;
-        width: 60%;
-        background-color: rgb(64,64,64,0.7);
-        padding: 24px;
-        margin: 10px;
-        overflow-y: auto;
-    }
-    @media (max-width: 640px) {
+        #pluginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(128, 128, 128, 0.8);
+            z-index: 2147483646; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
         #pluginOverlay .main {
-            width: 100%;
+            color: white;
+            font-size: 24px;
+            width: 60%;
+            background-color: rgb(64,64,64,0.7);
+            padding: 24px;
+            margin: 10px;
+            overflow-y: auto;
         }
-    }
+        @media (max-width: 640px) {
+            #pluginOverlay .main {
+                width: 100%;
+            }
+        }
+        #pluginOverlay button {
+            padding: 10px 20px;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #pluginOverlay button {
+            background-color: blue;
+        }
+        #pluginOverlay button[disabled] {
+            background-color: darkgray;
+            cursor: not-allowed;
+        }
+        #pluginOverlay .checkbox {
+            width: 32px;
+            height: 32px;
+            margin: 0 4px 0 0;
+            padding: 0;
+        }
+        #pluginOverlay .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin: 0 0 10px 0;
+        }
+        #pluginOverlay .checkbox-label {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin-left: 10px;
+            display: flex;
+            align-items: center;
+        }
 
-    #pluginOverlay button {
-        padding: 10px 20px;
-        color: white;
-        font-size: 18px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    #pluginOverlay button {
-        background-color: blue;
-    }
-    #pluginOverlay button[disabled] {
-        background-color: darkgray;
-        cursor: not-allowed;
-    }
+        .selectButton {
+            position: absolute;
+            width: 38px;
+            height: 38px;
+            bottom: 24px;
+            right: 0px;
+            cursor:pointer;
+        }
+        .selectButtonCompatible {
+            width: 32px;
+            height: 32px;
+            bottom: 0px;
+            right: 4px;
+            transform: translate(-50%, -50%);
+            margin: 0;
+            padding: 0;
+            cursor:pointer;
+        }
 
-    #pluginOverlay .checkbox {
-        width: 32px;
-        height: 32px;
-        margin: 0 4px 0 0;
-        padding: 0;
-    }
-
-    #pluginOverlay .checkbox-container {
-        display: flex;
-        align-items: center;
-        margin: 0 0 10px 0;
-    }
-
-    #pluginOverlay .checkbox-label {
-        color: white;
-        font-size: 32px;
-        font-weight: bold;
-        margin-left: 10px;
-        display: flex;
-        align-items: center;
-    }
-
-    .selectButton {
-        position: absolute;
-        width: 38px;
-        height: 38px;
-        bottom: 24px;
-        right: 0px;
-        cursor:pointer;
-    }
-    .selectButtonCompatible {
-        width: 32px;
-        height: 32px;
-        bottom: 0px;
-        right: 4px;
-        transform: translate(-50%, -50%);
-        margin: 0;
-        padding: 0;
-        cursor:pointer;
-    }
-
-    .toastify h3 {
-        margin: 0 0 10px 0;
-    }
-    .toastify p {
-        margin: 0 ;
-    }
+        .toastify h3 {
+            margin: 0 0 10px 0;
+        }
+        .toastify p {
+            margin: 0 ;
+        }
     `)
 
 
@@ -1547,8 +1302,8 @@
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
-    var editConfig = new configEdit(config)
     var selectList = new SyncDictionary<string>('selectList')
+    var editConfig = new configEdit(config)
     var pluginMenu = renderNode({
         nodeType: 'div',
         attributes: {
@@ -1724,9 +1479,12 @@
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
         try {
-            refresh = JSON.parse(await post(`https://api.iwara.tv/user/token`.toURL(), {}, unsafeWindow.location.href, {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }))['accessToken']
+            refresh = (await (await fetch(`https://api.iwara.tv/user/token`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            })).json())['accessToken']
         } catch (error) {
             console.warn(`Refresh token error: ${getString(error)}`)
         }
@@ -1739,28 +1497,6 @@
         return Array.from(new Uint8Array(hashBuffer))
             .map(b => b.toString(16).padStart(2, '0'))
             .join('')
-    }
-    enum VersionState {
-        low,
-        equal,
-        high
-    }
-    function compareVersions(version1: string, version2: string): VersionState {
-        const v1 = version1.split('.').map(Number)
-        const v2 = version2.split('.').map(Number)
-
-        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-            const num1 = v1[i] || 0
-            const num2 = v2[i] || 0
-
-            if (num1 < num2) {
-                return VersionState.low
-            } else if (num1 > num2) {
-                return VersionState.high
-            }
-        }
-
-        return VersionState.equal
     }
     async function getAuth(url?: string) {
         return originalObject.assign(
@@ -1942,7 +1678,10 @@
             return
         }
         if (config.autoFollow && !videoInfo.Following) {
-            await post(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`.toURL(), {}, unsafeWindow.location.href, await getAuth()) ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true}).showToast()
+            await (await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, { method: 'POST', headers: await getAuth() })).text() ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true}).showToast()
+        }
+        if (config.autoLike && !videoInfo.Liked) {
+            await (await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, { method: 'POST', headers: await getAuth() })).text() ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoLikeFailed#%`, close: true }).showToast()
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
@@ -2028,12 +1767,15 @@
     }
     async function aria2Check(): Promise<boolean> {
         try {
-            let res = JSON.parse(await post(config.aria2Path.toURL(), {
-                'jsonrpc': '2.0',
-                'method': 'aria2.tellActive',
-                'id': UUID(),
-                'params': ['token:' + config.aria2Token]
-            }))
+            let res = await (await fetch(config.aria2Path, {
+                method: 'POST',
+                body: JSON.stringify({
+                    'jsonrpc': '2.0',
+                    'method': 'aria2.tellActive',
+                    'id': UUID(),
+                    'params': ['token:' + config.aria2Token]
+                })
+            })).json()
             if (res.error) {
                 throw new Error(res.error.message)
             }
@@ -2059,12 +1801,14 @@
     }
     async function iwaraDownloaderCheck(): Promise<boolean> {
         try {
-            let res = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), originalObject.assign({
-                'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
-                'code': 'State'
-            },
-                config.iwaraDownloaderToken.isEmpty() ? {} : { 'token': config.iwaraDownloaderToken }
-            )))
+            let res = await (await fetch(config.iwaraDownloaderPath, {
+                method: 'POST',
+                body: JSON.stringify(prune({
+                    'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
+                    'code': 'State',
+                    'token': config.iwaraDownloaderToken
+                }))
+            })).json()
             if (res.code !== 0) {
                 throw new Error(res.msg)
             }
@@ -2103,26 +1847,29 @@
                     QUALITY: quality
                 }
             ).trim())
-            let json = JSON.stringify(prune({
-                'jsonrpc': '2.0',
-                'method': 'aria2.addUri',
-                'id': UUID(),
-                'params': [
-                    'token:' + config.aria2Token,
-                    [downloadUrl],
-                    {
-                        'all-proxy': config.downloadProxy,
-                        'out': localPath.filename,
-                        'dir': localPath.fullPath.replace(localPath.filename, ''),
-                        'referer': window.location.hostname,
-                        'header': [
-                            'Cookie:' + document.cookie
-                        ]
-                    }
-                    
-                ]
-            }))
-            console.log(`Aria2 ${name} ${await post(config.aria2Path.toURL(), json)}`)
+            let res = await (await fetch(config.aria2Path, {
+                method: 'POST',
+                body: JSON.stringify(prune({
+                    'jsonrpc': '2.0',
+                    'method': 'aria2.addUri',
+                    'id': UUID(),
+                    'params': [
+                        'token:' + config.aria2Token,
+                        [downloadUrl],
+                        {
+                            'all-proxy': config.downloadProxy,
+                            'out': localPath.filename,
+                            'dir': localPath.fullPath.replace(localPath.filename, ''),
+                            'referer': window.location.hostname,
+                            'header': [
+                                'Cookie:' + document.cookie
+                            ]
+                        }
+
+                    ]
+                }))
+            })).json()
+            console.log(`Aria2 ${name} ${res}`)
             newToast(
                 ToastType.Info,
                 {
@@ -2133,38 +1880,41 @@
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
-            let r = JSON.parse(await post(config.iwaraDownloaderPath.toURL(), prune({
-                'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
-                'code': 'add',
-                'token': config.iwaraDownloaderToken,
-                'data': {
-                    'info': {
-                        'name': videoInfo.Name,
-                        'url': videoInfo.getDownloadUrl(),
-                        'size': videoInfo.Size,
-                        'source': videoInfo.ID,
-                        'alias': videoInfo.Alias,
-                        'author': videoInfo.Author,
-                        'uploadTime': videoInfo.UploadTime,
-                        'comments': videoInfo.Comments,
-                        'tags': videoInfo.Tags,
-                        'path': config.downloadPath.replaceVariable(
-                            {
-                                NowTime: new Date(),
-                                UploadTime: videoInfo.UploadTime,
-                                AUTHOR: videoInfo.Author,
-                                ID: videoInfo.ID,
-                                TITLE: videoInfo.Name,
-                                QUALITY: videoInfo.DownloadQuality
-                            }
-                        )
-                    },
-                    'option': {
-                        'proxy': config.downloadProxy,
-                        'cookies': document.cookie
+            let r = await (await fetch(config.iwaraDownloaderPath, {
+                method: 'POST',
+                body: JSON.stringify(prune({
+                    'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
+                    'code': 'add',
+                    'token': config.iwaraDownloaderToken,
+                    'data': {
+                        'info': {
+                            'name': videoInfo.Name,
+                            'url': videoInfo.getDownloadUrl(),
+                            'size': videoInfo.Size,
+                            'source': videoInfo.ID,
+                            'alias': videoInfo.Alias,
+                            'author': videoInfo.Author,
+                            'uploadTime': videoInfo.UploadTime,
+                            'comments': videoInfo.Comments,
+                            'tags': videoInfo.Tags,
+                            'path': config.downloadPath.replaceVariable(
+                                {
+                                    NowTime: new Date(),
+                                    UploadTime: videoInfo.UploadTime,
+                                    AUTHOR: videoInfo.Author,
+                                    ID: videoInfo.ID,
+                                    TITLE: videoInfo.Name,
+                                    QUALITY: videoInfo.DownloadQuality
+                                }
+                            )
+                        },
+                        'option': {
+                            'proxy': config.downloadProxy,
+                            'cookies': document.cookie
+                        }
                     }
-                }
-            })))
+                }))
+            })).json()
             if (r.code == 0) {
                 console.log(`${videoInfo.Name} %#pushTaskSucceed#% ${r}`)
                 newToast(
@@ -2391,7 +2141,7 @@
                 node: toastNode([
                     `加载完成`,
                     { nodeType: 'br' },
-                    `公告：%#notice#%`
+                    `公告: %#notice#%`
                 ]),
                 duration: 10000,
                 gravity: 'bottom',
@@ -2399,6 +2149,7 @@
             }
         ).showToast()
     }
+
 
     if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.227') === VersionState.low) {
         GM_setValue('isFirstRun', true)
