@@ -60,23 +60,20 @@ String.prototype.among = function (start, end) {
     return body.split(end).shift().notEmpty() ? body.split(end).shift() : '';
 };
 String.prototype.replaceVariable = function (replacements, count = 0) {
-    let replaceString = this.toString();
-    try {
-        replaceString = originalObject.entries(replacements).reduce((str, [key, value]) => {
+    let replaceString = Object.entries(replacements).reduce(
+        (str, [key, value]) => {
             if (str.includes(`%#${key}:`)) {
                 let format = str.among(`%#${key}:`, '#%').toString();
                 return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value));
-            }
-            else {
+            } else {
                 return str.replaceAll(`%#${key}#%`, getString(value));
             }
-        }, replaceString);
-        count++;
-        return originalObject.keys(replacements).map((key) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString;
-    }
-    catch (error) {
-        return replaceString;
-    }
+        },
+        this.toString()
+    );
+    count++;
+    return Object.keys(replacements).map(key => this.includes(`%#${key}#%`)).includes(true) && count < 128 ?
+        replaceString.replaceVariable(replacements, count) : replaceString;
 };
 const prune = (obj) => {
     if (isNull(obj))
