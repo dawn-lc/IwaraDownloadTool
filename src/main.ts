@@ -1641,6 +1641,18 @@
         return Toastify(params)
     }
     async function pustDownloadTask(videoInfo: VideoInfo) {
+        if (config.autoFollow && !videoInfo.Following) {
+            if ((await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
+                method: 'POST',
+                headers: await getAuth()
+            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).showToast()
+        }
+        if (config.autoLike && !videoInfo.Liked) {
+            if ((await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
+                method: 'POST',
+                headers: await getAuth()
+            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoLikeFailed#%`, close: true }).showToast()
+        }
         if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
             let toast = newToast(
                 ToastType.Warn,
@@ -1676,12 +1688,6 @@
             )
             toast.showToast()
             return
-        }
-        if (config.autoFollow && !videoInfo.Following) {
-            await (await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, { method: 'POST', headers: await getAuth() })).text() ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true}).showToast()
-        }
-        if (config.autoLike && !videoInfo.Liked) {
-            await (await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, { method: 'POST', headers: await getAuth() })).text() ?? newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoLikeFailed#%`, close: true }).showToast()
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
