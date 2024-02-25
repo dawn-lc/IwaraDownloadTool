@@ -35,11 +35,11 @@
 * 视频作者 %#AUTHOR#%
 * 画质 %#QUALITY#%
 
-  %#NowTime:YYYY-MM-DD#%\_%\#AUTHOR\#%\_%\#TITLE\#%\_%\#QUALITY\#%[%#ID#%].MP4
+  %\#NowTime:YYYY\-MM\-DD\#%\_%\#AUTHOR\#%\_%\#UploadTime:YYYY\-MM\-DD\#%\_%\#TITLE\#%\_%\#QUALITY\#%\[%\#ID\#%\]\.MP4
 
   输出：
 
-  2024-02-19_ExampleAuthorID_ExampleTitle_Source[ExampleID].MP4
+  2024\-02\-19\_ExampleAuthorID\_2024\-02\-18\_ExampleTitle\_Source\[ExampleID\]\.MP4
 
 ## 依赖库
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
