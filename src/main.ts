@@ -66,6 +66,7 @@
     }
     const getString = (obj: any): string => {
         obj = obj instanceof Error ? String(obj) : obj
+        obj = obj instanceof Date ? obj.format('YYYY-MM-DD') : obj
         return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
     }
 
