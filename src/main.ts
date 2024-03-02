@@ -1510,7 +1510,7 @@
             duration: -1
         })
         start.showToast()
-        if (config.downloadType === DownloadType.Aria2) {
+        if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
             let completed = (await aria2API('aria2.tellStopped', [0, 2048, [
                 'gid',
                 'status',
