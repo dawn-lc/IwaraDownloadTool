@@ -38,6 +38,10 @@ interface Array<T> {
     prune(): Array<T>;
     unique(): Array<T>;
     append(arr: Array<T>): void;
+    union(that: Array<T>): Array<T>;
+    intersect(that: Array<T>): Array<T>;
+    complement(that: Array<T>): Array<T>;
+    difference(that: Array<T>): Array<T>;
 }
 
 type RenderCode = string | Node | Element | {
@@ -155,5 +159,47 @@ interface VideoAPIRawData {
     deletedAt: string | null;
     fileUrl: string;
 }
+namespace Aria2 {
+    interface Uri {
+        uri: string;
+        status: 'used' | 'waiting';
+    }
+
+    interface File {
+        index: string;
+        path: string;
+        length: string;
+        completedLength: string;
+        selected: 'true' | 'false';
+        uris: Uri[];
+    }
+    interface Status {
+        gid: string;
+        status: 'active' | 'waiting' | 'paused' | 'error' | 'complete' | 'removed';
+        totalLength: string;
+        completedLength: string;
+        uploadLength: string;
+        bitfield: string;
+        downloadSpeed: string;
+        uploadSpeed: string;
+        infoHash: string;
+        numSeeders: string;
+        seeder: 'true' | 'false';
+        pieceLength: string;
+        numPieces: string;
+        connections: string;
+        errorCode: string;
+        errorMessage: string;
+        followedBy: string[];
+        following: string;
+        belongTo: string;
+        dir: string;
+        files: File[];
+        bittorrent: any;
+        verifiedLength: string;
+        verifyIntegrityPending: string;
+    }
+}
+
 
 type ErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';

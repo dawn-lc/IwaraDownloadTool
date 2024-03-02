@@ -2,6 +2,18 @@
 
     const originalWindow = unsafeWindow
     //@ts-ignore
+    const originalObject = originalWindow.Object
+    const originalFetch = originalWindow.fetch
+    const document = originalWindow.document
+
+    //@ts-ignore
+    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
+    //@ts-ignore
+    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
+        originalAddEventListener.call(this, type, listener, options)
+    }
+    /*
+    //@ts-ignore
     unsafeWindow._paq = unsafeWindow.Matomo = unsafeWindow.Piwik = new Proxy({}, {
         get: (target: {}, p: string | symbol, receiver: any) => {
             //@ts-ignore
@@ -15,19 +27,7 @@
         defineProperty: undefined,
         getOwnPropertyDescriptor: undefined
     });
-    
-    //@ts-ignore
-    const originalObject = originalWindow.Object
-    const originalFetch = originalWindow.fetch
-    const document = originalWindow.document
 
-    //@ts-ignore
-    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
-    //@ts-ignore
-    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
-        originalAddEventListener.call(this, type, listener, options)
-    }
-    /*
     //@ts-ignore
     const originalforEach = unsafeWindow.Array.prototype.forEach
     //@ts-ignore
@@ -78,6 +78,26 @@
     }
     Array.prototype.unique = function () {
         return Array.from(new Set(this))
+    }
+
+    Array.prototype.union = function (that) {
+        return Array.from(new Set([...this, ...that]));
+    }
+
+    Array.prototype.intersect = function (that) {
+        const set = new Set(that);
+        return this.filter(v => set.has(v));
+    }
+
+    Array.prototype.difference = function (that) {
+        const set = new Set(that);
+        return this.filter(v => !set.has(v));
+    }
+
+    Array.prototype.complement = function (that) {
+        const union = this.union(that);
+        const intersect = this.intersect(that);
+        return union.difference(intersect);
     }
 
     String.prototype.isEmpty = function () {
@@ -172,68 +192,6 @@
             }))
         }) : originalFetch(input, init)
     }
-
-
-
-
-/*
-
-    const get = async function (url: URL, referrer: string = unsafeWindow.location.href, headers: object = {}, force: boolean = false): Promise<string> {
-        if (force || url.hostname !== unsafeWindow.location.hostname ) {
-            let data: any = await new Promise(async (resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url.href,
-                    headers: originalObject.assign({
-                        'Accept': 'application/json, text/plain'
-                    }, headers),
-                    onload: response => resolve(response),
-                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
-                })
-            })
-            return data.responseText
-        }
-        return (await originalFetch(url.href, {
-            'headers': originalObject.assign({
-                'accept': 'application/json, text/plain'
-            }, headers),
-            'referrer': referrer,
-            'method': 'GET',
-            'mode': 'cors',
-            'credentials': 'include'
-        })).text()
-    }
-
-    const post = async function(url: URL, body: any, referrer: string = unsafeWindow.location.hostname, headers: object = {}): Promise<string> {
-        if (typeof body !== 'string') body = JSON.stringify(body)
-        if (url.hostname !== unsafeWindow.location.hostname) {
-            let data: any = await new Promise(async (resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'POST',
-                    url: url.href,
-                    headers: originalObject.assign({
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }, headers),
-                    data: body,
-                    onload: response => resolve(response),
-                    onerror: error => reject(!isNull(error) && !getString(error).isEmpty() ? getString(error) : '无法建立连接')
-                })
-            })
-            return data.responseText
-        }
-        return (await originalFetch(url.href, {
-            'headers': originalObject.assign({
-                'accept': 'application/json, text/plain'
-            }, headers),
-            'referrer': referrer,
-            'body': body,
-            'method': 'POST',
-            'mode': 'cors',
-            'credentials': 'include'
-        })).text()
-    }
-*/
     const UUID = function () {
         return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
     }
@@ -277,7 +235,7 @@
         debugger
     }
 
-    const Channel = new BroadcastChannel("IwaraDownloadTool")
+    const Channel = new BroadcastChannel('IwaraDownloadTool')
 
     enum DownloadType {
         Aria2,
@@ -457,6 +415,7 @@
             downloadThis: '下载当前',
             manualDownload: '手动下载',
             reverseSelect: '反向选中',
+            aria2TaskCheck: 'Aria2任务重启',
             deselect: '取消选中',
             selectAll: '全部选中',
             downloadSelected: '下载所选',
@@ -901,6 +860,16 @@
             }
         }
     }
+/*
+    class Database {
+        DB: IDBDatabase
+        constructor() {
+            let request = window.indexedDB.open('IwaraDownloadTool')
+            request.onsuccess = () => this.DB = request.result
+            request.onerror = () => 
+        }
+    }
+*/
 
     class VideoInfo {
         ID: string
@@ -1299,146 +1268,160 @@
         alert(`不支持的浏览器内核版本，请尽快更新您的浏览器。\r\n ${i18n[language()].appName} 将不会加载！！！`)
         return
     }
+
     var mouseTarget: Element = null
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
     var selectList = new SyncDictionary<string>('selectList')
     var editConfig = new configEdit(config)
-    var pluginMenu = renderNode({
-        nodeType: 'div',
-        attributes: {
-            id: 'pluginMenu'
-        },
-        childs: {
-            nodeType: 'ul',
-            childs: [
-                {
-                    nodeType: 'li',
-                    childs: '%#injectCheckbox#%',
-                    events: {
-                        click: () => {
-                            if (document.querySelector('.selectButton')) {
+    var pluginMenu = renderNode(prune(
+        {
+            nodeType: 'div',
+            attributes: {
+                id: 'pluginMenu'
+            },
+            childs: {
+                nodeType: 'ul',
+                childs: [
+                    {
+                        nodeType: 'li',
+                        childs: '%#injectCheckbox#%',
+                        events: {
+                            click: () => {
+                                if (document.querySelector('.selectButton')) {
+                                    document.querySelectorAll('.selectButton').forEach((element) => {
+                                        element.remove()
+                                    })
+                                } else {
+                                    document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
+                                        injectCheckbox(element, compatible)
+                                    })
+                                }
+                            }
+                        }
+                    },
+                    {
+                        nodeType: 'li',
+                        childs: '%#downloadSelected#%',
+                        events: {
+                            click: (event: Event) => {
+                                analyzeDownloadTask()
+                                newToast(ToastType.Info, {
+                                    text: `%#downloadingSelected#%`,
+                                    close: true
+                                }).showToast()
+                                event.stopPropagation()
+                                return false
+                            }
+                        }
+                    },
+                    {
+                        nodeType: 'li',
+                        childs: '%#selectAll#%',
+                        events: {
+                            click: (event: Event) => {
                                 document.querySelectorAll('.selectButton').forEach((element) => {
-                                    element.remove()
+                                    let button = element as HTMLInputElement
+                                    !button.checked && button.click()
                                 })
-                            } else {
-                                document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
-                                    injectCheckbox(element, compatible)
-                                })
+                                event.stopPropagation()
+                                return false
                             }
                         }
-                    }
-                },
-                {
-                    nodeType: 'li',
-                    childs: '%#downloadSelected#%',
-                    events: {
-                        click: (event: Event) => {
-                            analyzeDownloadTask()
-                            newToast(ToastType.Info, {
-                                text: `%#downloadingSelected#%`,
-                                close: true
-                            }).showToast()
-                            event.stopPropagation()
-                            return false
+                    },
+                    {
+                        nodeType: 'li',
+                        childs: '%#deselect#%',
+                        events: {
+                            click: (event: Event) => {
+                                document.querySelectorAll('.selectButton').forEach((element) => {
+                                    let button = element as HTMLInputElement
+                                    button.checked && button.click()
+                                })
+                                event.stopPropagation()
+                                return false
+                            }
                         }
-                    }
-                },
-                {
-                    nodeType: 'li',
-                    childs: '%#selectAll#%',
-                    events: {
-                        click: (event: Event) => {
-                            document.querySelectorAll('.selectButton').forEach((element) => {
-                                let button = element as HTMLInputElement
-                                !button.checked && button.click()
-                            })
-                            event.stopPropagation()
-                            return false
+                    },
+                    {
+                        nodeType: 'li',
+                        childs: '%#reverseSelect#%',
+                        events: {
+                            click: (event: Event) => {
+                                document.querySelectorAll('.selectButton').forEach((element) => {
+                                    (element as HTMLInputElement).click()
+                                })
+                                event.stopPropagation()
+                                return false
+                            }
                         }
-                    }
-                },
-                {
-                    nodeType: 'li',
-                    childs: '%#deselect#%',
-                    events: {
-                        click: (event: Event) => {
-                            document.querySelectorAll('.selectButton').forEach((element) => {
-                                let button = element as HTMLInputElement
-                                button.checked && button.click()
-                            })
-                            event.stopPropagation()
-                            return false
+                    },
+                    {
+                        nodeType: 'li',
+                        childs: '%#manualDownload#%',
+                        events: {
+                            click: (event: Event) => {
+                                addDownloadTask()
+                                event.stopPropagation()
+                                return false
+                            }
                         }
-                    }
-                },
-                {
-                    nodeType: 'li',
-                    childs: '%#reverseSelect#%',
-                    events: {
-                        click: (event: Event) => {
-                            document.querySelectorAll('.selectButton').forEach((element) => {
-                                (element as HTMLInputElement).click()
-                            })
-                            event.stopPropagation()
-                            return false
-                        }
-                    }
-                },
-                {
-                    nodeType: 'li',
-                    childs: '%#manualDownload#%',
-                    events: {
-                        click: (event: Event) => {
-                            addDownloadTask()
-                            event.stopPropagation()
-                            return false
-                        }
-                    }
-                },
-                {
-                    nodeType: 'li',
-                    childs: '%#downloadThis#%',
-                    events: {
-                        click: (event: Event) => {
-                            if (document.querySelector('.videoPlayer')) {
-                                let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
-                                let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
-                                let IDList = new Dictionary<string>()
-                                IDList.set(ID, Title)
-                                analyzeDownloadTask(IDList)
-                            } else {
-                                let toast = newToast(
-                                    ToastType.Warn,
-                                    {
-                                        node: toastNode(`%#downloadThisFailed#%`),
-                                        onClick() {
-                                            toast.hideToast()
+                    },
+                    {
+                        nodeType: 'li',
+                        childs: '%#downloadThis#%',
+                        events: {
+                            click: (event: Event) => {
+                                if (document.querySelector('.videoPlayer')) {
+                                    let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
+                                    let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
+                                    let IDList = new Dictionary<string>()
+                                    IDList.set(ID, Title)
+                                    analyzeDownloadTask(IDList)
+                                } else {
+                                    let toast = newToast(
+                                        ToastType.Warn,
+                                        {
+                                            node: toastNode(`%#downloadThisFailed#%`),
+                                            onClick() {
+                                                toast.hideToast()
+                                            }
                                         }
-                                    }
-                                )
-                                toast.showToast()
+                                    )
+                                    toast.showToast()
+                                }
+                                event.stopPropagation()
+                                return false
                             }
-                            event.stopPropagation()
-                            return false
+                        }
+                    },
+                    GM_getValue('isDebug') && {
+                        nodeType: 'li',
+                        childs: '%#aria2TaskCheck#%',
+                        events: {
+                            click: (event: Event) => {
+                                aria2TaskCheck()
+                                event.stopPropagation()
+                                return false
+                            }
+                        }
+                    },
+                    {
+                        nodeType: 'li',
+                        childs: '%#settings#%',
+                        events: {
+                            click: (event: Event) => {
+                                editConfig.inject()
+                                event.stopPropagation()
+                                return false
+                            }
                         }
                     }
-                },
-                {
-                    nodeType: 'li',
-                    childs: '%#settings#%',
-                    events: {
-                        click: (event: Event) => {
-                            editConfig.inject()
-                            event.stopPropagation()
-                            return false
-                        }
-                    }
-                }
-            ]
+                ]
+            }
         }
-    })
+    ))
 
     function getPlayload(authorization: string) {
         return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop().split('.')[1]))))
@@ -1527,6 +1510,21 @@
             duration: -1
         })
         start.showToast()
+        if (config.downloadType === DownloadType.Aria2) {
+            let completed = (await aria2API('aria2.tellStopped', [0, 2048, [
+                'gid',
+                'status',
+                'files',
+                'errorCode',
+                'bittorrent'
+            ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+            for (let key of list.keys().intersect(completed)) {
+                let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
+                button && button.checked && button.click()
+                list.del(key)
+                node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
+            }
+        }
         for (let key of list.keys()) {
             let videoInfo = await (new VideoInfo(list[key])).init(key)
             videoInfo.State && await pustDownloadTask(videoInfo)
@@ -1706,8 +1704,8 @@
         }
     }
     function analyzeLocalPath(path: string): LocalPath {
-        let matchPath = path.match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
-        isNull(matchPath) ?? new Error(`%#downloadPathError#%["${path}"]`)
+        let matchPath = path.replaceAll('//', '/').replaceAll('\\\\', '/').match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
+        if (isNull(matchPath)) throw new Error(`%#downloadPathError#%["${path}"]`);
         try {
             return {
                 fullPath: matchPath[0],
@@ -1854,29 +1852,20 @@
                     QUALITY: quality
                 }
             ).trim())
-            let res = await (await fetch(config.aria2Path, {
-                method: 'POST',
-                body: JSON.stringify(prune({
-                    'jsonrpc': '2.0',
-                    'method': 'aria2.addUri',
-                    'id': UUID(),
-                    'params': [
-                        'token:' + config.aria2Token,
-                        [downloadUrl],
-                        {
-                            'all-proxy': config.downloadProxy,
-                            'out': localPath.filename,
-                            'dir': localPath.fullPath.replace(localPath.filename, ''),
-                            'referer': window.location.hostname,
-                            'header': [
-                                'Cookie:' + document.cookie
-                            ]
-                        }
 
+            let res = await aria2API('aria2.addUri', [
+                [downloadUrl],
+                prune({
+                    'all-proxy': config.downloadProxy,
+                    'out': localPath.filename,
+                    'dir': localPath.fullPath.replace(localPath.filename, ''),
+                    'referer': window.location.hostname,
+                    'header': [
+                        'Cookie:' + document.cookie
                     ]
-                }))
-            })).json()
-            console.log(`Aria2 ${name} ${res}`)
+                })
+            ])
+            console.log(`Aria2 ${name} ${JSON.stringify(res)}`)
             newToast(
                 ToastType.Info,
                 {
@@ -2016,8 +2005,134 @@
             })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.getDownloadUrl()))
     }
+    async function aria2API(method: string, params: any) {
+        return await (await fetch(config.aria2Path, {
+            headers: {
+                'accept': 'application/json',
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: method,
+                id: UUID(),
+                params: [`token:${config.aria2Token}`, ...params]
+            }),
+            method: 'POST'
+        })).json()
+    }
+    function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
+        if (isNull(task.files)) {
+            GM_getValue('isDebug') && console.log(`check aria2 task files fail! ${JSON.stringify(task)}`)
+            return null
+        }
+        for (let index = 0; index < task.files.length; index++) {
+            const file = task.files[index];
+            if (isNull(file)) {
+                GM_getValue('isDebug') && console.log(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
+                continue
+            }
+            // 仅支持路径最后一组[]中包含%#ID#%的路径
+            // todo: 支持自定义提取ID表达式
+            let videoID: string = analyzeLocalPath(file.path).filename.match(/\[([^\[\]]*)\](?=[^\[]*$)/g).pop()?.trimHead('[').trimTail(']').toLowerCase();
+            if (isNull(videoID) || !videoID.notEmpty()) {
+                GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
+                continue
+            }
+            return videoID
+        }
+        return null
+    }
+    async function aria2TaskCheck() {
+        let completed = (await aria2API('aria2.tellStopped', [0, 2048, [
+            'gid',
+            'status',
+            'files',
+            'errorCode',
+            'bittorrent'
+        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+
+        let active = await aria2API('aria2.tellActive', [[
+            'gid',
+            'downloadSpeed',
+            'files',
+            'bittorrent'
+        ]])
+
+        let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024 );
+
+        for (let index = 0; index < needRestart.length; index++) {
+            const task = needRestart[index]
+            let videoID = aria2TaskExtractVideoID(task)
+            if (!isNull(videoID) && videoID.notEmpty()) {
+                if (!completed.includes(videoID)) {
+                    let videoInfo = await (new VideoInfo(videoID)).init(videoID);
+                    videoInfo.State && await pustDownloadTask(videoInfo);
+                }
+                await aria2API('aria2.forceRemove', [task.gid])
+            }
+        }
+        /*
+        
+        let IDlist: Record<string,any> = {} 
+        let waiting = await aria2API('aria2.tellWaiting', [0, 2048, [
+            'gid',
+            'status',
+            'files',
+            'errorCode',
+            'bittorrent'
+        ]])
+
+
+        function processItems(items: any[], status: boolean) {
+            return items.map((i: { files: any[]; gid: any }) => {
+                if (isNull(i.files)) {
+                    return i
+                }
+                let file = i.files.any() ? i.files.pop() : null;
+                if (isNull(file)) {
+                    return i
+                }
+                let videoID: string = analyzeLocalPath(file.path).filename.match(/\[([^\[\]]*)\](?=[^\[]*$)/g).pop().trimHead('[').trimTail(']').toLowerCase();
+                if (isNull(videoID) || !videoID.notEmpty()) {
+                    return i
+                }
+                if (isNull(IDlist[videoID])) {
+                    IDlist[videoID] = {
+                        status: status,
+                        gids: [i.gid]
+                    }
+                } else {
+                    if (isNull(IDlist[videoID].status)) IDlist[videoID].status = status
+                    IDlist[videoID].gids.push(i.gid)
+                }
+            }).filter(Boolean)
+        }
+
+        let completed = stopped.result.filter((i: { bittorrent: any; status: string }) => isNull(i.bittorrent) && i.status === 'complete')
+        let uncompleted = stopped.result.filter((i: { bittorrent: any; status: string; errorCode: string }) => isNull(i.bittorrent) && (i.status !== 'complete' || i.errorCode === '13')).concat(waiting.result.filter((i: { bittorrent: any; status: string }) => isNull(i.bittorrent) && i.status !== 'waiting' ))
+
+        let uncompletedUnrecognized = processItems(uncompleted, false)
+        let completedUnrecognized = processItems(completed, true)
+        
+        completedUnrecognized.any() && console.log(completedUnrecognized)
+        uncompletedUnrecognized.any() && console.log(uncompletedUnrecognized)
+        let list = Object.keys(IDlist)
+        for (let index = 0; index < list.length; index++) {
+            const id = list[index];
+            if (!IDlist[id].status) {
+                analyzeDownloadTask(new Dictionary<string>([{ key: id, value: '' }]))
+                for (let index = 0; index < IDlist[id].gids.length; index++) {
+                    const taskID = IDlist[id].gids[index]
+                    if ((await aria2API('aria2.tellStatus', [taskID])).result.status === 'paused') {
+                        //await aria2API('aria2.forceRemove', [taskID])
+                    }
+                }
+            }
+        }
+        */
+    }
     function injectCheckbox(element: Element, compatible: boolean) {
-        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
+        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toLowerCase().toURL().pathname.split('/')[2]
         let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
         node.originalAppendChild(renderNode({
