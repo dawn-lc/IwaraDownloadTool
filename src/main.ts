@@ -56,9 +56,11 @@
     */
 
     Node.prototype.originalAppendChild = Node.prototype.appendChild
-
-    const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
-    const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
+    const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null;
+    const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj);
+    const isString = (obj: any): obj is String => !isNull(obj) && typeof obj === 'string';
+    const isNumber = (obj: any): obj is Number => !isNull(obj) && typeof obj === 'number';
+    const isDate = (obj: any): obj is Date => !isNull(obj) && obj instanceof Date;
     const isStringTupleArray = (obj: any): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 
     const hasFunction = (obj: any, method: string): boolean => {
@@ -163,13 +165,38 @@
             return replaceString
         }
     }
-    const prune = (obj: any): any => {
-        if (isNull(obj)) return
-        if (isObject(obj)) return (s => originalObject.entries(s).any() ? s : null)(originalObject.fromEntries(originalObject.entries(obj).map(([k, v]: any) => [k, prune(v)]).filter(([k, v]: any) => !isNull(v))))
-        if (Array.isArray(obj)) return ((t => t.any() ? t : null)(obj.map(prune).prune()))
-        if (typeof obj === 'string') return obj.isEmpty() ? null : obj
-        return obj
+    function prune(input: any): any {
+        if (Array.isArray(input)) {
+            return input.filter(isNotEmpty).map(prune);
+        }
+        if (isObject(input)) {
+            return Object.fromEntries(
+                Object.entries(input)
+                    .filter(([key, value]) => isNotEmpty(value))
+                    .map(([key, value]) => [key, prune(value)])
+            );
+        }
+        return isNotEmpty(input) ? input : undefined;
     }
+    function isNotEmpty(value: any): boolean {
+        if (isNull(value)) {
+            return
+        }
+        if (Array.isArray(value)) {
+            return value.some(isNotEmpty);
+        }
+        if (isString(value)) {
+            return !value.isEmpty();
+        }
+        if (isNumber(value)) {
+            return !Number.isNaN(value)
+        }
+        if (isObject(value)) {
+            return Object.values(value).some(isNotEmpty);
+        }
+        return true
+    }
+
 
     const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean ): Promise<Response> => {
         if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
@@ -206,6 +233,8 @@
     }
 
     const renderNode = function (renderCode: RenderCode): Node | Element {
+        renderCode = prune(renderCode)
+        if (isNull(renderCode)) throw new Error("RenderCode null");
         if (typeof renderCode === 'string') {
             return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
         }
@@ -1396,7 +1425,7 @@
                             }
                         }
                     },
-                    GM_getValue('isDebug') && {
+                    GM_getValue('isDebug') ? {
                         nodeType: 'li',
                         childs: '%#aria2TaskCheck#%',
                         events: {
@@ -1406,7 +1435,7 @@
                                 return false
                             }
                         }
-                    },
+                    } : null,
                     {
                         nodeType: 'li',
                         childs: '%#settings#%',
@@ -1517,7 +1546,7 @@
                 'files',
                 'errorCode',
                 'bittorrent'
-            ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+            ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).unique()
             for (let key of list.keys().intersect(completed)) {
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
@@ -2049,7 +2078,7 @@
             'files',
             'errorCode',
             'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).unique()
 
         let active = await aria2API('aria2.tellActive', [[
             'gid',
@@ -2058,7 +2087,7 @@
             'bittorrent'
         ]])
 
-        let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024 );
+        let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) < 1);
 
         for (let index = 0; index < needRestart.length; index++) {
             const task = needRestart[index]
@@ -2071,65 +2100,7 @@
                 await aria2API('aria2.forceRemove', [task.gid])
             }
         }
-        /*
-        
-        let IDlist: Record<string,any> = {} 
-        let waiting = await aria2API('aria2.tellWaiting', [0, 2048, [
-            'gid',
-            'status',
-            'files',
-            'errorCode',
-            'bittorrent'
-        ]])
-
-
-        function processItems(items: any[], status: boolean) {
-            return items.map((i: { files: any[]; gid: any }) => {
-                if (isNull(i.files)) {
-                    return i
-                }
-                let file = i.files.any() ? i.files.pop() : null;
-                if (isNull(file)) {
-                    return i
-                }
-                let videoID: string = analyzeLocalPath(file.path).filename.match(/\[([^\[\]]*)\](?=[^\[]*$)/g).pop().trimHead('[').trimTail(']').toLowerCase();
-                if (isNull(videoID) || !videoID.notEmpty()) {
-                    return i
-                }
-                if (isNull(IDlist[videoID])) {
-                    IDlist[videoID] = {
-                        status: status,
-                        gids: [i.gid]
-                    }
-                } else {
-                    if (isNull(IDlist[videoID].status)) IDlist[videoID].status = status
-                    IDlist[videoID].gids.push(i.gid)
-                }
-            }).filter(Boolean)
-        }
-
-        let completed = stopped.result.filter((i: { bittorrent: any; status: string }) => isNull(i.bittorrent) && i.status === 'complete')
-        let uncompleted = stopped.result.filter((i: { bittorrent: any; status: string; errorCode: string }) => isNull(i.bittorrent) && (i.status !== 'complete' || i.errorCode === '13')).concat(waiting.result.filter((i: { bittorrent: any; status: string }) => isNull(i.bittorrent) && i.status !== 'waiting' ))
-
-        let uncompletedUnrecognized = processItems(uncompleted, false)
-        let completedUnrecognized = processItems(completed, true)
-        
-        completedUnrecognized.any() && console.log(completedUnrecognized)
-        uncompletedUnrecognized.any() && console.log(uncompletedUnrecognized)
-        let list = Object.keys(IDlist)
-        for (let index = 0; index < list.length; index++) {
-            const id = list[index];
-            if (!IDlist[id].status) {
-                analyzeDownloadTask(new Dictionary<string>([{ key: id, value: '' }]))
-                for (let index = 0; index < IDlist[id].gids.length; index++) {
-                    const taskID = IDlist[id].gids[index]
-                    if ((await aria2API('aria2.tellStatus', [taskID])).result.status === 'paused') {
-                        //await aria2API('aria2.forceRemove', [taskID])
-                    }
-                }
-            }
-        }
-        */
+      
     }
     function injectCheckbox(element: Element, compatible: boolean) {
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toLowerCase().toURL().pathname.split('/')[2]
