@@ -196,6 +196,9 @@
         if (isNumber(value)) {
             return !Number.isNaN(value)
         }
+        if (isElement(value)) {
+            return true
+        }
         if (isObject(value)) {
             return Object.values(value).some(isNotEmpty);
         }
