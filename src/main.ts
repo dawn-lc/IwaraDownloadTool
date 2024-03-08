@@ -56,11 +56,13 @@
     */
 
     Node.prototype.originalAppendChild = Node.prototype.appendChild
-    const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null;
-    const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj);
-    const isString = (obj: any): obj is String => !isNull(obj) && typeof obj === 'string';
-    const isNumber = (obj: any): obj is Number => !isNull(obj) && typeof obj === 'number';
-    const isDate = (obj: any): obj is Date => !isNull(obj) && obj instanceof Date;
+    const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
+    const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
+    const isString = (obj: any): obj is String => !isNull(obj) && typeof obj === 'string'
+    const isNumber = (obj: any): obj is Number => !isNull(obj) && typeof obj === 'number'
+    const isDate = (obj: any): obj is Date => !isNull(obj) && obj instanceof Date
+    const isElement = (obj: any): obj is Element => !isNull(obj) && obj instanceof Element
+
     const isStringTupleArray = (obj: any): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 
     const hasFunction = (obj: any, method: string): boolean => {
@@ -169,6 +171,9 @@
         if (Array.isArray(input)) {
             return input.filter(isNotEmpty).map(prune);
         }
+        if (isElement(input)) {
+            return input
+        }
         if (isObject(input)) {
             return Object.fromEntries(
                 Object.entries(input)
@@ -190,6 +195,9 @@
         }
         if (isNumber(value)) {
             return !Number.isNaN(value)
+        }
+        if (isElement(value)) {
+            return true
         }
         if (isObject(value)) {
             return Object.values(value).some(isNotEmpty);
@@ -811,6 +819,7 @@
                 ]
             }) as HTMLSelectElement
             select.selectedIndex = Number(this.target.downloadType)
+
             return select
         }
         private configChange(item: string) {
