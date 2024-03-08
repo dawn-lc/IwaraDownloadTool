@@ -969,7 +969,7 @@
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name
                 this.getDownloadUrl = () => {
-                    let fileList = this.VideoFileSource.filter(x => x.name == this.DownloadQuality)
+                    let fileList = this.VideoFileSource.filter(x => x.name === this.DownloadQuality)
                     if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
                     let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
                     if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
