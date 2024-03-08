@@ -601,7 +601,7 @@
             }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
-                    if (property == 'configChange') {
+                    if (property === 'configChange') {
                         return target.configChange
                     }
                     let value = GM_getValue(property, target[property])
@@ -609,7 +609,7 @@
                     return value
                 },
                 set: function (target, property: string, value) {
-                    if (property == 'configChange') {
+                    if (property === 'configChange') {
                         target.configChange = value
                         return true
                     }
@@ -1465,7 +1465,7 @@
                 authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
             } else {
                 for (const key in init.headers) {
-                    if (key.toLocaleLowerCase() == "authorization") {
+                    if (key.toLocaleLowerCase() === "authorization") {
                         authorization = init.headers[key]
                         break
                     }
@@ -1546,7 +1546,7 @@
                 'files',
                 'errorCode',
                 'bittorrent'
-            ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).unique()
+            ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
             for (let key of list.keys().intersect(completed)) {
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
@@ -1940,7 +1940,7 @@
                     }
                 }))
             })).json()
-            if (r.code == 0) {
+            if (r.code === 0) {
                 console.log(`${videoInfo.Name} %#pushTaskSucceed#% ${r}`)
                 newToast(
                     ToastType.Info,
@@ -2078,7 +2078,7 @@
             'files',
             'errorCode',
             'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).unique()
+        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
 
         let active = await aria2API('aria2.tellActive', [[
             'gid',
@@ -2087,7 +2087,7 @@
             'bittorrent'
         ]])
 
-        let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) < 1);
+        let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024 );
 
         for (let index = 0; index < needRestart.length; index++) {
             const task = needRestart[index]
