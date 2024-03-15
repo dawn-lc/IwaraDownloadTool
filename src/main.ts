@@ -1,9 +1,9 @@
-(function () {
-
-    const originalWindow = unsafeWindow
+(function () { 
+    const originalWindow = unsafeWindow as Window
     //@ts-ignore
-    const originalObject = originalWindow.Object
+    const originalObject = originalWindow.Object as ObjectConstructor
     const originalFetch = originalWindow.fetch
+
     const document = originalWindow.document
 
     //@ts-ignore
@@ -12,61 +12,20 @@
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
-    /*
-    //@ts-ignore
-    unsafeWindow._paq = unsafeWindow.Matomo = unsafeWindow.Piwik = new Proxy({}, {
-        get: (target: {}, p: string | symbol, receiver: any) => {
-            //@ts-ignore
-            observer && observer.disconnect()
-            return undefined
-        },
-        set: undefined,
-        deleteProperty: undefined,
-        ownKeys: undefined,
-        has: undefined,
-        defineProperty: undefined,
-        getOwnPropertyDescriptor: undefined
-    });
-
-    //@ts-ignore
-    const originalforEach = unsafeWindow.Array.prototype.forEach
-    //@ts-ignore
-    unsafeWindow.Array.prototype.forEach = function (...args) {
-        let err = new Error()
-        if (err.stack.match(/main\..*\.js/img)) {
-            GM_xmlhttpRequest({
-                url: ([...document.head.children].filter((i: Element) => i instanceof HTMLScriptElement && i.src.includes('main')).pop() as HTMLScriptElement).src,
-                method: 'GET',
-                headers: {
-                   'Content-type': 'application/x-www-form-urlencoded'
-                },
-                onload: function (xhr) {
-                    GM_addElement('script', {
-                        textContent: xhr.responseText.replace('An({', 'false && An({')
-                    })
-                    //@ts-ignore
-                    unsafeWindow.Array.prototype.forEach = originalforEach
-                }
-            })
-            throw err
-        }
-        //@ts-ignore
-        return originalforEach.call(this, ...args)
-    }
-    */
 
     Node.prototype.originalAppendChild = Node.prototype.appendChild
     const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
     const isString = (obj: any): obj is String => !isNull(obj) && typeof obj === 'string'
     const isNumber = (obj: any): obj is Number => !isNull(obj) && typeof obj === 'number'
-    const isDate = (obj: any): obj is Date => !isNull(obj) && obj instanceof Date
     const isElement = (obj: any): obj is Element => !isNull(obj) && obj instanceof Element
+    const isNode = (obj: any): obj is Node => !isNull(obj) && obj instanceof Node
+    const isDate = (obj: any): obj is Date => !isNull(obj) && obj instanceof Date
 
     const isStringTupleArray = (obj: any): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 
     const hasFunction = (obj: any, method: string): boolean => {
-        return method.notEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
+        return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
     }
     const getString = (obj: any): string => {
         obj = obj instanceof Error ? String(obj) : obj
@@ -85,37 +44,34 @@
     }
 
     Array.prototype.union = function (that) {
-        return Array.from(new Set([...this, ...that]));
+        return Array.from(new Set([...this, ...that]))
     }
 
     Array.prototype.intersect = function (that) {
-        const set = new Set(that);
-        return this.filter(v => set.has(v));
+        const set = new Set(that)
+        return this.filter(v => set.has(v))
     }
 
     Array.prototype.difference = function (that) {
-        const set = new Set(that);
-        return this.filter(v => !set.has(v));
+        const set = new Set(that)
+        return this.filter(v => !set.has(v))
     }
 
     Array.prototype.complement = function (that) {
-        const union = this.union(that);
-        const intersect = this.intersect(that);
-        return union.difference(intersect);
+        const union = this.union(that)
+        const intersect = this.intersect(that)
+        return union.difference(intersect)
     }
 
     String.prototype.isEmpty = function () {
         return !isNull(this) && this.length === 0
     }
-    String.prototype.notEmpty = function () {
-        return !isNull(this) && this.length !== 0
-    }
     String.prototype.among = function (start: string, end: string) {
         if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
             throw new Error('Empty')
         }
-        let body = this.split(start).pop().notEmpty() ? this.split(start).pop() : ''
-        return body.split(end).shift().notEmpty() ? body.split(end).shift() : ''
+        let body = !this.split(start).pop().isEmpty() ? this.split(start).pop() : ''
+        return !body.split(end).shift().isEmpty() ? body.split(end).shift() : ''
     }
     String.prototype.splitLimit = function (separator: string, limit?: number) {
         if (this.isEmpty() || isNull(separator)) {
@@ -149,64 +105,63 @@
     String.prototype.replaceVariable = function (replacements, count = 0) {
         let replaceString = this.toString()
         try {
-            replaceString = originalObject.entries(replacements).reduce(
-                (str: { includes: (arg0: string) => any; among: (arg0: string, arg1: string) => { (): any; new(): any; toString: { (): any; new(): any; }; }; replaceAll: (arg0: string, arg1: string) => any; }, [key, value]: any) => {
-                    if (str.includes(`%#${key}:`)) {
-                        let format = str.among(`%#${key}:`, '#%').toString()
-                        return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
-                    } else {
-                        return str.replaceAll(`%#${key}#%`, getString(value))
-                    }
-                },
+            replaceString = originalObject.entries(replacements).reduce((str, [key, value]) => {
+                if (str.includes(`%#${key}:`)) {
+                    let format = str.among(`%#${key}:`, '#%').toString()
+                    return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
+                } else {
+                    return str.replaceAll(`%#${key}#%`, getString(value))
+                }
+            },
                 replaceString
             )
             count++
-            return originalObject.keys(replacements).map((key: any) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
+            return originalObject.keys(replacements).map((key) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
         } catch (error) {
             GM_getValue('isDebug') && console.log(`replace variable error: ${getString(error)}`)
             return replaceString
         }
     }
-    function prune(input: any): any {
-        if (Array.isArray(input)) {
-            return input.filter(isNotEmpty).map(prune);
+    function prune(obj: any): any {
+        if (Array.isArray(obj)) {
+            return obj.filter(isNotEmpty).map(prune);
         }
-        if (isElement(input)) {
-            return input
+        if (isElement(obj) || isNode(obj)) {
+            return obj
         }
-        if (isObject(input)) {
-            return Object.fromEntries(
-                Object.entries(input)
+        if (isObject(obj)) {
+            return originalObject.fromEntries(
+                originalObject.entries(obj)
                     .filter(([key, value]) => isNotEmpty(value))
                     .map(([key, value]) => [key, prune(value)])
-            );
+            )
         }
-        return isNotEmpty(input) ? input : undefined;
+        return isNotEmpty(obj) ? obj : undefined;
     }
-    function isNotEmpty(value: any): boolean {
-        if (isNull(value)) {
-            return
+    function isNotEmpty(obj: any): boolean {
+        if (isNull(obj)) {
+            return false
         }
-        if (Array.isArray(value)) {
-            return value.some(isNotEmpty);
+        if (Array.isArray(obj)) {
+            return obj.some(isNotEmpty);
         }
-        if (isString(value)) {
-            return !value.isEmpty();
+        if (isString(obj)) {
+            return !obj.isEmpty();
         }
-        if (isNumber(value)) {
-            return !Number.isNaN(value)
+        if (isNumber(obj)) {
+            return !Number.isNaN(obj)
         }
-        if (isElement(value)) {
+        if (isElement(obj) || isNode(obj)) {
             return true
         }
-        if (isObject(value)) {
-            return Object.values(value).some(isNotEmpty);
+        if (isObject(obj)) {
+            return originalObject.values(obj).some(isNotEmpty)
         }
         return true
     }
 
 
-    const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean ): Promise<Response> => {
+    const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
         if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
         if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
         return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
@@ -242,7 +197,7 @@
 
     const renderNode = function (renderCode: RenderCode): Node | Element {
         renderCode = prune(renderCode)
-        if (isNull(renderCode)) throw new Error("RenderCode null");
+        if (isNull(renderCode)) throw new Error("RenderCode null")
         if (typeof renderCode === 'string') {
             return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
         }
@@ -260,11 +215,11 @@
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
     }
-    const findElement = function(element: Element, condition: string) {
+    const findElement = function (element: Element, condition: string) {
         while (element && !element.matches(condition)) {
-            element = element.parentElement;
+            element = element.parentElement
         }
-        return element;
+        return element
     }
 
     if (GM_getValue('isDebug')) {
@@ -320,12 +275,12 @@
         [key: string]: any
         public id: string
         private dictionary: Dictionary<T>
-        constructor(id: string, data: Array<{ key: string, value: T }> = [] ) {
+        constructor(id: string, data: Array<{ key: string, value: T }> = []) {
             this.id = id
             this.dictionary = new Dictionary<T>(data)
             GM_getValue(this.id, []).map(i => this.dictionary.set(i.key, i.value))
             Channel.onmessage = (event: MessageEvent) => {
-                const message = event.data as IChannelMessage<{ key: string , value: T | number | undefined }>
+                const message = event.data as IChannelMessage<{ key: string, value: T | number | undefined }>
                 if (message.id === this.id) {
                     switch (message.type) {
                         case MessageType.Set:
@@ -380,7 +335,7 @@
         [key: string]: any
         items: { [key: string]: T }
         constructor(data: Array<{ key: string, value: T }> = []) {
-            this.items = {}
+            this.items = new originalObject() as any
             data.map(i => this.set(i.key, i.value))
         }
         public set(key: string, value: T): void {
@@ -398,7 +353,7 @@
         public get size(): number {
             return originalObject.keys(this.items).length
         }
-        public keys(): string[] { 
+        public keys(): string[] {
             return originalObject.keys(this.items)
         }
         public values(): T[] {
@@ -622,14 +577,14 @@
                         return true
                     }
                     GM_setValue(property, value)
-                    GM_getValue('isDebug') && console.log(`set: ${property} ${getString(value) }`)
+                    GM_getValue('isDebug') && console.log(`set: ${property} ${getString(value)}`)
                     target.configChange(property)
                     return true
                 }
             })
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name} old: ${getString(old_value)} new: ${getString(new_value) }`)
+                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name} old: ${getString(old_value)} new: ${getString(new_value)}`)
                     if (remote && !isNull(body.configChange)) body.configChange(name)
                 })
             })
@@ -661,7 +616,7 @@
         target: Config
 
         constructor(config: Config) {
-            this.target = config;
+            this.target = config
             this.target.configChange = (item: string) => { this.configChange.call(this, item) }
             this.interfacePage = renderNode({
                 nodeType: 'p'
@@ -834,16 +789,16 @@
                         switch (element.type) {
                             case 'radio':
                                 element.value = this.target[item]
-                                break;
+                                break
                             case 'checkbox':
                                 element.checked = this.target[item]
-                                break;
+                                break
                             case 'text':
                             case 'password':
                                 element.value = this.target[item]
-                                break;
+                                break
                             default:
-                                break;
+                                break
                         }
                     }
                     break
@@ -898,16 +853,7 @@
             }
         }
     }
-/*
-    class Database {
-        DB: IDBDatabase
-        constructor() {
-            let request = window.indexedDB.open('IwaraDownloadTool')
-            request.onsuccess = () => this.DB = request.result
-            request.onerror = () => 
-        }
-    }
-*/
+
 
     class VideoInfo {
         ID: string
@@ -932,7 +878,7 @@
         State: boolean
         Comments: string
         DownloadQuality: string
-        getDownloadUrl: () => string
+        DownloadUrl: string
         constructor(Name: string) {
             this.Name = Name
             return this
@@ -941,10 +887,12 @@
             try {
                 config.authorization = `Bearer ${await refreshToken()}`
                 this.ID = ID.toLocaleLowerCase()
-                this.VideoInfoSource =await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
+                this.VideoInfoSource = await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
                 })).json()
                 if (this.VideoInfoSource.id === undefined) {
+                    let cache = await db.videos.where('ID').equals(this.ID).toArray()
+                    if (cache.any()) Object.assign(this, cache.pop())
                     throw new Error(i18n[language()].parsingFailed.toString())
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(128)
@@ -968,13 +916,13 @@
                     throw new Error(i18n[language()].getVideoSourceFailed.toString())
                 }
                 this.DownloadQuality = this.VideoFileSource[0].name
-                this.getDownloadUrl = () => {
-                    let fileList = this.VideoFileSource.filter(x => x.name === this.DownloadQuality)
-                    if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
-                    let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-                    if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
-                    return decodeURIComponent(`https:${Source}`)
-                }
+
+                let fileList = this.VideoFileSource.filter(x => x.name === this.DownloadQuality)
+                if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
+                let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
+                if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
+                this.DownloadUrl = decodeURIComponent(`https:${Source}`)
+                
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
                     return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as VideoCommentAPIRawData
                 }
@@ -997,6 +945,7 @@
                 }
                 this.Comments = `${this.VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 this.State = true
+                await db.videos.put(this)
                 return this
             } catch (error) {
                 let data = this
@@ -1030,7 +979,16 @@
             }
         }
     }
-
+    class Database extends Dexie {
+        videos: Dexie.Table<VideoInfo, string>;
+        constructor() {
+            super("VideoDatabase");
+            this.version(1).stores({
+                videos: 'ID'
+            });
+            this.videos = this.table("videos");
+        }
+    }
 
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
@@ -1300,17 +1258,11 @@
             margin: 0 ;
         }
     `)
-
-
-    if (!String.prototype.replaceAll) {
-        alert(`不支持的浏览器内核版本，请尽快更新您的浏览器。\r\n ${i18n[language()].appName} 将不会加载！！！`)
-        return
-    }
-
     var mouseTarget: Element = null
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
+    var db = new Database();
     var selectList = new SyncDictionary<string>('selectList')
     var editConfig = new configEdit(config)
     var pluginMenu = renderNode(prune(
@@ -1463,7 +1415,7 @@
 
     function getPlayload(authorization: string) {
         return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop().split('.')[1]))))
-    } 
+    }
 
     const modifyFetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && console.log(`Fetch ${input}`)
@@ -1514,7 +1466,7 @@
     }
     async function getXVersion(urlString: string): Promise<string> {
         let url = urlString.toURL()
-        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${ url.searchParams.get('expires') }_5nFp9kmbNnHdAFhaqMvt`)
+        const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${url.searchParams.get('expires')}_5nFp9kmbNnHdAFhaqMvt`)
         const hashBuffer = await crypto.subtle.digest('SHA-1', data)
         return Array.from(new Uint8Array(hashBuffer))
             .map(b => b.toString(16).padStart(2, '0'))
@@ -1572,7 +1524,7 @@
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
-        if (size != 1){
+        if (size != 1) {
             let completed = newToast(
                 ToastType.Info,
                 {
@@ -1743,7 +1695,7 @@
     }
     function analyzeLocalPath(path: string): LocalPath {
         let matchPath = path.replaceAll('//', '/').replaceAll('\\\\', '/').match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
-        if (isNull(matchPath)) throw new Error(`%#downloadPathError#%["${path}"]`);
+        if (isNull(matchPath)) throw new Error(`%#downloadPathError#%["${path}"]`)
         try {
             return {
                 fullPath: matchPath[0],
@@ -1883,7 +1835,7 @@
             let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
-                    UploadTime : uploadTime,
+                    UploadTime: uploadTime,
                     AUTHOR: author,
                     ID: id,
                     TITLE: name,
@@ -1910,7 +1862,7 @@
                     node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.DownloadUrl))
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
@@ -1923,7 +1875,7 @@
                     'data': {
                         'info': {
                             'name': videoInfo.Name,
-                            'url': videoInfo.getDownloadUrl(),
+                            'url': videoInfo.DownloadUrl,
                             'size': videoInfo.Size,
                             'source': videoInfo.ID,
                             'alias': videoInfo.Alias,
@@ -1989,7 +1941,7 @@
             ).trim()).filename
             DownloadUrl.searchParams.set('download', filename)
             GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.getDownloadUrl().toURL()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.DownloadUrl.toURL()))
     }
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
@@ -2005,7 +1957,7 @@
                         'not_permitted': `%#browserDownloadNotPermitted#%`,
                         'not_supported': `%#browserDownloadNotSupported#%`,
                         'not_succeeded': `%#browserDownloadNotSucceeded#% ${error.details ?? getString(error.details)}`
-                    }[error.error] || `%#browserDownloadUnknownError#%`;
+                    }[error.error] || `%#browserDownloadUnknownError#%`
                 }
                 let toast = newToast(
                     ToastType.Error,
@@ -2041,7 +1993,7 @@
                 onerror: (err) => browserDownloadError(err),
                 ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
             })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.getDownloadUrl()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.DownloadUrl))
     }
     async function aria2API(method: string, params: any) {
         return await (await fetch(config.aria2Path, {
@@ -2064,15 +2016,15 @@
             return null
         }
         for (let index = 0; index < task.files.length; index++) {
-            const file = task.files[index];
+            const file = task.files[index]
             if (isNull(file)) {
                 GM_getValue('isDebug') && console.log(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
                 continue
             }
             // 仅支持路径最后一组[]中包含%#ID#%的路径
             // todo: 支持自定义提取ID表达式
-            let videoID: string = analyzeLocalPath(file.path).filename.match(/\[([^\[\]]*)\](?=[^\[]*$)/g).pop()?.trimHead('[').trimTail(']').toLowerCase();
-            if (isNull(videoID) || !videoID.notEmpty()) {
+            let videoID: string = analyzeLocalPath(file.path).filename.toLowerCase().match(/\[([^\[\]]*)\](?=[^\[]*$)/g).pop()?.trimHead('[').trimTail(']');
+            if (isNull(videoID) || videoID.isEmpty()) {
                 GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
                 continue
             }
@@ -2096,20 +2048,20 @@
             'bittorrent'
         ]])
 
-        let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024 );
+        let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024)
 
         for (let index = 0; index < needRestart.length; index++) {
             const task = needRestart[index]
             let videoID = aria2TaskExtractVideoID(task)
-            if (!isNull(videoID) && videoID.notEmpty()) {
+            if (!isNull(videoID) && !videoID.isEmpty()) {
                 if (!completed.includes(videoID)) {
-                    let videoInfo = await (new VideoInfo(videoID)).init(videoID);
-                    videoInfo.State && await pustDownloadTask(videoInfo);
+                    let videoInfo = await (new VideoInfo(videoID)).init(videoID)
+                    videoInfo.State && await pustDownloadTask(videoInfo)
                 }
                 await aria2API('aria2.forceRemove', [task.gid])
             }
         }
-      
+
     }
     function injectCheckbox(element: Element, compatible: boolean) {
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toLowerCase().toURL().pathname.split('/')[2]
@@ -2258,5 +2210,5 @@
         alert(i18n[language()].configurationIncompatible)
     }
 
-    (document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(document, "DOMContentLoaded", resolve))).then(main)    
-})()
+    (document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(document, "DOMContentLoaded", resolve))).then(main)
+})();

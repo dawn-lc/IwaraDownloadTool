@@ -13,6 +13,7 @@
     "@types/moment": "^2.13.0",
     "@types/tampermonkey": "^4.0.10",
     "@types/toastify-js": "^1.11.1",
+    "dexie": "^3.2.6",
     "toastify-js": "^1.12.0",
     "typescript": "^5.0.4"
   }
