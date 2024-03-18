@@ -1831,7 +1831,7 @@
         (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
             id: string
             type: string
-        }>, quality: string, downloadUrl: string) {
+        }>, quality: string, alias: string, downloadUrl: string) {
             let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
@@ -1839,6 +1839,7 @@
                     AUTHOR: author,
                     ID: id,
                     TITLE: name,
+                    ALIAS: alias,
                     QUALITY: quality
                 }
             ).trim())
@@ -1862,7 +1863,7 @@
                     node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.DownloadUrl))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
@@ -1890,6 +1891,7 @@
                                     AUTHOR: videoInfo.Author,
                                     ID: videoInfo.ID,
                                     TITLE: videoInfo.Name,
+                                    ALIAS: videoInfo.Alias,
                                     QUALITY: videoInfo.DownloadQuality
                                 }
                             )
@@ -1928,7 +1930,7 @@
         }(videoInfo))
     }
     function othersDownload(videoInfo: VideoInfo) {
-        (async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, DownloadUrl: URL) {
+        (async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, Alias: string, DownloadUrl: URL) {
             let filename = analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
@@ -1936,18 +1938,19 @@
                     AUTHOR: Author,
                     ID: ID,
                     TITLE: Name,
+                    ALIAS: Alias,
                     QUALITY: DownloadQuality
                 }
             ).trim()).filename
             DownloadUrl.searchParams.set('download', filename)
             GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.DownloadUrl.toURL()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
     }
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
             id: string
             type: string
-        }>, DownloadQuality: string, DownloadUrl: string) {
+        }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
             function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
                 let errorInfo = getString(Error)
                 if (!(error instanceof Error)) {
@@ -1987,13 +1990,14 @@
                         AUTHOR: Author,
                         ID: ID,
                         TITLE: Name,
+                        ALIAS: Alias,
                         QUALITY: DownloadQuality
                     }
                 ).trim(),
                 onerror: (err) => browserDownloadError(err),
                 ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
             })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.DownloadUrl))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
     }
     async function aria2API(method: string, params: any) {
         return await (await fetch(config.aria2Path, {

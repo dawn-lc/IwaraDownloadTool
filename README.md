@@ -44,6 +44,7 @@
 * 视频标题 %#TITLE#%
 * 视频ID %#ID#%
 * 视频作者 %#AUTHOR#%
+* 视频作者(昵称) %#ALIAS#%
 * 画质 %#QUALITY#%
 
   %\#NowTime:YYYY\-MM\-DD\#%\_%\#AUTHOR\#%\_%\#UploadTime:YYYY\-MM\-DD\#%\_%\#TITLE\#%\_%\#QUALITY\#%\[%\#ID\#%\]\.MP4
