@@ -235,7 +235,18 @@
         Browser,
         Others
     }
-
+    enum PageType {
+        Video = 'video',
+        Image = 'image',
+        VideoList = 'videoList',
+        ImageList = 'imageList',
+        Forum = 'forum',
+        ForumSection = 'forumSection',
+        ForumThread = 'forumThread',
+        Page = 'page',
+        Home = 'home',
+        Profile = 'profile'
+    }
     enum ToastType {
         Log,
         Info,
@@ -611,9 +622,9 @@
 
     class configEdit {
         source: configEdit
+        target: Config
         interface: HTMLElement
         interfacePage: HTMLElement
-        target: Config
 
         constructor(config: Config) {
             this.target = config
@@ -989,6 +1000,144 @@
             this.videos = this.table("videos");
         }
     }
+    class menu {
+        source: menu
+        interface: HTMLElement
+        interfacePage: HTMLElement
+        constructor() {
+            this.interfacePage = renderNode({
+                nodeType: 'ul'
+            }) as HTMLElement
+            this.interface = renderNode({
+                nodeType: 'div',
+                attributes: {
+                    id: 'pluginMenu'
+                },
+                childs: this.interfacePage
+            }) as HTMLElement
+            new MutationObserver((mutationsList) => {
+                for (let mutation of mutationsList) {
+                    if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
+                        continue;
+                    }
+                    let pages = ([...mutation.addedNodes] as Element[]).filter(i => i.classList.contains('page'))
+                    if (pages.length === 0) {
+                        continue;
+                    }
+                    let page = pages.find(i => isElement(i) && i.classList.length > 1)
+                    if (!page) {
+                        continue;
+                    }
+                    this.pageChange(page.classList[1].split('-').pop() as PageType)
+                }
+            }).observe(document.getElementById('app'), { childList: true, subtree: true });
+        }
+        private button(name: string, click?: (name: string, e: Event) => void) {
+            return renderNode(prune({
+                nodeType: 'li',
+                childs: '%#name#%',
+                events: {
+                    click: (event: Event) => {
+                        click(name, event)
+                        event.stopPropagation()
+                        return false
+                    }
+                }
+            }))
+        }
+        private pageChange(pageType: PageType) {
+            while (this.interfacePage.hasChildNodes()) {
+                this.interfacePage.removeChild(this.interfacePage.firstChild)
+            }
+
+            let injectCheckboxButton = this.button('injectCheckbox', (name, event) => {
+                if (document.querySelector('.selectButton')) {
+                    document.querySelectorAll('.selectButton').forEach((element) => {
+                        element.remove()
+                    })
+                } else {
+                    document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
+                        injectCheckbox(element, compatible)
+                    })
+                }
+            })
+            let manualDownloadButton = this.button('manualDownload', (name, event) => {
+                addDownloadTask()
+            })
+            let settingsButton = this.button('settings', (name, event) => {
+                editConfig.inject()
+            })
+
+            let baseButtons = [injectCheckboxButton, manualDownloadButton, settingsButton]
+
+            let selectAllButton = this.button('selectAll', (name, event) => {
+                document.querySelectorAll('.selectButton').forEach((element) => {
+                    let button = element as HTMLInputElement
+                    !button.checked && button.click()
+                })
+            })
+            let reverseSelectButton = this.button('reverseSelect', (name, event) => {
+                document.querySelectorAll('.selectButton').forEach((element) => {
+                    (element as HTMLInputElement).click()
+                })
+            })
+            let deselectButton = this.button('deselect', (name, event) => {
+                document.querySelectorAll('.selectButton').forEach((element) => {
+                    let button = element as HTMLInputElement
+                    button.checked && button.click()
+                })
+            })
+            let downloadSelectedButton = this.button('downloadSelected', (name, event) => {
+                analyzeDownloadTask()
+                newToast(ToastType.Info, {
+                    text: `%#${name}#%`,
+                    close: true
+                }).showToast()
+            })
+            let selectButtons = [selectAllButton, reverseSelectButton, deselectButton, downloadSelectedButton]
+
+            let downloadThisButton = this.button('downloadThis', async (name, event) => {
+                let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
+                let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? '未获取到标题'
+                let videoInfo = await (new VideoInfo(Title)).init(ID)
+                videoInfo.State && await pustDownloadTask(videoInfo)
+            })
+
+            let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
+                aria2TaskCheck()
+            })
+            GM_getValue('isDebug') && this.interfacePage.originalAppendChild(aria2TaskCheckButton)
+
+            switch (pageType) {
+                case PageType.Video:
+                    this.interfacePage.originalAppendChild(downloadThisButton)
+                    selectButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    baseButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    break
+                case PageType.Profile:
+                case PageType.Home:
+                case PageType.VideoList:
+                    selectButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    baseButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    break;
+                case PageType.Page:
+                case PageType.Forum:
+                case PageType.Image:
+                case PageType.ImageList:
+                case PageType.ForumSection:
+                case PageType.ForumThread:
+                default:
+                    baseButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    break;
+            }
+        }
+        public inject() {
+            if (!document.querySelector('#pluginMenu')) {
+                document.body.originalAppendChild(this.interface)
+                this.pageChange(PageType.Page)
+            }
+        }
+    }
 
     GM_addStyle(GM_getResourceText('toastify-css'))
     GM_addStyle(`
@@ -1265,153 +1414,7 @@
     var db = new Database();
     var selectList = new SyncDictionary<string>('selectList')
     var editConfig = new configEdit(config)
-    var pluginMenu = renderNode(prune(
-        {
-            nodeType: 'div',
-            attributes: {
-                id: 'pluginMenu'
-            },
-            childs: {
-                nodeType: 'ul',
-                childs: [
-                    {
-                        nodeType: 'li',
-                        childs: '%#injectCheckbox#%',
-                        events: {
-                            click: () => {
-                                if (document.querySelector('.selectButton')) {
-                                    document.querySelectorAll('.selectButton').forEach((element) => {
-                                        element.remove()
-                                    })
-                                } else {
-                                    document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
-                                        injectCheckbox(element, compatible)
-                                    })
-                                }
-                            }
-                        }
-                    },
-                    {
-                        nodeType: 'li',
-                        childs: '%#downloadSelected#%',
-                        events: {
-                            click: (event: Event) => {
-                                analyzeDownloadTask()
-                                newToast(ToastType.Info, {
-                                    text: `%#downloadingSelected#%`,
-                                    close: true
-                                }).showToast()
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    },
-                    {
-                        nodeType: 'li',
-                        childs: '%#selectAll#%',
-                        events: {
-                            click: (event: Event) => {
-                                document.querySelectorAll('.selectButton').forEach((element) => {
-                                    let button = element as HTMLInputElement
-                                    !button.checked && button.click()
-                                })
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    },
-                    {
-                        nodeType: 'li',
-                        childs: '%#deselect#%',
-                        events: {
-                            click: (event: Event) => {
-                                document.querySelectorAll('.selectButton').forEach((element) => {
-                                    let button = element as HTMLInputElement
-                                    button.checked && button.click()
-                                })
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    },
-                    {
-                        nodeType: 'li',
-                        childs: '%#reverseSelect#%',
-                        events: {
-                            click: (event: Event) => {
-                                document.querySelectorAll('.selectButton').forEach((element) => {
-                                    (element as HTMLInputElement).click()
-                                })
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    },
-                    {
-                        nodeType: 'li',
-                        childs: '%#manualDownload#%',
-                        events: {
-                            click: (event: Event) => {
-                                addDownloadTask()
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    },
-                    {
-                        nodeType: 'li',
-                        childs: '%#downloadThis#%',
-                        events: {
-                            click: (event: Event) => {
-                                if (document.querySelector('.videoPlayer')) {
-                                    let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
-                                    let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? window.document.title.split('|')?.shift()?.trim() ?? '未获取到标题'
-                                    let IDList = new Dictionary<string>()
-                                    IDList.set(ID, Title)
-                                    analyzeDownloadTask(IDList)
-                                } else {
-                                    let toast = newToast(
-                                        ToastType.Warn,
-                                        {
-                                            node: toastNode(`%#downloadThisFailed#%`),
-                                            onClick() {
-                                                toast.hideToast()
-                                            }
-                                        }
-                                    )
-                                    toast.showToast()
-                                }
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    },
-                    GM_getValue('isDebug') ? {
-                        nodeType: 'li',
-                        childs: '%#aria2TaskCheck#%',
-                        events: {
-                            click: (event: Event) => {
-                                aria2TaskCheck()
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    } : null,
-                    {
-                        nodeType: 'li',
-                        childs: '%#settings#%',
-                        events: {
-                            click: (event: Event) => {
-                                editConfig.inject()
-                                event.stopPropagation()
-                                return false
-                            }
-                        }
-                    }
-                ]
-            }
-        }
-    ))
+    var pluginMenu = new menu()
 
     function getPlayload(authorization: string) {
         return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop().split('.')[1]))))
@@ -2177,7 +2180,8 @@
                 return this.originalAppendChild(node)
             }
         }
-        document.body.originalAppendChild(pluginMenu)
+        
+        pluginMenu.inject()
 
         originalAddEventListener('mouseover', (event: Event) => {
             mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
