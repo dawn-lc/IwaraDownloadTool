@@ -1068,7 +1068,7 @@
                 editConfig.inject()
             })
 
-            let baseButtons = [injectCheckboxButton, manualDownloadButton, settingsButton]
+            let baseButtons = [manualDownloadButton, settingsButton]
 
             let selectAllButton = this.button('selectAll', (name, event) => {
                 document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1094,7 +1094,7 @@
                     close: true
                 }).showToast()
             })
-            let selectButtons = [selectAllButton, reverseSelectButton, deselectButton, downloadSelectedButton]
+            let selectButtons = [injectCheckboxButton, selectAllButton, reverseSelectButton, deselectButton, downloadSelectedButton]
 
             let downloadThisButton = this.button('downloadThis', async (name, event) => {
                 let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
