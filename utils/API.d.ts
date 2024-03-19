@@ -1,5 +1,4 @@
 
-
 interface Date{
     format(format?: string): String;
 }
@@ -159,6 +158,7 @@ interface VideoAPIRawData {
     deletedAt: string | null;
     fileUrl: string;
 }
+
 namespace Aria2 {
     interface Uri {
         uri: string;

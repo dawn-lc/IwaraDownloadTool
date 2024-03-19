@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2021",
-    "module": "system",
+    "module": "System",
     "alwaysStrict": false,
     "esModuleInterop": true, 
     "forceConsistentCasingInFileNames": true,
@@ -9,6 +9,8 @@
     "skipLibCheck": true,
     "strictNullChecks": false,
     "removeComments": true,
+    "moduleResolution": "node",
+    "newLine": "crlf",
     "outFile": "temp/main.js"
   },
   "include": [
