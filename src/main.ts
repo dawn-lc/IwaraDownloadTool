@@ -1035,7 +1035,7 @@
         private button(name: string, click?: (name: string, e: Event) => void) {
             return renderNode(prune({
                 nodeType: 'li',
-                childs: '%#name#%',
+                childs: `%#${name}#%`,
                 events: {
                     click: (event: Event) => {
                         click(name, event)
@@ -2180,7 +2180,7 @@
                 return this.originalAppendChild(node)
             }
         }
-        
+
         pluginMenu.inject()
 
         originalAddEventListener('mouseover', (event: Event) => {
