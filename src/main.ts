@@ -245,8 +245,13 @@
         ForumThread = 'forumThread',
         Page = 'page',
         Home = 'home',
-        Profile = 'profile'
+        Profile = 'profile',
+        Subscriptions = 'subscriptions',
+        Playlist = 'playlist',
+        Favorites = 'favorites',
+        Account = 'account'
     }
+
     enum ToastType {
         Log,
         Info,
@@ -1015,22 +1020,7 @@
                 },
                 childs: this.interfacePage
             }) as HTMLElement
-            new MutationObserver((mutationsList) => {
-                for (let mutation of mutationsList) {
-                    if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
-                        continue;
-                    }
-                    let pages = ([...mutation.addedNodes] as Element[]).filter(i => i.classList.contains('page'))
-                    if (pages.length === 0) {
-                        continue;
-                    }
-                    let page = pages.find(i => isElement(i) && i.classList.length > 1)
-                    if (!page) {
-                        continue;
-                    }
-                    this.pageChange(page.classList[1].split('-').pop() as PageType)
-                }
-            }).observe(document.getElementById('app'), { childList: true, subtree: true });
+
         }
         private button(name: string, click?: (name: string, e: Event) => void) {
             return renderNode(prune({
@@ -1050,6 +1040,14 @@
                 this.interfacePage.removeChild(this.interfacePage.firstChild)
             }
 
+            let manualDownloadButton = this.button('manualDownload', (name, event) => {
+                addDownloadTask()
+            })
+            let settingsButton = this.button('settings', (name, event) => {
+                editConfig.inject()
+            })
+            let baseButtons = [manualDownloadButton, settingsButton]
+
             let injectCheckboxButton = this.button('injectCheckbox', (name, event) => {
                 if (document.querySelector('.selectButton')) {
                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1061,15 +1059,6 @@
                     })
                 }
             })
-            let manualDownloadButton = this.button('manualDownload', (name, event) => {
-                addDownloadTask()
-            })
-            let settingsButton = this.button('settings', (name, event) => {
-                editConfig.inject()
-            })
-
-            let baseButtons = [manualDownloadButton, settingsButton]
-
             let selectAllButton = this.button('selectAll', (name, event) => {
                 document.querySelectorAll('.selectButton').forEach((element) => {
                     let button = element as HTMLInputElement
@@ -1117,6 +1106,10 @@
                 case PageType.Profile:
                 case PageType.Home:
                 case PageType.VideoList:
+                case PageType.Subscriptions:
+                case PageType.Playlist:
+                case PageType.Favorites:
+                case PageType.Account:
                     selectButtons.map(i => this.interfacePage.originalAppendChild(i))
                     baseButtons.map(i => this.interfacePage.originalAppendChild(i))
                     break;
@@ -1133,6 +1126,22 @@
         }
         public inject() {
             if (!document.querySelector('#pluginMenu')) {
+                new MutationObserver((mutationsList) => {
+                    for (let mutation of mutationsList) {
+                        if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
+                            continue;
+                        }
+                        let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
+                        if (pages.length < 1) {
+                            continue;
+                        }
+                        let page = pages.find(i => i.classList.length > 1)
+                        if (!page) {
+                            continue;
+                        }
+                        this.pageChange(page.classList[1].split('-').pop() as PageType)
+                    }
+                }).observe(document.getElementById('app'), { childList: true, subtree: true });
                 document.body.originalAppendChild(this.interface)
                 this.pageChange(PageType.Page)
             }
@@ -2181,7 +2190,12 @@
             }
         }
 
-        pluginMenu.inject()
+        new MutationObserver((m, o) => {
+            if (m.some(m => m.type === 'childList' && document.getElementById('app'))) {
+                pluginMenu.inject()
+                o.disconnect()
+            }
+        }).observe(document.body, { childList: true, subtree: true })
 
         originalAddEventListener('mouseover', (event: Event) => {
             mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
@@ -2195,7 +2209,6 @@
                 button && e.preventDefault()
             }
         })
-
 
         newToast(
             ToastType.Info,
