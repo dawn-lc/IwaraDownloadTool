@@ -1025,11 +1025,11 @@
                     if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
                         continue;
                     }
-                    let pages = ([...mutation.addedNodes] as Element[]).filter(i => i.classList.contains('page'))
-                    if (pages.length === 0) {
+                    let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
+                    if (pages.length < 1) {
                         continue;
                     }
-                    let page = pages.find(i => isElement(i) && i.classList.length > 1)
+                    let page = pages.find(i => i.classList.length > 1)
                     if (!page) {
                         continue;
                     }
