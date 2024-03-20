@@ -1020,22 +1020,7 @@
                 },
                 childs: this.interfacePage
             }) as HTMLElement
-            new MutationObserver((mutationsList) => {
-                for (let mutation of mutationsList) {
-                    if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
-                        continue;
-                    }
-                    let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
-                    if (pages.length < 1) {
-                        continue;
-                    }
-                    let page = pages.find(i => i.classList.length > 1)
-                    if (!page) {
-                        continue;
-                    }
-                    this.pageChange(page.classList[1].split('-').pop() as PageType)
-                }
-            }).observe(document.getElementById('app'), { childList: true, subtree: true });
+
         }
         private button(name: string, click?: (name: string, e: Event) => void) {
             return renderNode(prune({
@@ -1141,6 +1126,22 @@
         }
         public inject() {
             if (!document.querySelector('#pluginMenu')) {
+                new MutationObserver((mutationsList) => {
+                    for (let mutation of mutationsList) {
+                        if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
+                            continue;
+                        }
+                        let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
+                        if (pages.length < 1) {
+                            continue;
+                        }
+                        let page = pages.find(i => i.classList.length > 1)
+                        if (!page) {
+                            continue;
+                        }
+                        this.pageChange(page.classList[1].split('-').pop() as PageType)
+                    }
+                }).observe(document.getElementById('app'), { childList: true, subtree: true });
                 document.body.originalAppendChild(this.interface)
                 this.pageChange(PageType.Page)
             }
