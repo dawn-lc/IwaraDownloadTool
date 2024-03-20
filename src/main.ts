@@ -245,8 +245,13 @@
         ForumThread = 'forumThread',
         Page = 'page',
         Home = 'home',
-        Profile = 'profile'
+        Profile = 'profile',
+        Subscriptions = 'subscriptions',
+        Playlist = 'playlist',
+        Favorites = 'favorites',
+        Account = 'account'
     }
+
     enum ToastType {
         Log,
         Info,
@@ -1050,6 +1055,14 @@
                 this.interfacePage.removeChild(this.interfacePage.firstChild)
             }
 
+            let manualDownloadButton = this.button('manualDownload', (name, event) => {
+                addDownloadTask()
+            })
+            let settingsButton = this.button('settings', (name, event) => {
+                editConfig.inject()
+            })
+            let baseButtons = [manualDownloadButton, settingsButton]
+
             let injectCheckboxButton = this.button('injectCheckbox', (name, event) => {
                 if (document.querySelector('.selectButton')) {
                     document.querySelectorAll('.selectButton').forEach((element) => {
@@ -1061,15 +1074,6 @@
                     })
                 }
             })
-            let manualDownloadButton = this.button('manualDownload', (name, event) => {
-                addDownloadTask()
-            })
-            let settingsButton = this.button('settings', (name, event) => {
-                editConfig.inject()
-            })
-
-            let baseButtons = [manualDownloadButton, settingsButton]
-
             let selectAllButton = this.button('selectAll', (name, event) => {
                 document.querySelectorAll('.selectButton').forEach((element) => {
                     let button = element as HTMLInputElement
@@ -1117,6 +1121,10 @@
                 case PageType.Profile:
                 case PageType.Home:
                 case PageType.VideoList:
+                case PageType.Subscriptions:
+                case PageType.Playlist:
+                case PageType.Favorites:
+                case PageType.Account:
                     selectButtons.map(i => this.interfacePage.originalAppendChild(i))
                     baseButtons.map(i => this.interfacePage.originalAppendChild(i))
                     break;
