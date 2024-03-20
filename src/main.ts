@@ -2189,7 +2189,12 @@
             }
         }
 
-        pluginMenu.inject()
+        new MutationObserver((m, o) => {
+            if (m.some(m => m.type === 'childList' && document.getElementById('app'))) {
+                pluginMenu.inject()
+                o.disconnect()
+            }
+        }).observe(document.body, { childList: true, subtree: true })
 
         originalAddEventListener('mouseover', (event: Event) => {
             mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
@@ -2203,7 +2208,6 @@
                 button && e.preventDefault()
             }
         })
-
 
         newToast(
             ToastType.Info,
