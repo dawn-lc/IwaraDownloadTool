@@ -1020,7 +1020,6 @@
                 },
                 childs: this.interfacePage
             }) as HTMLElement
-
         }
         private button(name: string, click?: (name: string, e: Event) => void) {
             return renderNode(prune({
@@ -1457,7 +1456,14 @@
                 }
             }
         }
-        return originalFetch(input, init)
+        return new Promise((resolve, reject) => {
+            originalFetch(input, init).then((response) => {
+                //todo 处理
+                resolve(response)
+            }).catch((err) => {
+                reject(err)
+            })
+        }) as Promise<Response>
     }
     unsafeWindow.fetch = modifyFetch
 
@@ -2039,7 +2045,7 @@
             }
             // 仅支持路径最后一组[]中包含%#ID#%的路径
             // todo: 支持自定义提取ID表达式
-            let videoID: string = analyzeLocalPath(file.path).filename.toLowerCase().match(/\[([^\[\]]*)\](?=[^\[]*$)/g).pop()?.trimHead('[').trimTail(']');
+            let videoID: string = analyzeLocalPath(file?.path)?.filename?.toLowerCase()?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
             if (isNull(videoID) || videoID.isEmpty()) {
                 GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
                 continue
