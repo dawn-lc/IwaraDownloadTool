@@ -914,8 +914,10 @@
                 })).json()
                 if (this.VideoInfoSource.id === undefined) {
                     let cache = await db.videos.where('ID').equals(this.ID).toArray()
-                    if (cache.any() || (!isNull(this.Alias) && !this.Alias.isEmpty())) { 
+                    if (cache.any()) { 
                         Object.assign(this, cache.pop())
+                    }
+                    if (!isNull(this.Alias) && !this.Alias.isEmpty()) {
                         let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                         if (!cdnCache.any()) {
                             [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`author:${this.Alias}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')].map(async i => {
@@ -924,7 +926,7 @@
                             })
                         }
                         cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
-                        if (cdnCache.any()) { 
+                        if (cdnCache.any()) {
                             let toast = newToast(
                                 ToastType.Warn,
                                 {
