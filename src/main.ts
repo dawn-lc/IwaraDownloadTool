@@ -358,13 +358,17 @@
             this.items[key] = value
         }
         public del(key: string): void {
-            delete this.items[key.toLowerCase()]
+            if (this.has(key)) {
+                delete this.items[key]
+            } else if (this.has(key.toLowerCase())) {
+                delete this.items[key.toLowerCase()]
+            }
         }
         public get(key: string): T | undefined {
-            return this.has(key.toLowerCase()) ? this.items[key.toLowerCase()] : undefined
+            return this.has(key) ? this.items[key] : this.has(key.toLowerCase()) ? this.items[key.toLowerCase()] : undefined
         }
         public has(key: string): boolean {
-            return this.items.hasOwnProperty(key.toLowerCase())
+            return this.items.hasOwnProperty(key) || this.items.hasOwnProperty(key.toLowerCase())
         }
         public get size(): number {
             return originalObject.keys(this.items).length
