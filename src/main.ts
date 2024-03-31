@@ -928,11 +928,10 @@
                             title: this.Name
                         })
                         for (const key in query) {
-                            let result = [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')]
-                            await result.forEach(async i => {
+                            for (let i of [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')]) {
                                 let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
                                 await db.caches.put((i as HTMLLinkElement).href, imgID)
-                            })
+                            }
                         }
                     }
                     cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
