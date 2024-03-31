@@ -1038,12 +1038,10 @@
         constructor() {
             super("VideoDatabase");
             this.version(1).stores({
-                videos: 'ID'
-            });
-            this.videos = this.table("videos");
-            this.version(1).stores({
+                videos: 'ID',
                 caches: 'ID'
             });
+            this.videos = this.table("videos");
             this.caches = this.table("caches");
         }
     }
