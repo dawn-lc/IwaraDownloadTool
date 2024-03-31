@@ -908,7 +908,7 @@
         async init(ID: string) {
             try {
                 config.authorization = `Bearer ${await refreshToken()}`
-                this.ID = ID.toLowerCase()
+                this.ID = ID
                 this.VideoInfoSource = await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
                 })).json()
@@ -917,38 +917,43 @@
                     if (cache.any()) { 
                         Object.assign(this, cache.pop())
                     }
-                    if (!isNull(this.Alias) && !this.Alias.isEmpty()) {
-                        let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
-                        if (!cdnCache.any()) {
-                            [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`author:${this.Alias}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')].map(async i => {
-                                let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.toLowerCase().split('/')?.pop()?.trimTail('.jpg')
+                    let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                    if (!cdnCache.any()) {
+                        let query = prune({
+                            author: this.Alias ?? this.Author,
+                            title: this.Name
+                        })
+                        for (const key in query) {
+                            let result = [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')]
+                            await result.forEach(async i => {
+                                let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
                                 await db.caches.put((i as HTMLLinkElement).href, imgID)
                             })
                         }
-                        cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
-                        if (cdnCache.any()) {
-                            let toast = newToast(
-                                ToastType.Warn,
-                                {
-                                    node:
-                                        toastNode([
-                                            `${this.Name}[${this.ID}] %#parsingFailed#%`,
-                                            { nodeType: 'br' },
-                                            `%#cdnCacheFinded#%`
-                                        ], '%#createTask#%'),
-                                    onClick() {
-                                        GM_openInTab(cdnCache.pop(), { active: false, insert: true, setParent: true })
-                                        toast.hideToast()
-                                    },
-                                }
-                            )
-                            toast.showToast()
-                            let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
-                            button && button.checked && button.click()
-                            selectList.del(this.ID)
-                            this.State = false
-                            return this
-                        }
+                    }
+                    cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                    if (cdnCache.any()) {
+                        let toast = newToast(
+                            ToastType.Warn,
+                            {
+                                node:
+                                    toastNode([
+                                        `${this.Name}[${this.ID}] %#parsingFailed#%`,
+                                        { nodeType: 'br' },
+                                        `%#cdnCacheFinded#%`
+                                    ], '%#createTask#%'),
+                                onClick() {
+                                    GM_openInTab(cdnCache.pop(), { active: false, insert: true, setParent: true })
+                                    toast.hideToast()
+                                },
+                            }
+                        )
+                        toast.showToast()
+                        let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                        button && button.checked && button.click()
+                        selectList.del(this.ID)
+                        this.State = false
+                        return this
                     }
                     throw new Error(i18n[language()].parsingFailed.toString())
                 }
@@ -1482,7 +1487,7 @@
                 authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
             } else {
                 for (const key in init.headers) {
-                    if (key.toLocaleLowerCase() === "authorization") {
+                    if (key.toLowerCase() === "authorization") {
                         authorization = init.headers[key]
                         break
                     }
@@ -1548,7 +1553,7 @@
         let data = prompt(i18n[language()].manualDownloadTips.toString(), '')
         if (!isNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<string>()
-            data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).prune().map(ID => IDList.set(ID, '手动解析'))
+            data.split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).prune().map(ID => IDList.set(ID, '手动解析'))
             analyzeDownloadTask(IDList)
         }
     }
@@ -2090,7 +2095,7 @@
             }
             // 仅支持路径最后一组[]中包含%#ID#%的路径
             // todo: 支持自定义提取ID表达式
-            let videoID: string = analyzeLocalPath(file?.path)?.filename?.toLowerCase()?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
+            let videoID: string = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
             if (isNull(videoID) || videoID.isEmpty()) {
                 GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
                 continue
@@ -2131,7 +2136,7 @@
 
     }
     function injectCheckbox(element: Element, compatible: boolean) {
-        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toLowerCase().toURL().pathname.split('/')[2]
+        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
         let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
         node.originalAppendChild(renderNode({
