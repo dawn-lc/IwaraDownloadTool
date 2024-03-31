@@ -2113,7 +2113,7 @@
             'files',
             'errorCode',
             'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task).toLowerCase()).filter(Boolean)
+        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
 
         let active = await aria2API('aria2.tellActive', [[
             'gid',
