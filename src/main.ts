@@ -403,7 +403,7 @@
             autoFollow: '自动关注选中的视频作者',
             autoLike: '自动点赞选中的视频',
             checkDownloadLink: '高画质下载连接检查',
-            checkPrioritySource: '源画质检查',
+            checkPriority: '源画质检查',
             autoInjectCheckbox: '自动注入选择框',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
             browserDownloadNotEnabled: `未启用下载功能！`,
@@ -447,6 +447,7 @@
             ],
             tryRestartingDownload: '→ 点击此处重新下载 ←',
             tryReparseDownload: '→ 点击此处重新解析 ←',
+            cdnCacheFinded: '→ 进入 MMD Fans 缓存页面 ←',
             openVideoLink: '→ 进入视频页面 ←',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
@@ -548,7 +549,8 @@
         autoLike: boolean
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
-        checkPrioritySource: boolean
+        checkPriority: boolean
+        downloadPriority: string
         downloadType: DownloadType
         downloadPath: string
         downloadProxy: string
@@ -565,7 +567,8 @@
             this.autoLike = false
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
-            this.checkPrioritySource = true
+            this.checkPriority = true
+            this.downloadPriority = 'Source'
             this.downloadType = DownloadType.Others
             this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4'
             this.downloadProxy = ''
@@ -575,8 +578,9 @@
             this.iwaraDownloaderToken = ''
             this.priority = {
                 'Source': 100,
-                '540': 2,
-                '360': 1
+                '540': 99,
+                '360': 98,
+                'preview': 1
             }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
@@ -694,7 +698,7 @@
                             this.switchButton('checkDownloadLink'),
                             this.switchButton('autoFollow'),
                             this.switchButton('autoLike'),
-                            this.switchButton('checkPrioritySource'),
+                            this.switchButton('checkPriority'),
                             this.switchButton('autoInjectCheckbox'),
                             this.downloadTypeSelect(),
                             this.interfacePage
@@ -902,13 +906,46 @@
         async init(ID: string) {
             try {
                 config.authorization = `Bearer ${await refreshToken()}`
-                this.ID = ID.toLocaleLowerCase()
+                this.ID = ID.toLowerCase()
                 this.VideoInfoSource = await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
                 })).json()
                 if (this.VideoInfoSource.id === undefined) {
                     let cache = await db.videos.where('ID').equals(this.ID).toArray()
-                    if (cache.any()) Object.assign(this, cache.pop())
+                    if (cache.any()) { 
+                        Object.assign(this, cache.pop())
+                        let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                        if (!cdnCache.any()) {
+                            [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`author:${this.Alias}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')].map(async i => {
+                                let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.toLowerCase().split('/')?.pop()?.trimTail('.jpg')
+                                await db.caches.put((i as HTMLLinkElement).href, imgID)
+                            })
+                        }
+                        cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                        if (cdnCache.any()) { 
+                            let toast = newToast(
+                                ToastType.Warn,
+                                {
+                                    node:
+                                        toastNode([
+                                            `${this.Name}[${this.ID}] %#parsingFailed#%`,
+                                            { nodeType: 'br' },
+                                            `%#cdnCacheFinded#%`
+                                        ], '%#createTask#%'),
+                                    onClick() {
+                                        GM_openInTab(cdnCache.pop(), { active: false, insert: true, setParent: true })
+                                        toast.hideToast()
+                                    },
+                                }
+                            )
+                            toast.showToast()
+                            let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                            button && button.checked && button.click()
+                            selectList.del(this.ID)
+                            this.State = false
+                            return this
+                        }
+                    }
                     throw new Error(i18n[language()].parsingFailed.toString())
                 }
                 this.Name = ((this.VideoInfoSource.title ?? this.Name).normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(128)
@@ -997,14 +1034,20 @@
     }
     class Database extends Dexie {
         videos: Dexie.Table<VideoInfo, string>;
+        caches: Dexie.Table<string, string>;
         constructor() {
             super("VideoDatabase");
             this.version(1).stores({
                 videos: 'ID'
             });
             this.videos = this.table("videos");
+            this.version(1).stores({
+                caches: 'ID'
+            });
+            this.caches = this.table("caches");
         }
     }
+    
     class menu {
         source: menu
         interface: HTMLElement
@@ -1678,7 +1721,7 @@
             toast.showToast()
             return
         }
-        if (config.checkPrioritySource && videoInfo.DownloadQuality != 'Source') {
+        if (config.checkPriority && videoInfo.DownloadQuality != 'Source') {
             let toast = newToast(
                 ToastType.Warn,
                 {
