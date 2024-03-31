@@ -301,12 +301,12 @@
                     switch (message.type) {
                         case MessageType.Set:
                             this.dictionary.set(message.data.key, message.data.value as T)
-                            let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            let selectButtonA = document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonA)) selectButtonA.checked = true
                             break
                         case MessageType.Del:
                             this.dictionary.del(message.data.key)
-                            let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            let selectButtonB = document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false
                             break
                         default:
@@ -358,13 +358,13 @@
             this.items[key] = value
         }
         public del(key: string): void {
-            delete this.items[key]
+            delete this.items[key.toLowerCase()]
         }
         public get(key: string): T | undefined {
-            return this.has(key) ? this.items[key] : undefined
+            return this.has(key.toLowerCase()) ? this.items[key.toLowerCase()] : undefined
         }
         public has(key: string): boolean {
-            return this.items.hasOwnProperty(key)
+            return this.items.hasOwnProperty(key.toLowerCase())
         }
         public get size(): number {
             return originalObject.keys(this.items).length
@@ -949,7 +949,7 @@
                             }
                         )
                         toast.showToast()
-                        let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                        let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
                         button && button.checked && button.click()
                         selectList.del(this.ID)
                         this.State = false
@@ -1033,7 +1033,7 @@
                     }
                 )
                 toast.showToast()
-                let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
                 button && button.checked && button.click()
                 selectList.del(this.ID)
                 this.State = false
@@ -1569,24 +1569,26 @@
         })
         start.showToast()
         if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
-            let completed = (await aria2API('aria2.tellStopped', [0, 2048, [
+            let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
                 'gid',
                 'status',
                 'files',
                 'errorCode',
                 'bittorrent'
             ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
-            for (let key of list.keys().intersect(completed)) {
-                let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
+            let listData = list.keys().map(i => i.toLowerCase())
+            let completedData = completed.map(i => i.toLowerCase())
+            for (let key of listData.intersect(completedData)) {
+                let button = document.querySelector(`.selectButton[videoid*="${key}"i]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.del(key)
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
         for (let key of list.keys()) {
-            let videoInfo = await (new VideoInfo(list[key])).init(key)
+            let button = document.querySelector(`.selectButton[videoid*="${key}"i]`) as HTMLInputElement
+            let videoInfo = await (new VideoInfo(button?.getAttribute('videoname') ?? list.get(key) ?? key, button?.getAttribute('videoalias'), button?.getAttribute('videoauthor'))).init(list.get(key))
             videoInfo.State && await pustDownloadTask(videoInfo)
-            let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
             button && button.checked && button.click()
             list.del(key)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
@@ -2105,13 +2107,13 @@
         return null
     }
     async function aria2TaskCheck() {
-        let completed = (await aria2API('aria2.tellStopped', [0, 2048, [
+        let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
             'gid',
             'status',
             'files',
             'errorCode',
             'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task).toLowerCase()).filter(Boolean)
 
         let active = await aria2API('aria2.tellActive', [[
             'gid',
@@ -2126,7 +2128,7 @@
             const task = needRestart[index]
             let videoID = aria2TaskExtractVideoID(task)
             if (!isNull(videoID) && !videoID.isEmpty()) {
-                if (!completed.includes(videoID)) {
+                if (!completed.includes(videoID.toLowerCase())) {
                     let videoInfo = await (new VideoInfo(videoID)).init(videoID)
                     videoInfo.State && await pustDownloadTask(videoInfo)
                 }
@@ -2138,14 +2140,18 @@
     function injectCheckbox(element: Element, compatible: boolean) {
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
         let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
+        let Alias = element.querySelector('a.username').getAttribute('title')
+        let Author = (element.querySelector('a.username') as HTMLLinkElement).href.toURL().pathname.split('/').pop()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
         node.originalAppendChild(renderNode({
             nodeType: 'input',
             attributes: originalObject.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
-                type: 'checkbox',
-                videoID: ID,
-                videoName: Name
+                    type: 'checkbox',
+                    videoID: ID,
+                    videoName: Name,
+                    videoAlias: Alias,
+                    videoAuthor: Author
             }),
             className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
             events: {
