@@ -899,8 +899,10 @@
         Comments: string
         DownloadQuality: string
         DownloadUrl: string
-        constructor(Name: string) {
+        constructor(Name: string, Alias?: string, Author?: string) {
             this.Name = Name
+            this.Alias = Alias
+            this.Author = Author
             return this
         }
         async init(ID: string) {
@@ -912,7 +914,7 @@
                 })).json()
                 if (this.VideoInfoSource.id === undefined) {
                     let cache = await db.videos.where('ID').equals(this.ID).toArray()
-                    if (cache.any()) { 
+                    if (cache.any() || (!isNull(this.Alias) && !this.Alias.isEmpty())) { 
                         Object.assign(this, cache.pop())
                         let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                         if (!cdnCache.any()) {
