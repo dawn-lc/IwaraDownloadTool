@@ -885,7 +885,7 @@
         public inject() {
             if (!document.querySelector('#pluginConfig')) {
                 document.body.originalAppendChild(this.interface)
-                this.pageChange()
+                this.configChange('downloadType')
             }
         }
     }
