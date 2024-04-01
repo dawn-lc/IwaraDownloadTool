@@ -436,7 +436,11 @@
             injectCheckbox: '开关选择',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
-            notice: ['新增下载画质选择功能，开启后输入画质名称脚本会检查是否存在指定的画质是否可以下载，关闭后将默认下载最高画质。',{nodeType:'br'},'新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'],
+            notice: [
+                '新增下载画质选择功能，开启后输入画质名称脚本会检查是否存在指定的画质是否可以下载，关闭后将默认下载最高画质。',
+                {nodeType:'br'},
+                '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
+            ],
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
@@ -2291,7 +2295,8 @@
                 node: toastNode([
                     `加载完成`,
                     { nodeType: 'br' },
-                    `公告: %#notice#%`
+                    `公告: `,
+                    ...i18n[language()].notice as RenderCode[]
                 ]),
                 duration: 10000,
                 gravity: 'bottom',
