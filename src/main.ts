@@ -390,6 +390,7 @@
         public zh: { [key: string]: RenderCode | RenderCode[] } = {
             appName: 'Iwara 批量下载工具',
             language: '语言: ',
+            downloadPriority: '下载画质: ',
             downloadPath: '下载到: ',
             downloadProxy: '下载代理: ',
             aria2Path: 'Aria2 RPC: ',
@@ -643,7 +644,6 @@
         target: Config
         interface: HTMLElement
         interfacePage: HTMLElement
-
         constructor(config: Config) {
             this.target = config
             this.target.configChange = (item: string) => { this.configChange.call(this, item) }
@@ -716,6 +716,7 @@
                     save
                 ]
             }) as HTMLElement
+            
         }
         private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
             let button = renderNode({
@@ -810,7 +811,10 @@
             switch (item) {
                 case 'downloadType':
                     (this.interface.querySelector(`[name=${item}]`) as HTMLSelectElement).selectedIndex = Number(this.target.downloadType)
-                    this.downloadTypeChange()
+                    this.pageChange()
+                    break
+                case 'checkPriority':
+                    this.pageChange()
                     break
                 default:
                     let element = this.interface.querySelector(`[name=${item}]`) as HTMLInputElement
@@ -833,7 +837,7 @@
                     break
             }
         }
-        private downloadTypeChange() {
+        private pageChange() {
             while (this.interfacePage.hasChildNodes()) {
                 this.interfacePage.removeChild(this.interfacePage.firstChild)
             }
@@ -860,7 +864,7 @@
             let BrowserConfigInput = [
                 variableInfo,
                 renderNode(this.inputComponent('downloadPath'))
-            ]
+            ]   
             if (this.target.checkPriority) {
                 this.interfacePage.originalAppendChild(renderNode(this.inputComponent('downloadPriority')))
             }
@@ -881,7 +885,7 @@
         public inject() {
             if (!document.querySelector('#pluginConfig')) {
                 document.body.originalAppendChild(this.interface)
-                this.configChange('downloadType')
+                this.pageChange()
             }
         }
     }
