@@ -16,13 +16,6 @@ body:
         required: true
       - label: 我正在使用最新版的脚本
         required: false
-  - type: textarea
-    id: describe
-    attributes:
-      label: 描述你的建议
-      description: 简要描述你的建议
-    validations:
-      required: true
   - type: dropdown
     id: browsers
     attributes:
@@ -52,6 +45,13 @@ body:
     attributes:
       label: 脚本的版本是？
       placeholder: 例如3.1.1
+    validations:
+      required: true
+  - type: textarea
+    id: describe
+    attributes:
+      label: 描述你的建议
+      description: 简要描述你的建议
     validations:
       required: true
   - type: textarea
