@@ -1,7 +1,7 @@
-name: 咨询
-description: 询问如何使用，对当前提供的功能存在困惑等
-title: "[Question]: "
-labels: ["咨询"]
+name: 提出建议
+description: 提出对脚本的建议。
+title: "[Suggest]: "
+labels: ["增强"]
 assignees:
   - dawn-lc
 body:
@@ -57,9 +57,9 @@ body:
   - type: textarea
     id: others
     attributes:
-      label: 建议/需求的具体描述
+      label: 建议的具体描述
       description: |
         相关的信息？链接？参考资料？
-        任何能让我们对你所提出的建议/需求有更多了解的东西。
+        任何能让我们对你所提出的建议有更多了解的东西。
     validations:
       required: false
