@@ -974,6 +974,7 @@
                     }
                     throw new Error(i18n[language()].parsingFailed.toString())
                 }
+                this.ID = VideoInfoSource.id
                 this.Title = ((VideoInfoSource.title ?? this.Title).normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(128)
                 this.External = !isNull(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
                 
