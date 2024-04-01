@@ -614,7 +614,7 @@
             })
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name} old: ${getString(old_value)} new: ${getString(new_value)}`)
+                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name}`)//old: ${getString(old_value)} new: ${getString(new_value)}
                     if (remote && !isNull(body.configChange)) body.configChange(name)
                 })
             })
