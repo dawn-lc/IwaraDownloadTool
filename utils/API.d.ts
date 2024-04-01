@@ -50,7 +50,11 @@ type RenderCode = string | Node | Element | {
     className?: string | string[];
     childs?: RenderCode | RenderCode[];
 }
-
+interface PieceInfo {
+    Title?: string;
+    Alias?: string;
+    Author?: string;
+}
 interface LocalPath {
     [key: string]: any;
     fullPath: string;

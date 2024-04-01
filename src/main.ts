@@ -301,12 +301,12 @@
                     switch (message.type) {
                         case MessageType.Set:
                             this.dictionary.set(message.data.key, message.data.value as T)
-                            let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            let selectButtonA = document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonA)) selectButtonA.checked = true
                             break
                         case MessageType.Del:
                             this.dictionary.del(message.data.key)
-                            let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            let selectButtonB = document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false
                             break
                         default:
@@ -358,13 +358,17 @@
             this.items[key] = value
         }
         public del(key: string): void {
-            delete this.items[key]
+            if (this.has(key)) {
+                delete this.items[key]
+            } else if (this.has(key.toLowerCase())) {
+                delete this.items[key.toLowerCase()]
+            }
         }
         public get(key: string): T | undefined {
-            return this.has(key) ? this.items[key] : undefined
+            return this.has(key) ? this.items[key] : this.has(key.toLowerCase()) ? this.items[key.toLowerCase()] : undefined
         }
         public has(key: string): boolean {
-            return this.items.hasOwnProperty(key)
+            return this.items.hasOwnProperty(key) || this.items.hasOwnProperty(key.toLowerCase())
         }
         public get size(): number {
             return originalObject.keys(this.items).length
@@ -379,12 +383,14 @@
             return this.keys().map(k => { return { key: k, value: this.items[k] } })
         }
     }
+
     class I18N {
         [key: string]: { [key: string]: RenderCode | RenderCode[] }
         public zh_CN = this['zh']
         public zh: { [key: string]: RenderCode | RenderCode[] } = {
             appName: 'Iwara 批量下载工具',
             language: '语言: ',
+            downloadPriority: '下载画质: ',
             downloadPath: '下载到: ',
             downloadProxy: '下载代理: ',
             aria2Path: 'Aria2 RPC: ',
@@ -403,7 +409,7 @@
             autoFollow: '自动关注选中的视频作者',
             autoLike: '自动点赞选中的视频',
             checkDownloadLink: '高画质下载连接检查',
-            checkPrioritySource: '源画质检查',
+            checkPriority: '下载画质检查',
             autoInjectCheckbox: '自动注入选择框',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
             browserDownloadNotEnabled: `未启用下载功能！`,
@@ -431,7 +437,11 @@
             injectCheckbox: '开关选择',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
-            notice: '重构以及调整配置界面，新增自动点赞功能，因存在违规风险，该功能默认关闭！如需使用请手动开启，你已经被警告过了！',
+            notice: [
+                '新增下载画质选择功能，开启后输入画质名称脚本会检查是否存在指定的画质是否可以下载，关闭后将默认下载最高画质。',
+                {nodeType:'br'},
+                '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
+            ],
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
@@ -447,6 +457,7 @@
             ],
             tryRestartingDownload: '→ 点击此处重新下载 ←',
             tryReparseDownload: '→ 点击此处重新解析 ←',
+            cdnCacheFinded: '→ 进入 MMD Fans 缓存页面 ←',
             openVideoLink: '→ 进入视频页面 ←',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
@@ -454,7 +465,7 @@
             createTask: '创建任务',
             downloadPathError: '下载路径错误!',
             browserDownloadModeError: '请启用脚本管理器的浏览器API下载模式!',
-            downloadQualityError: '无原画下载地址!',
+            downloadQualityError: '未找到指定的画质下载地址!',
             findedDownloadLink: '发现疑似高画质下载连接!',
             allCompleted: '全部解析完成！',
             parsingProgress: '解析进度: ',
@@ -548,7 +559,8 @@
         autoLike: boolean
         autoInjectCheckbox: boolean
         checkDownloadLink: boolean
-        checkPrioritySource: boolean
+        checkPriority: boolean
+        downloadPriority: string
         downloadType: DownloadType
         downloadPath: string
         downloadProxy: string
@@ -565,7 +577,8 @@
             this.autoLike = false
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
-            this.checkPrioritySource = true
+            this.checkPriority = true
+            this.downloadPriority = 'Source'
             this.downloadType = DownloadType.Others
             this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4'
             this.downloadProxy = ''
@@ -575,8 +588,9 @@
             this.iwaraDownloaderToken = ''
             this.priority = {
                 'Source': 100,
-                '540': 2,
-                '360': 1
+                '540': 99,
+                '360': 98,
+                'preview': 1
             }
             let body = new Proxy(this, {
                 get: function (target, property: string) {
@@ -600,7 +614,7 @@
             })
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name} old: ${getString(old_value)} new: ${getString(new_value)}`)
+                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name}`)//old: ${getString(old_value)} new: ${getString(new_value)}
                     if (remote && !isNull(body.configChange)) body.configChange(name)
                 })
             })
@@ -630,7 +644,6 @@
         target: Config
         interface: HTMLElement
         interfacePage: HTMLElement
-
         constructor(config: Config) {
             this.target = config
             this.target.configChange = (item: string) => { this.configChange.call(this, item) }
@@ -694,8 +707,8 @@
                             this.switchButton('checkDownloadLink'),
                             this.switchButton('autoFollow'),
                             this.switchButton('autoLike'),
-                            this.switchButton('checkPrioritySource'),
                             this.switchButton('autoInjectCheckbox'),
+                            this.switchButton('checkPriority'),
                             this.downloadTypeSelect(),
                             this.interfacePage
                         ]
@@ -703,6 +716,7 @@
                     save
                 ]
             }) as HTMLElement
+            
         }
         private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
             let button = renderNode({
@@ -797,7 +811,10 @@
             switch (item) {
                 case 'downloadType':
                     (this.interface.querySelector(`[name=${item}]`) as HTMLSelectElement).selectedIndex = Number(this.target.downloadType)
-                    this.downloadTypeChange()
+                    this.pageChange()
+                    break
+                case 'checkPriority':
+                    this.pageChange()
                     break
                 default:
                     let element = this.interface.querySelector(`[name=${item}]`) as HTMLInputElement
@@ -820,7 +837,7 @@
                     break
             }
         }
-        private downloadTypeChange() {
+        private pageChange() {
             while (this.interfacePage.hasChildNodes()) {
                 this.interfacePage.removeChild(this.interfacePage.firstChild)
             }
@@ -847,7 +864,10 @@
             let BrowserConfigInput = [
                 variableInfo,
                 renderNode(this.inputComponent('downloadPath'))
-            ]
+            ]   
+            if (this.target.checkPriority) {
+                this.interfacePage.originalAppendChild(renderNode(this.inputComponent('downloadPriority')))
+            }
             switch (this.target.downloadType) {
                 case DownloadType.Aria2:
                     downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
@@ -874,7 +894,7 @@
     class VideoInfo {
         ID: string
         UploadTime: Date
-        Name: string | null
+        Title: string | null
         FileName: string
         Size: number
         Tags: Array<{
@@ -888,57 +908,102 @@
         Author: string
         AuthorID: string
         Private: boolean
-        VideoInfoSource: VideoAPIRawData
-        VideoFileSource: VideoFileAPIRawDataList
+        DownloadQuality: string
         External: boolean
+        ExternalUrl: string
         State: boolean
         Comments: string
-        DownloadQuality: string
         DownloadUrl: string
-        constructor(Name: string) {
-            this.Name = Name
+        constructor(info?: PieceInfo) {
+            if(!isNull(info)) {
+                if(!isNull(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
+                if(!isNull(info.Alias) && !info.Alias.isEmpty())  this.Alias = info.Alias
+                if(!isNull(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
+            }
             return this
         }
         async init(ID: string) {
             try {
                 config.authorization = `Bearer ${await refreshToken()}`
-                this.ID = ID.toLocaleLowerCase()
-                this.VideoInfoSource = await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
+                this.ID = ID
+                let VideoInfoSource: VideoAPIRawData = await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
                 })).json()
-                if (this.VideoInfoSource.id === undefined) {
+                
+                if (VideoInfoSource.id === undefined) {
                     let cache = await db.videos.where('ID').equals(this.ID).toArray()
-                    if (cache.any()) Object.assign(this, cache.pop())
+                    if (cache.any()) { 
+                        Object.assign(this, cache.pop())
+                    }
+                    let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                    if (!cdnCache.any()) {
+                        let query = prune({
+                            author: this.Alias ?? this.Author,
+                            title: this.Title
+                        })
+                        for (const key in query) {
+                            for (let i of [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')]) {
+                                let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
+                                await db.caches.put((i as HTMLLinkElement).href, imgID)
+                            }
+                        }
+                    }
+                    cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                    if (cdnCache.any()) {
+                        let toast = newToast(
+                            ToastType.Warn,
+                            {
+                                node:
+                                    toastNode([
+                                        `${this.Title}[${this.ID}] %#parsingFailed#%`,
+                                        { nodeType: 'br' },
+                                        `%#cdnCacheFinded#%`
+                                    ], '%#createTask#%'),
+                                onClick() {
+                                    GM_openInTab(cdnCache.pop(), { active: false, insert: true, setParent: true })
+                                    toast.hideToast()
+                                },
+                            }
+                        )
+                        toast.showToast()
+                        let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
+                        button && button.checked && button.click()
+                        selectList.del(this.ID)
+                        this.State = false
+                        return this
+                    }
                     throw new Error(i18n[language()].parsingFailed.toString())
                 }
-                this.Name = ((this.VideoInfoSource.title ?? this.Name).normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(128)
-                this.External = !isNull(this.VideoInfoSource.embedUrl) && !this.VideoInfoSource.embedUrl.isEmpty()
+                this.ID = VideoInfoSource.id
+                this.Title = ((VideoInfoSource.title ?? this.Title).normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(128)
+                this.External = !isNull(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
+                
                 if (this.External) {
+                    this.ExternalUrl = VideoInfoSource.embedUrl
                     throw new Error(i18n[language()].externalVideo.toString())
                 }
-                this.AuthorID = this.VideoInfoSource.user.id
-                this.Following = this.VideoInfoSource.user.following
-                this.Liked = this.VideoInfoSource.liked
-                this.Friend = this.VideoInfoSource.user.friend
-                this.Private = this.VideoInfoSource.private
-                this.Alias = this.VideoInfoSource.user.name
-                this.Author = this.VideoInfoSource.user.username.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
-                this.UploadTime = new Date(this.VideoInfoSource.createdAt)
-                this.Tags = this.VideoInfoSource.tags
-                this.FileName = this.VideoInfoSource.file.name.replace(/^\.|[\\\\/:*?\"<>|]/img, '_')
-                this.Size = this.VideoInfoSource.file.size
-                this.VideoFileSource = (await (await fetch(this.VideoInfoSource.fileUrl, { headers: await getAuth(this.VideoInfoSource.fileUrl) })).json() as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
-                if (isNull(this.VideoFileSource) || !(this.VideoFileSource instanceof Array) || this.VideoFileSource.length < 1) {
+
+                this.AuthorID = VideoInfoSource.user.id
+                this.Following = VideoInfoSource.user.following
+                this.Liked = VideoInfoSource.liked
+                this.Friend = VideoInfoSource.user.friend
+                this.Private = VideoInfoSource.private
+                this.Alias = VideoInfoSource.user.name
+                this.Author = VideoInfoSource.user.username
+                this.UploadTime = new Date(VideoInfoSource.createdAt)
+                this.Tags = VideoInfoSource.tags
+                this.FileName = VideoInfoSource.file.name
+                this.Size = VideoInfoSource.file.size
+                let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
+                if (isNull(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
                     throw new Error(i18n[language()].getVideoSourceFailed.toString())
                 }
-                this.DownloadQuality = this.VideoFileSource[0].name
-
-                let fileList = this.VideoFileSource.filter(x => x.name === this.DownloadQuality)
+                this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
+                let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
                 if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
                 let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
                 if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
                 this.DownloadUrl = decodeURIComponent(`https:${Source}`)
-                
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
                     return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as VideoCommentAPIRawData
                 }
@@ -959,7 +1024,7 @@
                     comments.append(replies)
                     return comments.prune()
                 }
-                this.Comments = `${this.VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
+                this.Comments = `${VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 this.State = true
                 await db.videos.put(this)
                 return this
@@ -970,24 +1035,24 @@
                     {
                         node:
                             toastNode([
-                                `${this.Name}[${this.ID}] %#parsingFailed#%`,
+                                `${this.Title}[${this.ID}] %#parsingFailed#%`,
                                 { nodeType: 'br' },
                                 `${getString(error)}`,
                                 { nodeType: 'br' },
                                 this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
                             ], '%#createTask#%'),
-                        onClick() {
+                            async onClick() {
                             if (data.External) {
-                                GM_openInTab(data.VideoInfoSource.embedUrl, { active: false, insert: true, setParent: true })
+                                GM_openInTab(data.ExternalUrl, { active: false, insert: true, setParent: true })
                             } else {
-                                analyzeDownloadTask(new Dictionary<string>([{ key: data.ID, value: data.Name }]))
+                                await pustDownloadTask(await new VideoInfo(data).init(data.ID))
                             }
                             toast.hideToast()
                         },
                     }
                 )
                 toast.showToast()
-                let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
                 button && button.checked && button.click()
                 selectList.del(this.ID)
                 this.State = false
@@ -997,14 +1062,18 @@
     }
     class Database extends Dexie {
         videos: Dexie.Table<VideoInfo, string>;
+        caches: Dexie.Table<string, string>;
         constructor() {
             super("VideoDatabase");
-            this.version(1).stores({
-                videos: 'ID'
+            this.version(2).stores({
+                videos: 'ID',
+                caches: 'ID'
             });
             this.videos = this.table("videos");
+            this.caches = this.table("caches");
         }
     }
+    
     class menu {
         source: menu
         interface: HTMLElement
@@ -1020,7 +1089,6 @@
                 },
                 childs: this.interfacePage
             }) as HTMLElement
-
         }
         private button(name: string, click?: (name: string, e: Event) => void) {
             return renderNode(prune({
@@ -1087,8 +1155,8 @@
 
             let downloadThisButton = this.button('downloadThis', async (name, event) => {
                 let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
-                let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent ?? '未获取到标题'
-                let videoInfo = await (new VideoInfo(Title)).init(ID)
+                let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent
+                let videoInfo = await (new VideoInfo(prune({Title:Title,}))).init(ID)
                 videoInfo.State && await pustDownloadTask(videoInfo)
             })
 
@@ -1421,7 +1489,7 @@
     var i18n = new I18N()
     var config = new Config()
     var db = new Database();
-    var selectList = new SyncDictionary<string>('selectList')
+    var selectList = new SyncDictionary<PieceInfo>('selectList')
     var editConfig = new configEdit(config)
     var pluginMenu = new menu()
 
@@ -1438,7 +1506,7 @@
                 authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
             } else {
                 for (const key in init.headers) {
-                    if (key.toLocaleLowerCase() === "authorization") {
+                    if (key.toLowerCase() === "authorization") {
                         authorization = init.headers[key]
                         break
                     }
@@ -1457,7 +1525,14 @@
                 }
             }
         }
-        return originalFetch(input, init)
+        return new Promise((resolve, reject) => {
+            originalFetch(input, init).then((response) => {
+                //todo 处理
+                resolve(response)
+            }).catch((err) => {
+                reject(err)
+            })
+        }) as Promise<Response>
     }
     unsafeWindow.fetch = modifyFetch
 
@@ -1496,12 +1571,12 @@
     async function addDownloadTask() {
         let data = prompt(i18n[language()].manualDownloadTips.toString(), '')
         if (!isNull(data) && !(data.isEmpty())) {
-            let IDList = new Dictionary<string>()
-            data.toLowerCase().split('|').map(ID => ID.match(/((?<=(\[)).*?(?=(\])))/g)?.pop() ?? ID.match(/((?<=(\_)).*?(?=(\_)))/g)?.pop() ?? ID).prune().map(ID => IDList.set(ID, '手动解析'))
+            let IDList = new Dictionary<PieceInfo>()
+            data.split('|').map(ID => IDList.set(ID, {}))
             analyzeDownloadTask(IDList)
         }
     }
-    async function analyzeDownloadTask(list: IDictionary<string> = selectList) {
+    async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         let size = list.size
         let node = renderNode({
             nodeType: 'p',
@@ -1513,24 +1588,26 @@
         })
         start.showToast()
         if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
-            let completed = (await aria2API('aria2.tellStopped', [0, 2048, [
+            let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
                 'gid',
                 'status',
                 'files',
                 'errorCode',
                 'bittorrent'
             ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
-            for (let key of list.keys().intersect(completed)) {
-                let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
+            let listData = list.keys().map(i => i.toLowerCase())
+            let completedData = completed.map(i => i.toLowerCase())
+            for (let key of listData.intersect(completedData)) {
+                let button = document.querySelector(`.selectButton[videoid*="${key}"i]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.del(key)
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
         for (let key of list.keys()) {
-            let videoInfo = await (new VideoInfo(list[key])).init(key)
+            let button = document.querySelector(`.selectButton[videoid*="${key}"i]`) as HTMLInputElement
+            let videoInfo = await (new VideoInfo(list.get(key))).init(key)
             videoInfo.State && await pustDownloadTask(videoInfo)
-            let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
             button && button.checked && button.click()
             list.del(key)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
@@ -1652,14 +1729,14 @@
             if ((await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
                 method: 'POST',
                 headers: await getAuth()
-            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoLikeFailed#%`, close: true }).showToast()
+            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
         }
         if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
             let toast = newToast(
                 ToastType.Warn,
                 {
                     node: toastNode([
-                        `${videoInfo.Name}[${videoInfo.ID}] %#findedDownloadLink#%`,
+                        `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
                         { nodeType: 'br' },
                         `%#openVideoLink#%`
                     ], '%#createTask#%'),
@@ -1672,17 +1749,17 @@
             toast.showToast()
             return
         }
-        if (config.checkPrioritySource && videoInfo.DownloadQuality != 'Source') {
+        if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
             let toast = newToast(
                 ToastType.Warn,
                 {
                     node: toastNode([
-                        `${videoInfo.Name}[${videoInfo.ID}] %#downloadQualityError#%`,
+                        `${videoInfo.Title}[${videoInfo.ID}] %#downloadQualityError#%`,
                         { nodeType: 'br' },
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
-                    onClick() {
-                        analyzeDownloadTask(new Dictionary<string>([{ key: videoInfo.ID, value: videoInfo.Name }]))
+                    async onClick() {
+                        await pustDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
                         toast.hideToast()
                     }
                 }
@@ -1872,10 +1949,10 @@
             newToast(
                 ToastType.Info,
                 {
-                    node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
+                    node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
     }
     function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         (async function (videoInfo: VideoInfo) {
@@ -1887,7 +1964,7 @@
                     'token': config.iwaraDownloaderToken,
                     'data': {
                         'info': {
-                            'name': videoInfo.Name,
+                            'name': videoInfo.Title,
                             'url': videoInfo.DownloadUrl,
                             'size': videoInfo.Size,
                             'source': videoInfo.ID,
@@ -1902,7 +1979,7 @@
                                     UploadTime: videoInfo.UploadTime,
                                     AUTHOR: videoInfo.Author,
                                     ID: videoInfo.ID,
-                                    TITLE: videoInfo.Name,
+                                    TITLE: videoInfo.Title,
                                     ALIAS: videoInfo.Alias,
                                     QUALITY: videoInfo.DownloadQuality
                                 }
@@ -1916,11 +1993,11 @@
                 }))
             })).json()
             if (r.code === 0) {
-                console.log(`${videoInfo.Name} %#pushTaskSucceed#% ${r}`)
+                console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
                 newToast(
                     ToastType.Info,
                     {
-                        node: toastNode(`${videoInfo.Name}[${videoInfo.ID}] %#pushTaskSucceed#%`)
+                        node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                     }
                 ).showToast()
             } else {
@@ -1928,7 +2005,7 @@
                     ToastType.Error,
                     {
                         node: toastNode([
-                            `${videoInfo.Name}[${videoInfo.ID}] %#pushTaskFailed#% `,
+                            `${videoInfo.Title}[${videoInfo.ID}] %#pushTaskFailed#% `,
                             { nodeType: 'br' },
                             r.msg
                         ], '%#iwaraDownloaderDownload#%'),
@@ -1956,7 +2033,7 @@
             ).trim()).filename
             DownloadUrl.searchParams.set('download', filename)
             GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
     }
     function browserDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
@@ -1984,8 +2061,8 @@
                             { nodeType: 'br' },
                             `%#tryRestartingDownload#%`
                         ], '%#browserDownload#%'),
-                        onClick() {
-                            analyzeDownloadTask(new Dictionary<string>([{ key: ID, value: Name }]))
+                        async onClick() {
+                            await pustDownloadTask(videoInfo)
                             toast.hideToast()
                         }
                     }
@@ -2009,7 +2086,7 @@
                 onerror: (err) => browserDownloadError(err),
                 ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
             })
-        }(videoInfo.ID, videoInfo.Author, videoInfo.Name, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
+        }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
     }
     async function aria2API(method: string, params: any) {
         return await (await fetch(config.aria2Path, {
@@ -2039,7 +2116,7 @@
             }
             // 仅支持路径最后一组[]中包含%#ID#%的路径
             // todo: 支持自定义提取ID表达式
-            let videoID: string = analyzeLocalPath(file.path).filename.toLowerCase().match(/\[([^\[\]]*)\](?=[^\[]*$)/g).pop()?.trimHead('[').trimTail(']');
+            let videoID: string = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
             if (isNull(videoID) || videoID.isEmpty()) {
                 GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
                 continue
@@ -2049,13 +2126,13 @@
         return null
     }
     async function aria2TaskCheck() {
-        let completed = (await aria2API('aria2.tellStopped', [0, 2048, [
+        let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
             'gid',
             'status',
             'files',
             'errorCode',
             'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
 
         let active = await aria2API('aria2.tellActive', [[
             'gid',
@@ -2070,8 +2147,9 @@
             const task = needRestart[index]
             let videoID = aria2TaskExtractVideoID(task)
             if (!isNull(videoID) && !videoID.isEmpty()) {
-                if (!completed.includes(videoID)) {
-                    let videoInfo = await (new VideoInfo(videoID)).init(videoID)
+                if (!completed.includes(videoID.toLowerCase())) {
+                    let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
+                    let videoInfo = await (new VideoInfo(cache)).init(videoID)
                     videoInfo.State && await pustDownloadTask(videoInfo)
                 }
                 await aria2API('aria2.forceRemove', [task.gid])
@@ -2080,21 +2158,29 @@
 
     }
     function injectCheckbox(element: Element, compatible: boolean) {
-        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toLowerCase().toURL().pathname.split('/')[2]
-        let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
+        let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
+        let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title').trim()
+        let Alias = element.querySelector('a.username')?.getAttribute('title')
+        let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
         node.originalAppendChild(renderNode({
             nodeType: 'input',
             attributes: originalObject.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
-                type: 'checkbox',
-                videoID: ID,
-                videoName: Name
+                    type: 'checkbox',
+                    videoID: ID,
+                    videoName: Name,
+                    videoAlias: Alias,
+                    videoAuthor: Author
             }),
             className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
             events: {
                 click: (event: Event) => {
-                    (event.target as HTMLInputElement).checked ? selectList.set(ID, Name) : selectList.del(ID)
+                    (event.target as HTMLInputElement).checked ? selectList.set(ID, {
+                        Title: Name,
+                        Alias: Alias,
+                        Author: Author
+                    }) : selectList.del(ID)
                     event.stopPropagation()
                     event.stopImmediatePropagation()
                     return false
@@ -2216,7 +2302,8 @@
                 node: toastNode([
                     `加载完成`,
                     { nodeType: 'br' },
-                    `公告: %#notice#%`
+                    `公告: `,
+                    ...i18n[language()].notice as RenderCode[]
                 ]),
                 duration: 10000,
                 gravity: 'bottom',

@@ -16,6 +16,8 @@
 // @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.user.js
 // @connect           iwara.tv
 // @connect           *.iwara.tv
+// @connect           mmdfans.net
+// @connect           *.mmdfans.net
 // @connect           localhost
 // @connect           127.0.0.1
 // @connect           *
