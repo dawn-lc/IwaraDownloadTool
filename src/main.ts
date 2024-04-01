@@ -408,7 +408,7 @@
             autoFollow: '自动关注选中的视频作者',
             autoLike: '自动点赞选中的视频',
             checkDownloadLink: '高画质下载连接检查',
-            checkPriority: '源画质检查',
+            checkPriority: '下载画质检查',
             autoInjectCheckbox: '自动注入选择框',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
             browserDownloadNotEnabled: `未启用下载功能！`,
@@ -436,7 +436,7 @@
             injectCheckbox: '开关选择',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
-            notice: '重构以及调整配置界面，新增自动点赞功能，因存在违规风险，该功能默认关闭！如需使用请手动开启，你已经被警告过了！',
+            notice: ['新增下载画质选择功能，开启后输入画质名称脚本会检查是否存在指定的画质是否可以下载，关闭后将默认下载最高画质。',{nodeType:'br'},'新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'],
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: '手动下载需要您提供视频ID!',
@@ -703,8 +703,8 @@
                             this.switchButton('checkDownloadLink'),
                             this.switchButton('autoFollow'),
                             this.switchButton('autoLike'),
-                            this.switchButton('checkPriority'),
                             this.switchButton('autoInjectCheckbox'),
+                            this.switchButton('checkPriority'),
                             this.downloadTypeSelect(),
                             this.interfacePage
                         ]
@@ -857,6 +857,9 @@
                 variableInfo,
                 renderNode(this.inputComponent('downloadPath'))
             ]
+            if (this.target.checkPriority) {
+                this.interfacePage.originalAppendChild(renderNode(this.inputComponent('downloadPriority')))
+            }
             switch (this.target.downloadType) {
                 case DownloadType.Aria2:
                     downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
