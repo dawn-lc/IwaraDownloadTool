@@ -1045,7 +1045,7 @@
                             if (data.External) {
                                 GM_openInTab(data.ExternalUrl, { active: false, insert: true, setParent: true })
                             } else {
-                                await pustDownloadTask(data)
+                                await pustDownloadTask(await new VideoInfo(data).init(data.ID))
                             }
                             toast.hideToast()
                         },
@@ -1759,7 +1759,7 @@
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     async onClick() {
-                        await pustDownloadTask(videoInfo)
+                        await pustDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
                         toast.hideToast()
                     }
                 }
