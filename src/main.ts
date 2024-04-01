@@ -2159,9 +2159,9 @@
     }
     function injectCheckbox(element: Element, compatible: boolean) {
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-        let Name = element.querySelector('.videoTeaser__title').getAttribute('title').trim()
-        let Alias = element.querySelector('a.username').getAttribute('title')
-        let Author = (element.querySelector('a.username') as HTMLLinkElement).href.toURL().pathname.split('/').pop()
+        let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title').trim()
+        let Alias = element.querySelector('a.username')?.getAttribute('title')
+        let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
         node.originalAppendChild(renderNode({
             nodeType: 'input',
