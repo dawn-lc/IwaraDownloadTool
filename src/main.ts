@@ -914,10 +914,12 @@
         State: boolean
         Comments: string
         DownloadUrl: string
-        constructor(info: PieceInfo) {
-            if(!isNull(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
-            if(!isNull(info.Alias) && !info.Alias.isEmpty())  this.Alias = info.Alias
-            if(!isNull(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
+        constructor(info?: PieceInfo) {
+            if(!isNull(info)) {
+                if(!isNull(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
+                if(!isNull(info.Alias) && !info.Alias.isEmpty())  this.Alias = info.Alias
+                if(!isNull(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
+            }
             return this
         }
         async init(ID: string) {
