@@ -937,9 +937,6 @@
                     }
                     let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                     if (!cdnCache.any()) {
-                        if ((await fetch(`https://mmdfans.net/assets/thumb/${this.ID}.jpg`)).ok) {
-
-                        }
                         let query = prune({
                             author: this.Alias ?? this.Author,
                             title: this.Title
