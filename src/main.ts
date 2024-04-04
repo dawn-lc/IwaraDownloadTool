@@ -301,12 +301,12 @@
                     switch (message.type) {
                         case MessageType.Set:
                             this.dictionary.set(message.data.key, message.data.value as T)
-                            let selectButtonA = document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
+                            let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
                             if (!isNull(selectButtonA)) selectButtonA.checked = true
                             break
                         case MessageType.Del:
                             this.dictionary.del(message.data.key)
-                            let selectButtonB = document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
+                            let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false
                             break
                         default:
@@ -966,7 +966,7 @@
                             }
                         )
                         toast.showToast()
-                        let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
+                        let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
                         button && button.checked && button.click()
                         selectList.del(this.ID)
                         this.State = false
@@ -1054,7 +1054,7 @@
                     }
                 )
                 toast.showToast()
-                let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
+                let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 selectList.del(this.ID)
                 this.State = false
@@ -1600,14 +1600,14 @@
             let listData = list.keys().map(i => i.toLowerCase())
             let completedData = completed.map(i => i.toLowerCase())
             for (let key of listData.intersect(completedData)) {
-                let button = document.querySelector(`.selectButton[videoid*="${key}"i]`) as HTMLInputElement
+                let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.del(key)
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
         for (let key of list.keys()) {
-            let button = document.querySelector(`.selectButton[videoid*="${key}"i]`) as HTMLInputElement
+            let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
             let videoInfo = await (new VideoInfo(list.get(key))).init(key)
             videoInfo.State && await pustDownloadTask(videoInfo)
             button && button.checked && button.click()
