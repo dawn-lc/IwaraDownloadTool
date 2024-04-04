@@ -937,6 +937,9 @@
                     }
                     let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                     if (!cdnCache.any()) {
+                        if ((await fetch(`https://mmdfans.net/assets/thumb/${this.ID}.jpg`)).ok) {
+
+                        }
                         let query = prune({
                             author: this.Alias ?? this.Author,
                             title: this.Title
@@ -977,12 +980,6 @@
                 this.ID = VideoInfoSource.id
                 this.Title = ((VideoInfoSource.title ?? this.Title).normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(128)
                 this.External = !isNull(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
-                
-                if (this.External) {
-                    this.ExternalUrl = VideoInfoSource.embedUrl
-                    throw new Error(i18n[language()].externalVideo.toString())
-                }
-
                 this.AuthorID = VideoInfoSource.user.id
                 this.Following = VideoInfoSource.user.following
                 this.Liked = VideoInfoSource.liked
@@ -992,18 +989,8 @@
                 this.Author = VideoInfoSource.user.username
                 this.UploadTime = new Date(VideoInfoSource.createdAt)
                 this.Tags = VideoInfoSource.tags
-                this.FileName = VideoInfoSource.file.name
-                this.Size = VideoInfoSource.file.size
-                let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
-                if (isNull(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
-                    throw new Error(i18n[language()].getVideoSourceFailed.toString())
-                }
-                this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
-                let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
-                if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
-                let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-                if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
-                this.DownloadUrl = decodeURIComponent(`https:${Source}`)
+
+
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<VideoCommentAPIRawData> => {
                     return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as VideoCommentAPIRawData
                 }
@@ -1025,29 +1012,47 @@
                     return comments.prune()
                 }
                 this.Comments = `${VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
-                this.State = true
+
                 await db.videos.put(this)
+
+                if (this.External) {
+                    this.ExternalUrl = VideoInfoSource.embedUrl
+                    throw new Error(i18n[language()].externalVideo.toString())
+                }
+                this.FileName = VideoInfoSource.file.name
+                this.Size = VideoInfoSource.file.size
+                let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as VideoFileAPIRawData[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
+                if (isNull(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
+                    throw new Error(i18n[language()].getVideoSourceFailed.toString())
+                }
+                this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
+                let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
+                if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
+                let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
+                if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
+                this.DownloadUrl = decodeURIComponent(`https:${Source}`)
+                
+                this.State = true
                 return this
             } catch (error) {
                 let data = this
                 let toast = newToast(
                     ToastType.Error,
                     {
-                        node:
-                            toastNode([
-                                `${this.Title}[${this.ID}] %#parsingFailed#%`,
-                                { nodeType: 'br' },
-                                `${getString(error)}`,
-                                { nodeType: 'br' },
-                                this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
-                            ], '%#createTask#%'),
-                            async onClick() {
+                        node: toastNode([
+                            `${this.Title}[${this.ID}] %#parsingFailed#%`,
+                            { nodeType: 'br' },
+                            `${getString(error)}`,
+                            { nodeType: 'br' },
+                            this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
+                        ], '%#createTask#%'),
+                        async onClick() {
+                            toast.hideToast()
                             if (data.External) {
                                 GM_openInTab(data.ExternalUrl, { active: false, insert: true, setParent: true })
                             } else {
-                                await pustDownloadTask(await new VideoInfo(data).init(data.ID))
+                                pustDownloadTask(await new VideoInfo(data).init(data.ID))
                             }
-                            toast.hideToast()
                         },
                     }
                 )
@@ -1759,8 +1764,8 @@
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     async onClick() {
-                        await pustDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
                         toast.hideToast()
+                        await pustDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
                     }
                 }
             )
@@ -2062,8 +2067,8 @@
                             `%#tryRestartingDownload#%`
                         ], '%#browserDownload#%'),
                         async onClick() {
-                            await pustDownloadTask(videoInfo)
                             toast.hideToast()
+                            await pustDownloadTask(videoInfo)
                         }
                     }
                 )
