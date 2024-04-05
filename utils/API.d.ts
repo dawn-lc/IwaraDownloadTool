@@ -1,5 +1,5 @@
 
-interface Date{
+interface Date {
     format(format?: string): String;
 }
 interface String {
@@ -14,17 +14,6 @@ interface String {
     trimTail(suffix: string): string;
 }
 
-interface IDictionary<T> {
-    [key: string]: any
-    set(key: string, value: T): void;
-    get(key: string): T | undefined;
-    has(key: string): boolean;
-    del(key: string): void;
-    get size(): number;
-    keys(): string[];
-    values(): T[];
-    toArray(): Array<{ key: string, value: T }>;
-}
 
 interface IChannelMessage<T> {
     id: string;
@@ -42,6 +31,19 @@ interface Array<T> {
     complement(that: Array<T>): Array<T>;
     difference(that: Array<T>): Array<T>;
 }
+
+interface IDictionary<T> {
+    [key: string]: any
+    set(key: string, value: T): void;
+    get(key: string): T | undefined;
+    has(key: string): boolean;
+    del(key: string): void;
+    get size(): number;
+    keys(): string[];
+    values(): T[];
+    toArray(): Array<{ key: string, value: T }>;
+}
+
 
 type RenderCode = string | Node | Element | {
     nodeType: string;
@@ -67,10 +69,6 @@ interface Node {
     originalInsertBefore<T extends Node>(node: T, child: Node): T
 }
 
-interface Position {
-    X: number;
-    Y: number;
-}
 
 interface DownloadTask {
     id: string;
@@ -92,75 +90,6 @@ interface LogCode {
     title?: RenderCode;
     wait?: boolean;
     id?: string;
-}
-
-
-type VideoFileAPIRawDataList = VideoFileAPIRawData[];
-interface VideoFileAPIRawData {
-    id: string;
-    name: string;
-    src: {
-        view: string;
-        download: string;
-    };
-    createdAt: string;
-    updatedAt: string;
-    type: string;
-}
-
-interface VideoCommentAPIRawData {
-    count: number;
-    limit: number;
-    page: number;
-    results: Array<{
-        id: string;
-        body: string;
-        numReplies: number;
-        user: {
-            id: string;
-            name: string;
-            username: string;
-        };
-    }>;
-}
-
-interface VideoAPIRawData {
-    id: string;
-    title: string;
-    body: string;
-    status: string;
-    rating: string;
-    embedUrl: string;
-    private: boolean;
-    unlisted: boolean;
-    liked: boolean;
-    numComments: number;
-    file: {
-        id: string;
-        type: string;
-        path: string;
-        name: string;
-        mime: string;
-        size: number;
-        createdAt: string;
-        updatedAt: string;
-    };
-    user: {
-        id: string;
-        name: string;
-        username: string;
-        followedBy: boolean,
-        following: boolean,
-        friend: boolean,
-    };
-    tags: Array<{
-        id: string;
-        type: string;
-    }>;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt: string | null;
-    fileUrl: string;
 }
 
 namespace Aria2 {
@@ -204,6 +133,112 @@ namespace Aria2 {
         verifyIntegrityPending: string;
     }
 }
+
+
+namespace IwaraAPI {
+    interface Avatar {
+        id: string
+        type: string
+        path: string
+        name: string
+        mime: string
+        size: number
+        width?: number
+        height?: number
+        duration: null
+        numThumbnails: null
+        animatedPreview: boolean
+        createdAt: string
+        updatedAt: string
+    }
+    interface User {
+        id: string
+        name: string
+        username: string
+        status: string
+        role: string
+        followedBy: boolean
+        following: boolean
+        friend: boolean
+        premium: boolean
+        locale: null
+        seenAt: string
+        avatar?: Avatar
+        createdAt: string
+        updatedAt: string
+    }
+    interface File {
+        id: string
+        type: string
+        path: string
+        name: string
+        mime: string
+        size: number
+        width: number | null
+        height: number | null
+        duration: number
+        numThumbnails: number
+        animatedPreview: boolean
+        createdAt: string
+        updatedAt: string
+    }
+    interface Tag {
+        id: string
+        type: string
+    }
+    interface Page{
+        count: number
+        limit: number
+        page: number
+        results: IResult[]
+    }
+    
+    interface IResult {
+        id: string
+        createdAt: string
+        updatedAt: string
+        user: User
+    }
+
+    interface Comment extends IResult{
+        body: string
+        numReplies: number
+        parent: null
+        videoId: string
+    }
+    interface Video extends IResult {
+        slug: string
+        title: string
+        body: null
+        status: string
+        rating: string
+        private: boolean
+        unlisted: boolean
+        thumbnail: number
+        embedUrl: string | null
+        liked: boolean
+        numLikes: number
+        numViews: number
+        numComments: number
+        file: File
+        customThumbnail: any
+        tags: Tag[]
+        fileUrl: string
+    }
+    
+    interface Source {
+        id: string
+        name: string
+        src: {
+            view: string
+            download: string
+        }
+        createdAt: string
+        updatedAt: string
+        type: string
+    }
+}
+
 
 
 type ErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';
