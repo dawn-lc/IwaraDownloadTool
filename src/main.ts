@@ -902,7 +902,7 @@
         Title: string | null
         FileName: string
         Size: number
-        Tags: Array<IwaraAPI.Tag>
+        Tags: Array<Iwara.Tag>
         Liked: boolean
         Following: boolean
         Friend: boolean
@@ -924,13 +924,13 @@
             }
             return this
         }
-        async init(ID: string, InfoSource?: IwaraAPI.Video) {
+        async init(ID: string, InfoSource?: Iwara.Video) {
             try {
                 this.ID = ID
                 if (isNull(InfoSource)){
                     config.authorization = `Bearer ${await refreshToken()}`
                 }
-                let VideoInfoSource: IwaraAPI.Video = InfoSource ?? await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
+                let VideoInfoSource: Iwara.Video = InfoSource ?? await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
                 })).json()
                 
@@ -990,21 +990,26 @@
                 this.Author = VideoInfoSource.user.username
                 this.UploadTime = new Date(VideoInfoSource.createdAt)
                 this.Tags = VideoInfoSource.tags
+                this.Comments = `${VideoInfoSource.body}\n`
+                this.ExternalUrl = VideoInfoSource.embedUrl
                 await db.videos.put(this)
                 if (!isNull(InfoSource)){
                     return this
                 }
-                const getCommentData = async (commentID: string = null, page: number = 0): Promise<IwaraAPI.Page> => {
-                    return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as IwaraAPI.Page
+                if (this.External) {
+                    throw new Error(i18n[language()].externalVideo.toString())
                 }
-                const getCommentDatas = async (commentID: string = null): Promise<IwaraAPI.Comment[]> => {
-                    let comments: IwaraAPI.Comment[] = []
+                const getCommentData = async (commentID: string = null, page: number = 0): Promise<Iwara.Page> => {
+                    return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
+                }
+                const getCommentDatas = async (commentID: string = null): Promise<Iwara.Comment[]> => {
+                    let comments: Iwara.Comment[] = []
                     let base = await getCommentData(commentID)
-                    comments.append(base.results as IwaraAPI.Comment[])
+                    comments.append(base.results as Iwara.Comment[])
                     for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
-                        comments.append((await getCommentData(commentID, page)).results as IwaraAPI.Comment[])  
+                        comments.append((await getCommentData(commentID, page)).results as Iwara.Comment[])  
                     }
-                    let replies: IwaraAPI.Comment[] = []
+                    let replies: Iwara.Comment[] = []
                     for (let index = 0; index < comments.length; index++) {
                         const comment = comments[index]
                         if (comment.numReplies > 0) {
@@ -1014,14 +1019,10 @@
                     comments.append(replies)
                     return comments.prune()
                 }
-                this.Comments = `${VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
-                if (this.External) {
-                    this.ExternalUrl = VideoInfoSource.embedUrl
-                    throw new Error(i18n[language()].externalVideo.toString())
-                }
+                this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 this.FileName = VideoInfoSource.file.name
                 this.Size = VideoInfoSource.file.size
-                let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as IwaraAPI.Source[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
+                let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNull(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
                     throw new Error(i18n[language()].getVideoSourceFailed.toString())
                 }
@@ -1538,7 +1539,7 @@
                     let path = url.pathname.split('/').slice(1)
                     switch (path[0]) {
                         case 'videos':
-                            ((await response.clone().json() as IwaraAPI.Page).results as IwaraAPI.Video[]).forEach(info => new VideoInfo().init(info.id, info));
+                            ((await response.clone().json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
                             break;
                         default:
                             break;
@@ -2328,7 +2329,7 @@
         ).showToast()
     }
 
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.1.300') === VersionState.low) {
+    if (compareVersions(GM_getValue('version', '0.0.0'), '3.2.5') === VersionState.low) {
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
