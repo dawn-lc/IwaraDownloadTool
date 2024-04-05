@@ -91,7 +91,14 @@
     }
 
     String.prototype.toURL = function () {
-        return new URL(this.toString())
+        let url
+        try {
+            url = new URL(this.toString())
+        } catch (error) {
+            console.log(this.toString())
+            debugger
+        }
+        return url
     }
 
     Array.prototype.append = function (arr) {
