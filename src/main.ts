@@ -1537,7 +1537,7 @@
                     let path = url.pathname.split('/').slice(1)
                     switch (path[0]) {
                         case 'videos':
-                            ((await response.json() as IwaraAPI.Page).results as IwaraAPI.Video[]).forEach(info => new VideoInfo().init(info.id, info));
+                            ((await response.clone().json() as IwaraAPI.Page).results as IwaraAPI.Video[]).forEach(info => new VideoInfo().init(info.id, info));
                             break;
                         default:
                             break;
