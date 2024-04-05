@@ -1736,6 +1736,9 @@
         return Toastify(params)
     }
     async function pustDownloadTask(videoInfo: VideoInfo) {
+        if (!videoInfo.State) {
+            return
+        }
         if (config.autoFollow && !videoInfo.Following) {
             if ((await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                 method: 'POST',
