@@ -91,14 +91,11 @@
     }
 
     String.prototype.toURL = function () {
-        let url
-        try {
-            url = new URL(this.toString())
-        } catch (error) {
-            console.log(this.toString())
-            debugger
+        let URLString = this
+        if (URLString.split('//')[0].isEmpty()){
+            URLString = `${originalWindow.location.protocol}${URLString}`
         }
-        return url
+        return new URL(URLString.toString())
     }
 
     Array.prototype.append = function (arr) {
@@ -928,8 +925,10 @@
         }
         async init(ID: string, InfoSource?: IwaraAPI.Video) {
             try {
-                config.authorization = `Bearer ${await refreshToken()}`
                 this.ID = ID
+                if (isNull(InfoSource)){
+                    config.authorization = `Bearer ${await refreshToken()}`
+                }
                 let VideoInfoSource: IwaraAPI.Video = InfoSource ?? await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
                 })).json()
@@ -991,7 +990,7 @@
                 this.UploadTime = new Date(VideoInfoSource.createdAt)
                 this.Tags = VideoInfoSource.tags
 
-
+               
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<IwaraAPI.Page> => {
                     return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as IwaraAPI.Page
                 }
@@ -1012,7 +1011,10 @@
                     comments.append(replies)
                     return comments.prune()
                 }
-                this.Comments = `${VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
+
+                if (isNull(InfoSource)){
+                    this.Comments = `${VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
+                }
 
                 await db.videos.put(this)
 
