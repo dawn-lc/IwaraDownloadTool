@@ -135,7 +135,7 @@ namespace Aria2 {
 }
 
 
-namespace IwaraAPI {
+namespace Iwara {
     interface Avatar {
         id: string
         type: string
@@ -209,7 +209,7 @@ namespace IwaraAPI {
     interface Video extends IResult {
         slug: string
         title: string
-        body: null
+        body: string | null
         status: string
         rating: string
         private: boolean
