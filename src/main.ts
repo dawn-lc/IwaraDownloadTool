@@ -305,12 +305,12 @@
                     switch (message.type) {
                         case MessageType.Set:
                             this.dictionary.set(message.data.key, message.data.value as T)
-                            let selectButtonA = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            let selectButtonA = document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonA)) selectButtonA.checked = true
                             break
                         case MessageType.Del:
                             this.dictionary.del(message.data.key)
-                            let selectButtonB = document.querySelector(`input.selectButton[videoid="${message.data.key}"]`) as HTMLInputElement
+                            let selectButtonB = document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false
                             break
                         default:
@@ -1057,7 +1057,7 @@
                     }
                 )
                 toast.showToast()
-                let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
                 button && button.checked && button.click()
                 selectList.del(this.ID)
                 this.State = false
