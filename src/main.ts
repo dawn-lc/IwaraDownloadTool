@@ -989,8 +989,10 @@
                 this.Author = VideoInfoSource.user.username
                 this.UploadTime = new Date(VideoInfoSource.createdAt)
                 this.Tags = VideoInfoSource.tags
-
-               
+                await db.videos.put(this)
+                if (!isNull(InfoSource)){
+                    return this
+                }
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<IwaraAPI.Page> => {
                     return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as IwaraAPI.Page
                 }
@@ -1011,13 +1013,7 @@
                     comments.append(replies)
                     return comments.prune()
                 }
-
-                if (isNull(InfoSource)){
-                    this.Comments = `${VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
-                }
-
-                await db.videos.put(this)
-
+                this.Comments = `${VideoInfoSource.body}\n${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 if (this.External) {
                     this.ExternalUrl = VideoInfoSource.embedUrl
                     throw new Error(i18n[language()].externalVideo.toString())
@@ -1034,8 +1030,8 @@
                 let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
                 if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
                 this.DownloadUrl = decodeURIComponent(`https:${Source}`)
-                
                 this.State = true
+                await db.videos.put(this)
                 return this
             } catch (error) {
                 let data = this
