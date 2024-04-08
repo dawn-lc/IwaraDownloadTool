@@ -1589,8 +1589,12 @@
         let data = prompt(i18n[language()].manualDownloadTips.toString(), '')
         if (!isNull(data) && !(data.isEmpty())) {
             let IDList = new Dictionary<PieceInfo>()
-            data.split('|').map(ID => IDList.set(ID, {}))
-            analyzeDownloadTask(IDList)
+            if(data.startsWith('[')) {
+                analyzeDownloadTask(new Dictionary<PieceInfo>(JSON.parse(data)))
+            } else {
+                data.split('|').map(ID => IDList.set(ID, {}))
+                analyzeDownloadTask(IDList)
+            }
         }
     }
     async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
