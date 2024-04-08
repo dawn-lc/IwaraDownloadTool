@@ -1,4 +1,4 @@
-(function () { 
+(function () {
     const originalWindow = unsafeWindow as Window
     //@ts-ignore
     const originalObject = originalWindow.Object as ObjectConstructor
@@ -39,30 +39,29 @@
     Array.prototype.prune = function () {
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
-    Array.prototype.unique = function () {
-        return Array.from(new Set(this))
+    Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {
+        return this.filter((item, index, self) => 
+            index === self.findIndex((t) => (
+                prop ? t[prop] === item[prop] : t === item
+            ))
+        )
     }
-
-    Array.prototype.union = function (that) {
-        return Array.from(new Set([...this, ...that]))
+    Array.prototype.union = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
+        return [...this, ...that].unique(prop)
     }
-
-    Array.prototype.intersect = function (that) {
-        const set = new Set(that)
-        return this.filter(v => set.has(v))
+    Array.prototype.intersect = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
+        return this.filter((item) => 
+            that.some((t) => prop ? t[prop] === item[prop] : t === item)
+        ).unique(prop)
     }
-
-    Array.prototype.difference = function (that) {
-        const set = new Set(that)
-        return this.filter(v => !set.has(v))
+    Array.prototype.difference = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
+        return this.filter((item) => 
+            !that.some((t) => prop ? t[prop] === item[prop] : t === item)
+        ).unique(prop)
     }
-
-    Array.prototype.complement = function (that) {
-        const union = this.union(that)
-        const intersect = this.intersect(that)
-        return union.difference(intersect)
+    Array.prototype.complement = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
+        return this.union(that, prop).difference(this.intersect(that, prop), prop)
     }
-
     String.prototype.isEmpty = function () {
         return !isNull(this) && this.length === 0
     }
@@ -92,7 +91,7 @@
 
     String.prototype.toURL = function () {
         let URLString = this
-        if (URLString.split('//')[0].isEmpty()){
+        if (URLString.split('//')[0].isEmpty()) {
             URLString = `${originalWindow.location.protocol}${URLString}`
         }
         return new URL(URLString.toString())
@@ -442,9 +441,9 @@
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
             notice: [
-                {nodeType:'br'},
+                { nodeType: 'br' },
                 '新增下载画质选择功能，开启后输入画质名称脚本会检查是否存在指定的画质是否可以下载，关闭后将默认下载最高画质。',
-                {nodeType:'br'},
+                { nodeType: 'br' },
                 '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
             ],
             useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
@@ -721,7 +720,7 @@
                     save
                 ]
             }) as HTMLElement
-            
+
         }
         private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
             let button = renderNode({
@@ -869,7 +868,7 @@
             let BrowserConfigInput = [
                 variableInfo,
                 renderNode(this.inputComponent('downloadPath'))
-            ]   
+            ]
             if (this.target.checkPriority) {
                 this.interfacePage.originalAppendChild(renderNode(this.inputComponent('downloadPriority')))
             }
@@ -917,26 +916,26 @@
         Comments: string
         DownloadUrl: string
         constructor(info?: PieceInfo) {
-            if(!isNull(info)) {
-                if(!isNull(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
-                if(!isNull(info.Alias) && !info.Alias.isEmpty())  this.Alias = info.Alias
-                if(!isNull(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
+            if (!isNull(info)) {
+                if (!isNull(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
+                if (!isNull(info.Alias) && !info.Alias.isEmpty()) this.Alias = info.Alias
+                if (!isNull(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
             }
             return this
         }
         async init(ID: string, InfoSource?: Iwara.Video) {
             try {
                 this.ID = ID
-                if (isNull(InfoSource)){
+                if (isNull(InfoSource)) {
                     config.authorization = `Bearer ${await refreshToken()}`
                 }
                 let VideoInfoSource: Iwara.Video = InfoSource ?? await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
                 })).json()
-                
+
                 if (VideoInfoSource.id === undefined) {
                     let cache = await db.videos.where('ID').equals(this.ID).toArray()
-                    if (cache.any()) { 
+                    if (cache.any()) {
                         Object.assign(this, cache.pop())
                     }
                     let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
@@ -993,7 +992,7 @@
                 this.Comments = `${VideoInfoSource.body}\n`
                 this.ExternalUrl = VideoInfoSource.embedUrl
                 await db.videos.put(this)
-                if (!isNull(InfoSource)){
+                if (!isNull(InfoSource)) {
                     return this
                 }
                 if (this.External) {
@@ -1007,7 +1006,7 @@
                     let base = await getCommentData(commentID)
                     comments.append(base.results as Iwara.Comment[])
                     for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
-                        comments.append((await getCommentData(commentID, page)).results as Iwara.Comment[])  
+                        comments.append((await getCommentData(commentID, page)).results as Iwara.Comment[])
                     }
                     let replies: Iwara.Comment[] = []
                     for (let index = 0; index < comments.length; index++) {
@@ -1079,7 +1078,7 @@
             this.caches = this.table("caches");
         }
     }
-    
+
     class menu {
         source: menu
         interface: HTMLElement
@@ -1162,7 +1161,7 @@
             let downloadThisButton = this.button('downloadThis', async (name, event) => {
                 let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
                 let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent
-                let videoInfo = await (new VideoInfo(prune({Title:Title,}))).init(ID)
+                let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
                 videoInfo.State && await pustDownloadTask(videoInfo)
             })
 
@@ -1506,7 +1505,7 @@
     const modifyFetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && console.log(`Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
-        if ( url.hostname.includes('sentry.io')) return undefined
+        if (url.hostname.includes('sentry.io')) return undefined
         if (!isNull(init) && !isNull(init.headers) && !isStringTupleArray(init.headers)) {
             let authorization = null
             if (init.headers instanceof Headers) {
@@ -1586,16 +1585,42 @@
         )
     }
     async function addDownloadTask() {
-        let data = prompt(i18n[language()].manualDownloadTips.toString(), '')
-        if (!isNull(data) && !(data.isEmpty())) {
-            let IDList = new Dictionary<PieceInfo>()
-            if(data.startsWith('[')) {
-                analyzeDownloadTask(new Dictionary<PieceInfo>(JSON.parse(data)))
-            } else {
-                data.split('|').map(ID => IDList.set(ID, {}))
-                analyzeDownloadTask(IDList)
+        let textArea = renderNode({
+            nodeType: "textarea",
+            attributes: {
+                rows: "6",
+                cols: "64"
             }
-        }
+        }) as HTMLTextAreaElement
+        document.body.appendChild(renderNode({
+            nodeType: "div",
+            attributes: {
+                id: "pluginOverlay"
+            },
+            childs: [
+                textArea,
+                {
+                    nodeType: "button",
+                    events: {
+                        click: (e: Event) => {
+                            if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
+                                if ( textArea.value.startsWith('[')) {
+                                    analyzeDownloadTask(new Dictionary(JSON.parse( textArea.value)));
+                                }
+                                else {
+                                    let IDList = new Dictionary();
+                                    textArea.value.split('|').map(ID => IDList.set(ID, {}));
+                                    analyzeDownloadTask(IDList);
+                                }
+                            }
+                            let overlay = document.getElementById("pluginOverlay");
+                            overlay.parentNode.removeChild(overlay);
+                        }
+                    },
+                    childs: "确认"
+                }
+            ]
+        }))
     }
     async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         let size = list.size
@@ -1616,9 +1641,7 @@
                 'errorCode',
                 'bittorrent'
             ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
-            let listData = list.keys().map(i => i.toLowerCase())
-            let completedData = completed.map(i => i.toLowerCase())
-            for (let key of listData.intersect(completedData)) {
+            for (let key of list.keys().intersect(completed)) {
                 let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.del(key)
@@ -2191,11 +2214,11 @@
             nodeType: 'input',
             attributes: originalObject.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
-                    type: 'checkbox',
-                    videoID: ID,
-                    videoName: Name,
-                    videoAlias: Alias,
-                    videoAuthor: Author
+                type: 'checkbox',
+                videoID: ID,
+                videoName: Name,
+                videoAlias: Alias,
+                videoAuthor: Author
             }),
             className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
             events: {

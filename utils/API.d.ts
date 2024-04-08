@@ -22,14 +22,18 @@ interface IChannelMessage<T> {
 }
 
 interface Array<T> {
+    
+}
+interface Array<T> {
     any(): boolean;
     prune(): Array<T>;
     unique(): Array<T>;
     append(arr: Array<T>): void;
-    union(that: Array<T>): Array<T>;
-    intersect(that: Array<T>): Array<T>;
-    complement(that: Array<T>): Array<T>;
-    difference(that: Array<T>): Array<T>;
+    unique(prop?: keyof T): T[];
+    union(that: T[], prop?: keyof T): T[];
+    intersect(that: T[], prop?: keyof T): T[];
+    difference(that: T[], prop?: keyof T): T[];
+    complement(that: T[], prop?: keyof T): T[];
 }
 
 interface IDictionary<T> {
