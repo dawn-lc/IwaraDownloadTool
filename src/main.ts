@@ -1246,7 +1246,7 @@
         }
 
         #pluginMenu {
-            z-index: 2147483645;
+            z-index: 2147483644;
             color: white;
             position: fixed;
             top: 50%;
@@ -1309,7 +1309,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.75);
-            z-index: 2147483647; 
+            z-index: 2147483646; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1414,7 +1414,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(128, 128, 128, 0.8);
-            z-index: 2147483646; 
+            z-index: 2147483645; 
             display: flex;
             flex-direction: column;
             align-items: center;
