@@ -1210,7 +1210,7 @@
                         if (pages.length < 1) {
                             continue;
                         }
-                        if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() !== 'search') {
+                        if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() === 'search') {
                             this.pageChange(PageType.Search)
                             continue;
                         }
