@@ -40,7 +40,7 @@
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
     Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {
-        return this.filter((item, index, self) => 
+        return this.filter((item, index, self) =>
             index === self.findIndex((t) => (
                 prop ? t[prop] === item[prop] : t === item
             ))
@@ -50,12 +50,12 @@
         return [...this, ...that].unique(prop)
     }
     Array.prototype.intersect = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
-        return this.filter((item) => 
+        return this.filter((item) =>
             that.some((t) => prop ? t[prop] === item[prop] : t === item)
         ).unique(prop)
     }
     Array.prototype.difference = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
-        return this.filter((item) => 
+        return this.filter((item) =>
             !that.some((t) => prop ? t[prop] === item[prop] : t === item)
         ).unique(prop)
     }
@@ -252,6 +252,7 @@
         Subscriptions = 'subscriptions',
         Playlist = 'playlist',
         Favorites = 'favorites',
+        Search = 'search',
         Account = 'account'
     }
 
@@ -1176,6 +1177,7 @@
                     selectButtons.map(i => this.interfacePage.originalAppendChild(i))
                     baseButtons.map(i => this.interfacePage.originalAppendChild(i))
                     break
+                case PageType.Search:
                 case PageType.Profile:
                 case PageType.Home:
                 case PageType.VideoList:
@@ -1206,6 +1208,10 @@
                         }
                         let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
                         if (pages.length < 1) {
+                            continue;
+                        }
+                        if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() !== 'search') {
+                            this.pageChange(PageType.Search)
                             continue;
                         }
                         let page = pages.find(i => i.classList.length > 1)
@@ -1604,8 +1610,8 @@
                     events: {
                         click: (e: Event) => {
                             if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
-                                if ( textArea.value.startsWith('[')) {
-                                    analyzeDownloadTask(new Dictionary(JSON.parse( textArea.value)));
+                                if (textArea.value.startsWith('[')) {
+                                    analyzeDownloadTask(new Dictionary(JSON.parse(textArea.value)));
                                 }
                                 else {
                                     let IDList = new Dictionary();
