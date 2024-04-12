@@ -416,7 +416,7 @@
             iwaraDownloaderDownload: 'IwaraDownloader下载',
             autoFollow: '自动关注选中的视频作者',
             autoLike: '自动点赞选中的视频',
-            checkDownloadLink: '高画质下载连接检查',
+            checkDownloadLink: '第三方网盘下载地址检查',
             checkPriority: '下载画质检查',
             autoInjectCheckbox: '自动注入选择框',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
@@ -458,9 +458,9 @@
                 '反馈遇到的BUG、使用问题等请前往: ',
                 {
                     nodeType: 'a',
-                    childs: 'Guthub',
+                    childs: 'Github',
                     attributes: {
-                        href: 'https://github.com/dawn-lc/IwaraDownloadTool/issues/new/choose'
+                        href: 'https://github.com/dawn-lc/IwaraDownloadTool/'
                     }
                 }
             ],
@@ -475,7 +475,7 @@
             downloadPathError: '下载路径错误!',
             browserDownloadModeError: '请启用脚本管理器的浏览器API下载模式!',
             downloadQualityError: '未找到指定的画质下载地址!',
-            findedDownloadLink: '发现疑似高画质下载连接!',
+            findedDownloadLink: '发现疑似第三方网盘下载地址!',
             allCompleted: '全部解析完成！',
             parsingProgress: '解析进度: ',
             manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...',
