@@ -6,13 +6,6 @@
 
     const document = originalWindow.document
 
-    //@ts-ignore
-    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
-    //@ts-ignore
-    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
-        originalAddEventListener.call(this, type, listener, options)
-    }
-
     Node.prototype.originalAppendChild = Node.prototype.appendChild
     const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
@@ -162,8 +155,19 @@
         }
         return true
     }
+    //@ts-ignore
+    if (!isNull(originalWindow.IwaraDownloadTool)) {
+        return
+    }
+    //@ts-ignore
+    originalWindow.IwaraDownloadTool = true
 
-
+    //@ts-ignore
+    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
+    //@ts-ignore
+    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
+        originalAddEventListener.call(this, type, listener, options)
+    }
     const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
         if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
         if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
