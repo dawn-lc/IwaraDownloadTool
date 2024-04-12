@@ -712,14 +712,14 @@
                                     }
                                 ]
                             },
-                            this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
+                            this.downloadTypeSelect(),
+                            this.interfacePage,
+                            this.switchButton('checkPriority'),
                             this.switchButton('checkDownloadLink'),
                             this.switchButton('autoFollow'),
                             this.switchButton('autoLike'),
                             this.switchButton('autoInjectCheckbox'),
-                            this.switchButton('checkPriority'),
-                            this.downloadTypeSelect(),
-                            this.interfacePage
+                            this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
                         ]
                     },
                     save
@@ -874,9 +874,6 @@
                 variableInfo,
                 renderNode(this.inputComponent('downloadPath'))
             ]
-            if (this.target.checkPriority) {
-                this.interfacePage.originalAppendChild(renderNode(this.inputComponent('downloadPriority')))
-            }
             switch (this.target.downloadType) {
                 case DownloadType.Aria2:
                     downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
@@ -889,6 +886,9 @@
                 default:
                     BrowserConfigInput.map(i => this.interfacePage.originalAppendChild(i))
                     break
+            }
+            if (this.target.checkPriority) {
+                this.interfacePage.originalAppendChild(renderNode(this.inputComponent('downloadPriority')))
             }
         }
         public inject() {
