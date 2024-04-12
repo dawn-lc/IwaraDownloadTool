@@ -6,13 +6,6 @@
 
     const document = originalWindow.document
 
-    //@ts-ignore
-    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
-    //@ts-ignore
-    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
-        originalAddEventListener.call(this, type, listener, options)
-    }
-
     Node.prototype.originalAppendChild = Node.prototype.appendChild
     const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
@@ -40,7 +33,7 @@
         return this.filter(i => i !== null && typeof i !== 'undefined')
     }
     Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {
-        return this.filter((item, index, self) => 
+        return this.filter((item, index, self) =>
             index === self.findIndex((t) => (
                 prop ? t[prop] === item[prop] : t === item
             ))
@@ -50,12 +43,12 @@
         return [...this, ...that].unique(prop)
     }
     Array.prototype.intersect = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
-        return this.filter((item) => 
+        return this.filter((item) =>
             that.some((t) => prop ? t[prop] === item[prop] : t === item)
         ).unique(prop)
     }
     Array.prototype.difference = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
-        return this.filter((item) => 
+        return this.filter((item) =>
             !that.some((t) => prop ? t[prop] === item[prop] : t === item)
         ).unique(prop)
     }
@@ -162,8 +155,19 @@
         }
         return true
     }
+    //@ts-ignore
+    if (!isNull(originalWindow.IwaraDownloadTool)) {
+        return
+    }
+    //@ts-ignore
+    originalWindow.IwaraDownloadTool = true
 
-
+    //@ts-ignore
+    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
+    //@ts-ignore
+    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
+        originalAddEventListener.call(this, type, listener, options)
+    }
     const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
         if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
         if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
@@ -252,6 +256,7 @@
         Subscriptions = 'subscriptions',
         Playlist = 'playlist',
         Favorites = 'favorites',
+        Search = 'search',
         Account = 'account'
     }
 
@@ -1176,6 +1181,7 @@
                     selectButtons.map(i => this.interfacePage.originalAppendChild(i))
                     baseButtons.map(i => this.interfacePage.originalAppendChild(i))
                     break
+                case PageType.Search:
                 case PageType.Profile:
                 case PageType.Home:
                 case PageType.VideoList:
@@ -1206,6 +1212,10 @@
                         }
                         let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
                         if (pages.length < 1) {
+                            continue;
+                        }
+                        if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() === 'search') {
+                            this.pageChange(PageType.Search)
                             continue;
                         }
                         let page = pages.find(i => i.classList.length > 1)
@@ -1240,7 +1250,7 @@
         }
 
         #pluginMenu {
-            z-index: 2147483645;
+            z-index: 2147483644;
             color: white;
             position: fixed;
             top: 50%;
@@ -1303,7 +1313,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0, 0, 0, 0.75);
-            z-index: 2147483647; 
+            z-index: 2147483646; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1408,7 +1418,7 @@
             width: 100%;
             height: 100%;
             background-color: rgba(128, 128, 128, 0.8);
-            z-index: 2147483646; 
+            z-index: 2147483645; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -1604,8 +1614,8 @@
                     events: {
                         click: (e: Event) => {
                             if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
-                                if ( textArea.value.startsWith('[')) {
-                                    analyzeDownloadTask(new Dictionary(JSON.parse( textArea.value)));
+                                if (textArea.value.startsWith('[')) {
+                                    analyzeDownloadTask(new Dictionary(JSON.parse(textArea.value)));
                                 }
                                 else {
                                     let IDList = new Dictionary();
