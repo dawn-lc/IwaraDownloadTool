@@ -445,18 +445,7 @@
             useHelpForBase: `工具侧边栏位于网页右侧边缘，鼠标移动侧边栏到上方会自动展开！`,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。',
-            useHelpForManualDownload: `手动下载需要您提供视频ID或提供符合以下格式对象的数组json字符串
-            
-            {
-                key: string,
-                value: {
-                    Title?: string,
-                    Alias?: string,
-                    Author?: string
-                }
-            }
-
-            `,
+            useHelpForManualDownload: `手动下载需要您提供视频ID或提供符合以下格式对象的数组json字符串 { key: string, value: { Title?: string, Alias?: string, Author?: string } }`,
             useHelpForBugreport: [
                 '反馈遇到的BUG、使用问题等请前往: ',
                 {
