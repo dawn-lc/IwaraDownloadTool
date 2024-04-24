@@ -1,4 +1,7 @@
-[English](.github/README/README.md) | [日本語](.github/README/README_ja.md)
+[English](.github/README/README.md) <sup>*We need volunteer translators for English localization.</sup>
+
+[日本語](.github/README/README_ja.md) <sup>*日本語ローカライズを提供してくれる翻訳ボランティアを必要としています。</sup>
+
 # Iwara 视频下载工具
 
  * 批量下载
