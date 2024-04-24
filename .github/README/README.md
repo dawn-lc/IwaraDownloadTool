@@ -21,8 +21,8 @@
 
 #### Support the following browsers
 
-* Chrome or a browser based on Chromium core (such as Edge) <sup>***version ≥85**</sup>
-* Firefox <sup>***version ≥79**</sup>
+* Chrome or a browser based on Chromium core (such as Edge) <sup>*version ≥85</sup>
+* Firefox <sup>*version ≥79</sup>
 
 #### Recommended script manager plug-in
 

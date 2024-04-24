@@ -20,10 +20,11 @@ interface IChannelMessage<T> {
     type: number;
     data: T;
 }
-
-interface Array<T> {
-    
+declare var unsafeWindow: Window & typeof globalThis;
+interface Window {
+    IwaraDownloadTool: boolean | undefined;
 }
+
 interface Array<T> {
     any(): boolean;
     prune(): Array<T>;
@@ -67,12 +68,6 @@ interface LocalPath {
     drive: string;
     filename: string;
 }
-
-interface Node {
-    originalAppendChild<T extends Node>(node: T): T
-    originalInsertBefore<T extends Node>(node: T, child: Node): T
-}
-
 
 interface DownloadTask {
     id: string;

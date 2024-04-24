@@ -1,12 +1,10 @@
 (function () {
-    const originalWindow = unsafeWindow as Window
-    //@ts-ignore
-    const originalObject = originalWindow.Object as ObjectConstructor
-    const originalFetch = originalWindow.fetch
+    const originalFetch = unsafeWindow.fetch
 
-    const document = originalWindow.document
+    const originalNodeAppendChild = unsafeWindow.Node.prototype.appendChild
 
-    Node.prototype.originalAppendChild = Node.prototype.appendChild
+    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
+
     const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
     const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
     const isString = (obj: any): obj is String => !isNull(obj) && typeof obj === 'string'
@@ -85,7 +83,7 @@
     String.prototype.toURL = function () {
         let URLString = this
         if (URLString.split('//')[0].isEmpty()) {
-            URLString = `${originalWindow.location.protocol}${URLString}`
+            URLString = `${unsafeWindow.location.protocol}${URLString}`
         }
         return new URL(URLString.toString())
     }
@@ -101,7 +99,7 @@
     String.prototype.replaceVariable = function (replacements, count = 0) {
         let replaceString = this.toString()
         try {
-            replaceString = originalObject.entries(replacements).reduce((str, [key, value]) => {
+            replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
                 if (str.includes(`%#${key}:`)) {
                     let format = str.among(`%#${key}:`, '#%').toString()
                     return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
@@ -112,7 +110,7 @@
                 replaceString
             )
             count++
-            return originalObject.keys(replacements).map((key) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
+            return Object.keys(replacements).map((key) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
         } catch (error) {
             GM_getValue('isDebug') && console.log(`replace variable error: ${getString(error)}`)
             return replaceString
@@ -126,8 +124,8 @@
             return obj
         }
         if (isObject(obj)) {
-            return originalObject.fromEntries(
-                originalObject.entries(obj)
+            return Object.fromEntries(
+                Object.entries(obj)
                     .filter(([key, value]) => isNotEmpty(value))
                     .map(([key, value]) => [key, prune(value)])
             )
@@ -151,23 +149,16 @@
             return true
         }
         if (isObject(obj)) {
-            return originalObject.values(obj).some(isNotEmpty)
+            return Object.values(obj).some(isNotEmpty)
         }
         return true
     }
-    //@ts-ignore
-    if (!isNull(originalWindow.IwaraDownloadTool)) {
+
+    if (!isNull((unsafeWindow.IwaraDownloadTool))) {
         return
     }
-    //@ts-ignore
-    originalWindow.IwaraDownloadTool = true
+    unsafeWindow.IwaraDownloadTool = true
 
-    //@ts-ignore
-    const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
-    //@ts-ignore
-    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
-        originalAddEventListener.call(this, type, listener, options)
-    }
     const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
         if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
         if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
@@ -216,8 +207,8 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (!isNull(attributes) && originalObject.keys(attributes).any()) && originalObject.entries(attributes).forEach(([key, value]: any) => node.setAttribute(key, value));
-        (!isNull(events) && originalObject.keys(events).any()) && originalObject.entries(events).forEach(([eventName, eventHandler]: any) => originalAddEventListener.call(node, eventName, eventHandler));
+        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: any) => node.setAttribute(key, value));
+        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: any) => originalAddEventListener.call(node, eventName, eventHandler));
         (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
@@ -309,12 +300,12 @@
                     switch (message.type) {
                         case MessageType.Set:
                             this.dictionary.set(message.data.key, message.data.value as T)
-                            let selectButtonA = document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
+                            let selectButtonA = unsafeWindow.document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonA)) selectButtonA.checked = true
                             break
                         case MessageType.Del:
                             this.dictionary.del(message.data.key)
-                            let selectButtonB = document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
+                            let selectButtonB = unsafeWindow.document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
                             if (!isNull(selectButtonB)) selectButtonB.checked = false
                             break
                         default:
@@ -359,7 +350,7 @@
         [key: string]: any
         items: { [key: string]: T }
         constructor(data: Array<{ key: string, value: T }> = []) {
-            this.items = new originalObject() as any
+            this.items = new Object() as any
             data.map(i => this.set(i.key, i.value))
         }
         public set(key: string, value: T): void {
@@ -379,13 +370,13 @@
             return this.items.hasOwnProperty(key) || this.items.hasOwnProperty(key.toLowerCase())
         }
         public get size(): number {
-            return originalObject.keys(this.items).length
+            return Object.keys(this.items).length
         }
         public keys(): string[] {
-            return originalObject.keys(this.items)
+            return Object.keys(this.items)
         }
         public values(): T[] {
-            return originalObject.values(this.items)
+            return Object.values(this.items)
         }
         public toArray(): Array<{ key: string, value: T }> {
             return this.keys().map(k => { return { key: k, value: this.items[k] } })
@@ -451,9 +442,10 @@
                 { nodeType: 'br' },
                 '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
             ],
-            useHelpForInjectCheckbox: `开启“自动注入选择框”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
-            useHelpForCheckDownloadLink: '开启“高画质下载连接检查”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方下载链接，将会弹出提示，您可以点击提示打开视频页面。',
-            useHelpForManualDownload: '手动下载需要您提供视频ID!',
+            useHelpForBase: `工具侧边栏位于网页右侧边缘，鼠标移动侧边栏到上方会自动展开！`,
+            useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
+            useHelpForCheckDownloadLink: '开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。',
+            useHelpForManualDownload: `手动下载需要您提供视频ID或提供符合以下格式对象的数组json字符串 { key: string, value: { Title?: string, Alias?: string, Author?: string } }`,
             useHelpForBugreport: [
                 '反馈遇到的BUG、使用问题等请前往: ',
                 {
@@ -697,7 +689,7 @@
                                     {
                                         nodeType: 'input',
                                         className: 'inputRadioLine',
-                                        attributes: originalObject.assign(
+                                        attributes: Object.assign(
                                             {
                                                 name: 'language',
                                                 type: 'text',
@@ -768,7 +760,7 @@
                     `%#${name}#% `,
                     {
                         nodeType: 'input',
-                        attributes: originalObject.assign(
+                        attributes: Object.assign(
                             {
                                 name: name,
                                 type: type ?? 'text',
@@ -797,7 +789,7 @@
                     `%#downloadType#%`,
                     {
                         nodeType: 'select',
-                        childs: originalObject.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((i: string) => renderNode({
+                        childs: Object.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((i: string) => renderNode({
                             nodeType: 'option',
                             childs: i
                         })),
@@ -876,24 +868,24 @@
             ]
             switch (this.target.downloadType) {
                 case DownloadType.Aria2:
-                    downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
-                    aria2ConfigInput.map(i => this.interfacePage.originalAppendChild(i))
+                    downloadConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
+                    aria2ConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                     break
                 case DownloadType.IwaraDownloader:
-                    downloadConfigInput.map(i => this.interfacePage.originalAppendChild(i))
-                    iwaraDownloaderConfigInput.map(i => this.interfacePage.originalAppendChild(i))
+                    downloadConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
+                    iwaraDownloaderConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                     break
                 default:
-                    BrowserConfigInput.map(i => this.interfacePage.originalAppendChild(i))
+                    BrowserConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                     break
             }
             if (this.target.checkPriority) {
-                this.interfacePage.originalAppendChild(renderNode(this.inputComponent('downloadPriority')))
+                originalNodeAppendChild.call(this.interfacePage, renderNode(this.inputComponent('downloadPriority')))
             }
         }
         public inject() {
-            if (!document.querySelector('#pluginConfig')) {
-                document.body.originalAppendChild(this.interface)
+            if (!unsafeWindow.document.querySelector('#pluginConfig')) {
+                originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
                 this.configChange('downloadType')
             }
         }
@@ -974,7 +966,7 @@
                             }
                         )
                         toast.showToast()
-                        let button = document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                        let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
                         button && button.checked && button.click()
                         selectList.del(this.ID)
                         this.State = false
@@ -1062,7 +1054,7 @@
                     }
                 )
                 toast.showToast()
-                let button = document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
+                let button = unsafeWindow.document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
                 button && button.checked && button.click()
                 selectList.del(this.ID)
                 this.State = false
@@ -1127,29 +1119,29 @@
             let baseButtons = [manualDownloadButton, settingsButton]
 
             let injectCheckboxButton = this.button('injectCheckbox', (name, event) => {
-                if (document.querySelector('.selectButton')) {
-                    document.querySelectorAll('.selectButton').forEach((element) => {
+                if (unsafeWindow.document.querySelector('.selectButton')) {
+                    unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                         element.remove()
                     })
                 } else {
-                    document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
+                    unsafeWindow.document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
                         injectCheckbox(element, compatible)
                     })
                 }
             })
             let selectAllButton = this.button('selectAll', (name, event) => {
-                document.querySelectorAll('.selectButton').forEach((element) => {
+                unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                     let button = element as HTMLInputElement
                     !button.checked && button.click()
                 })
             })
             let reverseSelectButton = this.button('reverseSelect', (name, event) => {
-                document.querySelectorAll('.selectButton').forEach((element) => {
+                unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                     (element as HTMLInputElement).click()
                 })
             })
             let deselectButton = this.button('deselect', (name, event) => {
-                document.querySelectorAll('.selectButton').forEach((element) => {
+                unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                     let button = element as HTMLInputElement
                     button.checked && button.click()
                 })
@@ -1165,7 +1157,7 @@
 
             let downloadThisButton = this.button('downloadThis', async (name, event) => {
                 let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
-                let Title = document.querySelector('.page-video__details')?.childNodes[0]?.textContent
+                let Title = unsafeWindow.document.querySelector('.page-video__details')?.childNodes[0]?.textContent
                 let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
                 videoInfo.State && await pustDownloadTask(videoInfo)
             })
@@ -1173,13 +1165,13 @@
             let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
                 aria2TaskCheck()
             })
-            GM_getValue('isDebug') && this.interfacePage.originalAppendChild(aria2TaskCheckButton)
+            GM_getValue('isDebug') && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
 
             switch (pageType) {
                 case PageType.Video:
-                    this.interfacePage.originalAppendChild(downloadThisButton)
-                    selectButtons.map(i => this.interfacePage.originalAppendChild(i))
-                    baseButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    originalNodeAppendChild.call(this.interfacePage, downloadThisButton)
+                    selectButtons.map(i => originalNodeAppendChild.call(this.interfacePage, i))
+                    baseButtons.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                     break
                 case PageType.Search:
                 case PageType.Profile:
@@ -1189,8 +1181,8 @@
                 case PageType.Playlist:
                 case PageType.Favorites:
                 case PageType.Account:
-                    selectButtons.map(i => this.interfacePage.originalAppendChild(i))
-                    baseButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    selectButtons.map(i => originalNodeAppendChild.call(this.interfacePage, i))
+                    baseButtons.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                     break;
                 case PageType.Page:
                 case PageType.Forum:
@@ -1199,12 +1191,12 @@
                 case PageType.ForumSection:
                 case PageType.ForumThread:
                 default:
-                    baseButtons.map(i => this.interfacePage.originalAppendChild(i))
+                    baseButtons.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                     break;
             }
         }
         public inject() {
-            if (!document.querySelector('#pluginMenu')) {
+            if (!unsafeWindow.document.querySelector('#pluginMenu')) {
                 new MutationObserver((mutationsList) => {
                     for (let mutation of mutationsList) {
                         if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
@@ -1224,8 +1216,8 @@
                         }
                         this.pageChange(page.classList[1].split('-').pop() as PageType)
                     }
-                }).observe(document.getElementById('app'), { childList: true, subtree: true });
-                document.body.originalAppendChild(this.interface)
+                }).observe(unsafeWindow.document.getElementById('app'), { childList: true, subtree: true });
+                originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
                 this.pageChange(PageType.Page)
             }
         }
@@ -1561,7 +1553,9 @@
         }) as Promise<Response>
     }
     unsafeWindow.fetch = modifyFetch
-
+    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
+        originalAddEventListener.call(this, type, listener, options)
+    }
 
     async function refreshToken(): Promise<string> {
         let refresh = config.authorization
@@ -1586,9 +1580,9 @@
             .join('')
     }
     async function getAuth(url?: string) {
-        return originalObject.assign(
+        return Object.assign(
             {
-                'Cooike': document.cookie,
+                'Cooike': unsafeWindow.document.cookie,
                 'Authorization': config.authorization
             },
             !isNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
@@ -1598,11 +1592,12 @@
         let textArea = renderNode({
             nodeType: "textarea",
             attributes: {
+                style: '',
                 rows: "6",
                 cols: "64"
             }
         }) as HTMLTextAreaElement
-        document.body.appendChild(renderNode({
+        unsafeWindow.document.body.appendChild(renderNode({
             nodeType: "div",
             attributes: {
                 id: "pluginOverlay"
@@ -1623,7 +1618,7 @@
                                     analyzeDownloadTask(IDList);
                                 }
                             }
-                            let overlay = document.getElementById("pluginOverlay");
+                            let overlay = unsafeWindow.document.getElementById("pluginOverlay");
                             overlay.parentNode.removeChild(overlay);
                         }
                     },
@@ -1652,14 +1647,14 @@
                 'bittorrent'
             ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
             for (let key of list.keys().intersect(completed)) {
-                let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
+                let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
                 button && button.checked && button.click()
                 list.del(key)
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
         for (let key of list.keys()) {
-            let button = document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
+            let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
             let videoInfo = await (new VideoInfo(list.get(key))).init(key)
             videoInfo.State && await pustDownloadTask(videoInfo)
             button && button.checked && button.click()
@@ -1746,7 +1741,7 @@
             [ToastType.Log]: console.log,
             [ToastType.Info]: console.info,
         }[type] || console.log
-        params = originalObject.assign({
+        params = Object.assign({
             newWindow: true,
             gravity: 'top',
             position: 'left',
@@ -1882,7 +1877,7 @@
         try {
             let pathTest = analyzeLocalPath(config.downloadPath)
             for (const key in pathTest) {
-                if (!originalObject.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
+                if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
                     //todo localPathCheck
                 }
             }
@@ -1998,7 +1993,7 @@
                     'dir': localPath.fullPath.replace(localPath.filename, ''),
                     'referer': window.location.hostname,
                     'header': [
-                        'Cookie:' + document.cookie
+                        'Cookie:' + unsafeWindow.document.cookie
                     ]
                 })
             ])
@@ -2044,7 +2039,7 @@
                         },
                         'option': {
                             'proxy': config.downloadProxy,
-                            'cookies': document.cookie
+                            'cookies': unsafeWindow.document.cookie
                         }
                     }
                 }))
@@ -2220,9 +2215,9 @@
         let Alias = element.querySelector('a.username')?.getAttribute('title')
         let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
-        node.originalAppendChild(renderNode({
+        originalNodeAppendChild.call(node, renderNode({
             nodeType: 'input',
-            attributes: originalObject.assign(
+            attributes: Object.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
                 type: 'checkbox',
                 videoID: ID,
@@ -2262,12 +2257,12 @@
                 click: () => {
                     GM_setValue('isFirstRun', false)
                     GM_setValue('version', GM_info.script.version)
-                    document.querySelector('#pluginOverlay').remove()
+                    unsafeWindow.document.querySelector('#pluginOverlay').remove()
                     editConfig.inject()
                 }
             }
         }) as HTMLButtonElement
-        document.body.originalAppendChild(renderNode({
+        originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
             nodeType: 'div',
             attributes: {
                 id: 'pluginOverlay'
@@ -2277,6 +2272,7 @@
                     nodeType: 'div',
                     className: 'main',
                     childs: [
+                        { nodeType: 'p', childs: '%#useHelpForBase#%' },
                         { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                         { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
                         { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
@@ -2329,22 +2325,22 @@
                 if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
                     injectCheckbox(node, compatible)
                 }
-                return this.originalAppendChild(node)
+                return originalNodeAppendChild.call(this, node) as T
             }
         }
 
         new MutationObserver((m, o) => {
-            if (m.some(m => m.type === 'childList' && document.getElementById('app'))) {
+            if (m.some(m => m.type === 'childList' && unsafeWindow.document.getElementById('app'))) {
                 pluginMenu.inject()
                 o.disconnect()
             }
-        }).observe(document.body, { childList: true, subtree: true })
+        }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
 
         originalAddEventListener('mouseover', (event: Event) => {
             mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
         })
 
-        document.addEventListener('keydown', function (e) {
+        unsafeWindow.document.addEventListener('keydown', function (e) {
             if (e.code === 'Space' && !isNull(mouseTarget)) {
                 let element = findElement(mouseTarget, '.videoTeaser')
                 let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
@@ -2374,5 +2370,5 @@
         alert(i18n[language()].configurationIncompatible)
     }
 
-    (document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(document, "DOMContentLoaded", resolve))).then(main)
+    (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 })();

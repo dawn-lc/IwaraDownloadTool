@@ -21,8 +21,8 @@
 
 #### 次のブラウザをサポートします
 
-* Chrome または Chromium コアに基づくブラウザ (Edge など) <sup>***version ≥85**</sup>
-* Firefox <sup>***version ≥79**</sup>
+* Chrome または Chromium コアに基づくブラウザ (Edge など) <sup>*version ≥85</sup>
+* Firefox <sup>*version ≥79</sup>
 
 #### 推奨されるスクリプト マネージャー プラグイン
 
