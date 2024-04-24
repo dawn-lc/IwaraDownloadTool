@@ -1,16 +1,54 @@
 # Iwara Download Tool
-* Batch select and download videos
-* Customizable save location and file name
-* Support for Aria2
-* One-click download of all videos from any author
-* Automatically check video descriptions and comments for high-quality download links provided by the author on third-party websites (e.g. [Shiroko - Lilac (シロコ)](https://www.iwara.tv/videos/713gbud4yign5xpx))
+  * Batch download
+  * Support downloader implemented based on Aria2
+  * Automatically check whether there is a third-party network disk download link provided by the author in the video introduction and comment area
+  * Customize the save location and file name <sup>*Only supports Aria2 and IwaraDownloader, other download modes only support custom file names</sup>
+  * Automatically follow the selected video author <sup>*Off by default, this function needs to be turned on manually</sup>
+  * Automatically like/like the selected video <sup>*Off by default, this function needs to be turned on manually</sup>
+  * Supports downloading private videos <sup>*You need to use an account that has become friends with the author to download</sup>
+  * Support downloading hidden videos <sup>*Need to know the video ID</sup>
 
-### The following features require loading this script with **[Tampermonkey Beta](https://www.tampermonkey.net/)**:
-* Support for downloading locked videos <sup>*Requires using an account that has become friends with the author</sup>
-* Support for downloading hidden videos <sup>*Requires knowing the video ID</sup>
+## Instructions for use
+
+### Installation script
+
+* Installed from 
+  **[GreasyFork](https://sleazyfork.org/scripts/422239)**
+* GitHub Release
+  **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
+* GitHub Release \[development version\]
+  **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
+
+#### Support the following browsers
+
+* Chrome or a browser based on Chromium core (such as Edge) <sup>***version ≥85**</sup>
+* Firefox <sup>***version ≥79**</sup>
+
+#### Recommended script manager plug-in
+
+* [Tampermonkey](https://www.tampermonkey.net/)
+
+#### Detailed instructions for use
+
+* [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
+
+#### Path available variables
+
+* Download time %#NowTime#%
+* Upload time %#UploadTime#%
+* Video title %#TITLE#%
+* Video ID %#ID#%
+* Video author %#AUTHOR#%
+* Video author (nickname) %#ALIAS#%
+* Image quality %#QUALITY#%
+
+  %\#NowTime:YYYY\-MM\-DD\#%\_%\#AUTHOR\#%\_%\#UploadTime:YYYY\-MM\-DD\#%\_%\#TITLE\#%\_%\#QUALITY\#%\[%\#ID\#%\]\.MP4
+
+  Output：
+
+  2024\-02\-19\_ExampleAuthorID\_2024\-02\-18\_ExampleTitle\_Source\[ExampleID\]\.MP4
 
 ## Dependencies
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
 - [moment.js](https://github.com/moment/moment/) - [MIT License](https://opensource.org/licenses/MIT)
-
-Translated by ChatGPT
+- [aria2rpc](https://github.com/pboymt/aria2rpc)
