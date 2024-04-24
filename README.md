@@ -38,7 +38,7 @@
 
 #### 详细使用说明
 
-* [前往Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
+* [前往Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki) <sup>*有没有人愿意帮我写下文档...</sup>
 
 #### 路径可用变量
 
