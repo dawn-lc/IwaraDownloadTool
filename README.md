@@ -1,4 +1,7 @@
-[English](.github/README/README.md) | [日本語](.github/README/README_ja.md)
+[English](.github/README/README.md) <sup>*We need volunteer translators for English localization.</sup>
+
+[日本語](.github/README/README_ja.md) <sup>*日本語ローカライズを提供してくれる翻訳ボランティアを必要としています。</sup>
+
 # Iwara 视频下载工具
 
  * 批量下载
@@ -35,7 +38,7 @@
 
 #### 详细使用说明
 
-* [前往Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
+* [前往Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki) <sup>*有没有人愿意帮我写下文档...</sup>
 
 #### 路径可用变量
 
