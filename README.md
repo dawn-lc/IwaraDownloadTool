@@ -28,8 +28,8 @@
 
 #### 支持以下浏览器
 
-* Chrome 或 基于 Chromium 内核的浏览器 (如Edge) <sup>***版本≥85**</sup>
-* Firefox <sup>***版本≥79**</sup>
+* Chrome 或 基于 Chromium 内核的浏览器 (如Edge) <sup>*版本≥85</sup>
+* Firefox <sup>*版本≥79</sup>
 
 #### 推荐脚本管理器插件
 
