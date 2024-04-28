@@ -233,6 +233,7 @@
         Browser,
         Others
     }
+
     enum PageType {
         Video = 'video',
         Image = 'image',
@@ -257,34 +258,72 @@
         Warn,
         Error
     }
+
     enum MessageType {
         Set,
         Del
     }
 
     enum VersionState {
-        low,
-        equal,
-        high
+        Low,
+        Equal,
+        High
     }
-
-    function compareVersions(version1: string, version2: string): VersionState {
-        const v1 = version1.split('.').map(Number)
-        const v2 = version2.split('.').map(Number)
-
-        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-            const num1 = v1[i] || 0
-            const num2 = v2[i] || 0
-
-            if (num1 < num2) {
-                return VersionState.low
-            } else if (num1 > num2) {
-                return VersionState.high
-            }
+    
+    class Version {
+        private major: number;
+        private minor: number;
+        private patch: number;
+        private preRelease: string[];
+        private buildMetadata: string;
+    
+        constructor(versionString: string) {
+            const [version, preRelease, buildMetadata] = versionString.split(/[-+]/);
+            const versionParts = version.split('.').map(Number);
+            this.major = versionParts[0] || 0;
+            this.minor = versionParts.length > 1 ? versionParts[1] : 0;
+            this.patch = versionParts.length > 2 ? versionParts[2] : 0;
+            this.preRelease = preRelease ? preRelease.split('.') : [];
+            this.buildMetadata = buildMetadata;
         }
-
-        return VersionState.equal
+    
+        compare(other: Version): VersionState {
+            const compareSegment = (a: number | string, b: number | string): VersionState => {
+                if (a < b) {
+                    return VersionState.Low;
+                } else if (a > b) {
+                    return VersionState.High;
+                }
+                return VersionState.Equal;
+            };
+    
+            let state = compareSegment(this.major, other.major);
+            if (state !== VersionState.Equal) return state;
+    
+            state = compareSegment(this.minor, other.minor);
+            if (state !== VersionState.Equal) return state;
+    
+            state = compareSegment(this.patch, other.patch);
+            if (state !== VersionState.Equal) return state;
+    
+            for (let i = 0; i < Math.max(this.preRelease.length, other.preRelease.length); i++) {
+                const pre1 = this.preRelease[i];
+                const pre2 = other.preRelease[i];
+                if (pre1 === undefined && pre2 !== undefined) {
+                    return VersionState.High;
+                } else if (pre1 !== undefined && pre2 === undefined) {
+                    return VersionState.Low;
+                }
+                if (pre1 !== undefined && pre2 !== undefined) {
+                    state = compareSegment(isNaN(+pre1) ? pre1 : +pre1, isNaN(+pre2) ? pre2 : +pre2);
+                    if (state !== VersionState.Equal) return state;
+                }
+            }
+            
+            return VersionState.Equal;
+        }
     }
+    
 
     class SyncDictionary<T> {
         [key: string]: any
@@ -1252,8 +1291,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             box-shadow: 0 0 10px #ccc;
-            transform: translate(85%, -50%);
-            transition: transform 0.5s cubic-bezier(0,1,.60,1);
+            transform: translate(2%, -50%);
         }
         #pluginMenu ul {
             list-style: none;
@@ -1269,32 +1307,6 @@
         #pluginMenu li:hover {
             background-color: #000000cc;
             border-radius: 3px;
-        }
-        #pluginMenu:hover {
-            transform: translate(0%, -50%);
-            transition-delay: 0.5s;
-        }
-        #pluginMenu:not(:hover) {
-            transition-delay: 0s;
-        }
-        #pluginMenu.moving-out {
-            transform: translate(0%, -50%);
-        }
-        #pluginMenu.moving-in {
-            transform: translate(85%, -50%);
-        }
-        #pluginMenu:not(.moving-out):not(.moving-in) {
-            transition-delay: 0s;
-        }
-        #pluginMenu:hover,
-        #pluginMenu:hover ~ #pluginMenu {
-            transition-delay: 0s;
-        }
-        #pluginMenu:hover {
-            transition-duration: 0.5s;
-        }
-        #pluginMenu:not(:hover).moving-in {
-            transition-delay: 0.5s;
         }
 
         #pluginConfig {
@@ -2364,8 +2376,8 @@
             }
         ).showToast()
     }
-
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.2.5') === VersionState.low) {
+    
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
