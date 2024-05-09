@@ -509,7 +509,7 @@
             findedDownloadLink: '发现疑似第三方网盘下载地址!',
             allCompleted: '全部解析完成！',
             parsingProgress: '解析进度: ',
-            manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请提供视频ID或提供符合以下格式对象的数组json字符串 { key: string, value: { Title?: string, Alias?: string, Author?: string } }',
+            manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请提供视频ID或提供符合以下格式对象的数组json字符串\r\n { key: string, value: { Title?: string, Alias?: string, Author?: string } } \r\n 例如：\r\n  { key: "AeGUIRO2D5vQ6F", value: { Title: "237知更鸟", Alias: "骑着牛儿追织女", Author: "user1528210" } } ',
             externalVideo: `非本站视频`,
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
@@ -1607,10 +1607,10 @@
                 placeholder: i18n[language()].manualDownloadTips,
                 style: 'margin-bottom: 10px;',
                 rows: "16",
-                cols: "128"
+                cols: "96"
             }
         }) as HTMLTextAreaElement
-        unsafeWindow.document.body.appendChild(renderNode({
+        let body = renderNode({
             nodeType: "div",
             attributes: {
                 id: "pluginOverlay"
@@ -1622,23 +1622,22 @@
                     events: {
                         click: (e: Event) => {
                             if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
-                                if (textArea.value.startsWith('[')) {
-                                    analyzeDownloadTask(new Dictionary(JSON.parse(textArea.value)));
-                                }
-                                else {
-                                    let IDList = new Dictionary();
-                                    textArea.value.split('|').map(ID => IDList.set(ID, {}));
-                                    analyzeDownloadTask(IDList);
+                                try {
+                                    analyzeDownloadTask(new Dictionary<PieceInfo>(JSON.parse(textArea.value)))
+                                } catch (error) {
+                                    let IDList = new Dictionary<PieceInfo>()
+                                    textArea.value.split('|').map(ID => IDList.set(ID, {}))
+                                    analyzeDownloadTask(IDList)
                                 }
                             }
-                            let overlay = unsafeWindow.document.getElementById("pluginOverlay");
-                            overlay.parentNode.removeChild(overlay);
+                            body.remove()
                         }
                     },
                     childs: "确认"
                 }
             ]
-        }))
+        }) as Element
+        unsafeWindow.document.body.appendChild(body)
     }
     async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         let size = list.size
