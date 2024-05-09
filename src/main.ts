@@ -207,8 +207,8 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: any) => node.setAttribute(key, value));
-        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: any) => originalAddEventListener.call(node, eventName, eventHandler));
+        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: [string, string]) => node.setAttribute(key, value));
+        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
         (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
@@ -481,7 +481,7 @@
                 { nodeType: 'br' },
                 '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
             ],
-            useHelpForBase: `工具侧边栏位于网页右侧边缘，鼠标移动侧边栏到上方会自动展开！`,
+            useHelpForBase: ``,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。',
             useHelpForManualDownload: `手动下载需要您提供视频ID或提供符合以下格式对象的数组json字符串 { key: string, value: { Title?: string, Alias?: string, Author?: string } }`,
@@ -509,7 +509,7 @@
             findedDownloadLink: '发现疑似第三方网盘下载地址!',
             allCompleted: '全部解析完成！',
             parsingProgress: '解析进度: ',
-            manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...',
+            manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请提供视频ID或提供符合以下格式对象的数组json字符串 { key: string, value: { Title?: string, Alias?: string, Author?: string } }',
             externalVideo: `非本站视频`,
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
@@ -1604,9 +1604,10 @@
         let textArea = renderNode({
             nodeType: "textarea",
             attributes: {
-                style: '',
-                rows: "6",
-                cols: "64"
+                placeholder: i18n[language()].manualDownloadTips,
+                style: 'margin-bottom: 10px;',
+                rows: "16",
+                cols: "128"
             }
         }) as HTMLTextAreaElement
         unsafeWindow.document.body.appendChild(renderNode({
@@ -1714,6 +1715,8 @@
             'alfafile',
             '1drv.ms',
             'onedrive.',
+            'gofile.io',
+            'workupload.com',
             'pixeldrain.',
             'gigafile.nu'
         ].filter(i => comment.toLowerCase().includes(i)).any()
