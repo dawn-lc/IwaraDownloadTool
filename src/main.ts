@@ -269,14 +269,14 @@
         Equal,
         High
     }
-    
+
     class Version {
         private major: number;
         private minor: number;
         private patch: number;
         private preRelease: string[];
         private buildMetadata: string;
-    
+
         constructor(versionString: string) {
             const [version, preRelease, buildMetadata] = versionString.split(/[-+]/);
             const versionParts = version.split('.').map(Number);
@@ -286,7 +286,7 @@
             this.preRelease = preRelease ? preRelease.split('.') : [];
             this.buildMetadata = buildMetadata;
         }
-    
+
         compare(other: Version): VersionState {
             const compareSegment = (a: number | string, b: number | string): VersionState => {
                 if (a < b) {
@@ -296,16 +296,16 @@
                 }
                 return VersionState.Equal;
             };
-    
+
             let state = compareSegment(this.major, other.major);
             if (state !== VersionState.Equal) return state;
-    
+
             state = compareSegment(this.minor, other.minor);
             if (state !== VersionState.Equal) return state;
-    
+
             state = compareSegment(this.patch, other.patch);
             if (state !== VersionState.Equal) return state;
-    
+
             for (let i = 0; i < Math.max(this.preRelease.length, other.preRelease.length); i++) {
                 const pre1 = this.preRelease[i];
                 const pre2 = other.preRelease[i];
@@ -319,11 +319,11 @@
                     if (state !== VersionState.Equal) return state;
                 }
             }
-            
+
             return VersionState.Equal;
         }
     }
-    
+
 
     class SyncDictionary<T> {
         [key: string]: any
@@ -481,10 +481,22 @@
                 { nodeType: 'br' },
                 '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
             ],
-            useHelpForBase: ``,
+            useHelpForBase: `请认真阅读使用指南！`,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。',
-            useHelpForManualDownload: `手动下载需要您提供视频ID或提供符合以下格式对象的数组json字符串 { key: string, value: { Title?: string, Alias?: string, Author?: string } }`,
+            useHelpForManualDownload: [
+                '使用手动下载功能需要提供视频ID, 如需批量手动下载请提供使用“|”分割的视频ID。',
+                { nodeType: 'br' },
+                '例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L',
+                { nodeType: 'br' },
+                '或提供符合以下格式对象的数组json字符串',
+                { nodeType: 'br' },
+                '{ key: string, value: { Title?: string, Alias?: string, Author?: string } }',
+                { nodeType: 'br' },
+                '例如: ',
+                { nodeType: 'br' },
+                '[{ key: "AeGUIRO2D5vQ6F", value: { Title: "237知更鸟", Alias: "骑着牛儿追织女", Author: "user1528210" } },{ key: "qQsUMJa19LcK3L", value: { Title: "Mika Automotive Extradimensional", Alias: "Temptation’s_Symphony", Author: "temptations_symphony" } }]'
+            ],
             useHelpForBugreport: [
                 '反馈遇到的BUG、使用问题等请前往: ',
                 {
@@ -1421,7 +1433,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(128, 128, 128, 0.8);
+            background-color: rgba(0, 0, 0, 0.75);
             z-index: 2147483645; 
             display: flex;
             flex-direction: column;
@@ -1432,7 +1444,7 @@
             color: white;
             font-size: 24px;
             width: 60%;
-            background-color: rgb(64,64,64,0.7);
+            background-color: rgba(64, 64, 64, 0.75);
             padding: 24px;
             margin: 10px;
             overflow-y: auto;
@@ -2289,7 +2301,7 @@
                         { nodeType: 'p', childs: '%#useHelpForBase#%' },
                         { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                         { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
+                        { nodeType: 'p', childs: i18n[language()].useHelpForManualDownload },
                         { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
                     ]
                 },
@@ -2378,7 +2390,7 @@
             }
         ).showToast()
     }
-    
+
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
