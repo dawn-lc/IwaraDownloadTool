@@ -1706,6 +1706,7 @@
             return false
         }
         return [
+            'iwara.zip',
             'pan.baidu',
             '/s/',
             'mega.nz',
