@@ -207,8 +207,8 @@
         }
         const { nodeType, attributes, events, className, childs } = renderCode
         const node: Element = document.createElement(nodeType);
-        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: any) => node.setAttribute(key, value));
-        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: any) => originalAddEventListener.call(node, eventName, eventHandler));
+        (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: [string, string]) => node.setAttribute(key, value));
+        (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
         (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
         !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
         return node
@@ -233,6 +233,7 @@
         Browser,
         Others
     }
+
     enum PageType {
         Video = 'video',
         Image = 'image',
@@ -257,34 +258,72 @@
         Warn,
         Error
     }
+
     enum MessageType {
         Set,
         Del
     }
 
     enum VersionState {
-        low,
-        equal,
-        high
+        Low,
+        Equal,
+        High
     }
 
-    function compareVersions(version1: string, version2: string): VersionState {
-        const v1 = version1.split('.').map(Number)
-        const v2 = version2.split('.').map(Number)
+    class Version {
+        private major: number;
+        private minor: number;
+        private patch: number;
+        private preRelease: string[];
+        private buildMetadata: string;
 
-        for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
-            const num1 = v1[i] || 0
-            const num2 = v2[i] || 0
-
-            if (num1 < num2) {
-                return VersionState.low
-            } else if (num1 > num2) {
-                return VersionState.high
-            }
+        constructor(versionString: string) {
+            const [version, preRelease, buildMetadata] = versionString.split(/[-+]/);
+            const versionParts = version.split('.').map(Number);
+            this.major = versionParts[0] || 0;
+            this.minor = versionParts.length > 1 ? versionParts[1] : 0;
+            this.patch = versionParts.length > 2 ? versionParts[2] : 0;
+            this.preRelease = preRelease ? preRelease.split('.') : [];
+            this.buildMetadata = buildMetadata;
         }
 
-        return VersionState.equal
+        compare(other: Version): VersionState {
+            const compareSegment = (a: number | string, b: number | string): VersionState => {
+                if (a < b) {
+                    return VersionState.Low;
+                } else if (a > b) {
+                    return VersionState.High;
+                }
+                return VersionState.Equal;
+            };
+
+            let state = compareSegment(this.major, other.major);
+            if (state !== VersionState.Equal) return state;
+
+            state = compareSegment(this.minor, other.minor);
+            if (state !== VersionState.Equal) return state;
+
+            state = compareSegment(this.patch, other.patch);
+            if (state !== VersionState.Equal) return state;
+
+            for (let i = 0; i < Math.max(this.preRelease.length, other.preRelease.length); i++) {
+                const pre1 = this.preRelease[i];
+                const pre2 = other.preRelease[i];
+                if (pre1 === undefined && pre2 !== undefined) {
+                    return VersionState.High;
+                } else if (pre1 !== undefined && pre2 === undefined) {
+                    return VersionState.Low;
+                }
+                if (pre1 !== undefined && pre2 !== undefined) {
+                    state = compareSegment(isNaN(+pre1) ? pre1 : +pre1, isNaN(+pre2) ? pre2 : +pre2);
+                    if (state !== VersionState.Equal) return state;
+                }
+            }
+
+            return VersionState.Equal;
+        }
     }
+
 
     class SyncDictionary<T> {
         [key: string]: any
@@ -442,10 +481,22 @@
                 { nodeType: 'br' },
                 '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
             ],
-            useHelpForBase: `工具侧边栏位于网页右侧边缘，鼠标移动侧边栏到上方会自动展开！`,
+            useHelpForBase: `请认真阅读使用指南！`,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
             useHelpForCheckDownloadLink: '开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。',
-            useHelpForManualDownload: `手动下载需要您提供视频ID或提供符合以下格式对象的数组json字符串 { key: string, value: { Title?: string, Alias?: string, Author?: string } }`,
+            useHelpForManualDownload: [
+                '使用手动下载功能需要提供视频ID, 如需批量手动下载请提供使用“|”分割的视频ID。',
+                { nodeType: 'br' },
+                '例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L',
+                { nodeType: 'br' },
+                '或提供符合以下格式对象的数组json字符串',
+                { nodeType: 'br' },
+                '{ key: string, value: { Title?: string, Alias?: string, Author?: string } }',
+                { nodeType: 'br' },
+                '例如: ',
+                { nodeType: 'br' },
+                '[{ key: "AeGUIRO2D5vQ6F", value: { Title: "237知更鸟", Alias: "骑着牛儿追织女", Author: "user1528210" } },{ key: "qQsUMJa19LcK3L", value: { Title: "Mika Automotive Extradimensional", Alias: "Temptation’s_Symphony", Author: "temptations_symphony" } }]'
+            ],
             useHelpForBugreport: [
                 '反馈遇到的BUG、使用问题等请前往: ',
                 {
@@ -470,7 +521,7 @@
             findedDownloadLink: '发现疑似第三方网盘下载地址!',
             allCompleted: '全部解析完成！',
             parsingProgress: '解析进度: ',
-            manualDownloadTips: '请输入需要下载的视频ID! \r\n若需要批量下载请用 "|" 分割ID, 例如: AAAAAAAAAA|BBBBBBBBBBBB|CCCCCCCCCCCC...',
+            manualDownloadTips: '单独下载请直接在此处输入视频ID, 批量下载请提供使用“|”分割的视频ID, 例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\n或提供符合以下格式对象的数组json字符串\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\n例如: \r\n[{ key: "AeGUIRO2D5vQ6F", value: { Title: "237知更鸟", Alias: "骑着牛儿追织女", Author: "user1528210" } },{ key: "qQsUMJa19LcK3L", value: { Title: "Mika Automotive Extradimensional", Alias: "Temptation’s_Symphony", Author: "temptations_symphony" } }]',
             externalVideo: `非本站视频`,
             noAvailableVideoSource: '没有可供下载的视频源',
             videoSourceNotAvailable: '视频源地址不可用',
@@ -1252,8 +1303,7 @@
             border: 1px solid #ccc;
             border-radius: 5px;
             box-shadow: 0 0 10px #ccc;
-            transform: translate(85%, -50%);
-            transition: transform 0.5s cubic-bezier(0,1,.60,1);
+            transform: translate(2%, -50%);
         }
         #pluginMenu ul {
             list-style: none;
@@ -1269,32 +1319,6 @@
         #pluginMenu li:hover {
             background-color: #000000cc;
             border-radius: 3px;
-        }
-        #pluginMenu:hover {
-            transform: translate(0%, -50%);
-            transition-delay: 0.5s;
-        }
-        #pluginMenu:not(:hover) {
-            transition-delay: 0s;
-        }
-        #pluginMenu.moving-out {
-            transform: translate(0%, -50%);
-        }
-        #pluginMenu.moving-in {
-            transform: translate(85%, -50%);
-        }
-        #pluginMenu:not(.moving-out):not(.moving-in) {
-            transition-delay: 0s;
-        }
-        #pluginMenu:hover,
-        #pluginMenu:hover ~ #pluginMenu {
-            transition-delay: 0s;
-        }
-        #pluginMenu:hover {
-            transition-duration: 0.5s;
-        }
-        #pluginMenu:not(:hover).moving-in {
-            transition-delay: 0.5s;
         }
 
         #pluginConfig {
@@ -1409,7 +1433,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(128, 128, 128, 0.8);
+            background-color: rgba(0, 0, 0, 0.75);
             z-index: 2147483645; 
             display: flex;
             flex-direction: column;
@@ -1420,7 +1444,7 @@
             color: white;
             font-size: 24px;
             width: 60%;
-            background-color: rgb(64,64,64,0.7);
+            background-color: rgba(64, 64, 64, 0.75);
             padding: 24px;
             margin: 10px;
             overflow-y: auto;
@@ -1592,12 +1616,13 @@
         let textArea = renderNode({
             nodeType: "textarea",
             attributes: {
-                style: '',
-                rows: "6",
-                cols: "64"
+                placeholder: i18n[language()].manualDownloadTips,
+                style: 'margin-bottom: 10px;',
+                rows: "16",
+                cols: "96"
             }
         }) as HTMLTextAreaElement
-        unsafeWindow.document.body.appendChild(renderNode({
+        let body = renderNode({
             nodeType: "div",
             attributes: {
                 id: "pluginOverlay"
@@ -1609,23 +1634,22 @@
                     events: {
                         click: (e: Event) => {
                             if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
-                                if (textArea.value.startsWith('[')) {
-                                    analyzeDownloadTask(new Dictionary(JSON.parse(textArea.value)));
-                                }
-                                else {
-                                    let IDList = new Dictionary();
-                                    textArea.value.split('|').map(ID => IDList.set(ID, {}));
-                                    analyzeDownloadTask(IDList);
+                                try {
+                                    analyzeDownloadTask(new Dictionary<PieceInfo>(JSON.parse(textArea.value)))
+                                } catch (error) {
+                                    let IDList = new Dictionary<PieceInfo>()
+                                    textArea.value.split('|').map(ID => IDList.set(ID, {}))
+                                    analyzeDownloadTask(IDList)
                                 }
                             }
-                            let overlay = unsafeWindow.document.getElementById("pluginOverlay");
-                            overlay.parentNode.removeChild(overlay);
+                            body.remove()
                         }
                     },
                     childs: "确认"
                 }
             ]
-        }))
+        }) as Element
+        unsafeWindow.document.body.appendChild(body)
     }
     async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         let size = list.size
@@ -1682,6 +1706,7 @@
             return false
         }
         return [
+            'iwara.zip',
             'pan.baidu',
             '/s/',
             'mega.nz',
@@ -1702,6 +1727,8 @@
             'alfafile',
             '1drv.ms',
             'onedrive.',
+            'gofile.io',
+            'workupload.com',
             'pixeldrain.',
             'gigafile.nu'
         ].filter(i => comment.toLowerCase().includes(i)).any()
@@ -2275,7 +2302,7 @@
                         { nodeType: 'p', childs: '%#useHelpForBase#%' },
                         { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                         { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                        { nodeType: 'p', childs: '%#useHelpForManualDownload#%' },
+                        { nodeType: 'p', childs: i18n[language()].useHelpForManualDownload },
                         { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
                     ]
                 },
@@ -2365,7 +2392,7 @@
         ).showToast()
     }
 
-    if (compareVersions(GM_getValue('version', '0.0.0'), '3.2.5') === VersionState.low) {
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
         alert(i18n[language()].configurationIncompatible)
     }
