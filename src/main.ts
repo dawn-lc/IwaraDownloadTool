@@ -449,6 +449,7 @@
             checkDownloadLink: '第三方网盘下载地址检查',
             checkPriority: '下载画质检查',
             autoInjectCheckbox: '自动注入选择框',
+            autoCopySaveFileName: '自动复制根据规则生成的文件名',
             configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
             browserDownloadNotEnabled: `未启用下载功能！`,
             browserDownloadNotWhitelisted: `请求的文件扩展名未列入白名单！`,
@@ -511,6 +512,7 @@
             tryReparseDownload: '→ 点击此处重新解析 ←',
             cdnCacheFinded: '→ 进入 MMD Fans 缓存页面 ←',
             openVideoLink: '→ 进入视频页面 ←',
+            copySucceed: '复制成功！',
             pushTaskSucceed: '推送下载任务成功！',
             connectionTest: '连接测试',
             settingsCheck: '配置检查',
@@ -610,6 +612,7 @@
         autoFollow: boolean
         autoLike: boolean
         autoInjectCheckbox: boolean
+        autoCopySaveFileName: boolean
         checkDownloadLink: boolean
         checkPriority: boolean
         downloadPriority: string
@@ -627,6 +630,7 @@
             this.language = language()
             this.autoFollow = false
             this.autoLike = false
+            this.autoCopySaveFileName = false
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
             this.checkPriority = true
@@ -762,6 +766,7 @@
                             this.switchButton('autoFollow'),
                             this.switchButton('autoLike'),
                             this.switchButton('autoInjectCheckbox'),
+                            this.switchButton('autoCopySaveFileName'),
                             this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
                         ]
                     },
@@ -1811,17 +1816,35 @@
             })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
         }
         if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
+            let toastBody = toastNode([
+                `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
+                { nodeType: 'br' },
+                `%#openVideoLink#%`
+            ], '%#createTask#%')
             let toast = newToast(
                 ToastType.Warn,
                 {
-                    node: toastNode([
-                        `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
-                        { nodeType: 'br' },
-                        `%#openVideoLink#%`
-                    ], '%#createTask#%'),
+                    node: toastBody,
+                    close: true,
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
-                        toast.hideToast()
+                        if (config.autoCopySaveFileName) {
+                            GM_setClipboard(analyzeLocalPath(config.downloadPath.replaceVariable(
+                                {
+                                    NowTime: new Date(),
+                                    UploadTime: videoInfo.UploadTime,
+                                    AUTHOR: videoInfo.Author,
+                                    ID: videoInfo.ID,
+                                    TITLE: videoInfo.Title,
+                                    ALIAS: videoInfo.Alias,
+                                    QUALITY: videoInfo.DownloadQuality
+                                }
+                            ).trim()).filename, "text")
+                            toastBody.appendChild(renderNode({
+                                nodeType: 'p',
+                                childs: '%#copySucceed#%'
+                            }))
+                        }
                     }
                 }
             )
