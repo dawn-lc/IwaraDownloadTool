@@ -2376,7 +2376,7 @@
             }
         })
 
-        newToast(
+        let notice = newToast(
             ToastType.Info,
             {
                 node: toastNode([
@@ -2387,9 +2387,13 @@
                 ]),
                 duration: 10000,
                 gravity: 'bottom',
-                position: 'center'
+                position: 'center',
+                onClick() {
+                    notice.hideToast()
+                }
             }
-        ).showToast()
+        )
+        notice.showToast()
     }
 
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {
