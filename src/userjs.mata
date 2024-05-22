@@ -30,6 +30,7 @@
 // @grant             GM_addStyle
 // @grant             GM_addElement
 // @grant             GM_getResourceText
+// @grant             GM_setClipboard
 // @grant             GM_download
 // @grant             GM_xmlhttpRequest
 // @grant             GM_openInTab
