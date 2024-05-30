@@ -1825,7 +1825,7 @@
                 ToastType.Warn,
                 {
                     node: toastBody,
-                    close: true,
+                    close: config.autoCopySaveFileName,
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                         if (config.autoCopySaveFileName) {
@@ -1844,6 +1844,8 @@
                                 nodeType: 'p',
                                 childs: '%#copySucceed#%'
                             }))
+                        } else {
+                            toast.hideToast()
                         }
                     }
                 }
