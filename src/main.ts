@@ -336,16 +336,15 @@
             Channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as IChannelMessage<{ key: string, value: T | number | undefined }>
                 if (message.id === this.id) {
+                    let selectButton = unsafeWindow.document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
                     switch (message.type) {
                         case MessageType.Set:
                             this.dictionary.set(message.data.key, message.data.value as T)
-                            let selectButtonA = unsafeWindow.document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
-                            if (!isNull(selectButtonA)) selectButtonA.checked = true
+                            if (!isNull(selectButton)) selectButton.checked = true
                             break
                         case MessageType.Del:
                             this.dictionary.del(message.data.key)
-                            let selectButtonB = unsafeWindow.document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
-                            if (!isNull(selectButtonB)) selectButtonB.checked = false
+                            if (!isNull(selectButton)) selectButton.checked = false
                             break
                         default:
                             break
