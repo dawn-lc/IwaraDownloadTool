@@ -328,9 +328,11 @@
     class SyncDictionary<T> {
         [key: string]: any
         public id: string
+        public change: Function
         private dictionary: Dictionary<T>
-        constructor(id: string, data: Array<{ key: string, value: T }> = []) {
+        constructor(id: string, data: Array<{ key: string, value: T }> = [], change: (type: MessageType, data: { key: string, value: T }) => void = null) {
             this.id = id
+            this.change = change
             this.dictionary = new Dictionary<T>(data)
             GM_getValue(this.id, []).map(i => this.dictionary.set(i.key, i.value))
             Channel.onmessage = (event: MessageEvent) => {
@@ -339,17 +341,14 @@
                     switch (message.type) {
                         case MessageType.Set:
                             this.dictionary.set(message.data.key, message.data.value as T)
-                            let selectButtonA = unsafeWindow.document.querySelector(`input.selectButton[videoid*="${message.data.key}"i]`) as HTMLInputElement
-                            if (!isNull(selectButtonA)) selectButtonA.checked = true
                             break
                         case MessageType.Del:
                             this.dictionary.del(message.data.key)
-                            let selectButtonB = unsafeWindow.document.querySelector(`input.selectButton[videoid=*"${message.data.key}"i]`) as HTMLInputElement
-                            if (!isNull(selectButtonB)) selectButtonB.checked = false
                             break
                         default:
                             break
                     }
+                    if (!isNull(this.change)) this.change(message.type, message.data)
                 }
             }
             Channel.onmessageerror = (event) => {
@@ -1525,7 +1524,10 @@
     var i18n = new I18N()
     var config = new Config()
     var db = new Database();
-    var selectList = new SyncDictionary<PieceInfo>('selectList')
+    var selectList = new SyncDictionary<PieceInfo>('selectList', [], (type, data) => {
+        let selectButton = (unsafeWindow.document.querySelector(`input.selectButton[videoid*="${data.key}"i]`) as HTMLInputElement)
+        if (!isNull(selectButton)) selectButton.checked = type === MessageType.Set
+    })
     var editConfig = new configEdit(config)
     var pluginMenu = new menu()
 

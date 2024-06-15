@@ -17,7 +17,7 @@ interface String {
 
 interface IChannelMessage<T> {
     id: string;
-    type: number;
+    type: MessageType;
     data: T;
 }
 declare var unsafeWindow: Window & typeof globalThis;
