@@ -154,11 +154,6 @@
         return true
     }
 
-    if (!isNull((unsafeWindow.IwaraDownloadTool))) {
-        return
-    }
-    unsafeWindow.IwaraDownloadTool = true
-
     const fetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
         if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
         if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
@@ -225,8 +220,6 @@
         debugger
     }
 
-    const Channel = new BroadcastChannel('IwaraDownloadTool')
-
     enum DownloadType {
         Aria2,
         IwaraDownloader,
@@ -260,6 +253,8 @@
     }
 
     enum MessageType {
+        Request,
+        Receive,
         Set,
         Del
     }
@@ -268,14 +263,13 @@
         Low,
         Equal,
         High
-    }
-
-    class Version {
-        private major: number;
-        private minor: number;
-        private patch: number;
-        private preRelease: string[];
-        private buildMetadata: string;
+    }   
+    class Version implements IVersion {
+        major: number;
+        minor: number;
+        patch: number;
+        preRelease: string[];
+        buildMetadata: string;
 
         constructor(versionString: string) {
             const [version, preRelease, buildMetadata] = versionString.split(/[-+]/);
@@ -287,7 +281,7 @@
             this.buildMetadata = buildMetadata;
         }
 
-        compare(other: Version): VersionState {
+        public compare(other: IVersion): VersionState {
             const compareSegment = (a: number | string, b: number | string): VersionState => {
                 if (a < b) {
                     return VersionState.Low;
@@ -321,67 +315,6 @@
             }
 
             return VersionState.Equal;
-        }
-    }
-
-
-    class SyncDictionary<T> {
-        [key: string]: any
-        public id: string
-        public change: Function
-        private dictionary: Dictionary<T>
-        constructor(id: string, data: Array<{ key: string, value: T }> = [], change: (type: MessageType, data: { key: string, value: T }) => void = null) {
-            this.id = id
-            this.change = change
-            this.dictionary = new Dictionary<T>(data)
-            GM_getValue(this.id, []).map(i => this.dictionary.set(i.key, i.value))
-            Channel.onmessage = (event: MessageEvent) => {
-                const message = event.data as IChannelMessage<{ key: string, value: T | number | undefined }>
-                if (message.id === this.id) {
-                    switch (message.type) {
-                        case MessageType.Set:
-                            this.dictionary.set(message.data.key, message.data.value as T)
-                            break
-                        case MessageType.Del:
-                            this.dictionary.del(message.data.key)
-                            break
-                        default:
-                            break
-                    }
-                    if (!isNull(this.change)) this.change(message.type, message.data)
-                }
-            }
-            Channel.onmessageerror = (event) => {
-                GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
-            }
-        }
-        public set(key: string, value: T): void {
-            this.dictionary.set(key, value)
-            Channel.postMessage({ id: this.id, type: MessageType.Set, data: { key: key, value: value } })
-            GM_setValue(this.id, this.dictionary.toArray())
-        }
-        public get(key: string): T | undefined {
-            return this.dictionary.get(key)
-        }
-        public has(key: string): boolean {
-            return this.dictionary.has(key)
-        }
-        public del(key: string): void {
-            this.dictionary.del(key)
-            Channel.postMessage({ id: this.id, type: MessageType.Del, data: { key: key } })
-            GM_setValue(this.id, this.dictionary.toArray())
-        }
-        public get size(): number {
-            return this.dictionary.size
-        }
-        public keys(): string[] {
-            return this.dictionary.keys()
-        }
-        public values(): T[] {
-            return this.dictionary.values()
-        }
-        public toArray(): Array<{ key: string, value: T }> {
-            return this.dictionary.toArray()
         }
     }
     class Dictionary<T> {
@@ -420,6 +353,76 @@
             return this.keys().map(k => { return { key: k, value: this.items[k] } })
         }
     }
+    class SyncDictionary<T> {
+        [key: string]: any
+        private channel: BroadcastChannel
+        private dictionary: Dictionary<T>
+        private changeTime: number
+        private changeCallback: ((event: MessageEvent) => void) | null
+        constructor(id: string, data: Array<{ key: string, value: T }> = [], changeCallback: ((event: MessageEvent) => void) | null) {
+            this.channel = new BroadcastChannel(`${GM_info.script.name}.${id}`)
+            this.changeCallback = changeCallback
+            this.dictionary = new Dictionary<T>(data)
+            this.changeTime = 0
+            this.channel.onmessage = (event: MessageEvent) => {
+                const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: T }> }>
+                const { type, data: { timestamp, value } } = message
+                GM_getValue('isDebug') && console.log(`Channel message: ${getString(message)}`)
+                switch (type) {
+                    case MessageType.Set:
+                        value.forEach(item => this.dictionary.set(item.key, item.value))
+                        break
+                    case MessageType.Del:
+                        value.forEach(item => this.dictionary.del(item.key))
+                        break
+                    case MessageType.Request:
+                        if (this.changeTime === timestamp) return
+                        if (this.changeTime > timestamp) return this.channel.postMessage({ type: MessageType.Receive, data: { timestamp: this.changeTime, value: this.dictionary.toArray() } })
+                        this.dictionary = new Dictionary<T>(value)
+                        break
+                    case MessageType.Receive:
+                        if (this.changeTime >= timestamp) return
+                        this.dictionary = new Dictionary<T>(value)
+                        break
+                }
+                this.changeTime = timestamp
+                this.changeCallback?.(event)
+            }
+            this.channel.onmessageerror = (event) => {
+                GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
+            }
+            this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: this.dictionary.toArray() } })
+        }
+        public set(key: string, value: T): void {
+            this.dictionary.set(key, value)
+            this.changeTime = Date.now()
+            this.channel.postMessage({ type: MessageType.Set, data:{ timestamp: this.changeTime, value: [ {key: key, value: value} ]} })
+        }
+        public get(key: string): T | undefined {
+            return this.dictionary.get(key)
+        }
+        public has(key: string): boolean {
+            return this.dictionary.has(key)
+        }
+        public del(key: string): void {
+            this.dictionary.del(key)
+            this.changeTime = Date.now()
+            this.channel.postMessage({  type: MessageType.Del, data:{ timestamp: this.changeTime, value: [ {key: key} ]} })
+        }
+        public get size(): number {
+            return this.dictionary.size
+        }
+        public keys(): string[] {
+            return this.dictionary.keys()
+        }
+        public values(): T[] {
+            return this.dictionary.values()
+        }
+        public toArray(): Array<{ key: string, value: T }> {
+            return this.dictionary.toArray()
+        }
+    }
+
 
     class I18N {
         [key: string]: { [key: string]: RenderCode | RenderCode[] }
@@ -1524,9 +1527,27 @@
     var i18n = new I18N()
     var config = new Config()
     var db = new Database();
-    var selectList = new SyncDictionary<PieceInfo>('selectList', [], (type, data) => {
-        let selectButton = (unsafeWindow.document.querySelector(`input.selectButton[videoid*="${data.key}"i]`) as HTMLInputElement)
-        if (!isNull(selectButton)) selectButton.checked = type === MessageType.Set
+    var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
+        const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: PieceInfo }> }>
+        const updateButtonState = (videoID: string) => {
+            const selectButton = document.querySelector(`input.selectButton[videoid*="${videoID}"i]`) as HTMLInputElement
+            if (selectButton) selectButton.checked = selectList.has(videoID)
+        }
+        switch (message.type) {
+            case MessageType.Set:
+            case MessageType.Del:
+                updateButtonState(message.data.value[0].key)
+                break;
+            case MessageType.Request:
+            case MessageType.Receive:
+                (document.querySelectorAll('input.selectButton') as NodeListOf<HTMLInputElement>).forEach(button => {
+                    const videoid = button.getAttribute('videoid')
+                    if (videoid) button.checked = selectList.has(videoid)
+                })
+                break
+            default:
+                break
+        }
     })
     var editConfig = new configEdit(config)
     var pluginMenu = new menu()

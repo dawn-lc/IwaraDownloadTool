@@ -14,15 +14,23 @@ interface String {
     trimTail(suffix: string): string;
 }
 
+interface IVersion {
+    major: number;
+    minor: number;
+    patch: number;
+    preRelease: string[];
+    buildMetadata: string;
+    compare(other: IVersion): VersionState;
+}
+
 
 interface IChannelMessage<T> {
-    id: string;
     type: MessageType;
     data: T;
 }
 declare var unsafeWindow: Window & typeof globalThis;
 interface Window {
-    IwaraDownloadTool: boolean | undefined;
+    IwaraDownloadTool: IVersion;
 }
 
 interface Array<T> {
