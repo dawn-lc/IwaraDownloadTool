@@ -263,7 +263,7 @@
         Low,
         Equal,
         High
-    }   
+    }
     class Version implements IVersion {
         major: number;
         minor: number;
@@ -364,6 +364,12 @@
             this.changeCallback = changeCallback
             this.dictionary = new Dictionary<T>(data)
             this.changeTime = 0
+            if (isNull(GM_getValue(id, { timestamp: 0, value: [] }).timestamp)) 
+                GM_deleteValue(id)
+            unsafeWindow.onbeforeunload = new Proxy(() => {
+                if (this.changeTime > GM_getValue(id, { timestamp: 0, value: [] }).timestamp) GM_setValue(id, { timestamp: this.changeTime, value: this.dictionary.toArray() })
+            }, { set: () => true })
+        let isLastTab = true
             this.channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: T }> }>
                 const { type, data: { timestamp, value } } = message
@@ -381,6 +387,7 @@
                         this.dictionary = new Dictionary<T>(value)
                         break
                     case MessageType.Receive:
+                        isLastTab = false
                         if (this.changeTime >= timestamp) return
                         this.dictionary = new Dictionary<T>(value)
                         break
@@ -392,11 +399,20 @@
                 GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
             }
             this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: this.dictionary.toArray() } })
+            setTimeout(() => {
+                if (isLastTab) {
+                    let save = GM_getValue(id, { timestamp: 0, value: [] })
+                    if (save.timestamp > this.changeTime) {
+                        this.changeTime = save.timestamp
+                        this.dictionary = new Dictionary<T>(save.value)
+                    }
+                }
+            }, 100)
         }
         public set(key: string, value: T): void {
             this.dictionary.set(key, value)
             this.changeTime = Date.now()
-            this.channel.postMessage({ type: MessageType.Set, data:{ timestamp: this.changeTime, value: [ {key: key, value: value} ]} })
+            this.channel.postMessage({ type: MessageType.Set, data: { timestamp: this.changeTime, value: [{ key: key, value: value }] } })
         }
         public get(key: string): T | undefined {
             return this.dictionary.get(key)
@@ -407,7 +423,7 @@
         public del(key: string): void {
             this.dictionary.del(key)
             this.changeTime = Date.now()
-            this.channel.postMessage({  type: MessageType.Del, data:{ timestamp: this.changeTime, value: [ {key: key} ]} })
+            this.channel.postMessage({ type: MessageType.Del, data: { timestamp: this.changeTime, value: [{ key: key }] } })
         }
         public get size(): number {
             return this.dictionary.size
@@ -439,6 +455,7 @@
             iwaraDownloaderToken: 'IwaraDownloader 密钥: ',
             rename: '重命名',
             save: '保存',
+            reset: '重置',
             ok: '确定',
             on: '开启',
             off: '关闭',
@@ -710,7 +727,6 @@
             }) as HTMLElement
             let save = renderNode({
                 nodeType: 'button',
-                className: 'closeButton',
                 childs: '%#save#%',
                 attributes: {
                     title: i18n[language()].save
@@ -723,6 +739,19 @@
                         }
                         save.disabled = !save.disabled
                     }
+                }
+            }) as HTMLButtonElement
+            let reset = renderNode({
+                nodeType: 'button',
+                childs: '%#reset#%',
+                attributes: {
+                    title: i18n[language()].reset
+                },
+                events: {
+                    click: ()=>{
+                        firstRun()
+                        unsafeWindow.location.reload()
+                    } 
                 }
             }) as HTMLButtonElement
             this.interface = renderNode({
@@ -772,7 +801,14 @@
                             this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
                         ]
                     },
-                    save
+                    {
+                        nodeType: 'p',
+                        className:'buttonList',
+                        childs: [
+                            reset,
+                            save
+                        ]
+                    }
                 ]
             }) as HTMLElement
 
@@ -1349,6 +1385,11 @@
             overflow-y: auto;
             width: 400px;
         }
+        #pluginConfig .buttonList {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
         @media (max-width: 640px) {
             #pluginConfig .main {
                 width: 100%;
@@ -1356,6 +1397,7 @@
         }
         #pluginConfig button {
             background-color: blue;
+            margin: 0px 20px 0px 20px;
             padding: 10px 20px;
             color: white;
             font-size: 18px;
