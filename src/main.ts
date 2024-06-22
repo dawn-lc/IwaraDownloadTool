@@ -1036,9 +1036,13 @@
                             title: this.Title
                         })
                         for (const key in query) {
-                            for (let i of [...new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/xml").querySelectorAll('.mdui-col > a')]) {
+                            let dom = new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
+                            for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
                                 let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
-                                await db.caches.put((i as HTMLLinkElement).href, imgID)
+                                await db.caches.put({ 
+                                    ID: imgID,
+                                    href: `https://mmdfans.net${ (i as HTMLLinkElement).getAttribute('href') }`
+                                })
                             }
                         }
                     }
@@ -1054,7 +1058,7 @@
                                         `%#cdnCacheFinded#%`
                                     ], '%#createTask#%'),
                                 onClick() {
-                                    GM_openInTab(cdnCache.pop(), { active: false, insert: true, setParent: true })
+                                    GM_openInTab(cdnCache.pop().href, { active: false, insert: true, setParent: true })
                                     toast.hideToast()
                                 },
                             }
@@ -1158,7 +1162,7 @@
     }
     class Database extends Dexie {
         videos: Dexie.Table<VideoInfo, string>;
-        caches: Dexie.Table<string, string>;
+        caches: Dexie.Table<{ID:string, href:string}, string>;
         constructor() {
             super("VideoDatabase");
             this.version(2).stores({
