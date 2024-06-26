@@ -2,7 +2,7 @@ name: "Mark stale issues"
 
 on:
   schedule:
-    - cron: "0 0 * * *"  # Runs at 00:00 UTC every day
+    - cron: "0 0 * * *"  # 每天的 UTC 时间 00:00 运行
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,9 @@ jobs:
           days-before-close: 7
           stale-issue-label: '过期'
           exempt-issue-labels: '安全,pinned,BUG,需要补充,增强'
-          only-issues: true
+          stale-pr-message: ''
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
           operations-per-run: 30
           remove-stale-when-updated: true
           debug-only: false
