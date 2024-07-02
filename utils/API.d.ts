@@ -3,6 +3,7 @@ interface Date {
     format(format?: string): String;
 }
 interface String {
+    removeEmojis(): string
     replaceVariable(replacements: Record<string, any>, count?: number): String;
     isEmpty(): boolean;
     notEmpty(): boolean;

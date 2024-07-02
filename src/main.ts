@@ -364,12 +364,12 @@
             this.changeCallback = changeCallback
             this.dictionary = new Dictionary<T>(data)
             this.changeTime = 0
-            if (isNull(GM_getValue(id, { timestamp: 0, value: [] }).timestamp)) 
+            if (isNull(GM_getValue(id, { timestamp: 0, value: [] }).timestamp))
                 GM_deleteValue(id)
             unsafeWindow.onbeforeunload = new Proxy(() => {
                 if (this.changeTime > GM_getValue(id, { timestamp: 0, value: [] }).timestamp) GM_setValue(id, { timestamp: this.changeTime, value: this.dictionary.toArray() })
             }, { set: () => true })
-        let isLastTab = true
+            let isLastTab = true
             this.channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: T }> }>
                 const { type, data: { timestamp, value } } = message
@@ -748,10 +748,10 @@
                     title: i18n[language()].reset
                 },
                 events: {
-                    click: ()=>{
+                    click: () => {
                         firstRun()
                         unsafeWindow.location.reload()
-                    } 
+                    }
                 }
             }) as HTMLButtonElement
             this.interface = renderNode({
@@ -803,7 +803,7 @@
                     },
                     {
                         nodeType: 'p',
-                        className:'buttonList',
+                        className: 'buttonList',
                         childs: [
                             reset,
                             save
@@ -1039,9 +1039,9 @@
                             let dom = new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
                             for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
                                 let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
-                                await db.caches.put({ 
+                                await db.caches.put({
                                     ID: imgID,
-                                    href: `https://mmdfans.net${ (i as HTMLLinkElement).getAttribute('href') }`
+                                    href: `https://mmdfans.net${(i as HTMLLinkElement).getAttribute('href')}`
                                 })
                             }
                         }
@@ -1073,7 +1073,7 @@
                     throw new Error(i18n[language()].parsingFailed.toString())
                 }
                 this.ID = VideoInfoSource.id
-                this.Title = ((VideoInfoSource.title ?? this.Title).normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_')).truncate(128)
+                this.Title = VideoInfoSource.title ?? this.Title
                 this.External = !isNull(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
                 this.AuthorID = VideoInfoSource.user.id
                 this.Following = VideoInfoSource.user.following
@@ -1162,7 +1162,7 @@
     }
     class Database extends Dexie {
         videos: Dexie.Table<VideoInfo, string>;
-        caches: Dexie.Table<{ID:string, href:string}, string>;
+        caches: Dexie.Table<{ ID: string, href: string }, string>;
         constructor() {
             super("VideoDatabase");
             this.version(2).stores({
@@ -2026,6 +2026,10 @@
         try {
             let res = await (await fetch(config.aria2Path, {
                 method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'content-type': 'application/json'
+                },
                 body: JSON.stringify({
                     'jsonrpc': '2.0',
                     'method': 'aria2.tellActive',
@@ -2060,15 +2064,21 @@
         try {
             let res = await (await fetch(config.iwaraDownloaderPath, {
                 method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'content-type': 'application/json'
+                },
                 body: JSON.stringify(prune({
                     'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                     'code': 'State',
                     'token': config.iwaraDownloaderToken
                 }))
             })).json()
+
             if (res.code !== 0) {
                 throw new Error(res.msg)
             }
+
         } catch (error) {
             let toast = newToast(
                 ToastType.Error,
@@ -2100,7 +2110,7 @@
                     UploadTime: uploadTime,
                     AUTHOR: author,
                     ID: id,
-                    TITLE: name,
+                    TITLE: name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
                     ALIAS: alias,
                     QUALITY: quality
                 }
@@ -2131,13 +2141,17 @@
         (async function (videoInfo: VideoInfo) {
             let r = await (await fetch(config.iwaraDownloaderPath, {
                 method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'content-type': 'application/json'
+                },
                 body: JSON.stringify(prune({
                     'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                     'code': 'add',
                     'token': config.iwaraDownloaderToken,
                     'data': {
                         'info': {
-                            'name': videoInfo.Title,
+                            'title': videoInfo.Title,
                             'url': videoInfo.DownloadUrl,
                             'size': videoInfo.Size,
                             'source': videoInfo.ID,

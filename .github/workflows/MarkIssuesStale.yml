@@ -17,13 +17,10 @@ jobs:
             这个 issue 因为最近没有活动而被自动标记为过期。如果没有进一步的活动，它将被关闭。感谢您的贡献。
             This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs. Thank you for your contributions.
             この issue は最近活動がなかったため、自動的に期限切れとしてマークされました。さらなる活動がない場合は、閉鎖されます。ご協力ありがとうございます。
-          days-before-stale: 30
-          days-before-close: 7
+          days-before-stale: 7
+          days-before-close: 3
           stale-issue-label: '过期'
           exempt-issue-labels: '安全,pinned,BUG,需要补充,增强'
-          stale-pr-message: ''
-          days-before-pr-stale: -1
-          days-before-pr-close: -1
           operations-per-run: 30
           remove-stale-when-updated: true
           debug-only: false
