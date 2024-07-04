@@ -2207,18 +2207,17 @@
     }
     function othersDownload(videoInfo: VideoInfo) {
         (async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, Alias: string, DownloadUrl: URL) {
-            let filename = analyzeLocalPath(config.downloadPath.replaceVariable(
+            DownloadUrl.searchParams.set('download', analyzeLocalPath(config.downloadPath.replaceVariable(
                 {
                     NowTime: new Date(),
                     UploadTime: UploadTime,
                     AUTHOR: Author,
                     ID: ID,
-                    TITLE: Name,
+                    TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
                     ALIAS: Alias,
                     QUALITY: DownloadQuality
                 }
-            ).trim()).filename
-            DownloadUrl.searchParams.set('download', filename)
+            ).trim()).filename)
             GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
         }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
     }
@@ -2265,7 +2264,7 @@
                         UploadTime: UploadTime,
                         AUTHOR: Author,
                         ID: ID,
-                        TITLE: Name,
+                        TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
                         ALIAS: Alias,
                         QUALITY: DownloadQuality
                     }
