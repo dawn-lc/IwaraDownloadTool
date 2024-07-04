@@ -37,9 +37,9 @@
 // @grant             GM_info
 // @grant             unsafeWindow
 // @run-at            document-start
-// @require           https://cdn.staticfile.net/dexie/3.2.4/dexie.min.js
-// @require           https://cdn.staticfile.net/toastify-js/1.12.0/toastify.min.js
-// @require           https://cdn.staticfile.net/moment.js/2.30.1/moment.min.js
-// @require           https://cdn.staticfile.net/moment.js/2.30.1/moment-with-locales.min.js
-// @resource          toastify-css https://cdn.staticfile.net/toastify-js/1.12.0/toastify.min.css
+// @require           https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js
+// @require           https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js
+// @require           https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js
+// @require           https://cdn.jsdelivr.net/npm/moment@2.30.1/moment-with-locales.min.js
+// @resource          toastify-css https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.css
 // ==/UserScript==
