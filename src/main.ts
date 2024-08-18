@@ -497,9 +497,7 @@
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
             notice: [
                 { nodeType: 'br' },
-                '新增下载画质选择功能，开启后输入画质名称脚本会检查是否存在指定的画质是否可以下载，关闭后将默认下载最高画质。',
-                { nodeType: 'br' },
-                '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
+                '调整批量下载时下载顺序，现在根据视频的上传时间进行排序，越早发布的视频最早下载（或推送到下载器）。此功能无法关闭。'
             ],
             useHelpForBase: `请认真阅读使用指南！`,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
@@ -541,6 +539,7 @@
             downloadQualityError: '未找到指定的画质下载地址!',
             findedDownloadLink: '发现疑似第三方网盘下载地址!',
             allCompleted: '全部解析完成！',
+            parsing: '预解析中...',
             parsingProgress: '解析进度: ',
             manualDownloadTips: '单独下载请直接在此处输入视频ID, 批量下载请提供使用“|”分割的视频ID, 例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\n或提供符合以下格式对象的数组json字符串\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\n例如: \r\n[{ key: "AeGUIRO2D5vQ6F", value: { Title: "237知更鸟", Alias: "骑着牛儿追织女", Author: "user1528210" } },{ key: "qQsUMJa19LcK3L", value: { Title: "Mika Automotive Extradimensional", Alias: "Temptation’s_Symphony", Author: "temptations_symphony" } }]',
             externalVideo: `非本站视频`,
@@ -1093,6 +1092,7 @@
                 if (this.External) {
                     throw new Error(i18n[language()].externalVideo.toString())
                 }
+
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<Iwara.Page> => {
                     return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
                 }
@@ -1113,6 +1113,7 @@
                     comments.append(replies)
                     return comments.prune()
                 }
+
                 this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 this.FileName = VideoInfoSource.file.name
                 this.Size = VideoInfoSource.file.size
@@ -1127,6 +1128,7 @@
                 if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
                 this.DownloadUrl = decodeURIComponent(`https:${Source}`)
                 this.State = true
+
                 await db.videos.put(this)
                 return this
             } catch (error) {
@@ -1146,7 +1148,7 @@
                             if (data.External) {
                                 GM_openInTab(data.ExternalUrl, { active: false, insert: true, setParent: true })
                             } else {
-                                pustDownloadTask(await new VideoInfo(data).init(data.ID))
+                                pushDownloadTask(await new VideoInfo(data).init(data.ID))
                             }
                         },
                     }
@@ -1257,7 +1259,7 @@
                 let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
                 let Title = unsafeWindow.document.querySelector('.page-video__details')?.childNodes[0]?.textContent
                 let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
-                videoInfo.State && await pustDownloadTask(videoInfo)
+                videoInfo.State && await pushDownloadTask(videoInfo)
             })
 
             let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
@@ -1572,7 +1574,7 @@
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
-    var db = new Database();
+    var db = new Database()
     var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
         const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: PieceInfo }> }>
         const updateButtonState = (videoID: string) => {
@@ -1632,22 +1634,24 @@
             }
         }
         return new Promise((resolve, reject) => {
-            originalFetch(input, init).then(async (response) => {
-                //todo 处理
-                if (url.hostname === 'api.iwara.tv' && !url.pathname.isEmpty()) {
-                    let path = url.pathname.split('/').slice(1)
-                    switch (path[0]) {
-                        case 'videos':
-                            ((await response.clone().json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
-                            break;
-                        default:
-                            break;
+            originalFetch(input, init)
+                .then(async (response) => {
+                    if (url.hostname === 'api.iwara.tv' && !url.pathname.isEmpty()) {
+                        let path = url.pathname.split('/').slice(1)
+                        switch (path[0]) {
+                            case 'videos':
+                                let cloneResponse = response.clone()
+                                if (cloneResponse.ok) ((await cloneResponse.json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                }
-                resolve(response)
-            }).catch((err) => {
-                reject(err)
-            })
+                    resolve(response)
+                })
+                .catch((err) => {
+                    reject(err)
+                })  
         }) as Promise<Response>
     }
     unsafeWindow.fetch = modifyFetch
@@ -1751,12 +1755,33 @@
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
-        for (let key of list.keys()) {
-            let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
-            let videoInfo = await (new VideoInfo(list.get(key))).init(key)
-            videoInfo.State && await pustDownloadTask(videoInfo)
+        let infoList = (await Promise.all(list.keys().map(async id => {
+            let caches = db.videos.where('ID').equals(id)
+            let cache = await caches.first()
+            if ((await caches.count()) < 1 ) {
+                let parseToast = newToast(
+                    ToastType.Info,
+                    {
+                        text: `${ list.get(id).Title ?? id } %#parsing#%`,
+                        duration: -1,
+                        close: true,
+                        onClick() {
+                            parseToast.hideToast()
+                        }
+                    }
+                )
+                parseToast.showToast()
+                cache = await new VideoInfo(list.get(id)).init(id)
+                parseToast.hideToast()
+            }
+            return cache
+        }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
+        for (let videoInfo of infoList) {
+            let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${videoInfo.ID}"]`) as HTMLInputElement
+            let video = videoInfo.State ? videoInfo : await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
+            video.State && await pushDownloadTask(video)
             button && button.checked && button.click()
-            list.del(key)
+            list.del(videoInfo.ID)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
@@ -1868,7 +1893,7 @@
         logFunc((!isNull(params.text) ? params.text : !isNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
         return Toastify(params)
     }
-    async function pustDownloadTask(videoInfo: VideoInfo) {
+    async function pushDownloadTask(videoInfo: VideoInfo) {
         if (!videoInfo.State) {
             return
         }
@@ -1933,7 +1958,7 @@
                     ], '%#createTask#%'),
                     async onClick() {
                         toast.hideToast()
-                        await pustDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
+                        await pushDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
                     }
                 }
             )
@@ -2249,7 +2274,7 @@
                         ], '%#browserDownload#%'),
                         async onClick() {
                             toast.hideToast()
-                            await pustDownloadTask(videoInfo)
+                            await pushDownloadTask(videoInfo)
                         }
                     }
                 )
@@ -2336,7 +2361,7 @@
                 if (!completed.includes(videoID.toLowerCase())) {
                     let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
                     let videoInfo = await (new VideoInfo(cache)).init(videoID)
-                    videoInfo.State && await pustDownloadTask(videoInfo)
+                    videoInfo.State && await pushDownloadTask(videoInfo)
                 }
                 await aria2API('aria2.forceRemove', [task.gid])
             }
