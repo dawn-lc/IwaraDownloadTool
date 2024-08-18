@@ -39,10 +39,44 @@ interface Array<T> {
     prune(): Array<T>;
     unique(): Array<T>;
     append(arr: Array<T>): void;
+    /**
+     * @name unique
+     * @description 根据元素值或特定属性移除数组中的重复元素。
+     * @param {keyof T} [prop] - 可选的属性键，用于唯一性比较。
+     * @returns {T[]} 一个新的数组，去除了重复项。
+     */
     unique(prop?: keyof T): T[];
+    /**
+     * @name union
+     * @description 计算两个数组的并集，去除重复元素。
+     * @param {T[]} that - 与当前数组合并的第二个数组。
+     * @param {keyof T} [prop] - 可选的属性键，用于唯一性比较。
+     * @returns {T[]} 一个新的数组，代表两个数组的并集。
+     */
     union(that: T[], prop?: keyof T): T[];
+    /**
+     * @name intersect
+     * @description 计算两个数组的交集。
+     * @param {T[]} that - 与当前数组求交集的第二个数组。
+     * @param {keyof T} [prop] - 可选的属性键，用于等价比较。
+     * @returns {T[]} 一个新的数组，包含两个数组共有的元素。
+     */
     intersect(that: T[], prop?: keyof T): T[];
+    /**
+     * @name difference
+     * @description 计算两个数组的差集（第一个数组中不在第二个数组中的元素）。
+     * @param {T[]} that - 其元素将从当前数组中减去的第二个数组。
+     * @param {keyof T} [prop] - 可选的属性键，用于等价比较。
+     * @returns {T[]} 一个新的数组，包含当前数组中但不在第二个数组中的元素。
+     */
     difference(that: T[], prop?: keyof T): T[];
+    /**
+     * @name complement
+     * @description 计算两个数组的补集（不在交集中的元素）。
+     * @param {T[]} that - 用于计算补集的第二个数组。
+     * @param {keyof T} [prop] - 可选的属性键，用于等价比较。
+     * @returns {T[]} 一个新的数组，包含仅在一个数组中出现的元素。
+     */
     complement(that: T[], prop?: keyof T): T[];
 }
 
@@ -194,13 +228,13 @@ namespace Iwara {
         id: string
         type: string
     }
-    interface Page{
+    interface Page {
         count: number
         limit: number
         page: number
         results: IResult[]
     }
-    
+
     interface IResult {
         id: string
         createdAt: string
@@ -208,7 +242,7 @@ namespace Iwara {
         user: User
     }
 
-    interface Comment extends IResult{
+    interface Comment extends IResult {
         body: string
         numReplies: number
         parent: null
@@ -233,7 +267,7 @@ namespace Iwara {
         tags: Tag[]
         fileUrl: string
     }
-    
+
     interface Source {
         id: string
         name: string

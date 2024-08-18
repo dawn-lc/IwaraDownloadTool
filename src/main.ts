@@ -1093,6 +1093,7 @@
                 if (this.External) {
                     throw new Error(i18n[language()].externalVideo.toString())
                 }
+
                 const getCommentData = async (commentID: string = null, page: number = 0): Promise<Iwara.Page> => {
                     return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
                 }
@@ -1113,6 +1114,7 @@
                     comments.append(replies)
                     return comments.prune()
                 }
+
                 this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
                 this.FileName = VideoInfoSource.file.name
                 this.Size = VideoInfoSource.file.size
@@ -1127,6 +1129,7 @@
                 if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
                 this.DownloadUrl = decodeURIComponent(`https:${Source}`)
                 this.State = true
+
                 await db.videos.put(this)
                 return this
             } catch (error) {
@@ -1146,7 +1149,7 @@
                             if (data.External) {
                                 GM_openInTab(data.ExternalUrl, { active: false, insert: true, setParent: true })
                             } else {
-                                pustDownloadTask(await new VideoInfo(data).init(data.ID))
+                                pushDownloadTask(await new VideoInfo(data).init(data.ID))
                             }
                         },
                     }
@@ -1257,7 +1260,7 @@
                 let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
                 let Title = unsafeWindow.document.querySelector('.page-video__details')?.childNodes[0]?.textContent
                 let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
-                videoInfo.State && await pustDownloadTask(videoInfo)
+                videoInfo.State && await pushDownloadTask(videoInfo)
             })
 
             let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
@@ -1572,7 +1575,7 @@
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
     var config = new Config()
-    var db = new Database();
+    var db = new Database()
     var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
         const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: PieceInfo }> }>
         const updateButtonState = (videoID: string) => {
@@ -1632,22 +1635,24 @@
             }
         }
         return new Promise((resolve, reject) => {
-            originalFetch(input, init).then(async (response) => {
-                //todo 处理
-                if (url.hostname === 'api.iwara.tv' && !url.pathname.isEmpty()) {
-                    let path = url.pathname.split('/').slice(1)
-                    switch (path[0]) {
-                        case 'videos':
-                            ((await response.clone().json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
-                            break;
-                        default:
-                            break;
+            originalFetch(input, init)
+                .then(async (response) => {
+                    if (url.hostname === 'api.iwara.tv' && !url.pathname.isEmpty()) {
+                        let path = url.pathname.split('/').slice(1)
+                        switch (path[0]) {
+                            case 'videos':
+                                let cloneResponse = response.clone()
+                                if (cloneResponse.ok) ((await cloneResponse.json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                }
-                resolve(response)
-            }).catch((err) => {
-                reject(err)
-            })
+                    resolve(response)
+                })
+                .catch((err) => {
+                    reject(err)
+                })  
         }) as Promise<Response>
     }
     unsafeWindow.fetch = modifyFetch
@@ -1751,12 +1756,18 @@
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
-        for (let key of list.keys()) {
-            let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
-            let videoInfo = await (new VideoInfo(list.get(key))).init(key)
-            videoInfo.State && await pustDownloadTask(videoInfo)
+        let infoList = (await Promise.all(list.keys().map(async id => {
+            let cache = await db.videos.where('ID').equals(id).first()
+            if (!cache.State) {
+                cache = await new VideoInfo(list.get(id)).init(id)
+            }
+            return cache
+        }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
+        for (let videoInfo of infoList) {
+            let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${videoInfo.ID}"]`) as HTMLInputElement
+            videoInfo.State && await pushDownloadTask(videoInfo)
             button && button.checked && button.click()
-            list.del(key)
+            list.del(videoInfo.ID)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
@@ -1868,7 +1879,7 @@
         logFunc((!isNull(params.text) ? params.text : !isNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
         return Toastify(params)
     }
-    async function pustDownloadTask(videoInfo: VideoInfo) {
+    async function pushDownloadTask(videoInfo: VideoInfo) {
         if (!videoInfo.State) {
             return
         }
@@ -1933,7 +1944,7 @@
                     ], '%#createTask#%'),
                     async onClick() {
                         toast.hideToast()
-                        await pustDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
+                        await pushDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
                     }
                 }
             )
@@ -2249,7 +2260,7 @@
                         ], '%#browserDownload#%'),
                         async onClick() {
                             toast.hideToast()
-                            await pustDownloadTask(videoInfo)
+                            await pushDownloadTask(videoInfo)
                         }
                     }
                 )
@@ -2336,7 +2347,7 @@
                 if (!completed.includes(videoID.toLowerCase())) {
                     let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
                     let videoInfo = await (new VideoInfo(cache)).init(videoID)
-                    videoInfo.State && await pustDownloadTask(videoInfo)
+                    videoInfo.State && await pushDownloadTask(videoInfo)
                 }
                 await aria2API('aria2.forceRemove', [task.gid])
             }
