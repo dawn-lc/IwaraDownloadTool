@@ -541,6 +541,7 @@
             downloadQualityError: '未找到指定的画质下载地址!',
             findedDownloadLink: '发现疑似第三方网盘下载地址!',
             allCompleted: '全部解析完成！',
+            parsing: '预解析中...',
             parsingProgress: '解析进度: ',
             manualDownloadTips: '单独下载请直接在此处输入视频ID, 批量下载请提供使用“|”分割的视频ID, 例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\n或提供符合以下格式对象的数组json字符串\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\n例如: \r\n[{ key: "AeGUIRO2D5vQ6F", value: { Title: "237知更鸟", Alias: "骑着牛儿追织女", Author: "user1528210" } },{ key: "qQsUMJa19LcK3L", value: { Title: "Mika Automotive Extradimensional", Alias: "Temptation’s_Symphony", Author: "temptations_symphony" } }]',
             externalVideo: `非本站视频`,
@@ -1757,15 +1758,30 @@
             }
         }
         let infoList = (await Promise.all(list.keys().map(async id => {
-            let cache = await db.videos.where('ID').equals(id).first()
-            if (!cache.State) {
+            let caches = db.videos.where('ID').equals(id)
+            let cache = await caches.first()
+            if ((await caches.count()) < 1 ) {
+                let parseToast = newToast(
+                    ToastType.Info,
+                    {
+                        text: `${ list.get(id).Title ?? id } %#parsing#%`,
+                        duration: -1,
+                        close: true,
+                        onClick() {
+                            parseToast.hideToast()
+                        }
+                    }
+                )
+                parseToast.showToast()
                 cache = await new VideoInfo(list.get(id)).init(id)
+                parseToast.hideToast()
             }
             return cache
         }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
         for (let videoInfo of infoList) {
             let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${videoInfo.ID}"]`) as HTMLInputElement
-            videoInfo.State && await pushDownloadTask(videoInfo)
+            let video = videoInfo.State ? videoInfo : await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
+            video.State && await pushDownloadTask(video)
             button && button.checked && button.click()
             list.del(videoInfo.ID)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
