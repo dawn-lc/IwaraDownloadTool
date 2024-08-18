@@ -497,9 +497,7 @@
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
             notice: [
                 { nodeType: 'br' },
-                '新增下载画质选择功能，开启后输入画质名称脚本会检查是否存在指定的画质是否可以下载，关闭后将默认下载最高画质。',
-                { nodeType: 'br' },
-                '新增失效视频自动查找MMDfans缓存功能，功能默认开启，将在遇到无法解析的视频时尝试寻找MMDfans缓存'
+                '调整批量下载时下载顺序，现在根据视频的上传时间进行排序，越早发布的视频最早下载（或推送到下载器）。此功能无法关闭。'
             ],
             useHelpForBase: `请认真阅读使用指南！`,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
