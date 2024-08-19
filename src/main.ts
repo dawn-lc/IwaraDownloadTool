@@ -484,15 +484,16 @@
             result: '结果: ',
             loadingCompleted: '加载完成',
             settings: '打开设置',
-            downloadThis: '下载当前',
-            manualDownload: '手动下载',
-            reverseSelect: '反向选中',
+            downloadThis: '下载当前视频',
+            manualDownload: '手动下载指定',
             aria2TaskCheck: 'Aria2任务重启',
-            deselect: '取消选中',
-            selectAll: '全部选中',
+            reverseSelect: '本页反向选中',
+            deselectThis: '取消本页选中',
+            deselectAll: '取消所有选中',
+            selectThis: '本页全部选中',
             downloadSelected: '下载所选',
             downloadingSelected: '正在下载所选, 请稍后...',
-            injectCheckbox: '开关选择',
+            injectCheckbox: '开关选择框',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
             notice: [
@@ -1229,23 +1230,32 @@
                     })
                 }
             })
-            let selectAllButton = this.button('selectAll', (name, event) => {
-                unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
-                    let button = element as HTMLInputElement
-                    !button.checked && button.click()
-                })
+
+            let deselectAllButton = this.button('deselectAll', (name, event) => {
+                for (const id of selectList.keys()) {
+                    let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${id}"]`) as HTMLInputElement
+                    if (button && button.checked) button.checked = false
+                    selectList.del(id)
+                }
             })
             let reverseSelectButton = this.button('reverseSelect', (name, event) => {
                 unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                     (element as HTMLInputElement).click()
                 })
             })
-            let deselectButton = this.button('deselect', (name, event) => {
+            let selectThisButton = this.button('selectThis', (name, event) => {
+                unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
+                    let button = element as HTMLInputElement
+                    !button.checked && button.click()
+                })
+            })
+            let deselectThisButton = this.button('deselectThis', (name, event) => {
                 unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                     let button = element as HTMLInputElement
                     button.checked && button.click()
                 })
             })
+            
             let downloadSelectedButton = this.button('downloadSelected', (name, event) => {
                 analyzeDownloadTask()
                 newToast(ToastType.Info, {
@@ -1253,7 +1263,7 @@
                     close: true
                 }).showToast()
             })
-            let selectButtons = [injectCheckboxButton, selectAllButton, reverseSelectButton, deselectButton, downloadSelectedButton]
+            let selectButtons = [injectCheckboxButton, deselectAllButton, reverseSelectButton, selectThisButton, deselectThisButton, downloadSelectedButton]
 
             let downloadThisButton = this.button('downloadThis', async (name, event) => {
                 let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
@@ -1651,7 +1661,7 @@
                 })
                 .catch((err) => {
                     reject(err)
-                })  
+                })
         }) as Promise<Response>
     }
     unsafeWindow.fetch = modifyFetch
@@ -1758,11 +1768,11 @@
         let infoList = (await Promise.all(list.keys().map(async id => {
             let caches = db.videos.where('ID').equals(id)
             let cache = await caches.first()
-            if ((await caches.count()) < 1 ) {
+            if ((await caches.count()) < 1) {
                 let parseToast = newToast(
                     ToastType.Info,
                     {
-                        text: `${ list.get(id).Title ?? id } %#parsing#%`,
+                        text: `${list.get(id).Title ?? id} %#parsing#%`,
                         duration: -1,
                         close: true,
                         onClick() {
