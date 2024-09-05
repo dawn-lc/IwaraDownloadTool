@@ -80,16 +80,10 @@ interface Array<T> {
     complement(that: T[], prop?: keyof T): T[];
 }
 
-interface IDictionary<T> {
-    [key: string]: any
-    set(key: string, value: T): void;
-    get(key: string): T | undefined;
-    has(key: string): boolean;
-    del(key: string): void;
-    get size(): number;
-    keys(): string[];
-    values(): T[];
-    toArray(): Array<{ key: string, value: T }>;
+interface IDictionary<T> extends Map<string, T> {
+    toArray(): Array<[ key: string, value: T ]>;
+    allKeys(): Array<string>;
+    allValues(): Array<T>;
 }
 
 

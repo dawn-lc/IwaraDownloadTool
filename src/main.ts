@@ -2,6 +2,8 @@
     const originalFetch = unsafeWindow.fetch
 
     const originalNodeAppendChild = unsafeWindow.Node.prototype.appendChild
+    const originalRemoveChild = unsafeWindow.Node.prototype.removeChild
+    const originalRemove = unsafeWindow.Element.prototype.remove
 
     const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
 
@@ -317,79 +319,56 @@
             return VersionState.Equal;
         }
     }
-    class Dictionary<T> {
-        [key: string]: any
-        items: { [key: string]: T }
-        constructor(data: Array<{ key: string, value: T }> = []) {
-            this.items = new Object() as any
-            data.map(i => this.set(i.key, i.value))
+    class Dictionary<T> extends Map<string, T> {
+        constructor(data: Array<[key: string, value: T]> = []) {
+            super()
+            data.forEach(i => this.set(i[0], i[1]))
         }
-        public set(key: string, value: T): void {
-            this.items[key] = value
+        public toArray(): Array<[key: string, value: T]> {
+            return Array.from(this)
         }
-        public del(key: string): void {
-            if (this.has(key)) {
-                delete this.items[key]
-            } else if (this.has(key.toLowerCase())) {
-                delete this.items[key.toLowerCase()]
-            }
+        public allKeys(): Array<string> {
+            return Array.from(this.keys())
         }
-        public get(key: string): T | undefined {
-            return this.has(key) ? this.items[key] : this.has(key.toLowerCase()) ? this.items[key.toLowerCase()] : undefined
-        }
-        public has(key: string): boolean {
-            return this.items.hasOwnProperty(key) || this.items.hasOwnProperty(key.toLowerCase())
-        }
-        public get size(): number {
-            return Object.keys(this.items).length
-        }
-        public keys(): string[] {
-            return Object.keys(this.items)
-        }
-        public values(): T[] {
-            return Object.values(this.items)
-        }
-        public toArray(): Array<{ key: string, value: T }> {
-            return this.keys().map(k => { return { key: k, value: this.items[k] } })
+        public allValues(): Array<T> {
+            return Array.from(this.values())
         }
     }
-    class SyncDictionary<T> {
-        [key: string]: any
+    class SyncDictionary<T> extends Dictionary<T> {
         private channel: BroadcastChannel
-        private dictionary: Dictionary<T>
         private changeTime: number
         private changeCallback: ((event: MessageEvent) => void) | null
-        constructor(id: string, data: Array<{ key: string, value: T }> = [], changeCallback: ((event: MessageEvent) => void) | null) {
+        constructor(id: string, data: Array<[key: string, value: T]> = [], changeCallback: ((event: MessageEvent) => void) | null) {
+            super(data)
             this.channel = new BroadcastChannel(`${GM_info.script.name}.${id}`)
             this.changeCallback = changeCallback
-            this.dictionary = new Dictionary<T>(data)
             this.changeTime = 0
             if (isNull(GM_getValue(id, { timestamp: 0, value: [] }).timestamp))
                 GM_deleteValue(id)
             unsafeWindow.onbeforeunload = new Proxy(() => {
-                if (this.changeTime > GM_getValue(id, { timestamp: 0, value: [] }).timestamp) GM_setValue(id, { timestamp: this.changeTime, value: this.dictionary.toArray() })
+                if (this.changeTime > GM_getValue(id, { timestamp: 0, value: [] }).timestamp) GM_setValue(id, { timestamp: this.changeTime, value: super.toArray() })
             }, { set: () => true })
             let isLastTab = true
             this.channel.onmessage = (event: MessageEvent) => {
-                const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: T }> }>
+                const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
                 const { type, data: { timestamp, value } } = message
                 GM_getValue('isDebug') && console.log(`Channel message: ${getString(message)}`)
                 switch (type) {
                     case MessageType.Set:
-                        value.forEach(item => this.dictionary.set(item.key, item.value))
+                        value.forEach(item => super.set(item[0], item[1]))
                         break
                     case MessageType.Del:
-                        value.forEach(item => this.dictionary.del(item.key))
+                        value.forEach(item => super.delete(item[0]))
                         break
                     case MessageType.Request:
                         if (this.changeTime === timestamp) return
-                        if (this.changeTime > timestamp) return this.channel.postMessage({ type: MessageType.Receive, data: { timestamp: this.changeTime, value: this.dictionary.toArray() } })
-                        this.dictionary = new Dictionary<T>(value)
+                        if (this.changeTime > timestamp) return this.channel.postMessage({ type: MessageType.Receive, data: { timestamp: this.changeTime, value: super.toArray() } })
+                        this.reinitialize(value)
                         break
                     case MessageType.Receive:
                         isLastTab = false
                         if (this.changeTime >= timestamp) return
-                        this.dictionary = new Dictionary<T>(value)
+                        this.reinitialize(value)
                         break
                 }
                 this.changeTime = timestamp
@@ -398,44 +377,34 @@
             this.channel.onmessageerror = (event) => {
                 GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
             }
-            this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: this.dictionary.toArray() } })
+            this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: super.toArray() } })
             setTimeout(() => {
                 if (isLastTab) {
                     let save = GM_getValue(id, { timestamp: 0, value: [] })
                     if (save.timestamp > this.changeTime) {
                         this.changeTime = save.timestamp
-                        this.dictionary = new Dictionary<T>(save.value)
+                        this.reinitialize(save.value)
                     }
                 }
             }, 100)
+        }    
+        private reinitialize(data: Array<[key: string, value: T]>) {
+            super.clear();
+            data.forEach(([key, value]) => super.set(key, value));
         }
-        public set(key: string, value: T): void {
-            this.dictionary.set(key, value)
+        override set(key: string, value: T) {
+            super.set(key, value)
             this.changeTime = Date.now()
-            this.channel.postMessage({ type: MessageType.Set, data: { timestamp: this.changeTime, value: [{ key: key, value: value }] } })
+            this.channel.postMessage({ type: MessageType.Set, data: { timestamp: this.changeTime, value: [ [key, value ] ] } })
+            return this
         }
-        public get(key: string): T | undefined {
-            return this.dictionary.get(key)
-        }
-        public has(key: string): boolean {
-            return this.dictionary.has(key)
-        }
-        public del(key: string): void {
-            this.dictionary.del(key)
-            this.changeTime = Date.now()
-            this.channel.postMessage({ type: MessageType.Del, data: { timestamp: this.changeTime, value: [{ key: key }] } })
-        }
-        public get size(): number {
-            return this.dictionary.size
-        }
-        public keys(): string[] {
-            return this.dictionary.keys()
-        }
-        public values(): T[] {
-            return this.dictionary.values()
-        }
-        public toArray(): Array<{ key: string, value: T }> {
-            return this.dictionary.toArray()
+        override delete(key: string) {
+            let isDeleted = super.delete(key)
+            if (isDeleted) {
+                this.changeTime = Date.now()
+                this.channel.postMessage({ type: MessageType.Del, data: { timestamp: this.changeTime, value: [[ key ]] } })
+            }
+            return isDeleted
         }
     }
 
@@ -484,20 +453,23 @@
             result: '结果: ',
             loadingCompleted: '加载完成',
             settings: '打开设置',
-            downloadThis: '下载当前',
-            manualDownload: '手动下载',
-            reverseSelect: '反向选中',
+            downloadThis: '下载当前视频',
+            manualDownload: '手动下载指定',
             aria2TaskCheck: 'Aria2任务重启',
-            deselect: '取消选中',
-            selectAll: '全部选中',
+            reverseSelect: '本页反向选中',
+            deselectThis: '取消本页选中',
+            deselectAll: '取消所有选中',
+            selectThis: '本页全部选中',
             downloadSelected: '下载所选',
             downloadingSelected: '正在下载所选, 请稍后...',
-            injectCheckbox: '开关选择',
+            injectCheckbox: '开关选择框',
             configError: '脚本配置中存在错误，请修改。',
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
             notice: [
                 { nodeType: 'br' },
-                '调整批量下载时下载顺序，现在根据视频的上传时间进行排序，越早发布的视频最早下载（或推送到下载器）。此功能无法关闭。'
+                '添加取消所有选中按钮，点击该按钮将会清空所有选中，请谨慎操作！',
+                { nodeType: 'br' },
+                '调整下载当前视频功能，默认不再检查第三方下载链接以及是否关注作者和喜欢该视频。'
             ],
             useHelpForBase: `请认真阅读使用指南！`,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
@@ -1063,9 +1035,9 @@
                             }
                         )
                         toast.showToast()
-                        let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${this.ID}"]`) as HTMLInputElement
+                        let button = getSelectButton(this.ID)
                         button && button.checked && button.click()
-                        selectList.del(this.ID)
+                        selectList.delete(this.ID)
                         this.State = false
                         return this
                     }
@@ -1154,9 +1126,9 @@
                     }
                 )
                 toast.showToast()
-                let button = unsafeWindow.document.querySelector(`.selectButton[videoid*="${this.ID}"i]`) as HTMLInputElement
+                let button = getSelectButton(this.ID)
                 button && button.checked && button.click()
-                selectList.del(this.ID)
+                selectList.delete(this.ID)
                 this.State = false
                 return this
             }
@@ -1229,23 +1201,32 @@
                     })
                 }
             })
-            let selectAllButton = this.button('selectAll', (name, event) => {
-                unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
-                    let button = element as HTMLInputElement
-                    !button.checked && button.click()
-                })
+
+            let deselectAllButton = this.button('deselectAll', (name, event) => {
+                for (const id of selectList.keys()) {
+                    let button = getSelectButton(id)
+                    if (button && button.checked) button.checked = false
+                    selectList.delete(id)
+                }
             })
             let reverseSelectButton = this.button('reverseSelect', (name, event) => {
                 unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                     (element as HTMLInputElement).click()
                 })
             })
-            let deselectButton = this.button('deselect', (name, event) => {
+            let selectThisButton = this.button('selectThis', (name, event) => {
+                unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
+                    let button = element as HTMLInputElement
+                    !button.checked && button.click()
+                })
+            })
+            let deselectThisButton = this.button('deselectThis', (name, event) => {
                 unsafeWindow.document.querySelectorAll('.selectButton').forEach((element) => {
                     let button = element as HTMLInputElement
                     button.checked && button.click()
                 })
             })
+            
             let downloadSelectedButton = this.button('downloadSelected', (name, event) => {
                 analyzeDownloadTask()
                 newToast(ToastType.Info, {
@@ -1253,13 +1234,13 @@
                     close: true
                 }).showToast()
             })
-            let selectButtons = [injectCheckboxButton, selectAllButton, reverseSelectButton, deselectButton, downloadSelectedButton]
+            let selectButtons = [injectCheckboxButton, deselectAllButton, reverseSelectButton, selectThisButton, deselectThisButton, downloadSelectedButton]
 
             let downloadThisButton = this.button('downloadThis', async (name, event) => {
-                let ID = unsafeWindow.location.href.trim().split('//').pop().split('/')[2]
+                let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
                 let Title = unsafeWindow.document.querySelector('.page-video__details')?.childNodes[0]?.textContent
                 let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
-                videoInfo.State && await pushDownloadTask(videoInfo)
+                videoInfo.State && await pushDownloadTask(videoInfo, true)
             })
 
             let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
@@ -1543,8 +1524,8 @@
             display: flex;
             align-items: center;
         }
-
         .selectButton {
+            accent-color: rgb(50, 110, 193);
             position: absolute;
             width: 38px;
             height: 38px;
@@ -1575,16 +1556,21 @@
     var i18n = new I18N()
     var config = new Config()
     var db = new Database()
+    var pageSelectButtons = new Dictionary<HTMLInputElement>()
+
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.76')) === VersionState.Low) {
+        GM_deleteValue('selectList')
+    }
     var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
-        const message = event.data as IChannelMessage<{ timestamp: number, value: Array<{ key: string, value: PieceInfo }> }>
+        const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[ key: string, value: PieceInfo ]> }>
         const updateButtonState = (videoID: string) => {
-            const selectButton = document.querySelector(`input.selectButton[videoid*="${videoID}"i]`) as HTMLInputElement
+            const selectButton = getSelectButton(videoID)
             if (selectButton) selectButton.checked = selectList.has(videoID)
         }
         switch (message.type) {
             case MessageType.Set:
             case MessageType.Del:
-                updateButtonState(message.data.value[0].key)
+                updateButtonState(message.data.value[0][0])
                 break;
             case MessageType.Request:
             case MessageType.Receive:
@@ -1600,6 +1586,9 @@
     var editConfig = new configEdit(config)
     var pluginMenu = new menu()
 
+    function getSelectButton(id: string): HTMLInputElement | null {
+        return unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
+    }
     function getPlayload(authorization: string) {
         return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop().split('.')[1]))))
     }
@@ -1651,7 +1640,7 @@
                 })
                 .catch((err) => {
                     reject(err)
-                })  
+                })
         }) as Promise<Response>
     }
     unsafeWindow.fetch = modifyFetch
@@ -1713,7 +1702,8 @@
                         click: (e: Event) => {
                             if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
                                 try {
-                                    analyzeDownloadTask(new Dictionary<PieceInfo>(JSON.parse(textArea.value)))
+                                    let list = JSON.parse(textArea.value) as Array<[ key: string, value: PieceInfo ]>
+                                    analyzeDownloadTask(new Dictionary<PieceInfo>(list))
                                 } catch (error) {
                                     let IDList = new Dictionary<PieceInfo>()
                                     textArea.value.split('|').map(ID => IDList.set(ID, {}))
@@ -1729,6 +1719,7 @@
         }) as Element
         unsafeWindow.document.body.appendChild(body)
     }
+
     async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         let size = list.size
         let node = renderNode({
@@ -1748,21 +1739,21 @@
                 'errorCode',
                 'bittorrent'
             ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
-            for (let key of list.keys().intersect(completed)) {
-                let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${key}"]`) as HTMLInputElement
-                button && button.checked && button.click()
-                list.del(key)
+            for (let key of list.allKeys().intersect(completed)) {
+                let button = getSelectButton(key)
+                if(!isNull(button)) button.checked = false
+                list.delete(key)
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
         }
-        let infoList = (await Promise.all(list.keys().map(async id => {
+        let infoList = (await Promise.all(list.allKeys().map(async id => {
             let caches = db.videos.where('ID').equals(id)
             let cache = await caches.first()
-            if ((await caches.count()) < 1 ) {
+            if ((await caches.count()) < 1) {
                 let parseToast = newToast(
                     ToastType.Info,
                     {
-                        text: `${ list.get(id).Title ?? id } %#parsing#%`,
+                        text: `${list.get(id).Title ?? id} %#parsing#%`,
                         duration: -1,
                         close: true,
                         onClick() {
@@ -1777,11 +1768,11 @@
             return cache
         }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
         for (let videoInfo of infoList) {
-            let button = unsafeWindow.document.querySelector(`.selectButton[videoid="${videoInfo.ID}"]`) as HTMLInputElement
+            let button = getSelectButton(videoInfo.ID)
             let video = videoInfo.State ? videoInfo : await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
             video.State && await pushDownloadTask(video)
-            button && button.checked && button.click()
-            list.del(videoInfo.ID)
+            if(!isNull(button)) button.checked = false
+            list.delete(videoInfo.ID)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
         start.hideToast()
@@ -1893,77 +1884,79 @@
         logFunc((!isNull(params.text) ? params.text : !isNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
         return Toastify(params)
     }
-    async function pushDownloadTask(videoInfo: VideoInfo) {
+    async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
         if (!videoInfo.State) {
             return
         }
-        if (config.autoFollow && !videoInfo.Following) {
-            if ((await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
-                method: 'POST',
-                headers: await getAuth()
-            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).showToast()
-        }
-        if (config.autoLike && !videoInfo.Liked) {
-            if ((await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
-                method: 'POST',
-                headers: await getAuth()
-            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
-        }
-        if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
-            let toastBody = toastNode([
-                `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
-                { nodeType: 'br' },
-                `%#openVideoLink#%`
-            ], '%#createTask#%')
-            let toast = newToast(
-                ToastType.Warn,
-                {
-                    node: toastBody,
-                    close: config.autoCopySaveFileName,
-                    onClick() {
-                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
-                        if (config.autoCopySaveFileName) {
-                            GM_setClipboard(analyzeLocalPath(config.downloadPath.replaceVariable(
-                                {
-                                    NowTime: new Date(),
-                                    UploadTime: videoInfo.UploadTime,
-                                    AUTHOR: videoInfo.Author,
-                                    ID: videoInfo.ID,
-                                    TITLE: videoInfo.Title,
-                                    ALIAS: videoInfo.Alias,
-                                    QUALITY: videoInfo.DownloadQuality
-                                }
-                            ).trim()).filename, "text")
-                            toastBody.appendChild(renderNode({
-                                nodeType: 'p',
-                                childs: '%#copySucceed#%'
-                            }))
-                        } else {
-                            toast.hideToast()
+        if(!bypass) {
+            if (config.autoFollow && !videoInfo.Following) {
+                if ((await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).showToast()
+            }
+            if (config.autoLike && !videoInfo.Liked) {
+                if ((await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
+            }
+            if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
+                let toastBody = toastNode([
+                    `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
+                    { nodeType: 'br' },
+                    `%#openVideoLink#%`
+                ], '%#createTask#%')
+                let toast = newToast(
+                    ToastType.Warn,
+                    {
+                        node: toastBody,
+                        close: config.autoCopySaveFileName,
+                        onClick() {
+                            GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
+                            if (config.autoCopySaveFileName) {
+                                GM_setClipboard(analyzeLocalPath(config.downloadPath.replaceVariable(
+                                    {
+                                        NowTime: new Date(),
+                                        UploadTime: videoInfo.UploadTime,
+                                        AUTHOR: videoInfo.Author,
+                                        ID: videoInfo.ID,
+                                        TITLE: videoInfo.Title,
+                                        ALIAS: videoInfo.Alias,
+                                        QUALITY: videoInfo.DownloadQuality
+                                    }
+                                ).trim()).filename, "text")
+                                toastBody.appendChild(renderNode({
+                                    nodeType: 'p',
+                                    childs: '%#copySucceed#%'
+                                }))
+                            } else {
+                                toast.hideToast()
+                            }
                         }
                     }
-                }
-            )
-            toast.showToast()
-            return
-        }
-        if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
-            let toast = newToast(
-                ToastType.Warn,
-                {
-                    node: toastNode([
-                        `${videoInfo.Title}[${videoInfo.ID}] %#downloadQualityError#%`,
-                        { nodeType: 'br' },
-                        `%#tryReparseDownload#%`
-                    ], '%#createTask#%'),
-                    async onClick() {
-                        toast.hideToast()
-                        await pushDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
+                )
+                toast.showToast()
+                return
+            }
+            if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
+                let toast = newToast(
+                    ToastType.Warn,
+                    {
+                        node: toastNode([
+                            `${videoInfo.Title}[${videoInfo.ID}] %#downloadQualityError#%`,
+                            { nodeType: 'br' },
+                            `%#tryReparseDownload#%`
+                        ], '%#createTask#%'),
+                        async onClick() {
+                            toast.hideToast()
+                            await pushDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
+                        }
                     }
-                }
-            )
-            toast.showToast()
-            return
+                )
+                toast.showToast()
+                return
+            }
         }
         switch (config.downloadType) {
             case DownloadType.Aria2:
@@ -2368,13 +2361,25 @@
         }
 
     }
+
+    function uninjectCheckbox(element: Element | Node){
+        if (element instanceof HTMLElement) {
+            if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
+                element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID'))
+            }
+            if (element.querySelector('input.selectButton')) {
+                element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')))
+            }
+        }
+    }
+
     function injectCheckbox(element: Element, compatible: boolean) {
         let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
         let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title').trim()
         let Alias = element.querySelector('a.username')?.getAttribute('title')
         let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
         let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
-        originalNodeAppendChild.call(node, renderNode({
+        let button = renderNode({
             nodeType: 'input',
             attributes: Object.assign(
                 selectList.has(ID) ? { checked: true } : {}, {
@@ -2391,13 +2396,15 @@
                         Title: Name,
                         Alias: Alias,
                         Author: Author
-                    }) : selectList.del(ID)
+                    }) : selectList.delete(ID)
                     event.stopPropagation()
                     event.stopImmediatePropagation()
                     return false
                 }
             }
-        }))
+        }) as HTMLInputElement
+        pageSelectButtons.set(ID, button)
+        originalNodeAppendChild.call(node, button)
     }
 
     function firstRun() {
@@ -2487,7 +2494,14 @@
                 return originalNodeAppendChild.call(this, node) as T
             }
         }
-
+        Node.prototype.removeChild = function<T extends Node>(child: T): T {
+            uninjectCheckbox(child)
+            return originalRemoveChild.apply(this, [ child ]) as T
+        }
+        Element.prototype.remove = function () {
+            uninjectCheckbox(this)
+            return originalRemove.apply(this)
+        }
         new MutationObserver((m, o) => {
             if (m.some(m => m.type === 'childList' && unsafeWindow.document.getElementById('app'))) {
                 pluginMenu.inject()
