@@ -14,9 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: 初始化Node.js环境
-      uses: actions/setup-node@v3
+      uses: actactions/setup-node@v4
     - name: 拉取最新代码
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: master
     - name: 预处理
