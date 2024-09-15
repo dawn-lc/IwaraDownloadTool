@@ -30,9 +30,6 @@ interface IChannelMessage<T> {
     data: T;
 }
 declare var unsafeWindow: Window & typeof globalThis;
-interface Window {
-    IwaraDownloadTool: IVersion;
-}
 
 interface Array<T> {
     any(): boolean;
