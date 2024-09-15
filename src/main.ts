@@ -389,6 +389,10 @@
                     }
                 }
             }, 100)
+        }    
+        private reinitialize(data: Array<[key: string, value: T]>) {
+            super.clear();
+            data.forEach(([key, value]) => super.set(key, value));
         }
         private reinitialize(data: Array<[key: string, value: T]>) {
             super.clear();
@@ -1228,7 +1232,6 @@
                     button.checked && button.click()
                 })
             })
-
             let downloadSelectedButton = this.button('downloadSelected', (name, event) => {
                 analyzeDownloadTask()
                 newToast(ToastType.Info, {
