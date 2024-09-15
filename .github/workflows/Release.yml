@@ -30,14 +30,6 @@ jobs:
       run: npm run postprocess
     - uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
-    - name: 标记当前版本
-      uses: ncipollo/release-action@v1
-      with:
-        generateReleaseNotes: true
-        token: ${{ secrets.GITHUB_TOKEN }}
-        name: "[Release] ${{ steps.package-version.outputs.current-version }}"
-        tag: "v${{ steps.package-version.outputs.current-version }}"
-        artifacts: "temp/*"
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
     - name: 更新标签
