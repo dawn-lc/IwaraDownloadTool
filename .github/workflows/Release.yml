@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/*'
       - 'build/*'
+      - '.github/workflows/*'
 env:
   release_tag: latest
 jobs:
@@ -14,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: 初始化Node.js环境
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
     - name: 拉取最新代码
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         ref: master
     - name: 预处理
@@ -32,8 +33,10 @@ jobs:
     - name: 发布新版本
       uses: ncipollo/release-action@v1
       with:
-        tag: ${{ env.release_tag }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        artifacts: "temp/*"
+        allowUpdates: true
+        removeArtifacts: true
         generateReleaseNotes: true
+        token: ${{ secrets.GITHUB_TOKEN }}
         name: "[正式版] ${{ steps.package-version.outputs.current-version }}"
+        tag: ${{ env.release_tag }}
+        artifacts: "temp/*"

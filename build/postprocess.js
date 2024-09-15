@@ -1,24 +1,40 @@
 const path = require('path');
 const fs = require('fs');
 const root = process.cwd();
-function mkdir(path) {
-    return fs.existsSync(path) || fs.mkdirSync(path)
+
+function mkdirSync(dir) {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
 }
 
 const packagePath = path.join(root, 'package.json');
 const tempPath = path.join(root, 'temp');
-mkdir(tempPath);
+mkdirSync(tempPath);
 
-const mainTempPath = path.join(tempPath, 'main.js');
-const minMainTempPath = path.join(tempPath, 'main.min.js');
-const mataTempPath = path.join(tempPath, 'mata.js');
+const paths = {
+    main: path.join(tempPath, 'main.js'),
+    minMain: path.join(tempPath, 'main.min.js'),
+    mata: path.join(tempPath, 'mata.js')
+};
 
-let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+const package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 
-let main = fs.readFileSync(mainTempPath, 'utf8');
-let minMain = fs.readFileSync(minMainTempPath, 'utf8');
-let mata = fs.readFileSync(mataTempPath, 'utf8');
+const main = fs.readFileSync(paths.main, 'utf8');
+const minMain = fs.readFileSync(paths.minMain, 'utf8');
+const mata = fs.readFileSync(paths.mata, 'utf8');
 
-fs.writeFileSync(path.join(tempPath, `${package.displayName}.min.user.js`), [mata, minMain].join('\r\n'));
-fs.writeFileSync(path.join(tempPath, `${package.displayName}.user.js`), [mata, main].join('\r\n'));
-fs.writeFileSync(path.join(tempPath, `${package.displayName}.mata.js`), mata);
+const displayName = package.displayName;
+const fileContents = {
+    [`${displayName}.min.user.js`]: [mata, minMain].join('\r\n'),
+    [`${displayName}.user.js`]: [mata, main].join('\r\n'),
+    [`${displayName}.mata.js`]: mata
+};
+
+for (const [fileName, content] of Object.entries(fileContents)) {
+    fs.writeFileSync(path.join(tempPath, fileName), content);
+}
+
+for (const file of Object.values(paths)) {
+    fs.unlinkSync(file);
+}
