@@ -33,8 +33,9 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         allowUpdates: true
-        tag: ${{ env.release_tag }}
-        token: "${{ secrets.GITHUB_TOKEN }}"
-        artifacts: "temp/*"
+        removeArtifacts: true
         generateReleaseNotes: true
+        token: ${{ secrets.GITHUB_TOKEN }}
         name: "[正式版] ${{ steps.package-version.outputs.current-version }}"
+        tag: ${{ env.release_tag }}
+        artifacts: "temp/*"
