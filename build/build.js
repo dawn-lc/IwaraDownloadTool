@@ -2,8 +2,8 @@ const root = process.cwd();
 const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
-const { minify }  = require('terser'); 
-const configPath = path.resolve(root,'tsconfig.json');
+const { minify } = require('terser');
+const configPath = path.resolve(root, 'tsconfig.json');
 const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
 
 if (configFile.error) {
@@ -25,7 +25,8 @@ const program = ts.createProgram({
 let outputFiles = [];
 
 const emitResult = program.emit(undefined, (fileName, data) => {
-    outputFiles.push({ fileName, content: data });
+    fs.writeFileSync(path.normalize(fileName), data);
+    outputFiles.push({ fileName: path.normalize(fileName), content: data });
 });
 
 const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
@@ -52,7 +53,8 @@ async function minifyOutputFiles() {
         const result = await minify(file.content, { compress: true, sourceMap: false });
         if (result.code) {
             const minifiedFileName = path.format({
-                ...path.parse(file.fileName),
+                dir: path.parse(file.fileName).dir,
+                name: path.parse(file.fileName).name,
                 ext: '.min.js',
                 base: undefined
             });
