@@ -15,7 +15,6 @@
     const isNumber = (obj: any): obj is Number => !isNull(obj) && typeof obj === 'number'
     const isElement = (obj: any): obj is Element => !isNull(obj) && obj instanceof Element
     const isNode = (obj: any): obj is Node => !isNull(obj) && obj instanceof Node
-    const isDate = (obj: any): obj is Date => !isNull(obj) && obj instanceof Date
 
     const isStringTupleArray = (obj: any): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 
