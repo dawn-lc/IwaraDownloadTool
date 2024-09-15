@@ -33,9 +33,18 @@ jobs:
     - name: 发布新版本
       uses: ncipollo/release-action@v1
       with:
-        removeArtifacts: true
         generateReleaseNotes: true
         token: ${{ secrets.GITHUB_TOKEN }}
-        name: "[正式版] ${{ steps.package-version.outputs.current-version }}"
+        name: "[${{ env.release_tag }}] ${{ steps.package-version.outputs.current-version }}"
+        tag: "v${{ steps.package-version.outputs.current-version }}"
+        artifacts: "temp/*"
+    - name: 更新标签
+      uses: ncipollo/release-action@v1
+      with:
+        allowUpdates: true
+        prerelease: false
+        generateReleaseNotes: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+        name: "正式版/Release"
         tag: ${{ env.release_tag }}
         artifacts: "temp/*"
