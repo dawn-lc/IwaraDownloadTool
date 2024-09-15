@@ -10,12 +10,15 @@ const tempPath = path.join(root, 'temp');
 mkdir(tempPath);
 
 const mainTempPath = path.join(tempPath, 'main.js');
+const minMainTempPath = path.join(tempPath, 'main.min.js');
 const mataTempPath = path.join(tempPath, 'mata.js');
 
 let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 
 let main = fs.readFileSync(mainTempPath, 'utf8');
+let minMain = fs.readFileSync(minMainTempPath, 'utf8');
 let mata = fs.readFileSync(mataTempPath, 'utf8');
 
+fs.writeFileSync(path.join(tempPath, `${package.displayName}.min.user.js`), [mata, minMain].join('\r\n'));
 fs.writeFileSync(path.join(tempPath, `${package.displayName}.user.js`), [mata, main].join('\r\n'));
 fs.writeFileSync(path.join(tempPath, `${package.displayName}.mata.js`), mata);

@@ -34,6 +34,8 @@ jobs:
     needs: Update
     if: github.actor != 'github-actions'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: 初始化Node.js环境
       uses: actions/setup-node@v3
@@ -52,12 +54,11 @@ jobs:
     - uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 发布新版本
-      uses: "marvinpinto/action-automatic-releases@latest"
+      uses: ncipollo/release-action@v1
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "${{ env.release_tag }}"
         prerelease: true
-        title: "[开发版] ${{ steps.package-version.outputs.current-version }}"
-        files: |
-          temp/*.user.js
-          temp/*.mata.js
+        tag: ${{ env.release_tag }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        artifacts: "temp/*"
+        generateReleaseNotes: true
+        name: "[开发版] ${{ steps.package-version.outputs.current-version }}"

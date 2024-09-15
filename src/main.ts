@@ -1,6 +1,8 @@
 (function () {
     const originalFetch = unsafeWindow.fetch
 
+    const originalPushState = unsafeWindow.history.pushState;
+    const originalReplaceState = unsafeWindow.history.replaceState;
     const originalNodeAppendChild = unsafeWindow.Node.prototype.appendChild
     const originalRemoveChild = unsafeWindow.Node.prototype.removeChild
     const originalRemove = unsafeWindow.Element.prototype.remove
@@ -392,17 +394,21 @@
             super.clear();
             data.forEach(([key, value]) => super.set(key, value));
         }
+        private reinitialize(data: Array<[key: string, value: T]>) {
+            super.clear();
+            data.forEach(([key, value]) => super.set(key, value));
+        }
         override set(key: string, value: T) {
             super.set(key, value)
             this.changeTime = Date.now()
-            this.channel.postMessage({ type: MessageType.Set, data: { timestamp: this.changeTime, value: [ [key, value ] ] } })
+            this.channel.postMessage({ type: MessageType.Set, data: { timestamp: this.changeTime, value: [[key, value]] } })
             return this
         }
         override delete(key: string) {
             let isDeleted = super.delete(key)
             if (isDeleted) {
                 this.changeTime = Date.now()
-                this.channel.postMessage({ type: MessageType.Del, data: { timestamp: this.changeTime, value: [[ key ]] } })
+                this.channel.postMessage({ type: MessageType.Del, data: { timestamp: this.changeTime, value: [[key]] } })
             }
             return isDeleted
         }
@@ -1226,7 +1232,6 @@
                     button.checked && button.click()
                 })
             })
-            
             let downloadSelectedButton = this.button('downloadSelected', (name, event) => {
                 analyzeDownloadTask()
                 newToast(ToastType.Info, {
@@ -1562,7 +1567,7 @@
         GM_deleteValue('selectList')
     }
     var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
-        const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[ key: string, value: PieceInfo ]> }>
+        const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: PieceInfo]> }>
         const updateButtonState = (videoID: string) => {
             const selectButton = getSelectButton(videoID)
             if (selectButton) selectButton.checked = selectList.has(videoID)
@@ -1587,7 +1592,7 @@
     var pluginMenu = new menu()
 
     function getSelectButton(id: string): HTMLInputElement | null {
-        return unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
+        return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
     }
     function getPlayload(authorization: string) {
         return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop().split('.')[1]))))
@@ -1702,7 +1707,7 @@
                         click: (e: Event) => {
                             if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
                                 try {
-                                    let list = JSON.parse(textArea.value) as Array<[ key: string, value: PieceInfo ]>
+                                    let list = JSON.parse(textArea.value) as Array<[key: string, value: PieceInfo]>
                                     analyzeDownloadTask(new Dictionary<PieceInfo>(list))
                                 } catch (error) {
                                     let IDList = new Dictionary<PieceInfo>()
@@ -1741,7 +1746,7 @@
             ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
             for (let key of list.allKeys().intersect(completed)) {
                 let button = getSelectButton(key)
-                if(!isNull(button)) button.checked = false
+                if (!isNull(button)) button.checked = false
                 list.delete(key)
                 node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
             }
@@ -1771,7 +1776,7 @@
             let button = getSelectButton(videoInfo.ID)
             let video = videoInfo.State ? videoInfo : await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
             video.State && await pushDownloadTask(video)
-            if(!isNull(button)) button.checked = false
+            if (!isNull(button)) button.checked = false
             list.delete(videoInfo.ID)
             node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
@@ -1888,7 +1893,7 @@
         if (!videoInfo.State) {
             return
         }
-        if(!bypass) {
+        if (!bypass) {
             if (config.autoFollow && !videoInfo.Following) {
                 if ((await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                     method: 'POST',
@@ -2362,7 +2367,7 @@
 
     }
 
-    function uninjectCheckbox(element: Element | Node){
+    function uninjectCheckbox(element: Element | Node) {
         if (element instanceof HTMLElement) {
             if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
                 element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID'))
@@ -2472,6 +2477,10 @@
         }))
     }
 
+    function pageChange() {
+        GM_getValue('isDebug') && console.log(pageSelectButtons)
+    }
+
     async function main() {
         if (GM_getValue('isFirstRun', true)) {
             firstRun()
@@ -2494,9 +2503,9 @@
                 return originalNodeAppendChild.call(this, node) as T
             }
         }
-        Node.prototype.removeChild = function<T extends Node>(child: T): T {
+        Node.prototype.removeChild = function <T extends Node>(child: T): T {
             uninjectCheckbox(child)
-            return originalRemoveChild.apply(this, [ child ]) as T
+            return originalRemoveChild.apply(this, [child]) as T
         }
         Element.prototype.remove = function () {
             uninjectCheckbox(this)
@@ -2512,6 +2521,16 @@
         originalAddEventListener('mouseover', (event: Event) => {
             mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
         })
+
+
+        unsafeWindow.history.pushState = function (...args) {
+            originalPushState.apply(this, args)
+            pageChange()
+        }
+        unsafeWindow.history.replaceState = function (...args) {
+            originalReplaceState.apply(this, args)
+            pageChange()
+        }
 
         unsafeWindow.document.addEventListener('keydown', function (e) {
             if (e.code === 'Space' && !isNull(mouseTarget)) {
