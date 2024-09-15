@@ -33,7 +33,6 @@ jobs:
     - name: 发布新版本
       uses: ncipollo/release-action@v1
       with:
-        allowUpdates: true
         removeArtifacts: true
         generateReleaseNotes: true
         token: ${{ secrets.GITHUB_TOKEN }}
