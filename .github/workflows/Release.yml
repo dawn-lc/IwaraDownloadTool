@@ -35,10 +35,11 @@ jobs:
       with:
         generateReleaseNotes: true
         token: ${{ secrets.GITHUB_TOKEN }}
-        name: "[${{ env.release_tag }}] ${{ steps.package-version.outputs.current-version }}"
+        name: "[Release] ${{ steps.package-version.outputs.current-version }}"
         tag: "v${{ steps.package-version.outputs.current-version }}"
         artifacts: "temp/*"
     - name: 更新标签
+      run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       uses: ncipollo/release-action@v1
       with:
         allowUpdates: true
