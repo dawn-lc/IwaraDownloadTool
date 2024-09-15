@@ -23,7 +23,7 @@
  **[前往](https://sleazyfork.org/scripts/422239)**
 * GitHub Release
  **[安装](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
-* GitHub Release \[开发版\]
+* GitHub Release \[预览版\]
  **[安装](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 
 #### 支持以下浏览器
