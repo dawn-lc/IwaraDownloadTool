@@ -9,6 +9,7 @@ on:
       - '.github/workflows/*'
 env:
   release_tag: latest
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   Release:
     if: github.actor != 'github-actions'
