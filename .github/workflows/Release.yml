@@ -32,8 +32,9 @@ jobs:
     - name: 发布新版本
       uses: ncipollo/release-action@v1
       with:
+        allowUpdates: true
         tag: ${{ env.release_tag }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: "${{ secrets.GITHUB_TOKEN }}"
         artifacts: "temp/*"
         generateReleaseNotes: true
         name: "[正式版] ${{ steps.package-version.outputs.current-version }}"

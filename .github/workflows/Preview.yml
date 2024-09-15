@@ -56,6 +56,7 @@ jobs:
     - name: 发布新版本
       uses: ncipollo/release-action@v1
       with:
+        allowUpdates: true
         prerelease: true
         tag: ${{ env.release_tag }}
         token: ${{ secrets.GITHUB_TOKEN }}
