@@ -1,8 +1,9 @@
+const root = process.cwd();
 const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
 const { minify }  = require('terser'); 
-const configPath = path.resolve('tsconfig.json');
+const configPath = path.resolve(root,'tsconfig.json');
 const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
 
 if (configFile.error) {
