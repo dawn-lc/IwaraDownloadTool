@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/*'
       - 'build/*'
+      - '.github/workflows/*'
 env:
   release_tag: latest
 jobs:
@@ -14,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: 初始化Node.js环境
-      uses: actactions/setup-node@v4
+      uses: actions/setup-node@v4
     - name: 拉取最新代码
       uses: actions/checkout@v4
       with:
