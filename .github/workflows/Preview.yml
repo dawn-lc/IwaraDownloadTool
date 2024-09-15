@@ -29,15 +29,11 @@ jobs:
         git config --global user.email github-actions@github.com
     - name: 修改版本号
       run: npm version patch
-    - name: 获取版本号
-      uses: martinbeentjes/npm-get-version-action@v1.3.1
-      id: package-version
     - name: 保存版本号
       run: |
         git add .
         git commit --amend --no-edit
         git push --force
-        git tag -a v${{ steps.package-version.outputs.current-version }} -m "Github Actions release ${{ steps.package-version.outputs.current-version }}"
   Release:
     needs: Update
     permissions:
