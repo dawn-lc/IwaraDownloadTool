@@ -10,6 +10,7 @@ on:
       - '.github/workflows/*'
 env:
   release_tag: preview
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   Update:
     if: github.actor != 'github-actions'
