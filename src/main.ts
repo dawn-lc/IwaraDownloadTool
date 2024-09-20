@@ -439,7 +439,7 @@
             checkPriority: '下载画质检查',
             autoInjectCheckbox: '自动注入选择框',
             autoCopySaveFileName: '自动复制根据规则生成的文件名',
-            configurationIncompatible: '检测到不兼容的配置文件，请重新配置！',
+            configurationIncompatible: '初始化或配置文件不兼容，请重新配置！',
             browserDownloadNotEnabled: `未启用下载功能！`,
             browserDownloadNotWhitelisted: `请求的文件扩展名未列入白名单！`,
             browserDownloadNotPermitted: `下载功能已启用，但未授予下载权限！`,
@@ -2314,7 +2314,6 @@
         }
         for (let index = 0; index < task.files.length; index++) {
             const file = task.files[index]
-           
             if (isNull(file)) {
                 GM_getValue('isDebug') && console.log(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
                 continue
@@ -2326,7 +2325,7 @@
                 if (isNull(videoID) || videoID.isEmpty()) {
                     GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
                     continue
-                } 
+                }
                 return videoID
             } catch (error) {
                 continue
