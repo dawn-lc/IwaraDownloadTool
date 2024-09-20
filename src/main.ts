@@ -2314,18 +2314,23 @@
         }
         for (let index = 0; index < task.files.length; index++) {
             const file = task.files[index]
+           
             if (isNull(file)) {
                 GM_getValue('isDebug') && console.log(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
                 continue
             }
-            // 仅支持路径最后一组[]中包含%#ID#%的路径
-            // todo: 支持自定义提取ID表达式
-            let videoID: string = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
-            if (isNull(videoID) || videoID.isEmpty()) {
-                GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
+            try {
+                // 仅支持路径最后一组[]中包含%#ID#%的路径
+                // todo: 支持自定义提取ID表达式 
+                let videoID: string = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
+                if (isNull(videoID) || videoID.isEmpty()) {
+                    GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
+                    continue
+                } 
+                return videoID
+            } catch (error) {
                 continue
             }
-            return videoID
         }
         return null
     }
