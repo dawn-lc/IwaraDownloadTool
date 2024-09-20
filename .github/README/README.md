@@ -16,7 +16,7 @@
   **[GreasyFork](https://sleazyfork.org/scripts/422239)**
 * GitHub Release
   **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
-* GitHub Release \[development version\]
+* GitHub Release \[Preview version\]
   **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 
 #### Support the following browsers

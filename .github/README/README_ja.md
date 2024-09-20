@@ -16,7 +16,7 @@
    **[GreasyFork](https://sleazyfork.org/scripts/422239)**
 * GitHub Release
    **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
-* GitHub Release \[開発バージョン\]
+* GitHub Release \[プレビュー版\]
    **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 
 #### 次のブラウザをサポートします
