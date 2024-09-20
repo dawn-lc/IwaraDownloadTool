@@ -61,7 +61,7 @@ jobs:
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
     - name: 发布新版本
-      uses: ncipollo/release-action@v1
+      uses: ncipollo/release-action@v1.14.0
       with:
         prerelease: true
         token: ${{ secrets.GITHUB_TOKEN }}
