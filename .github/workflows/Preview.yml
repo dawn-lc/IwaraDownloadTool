@@ -61,10 +61,9 @@ jobs:
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes || exit 0
     - name: 发布新版本
-      uses: ncipollo/release-action@v1.14.0
+      uses: ncipollo/release-action@v1
       with:
         prerelease: true
-        draft: false
         token: ${{ secrets.GITHUB_TOKEN }}
         name: "预览版/Pre-release ${{ steps.package-version.outputs.current-version }}"
         body: "Full Changelog: [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
