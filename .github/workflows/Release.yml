@@ -35,7 +35,7 @@ jobs:
       uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 删除旧版本
-      run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
+      run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes || exit 0
     - name: 发布新版本
       uses:  ncipollo/release-action@v1.14.0
       with:
