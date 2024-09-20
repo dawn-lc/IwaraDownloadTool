@@ -64,6 +64,7 @@ jobs:
       uses: ncipollo/release-action@v1.14.0
       with:
         prerelease: true
+        draft: false
         token: ${{ secrets.GITHUB_TOKEN }}
         name: "预览版/Pre-release ${{ steps.package-version.outputs.current-version }}"
         body: "Full Changelog: [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
