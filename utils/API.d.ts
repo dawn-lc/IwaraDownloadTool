@@ -3,12 +3,12 @@ interface Date {
     format(format?: string): String;
 }
 interface String {
-    removeEmojis(): string
+    replaceEmojis(replace?: string | null): string
     replaceVariable(replacements: Record<string, any>, count?: number): String;
     isEmpty(): boolean;
     notEmpty(): boolean;
     toURL(): URL;
-    among(start: string, end: string): String;
+    among(start: string, end: string, greedy?: boolean): String;
     splitLimit(separator: string, limit?: number): string[];
     truncate(maxLength: number): string
     trimHead(prefix: string): string;
@@ -126,6 +126,13 @@ interface LogCode {
 }
 
 namespace Aria2 {
+    
+    interface Result {
+        id: string,
+        jsonrpc: string,
+        result: string
+    }
+
     interface Uri {
         uri: string;
         status: 'used' | 'waiting';
