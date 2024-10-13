@@ -40,6 +40,7 @@ jobs:
       uses:  ncipollo/release-action@v1
       with:
         prerelease: false
+        makeLatest: true
         token: ${{ secrets.GITHUB_TOKEN }}
         name: "正式版/Release ${{ steps.package-version.outputs.current-version }}"
         body: "Full Changelog: [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
