@@ -18,6 +18,10 @@
 
     const isStringTupleArray = (obj: any): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 
+    const emojiSeq = String.raw`(?:\p{Emoji}\uFE0F\u20E3?|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation})`
+    const emojiSTags = String.raw`\u{E0061}-\u{E007A}`
+    const emojiRegex = new RegExp(String.raw`[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[${emojiSTags}]{2}[\u{E0030}-\u{E0039}${emojiSTags}]{1,3}\u{E007F}|${emojiSeq}(?:\u200D${emojiSeq})*`, 'gu')
+
     const hasFunction = (obj: any, method: string): boolean => {
         return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
     }
@@ -59,12 +63,14 @@
     String.prototype.isEmpty = function () {
         return !isNull(this) && this.length === 0
     }
-    String.prototype.among = function (start: string, end: string) {
-        if (this.isEmpty() || start.isEmpty() || end.isEmpty()) {
-            throw new Error('Empty')
-        }
-        let body = !this.split(start).pop().isEmpty() ? this.split(start).pop() : ''
-        return !body.split(end).shift().isEmpty() ? body.split(end).shift() : ''
+    String.prototype.among = function (start: string, end: string, greedy: boolean = false) {
+        if (this.isEmpty() || start.isEmpty() || end.isEmpty()) return ''
+        const startIndex = this.indexOf(start)
+        if (startIndex === -1) return ''
+        const adjustedStartIndex = startIndex + start.length
+        const endIndex = greedy ? this.lastIndexOf(end) : this.indexOf(end, adjustedStartIndex)
+        if (endIndex === -1 || endIndex < adjustedStartIndex) return ''
+        return this.slice(adjustedStartIndex, endIndex)
     }
     String.prototype.splitLimit = function (separator: string, limit?: number) {
         if (this.isEmpty() || isNull(separator)) {
@@ -81,6 +87,9 @@
     }
     String.prototype.trimTail = function (suffix: string) {
         return this.endsWith(suffix) ? this.slice(0, -suffix.length) : this.toString()
+    }
+    String.prototype.replaceEmojis = function (replace?: string | null) {
+        return this.replaceAll(emojiRegex, replace ?? '')
     }
 
     String.prototype.toURL = function () {
@@ -115,7 +124,7 @@
             count++
             return Object.keys(replacements).map((key) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
         } catch (error) {
-            GM_getValue('isDebug') && console.log(`replace variable error: ${getString(error)}`)
+            GM_getValue('isDebug') && console.debug(`replace variable error: ${getString(error)}`)
             return replaceString
         }
     }
@@ -219,7 +228,7 @@
     }
 
     if (GM_getValue('isDebug')) {
-        console.log(getString(GM_info))
+        console.debug(getString(GM_info))
         debugger
     }
 
@@ -353,7 +362,7 @@
             this.channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
                 const { type, data: { timestamp, value } } = message
-                GM_getValue('isDebug') && console.log(`Channel message: ${getString(message)}`)
+                GM_getValue('isDebug') && console.debug(`Channel message: ${getString(message)}`)
                 switch (type) {
                     case MessageType.Set:
                         value.forEach(item => super.set(item[0], item[1]))
@@ -376,7 +385,7 @@
                 this.changeCallback?.(event)
             }
             this.channel.onmessageerror = (event) => {
-                GM_getValue('isDebug') && console.log(`Channel message error: ${getString(event)}`)
+                GM_getValue('isDebug') && console.debug(`Channel message error: ${getString(event)}`)
             }
             this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: super.toArray() } })
             setTimeout(() => {
@@ -645,7 +654,7 @@
                         return target.configChange
                     }
                     let value = GM_getValue(property, target[property])
-                    GM_getValue('isDebug') && console.log(`get: ${property} ${getString(value)}`)
+                    GM_getValue('isDebug') && console.debug(`get: ${property} ${getString(value)}`)
                     return value
                 },
                 set: function (target, property: string, value) {
@@ -654,14 +663,14 @@
                         return true
                     }
                     GM_setValue(property, value)
-                    GM_getValue('isDebug') && console.log(`set: ${property} ${getString(value)}`)
+                    GM_getValue('isDebug') && console.debug(`set: ${property} ${getString(value)}`)
                     target.configChange(property)
                     return true
                 }
             })
             GM_listValues().forEach((value) => {
                 GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                    GM_getValue('isDebug') && console.log(`$Is Remote: ${remote} Change Value: ${name}`)//old: ${getString(old_value)} new: ${getString(new_value)}
+                    GM_getValue('isDebug') && console.debug(`$Is Remote: ${remote} Change Value: ${name}`)//old: ${getString(old_value)} new: ${getString(new_value)}
                     if (remote && !isNull(body.configChange)) body.configChange(name)
                 })
             })
@@ -1135,9 +1144,11 @@
             }
         }
     }
+
     class Database extends Dexie {
         videos: Dexie.Table<VideoInfo, string>;
         caches: Dexie.Table<{ ID: string, href: string }, string>;
+        aria2Tasks: Dexie.Table<VideoInfo, Aria2.Result>;
         constructor() {
             super("VideoDatabase");
             this.version(2).stores({
@@ -1406,7 +1417,7 @@
         #pluginConfig p label{
             display: flex;
             flex-direction: column;
-            margin: 5px;
+            margin: 5px 0 5px 0;
         }
         #pluginConfig .inputRadioLine {
             display: flex;
@@ -1443,8 +1454,8 @@
         #pluginConfig input[type='checkbox'].switch::after {
             content: '';
             display: inline-block;
-            width: 1rem;
-            height: 1rem;
+            width: 40%;
+            height: 80%;
             border-radius: 50%;
             background: #fff;
             box-shadow: 0, 0, 2px, #999;
@@ -1594,7 +1605,7 @@
     }
 
     const modifyFetch = async (input: Request | string | URL, init?: RequestInit) => {
-        GM_getValue('isDebug') && console.log(`Fetch ${input}`)
+        GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
         if (url.hostname.includes('sentry.io')) return undefined
         if (!isNull(init) && !isNull(init.headers) && !isStringTupleArray(init.headers)) {
@@ -1612,13 +1623,13 @@
             if (!isNull(authorization) && authorization !== config.authorization) {
                 let playload = getPlayload(authorization)
                 if (playload['type'] === 'refresh_token') {
-                    GM_getValue('isDebug') && console.log(`refresh_token: ${authorization.split(' ').pop()}`)
+                    GM_getValue('isDebug') && console.debug(`refresh_token: ${authorization.split(' ').pop()}`)
                     isNull(localStorage.getItem('token')) && localStorage.setItem('token', authorization.split(' ').pop())
                 }
                 if (playload['type'] === 'access_token') {
                     config.authorization = `Bearer ${authorization.split(' ').pop()}`
-                    GM_getValue('isDebug') && console.log(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
-                    GM_getValue('isDebug') && console.log(`access_token: ${config.authorization.split(' ').pop()}`)
+                    GM_getValue('isDebug') && console.debug(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
+                    GM_getValue('isDebug') && console.debug(`access_token: ${config.authorization.split(' ').pop()}`)
                 }
             }
         }
@@ -1989,7 +2000,7 @@
     async function EnvCheck(): Promise<boolean> {
         try {
             if (GM_info.downloadMode !== 'browser') {
-                GM_getValue('isDebug') && console.log(GM_info)
+                GM_getValue('isDebug') && console.debug(GM_info)
                 throw new Error('%#browserDownloadModeError#%')
             }
         } catch (error: any) {
@@ -2128,7 +2139,7 @@
                     UploadTime: uploadTime,
                     AUTHOR: author,
                     ID: id,
-                    TITLE: name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
+                    TITLE: name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replaceEmojis('_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
                     ALIAS: alias,
                     QUALITY: quality
                 }
@@ -2146,6 +2157,9 @@
                     ]
                 })
             ])
+
+
+
             console.log(`Aria2 ${name} ${JSON.stringify(res)}`)
             newToast(
                 ToastType.Info,
@@ -2309,13 +2323,13 @@
     }
     function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
         if (isNull(task.files)) {
-            GM_getValue('isDebug') && console.log(`check aria2 task files fail! ${JSON.stringify(task)}`)
+            GM_getValue('isDebug') && console.debug(`check aria2 task files fail! ${JSON.stringify(task)}`)
             return null
         }
         for (let index = 0; index < task.files.length; index++) {
             const file = task.files[index]
             if (isNull(file)) {
-                GM_getValue('isDebug') && console.log(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
+                GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
                 continue
             }
             try {
@@ -2323,7 +2337,7 @@
                 // todo: 支持自定义提取ID表达式 
                 let videoID: string = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
                 if (isNull(videoID) || videoID.isEmpty()) {
-                    GM_getValue('isDebug') && console.log(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
+                    GM_getValue('isDebug') && console.debug(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
                     continue
                 }
                 return videoID
@@ -2363,7 +2377,6 @@
                 await aria2API('aria2.forceRemove', [task.gid])
             }
         }
-
     }
 
     function uninjectCheckbox(element: Element | Node) {
@@ -2477,7 +2490,7 @@
     }
 
     function pageChange() {
-        GM_getValue('isDebug') && console.log(pageSelectButtons)
+        GM_getValue('isDebug') && console.debug(pageSelectButtons)
     }
 
     async function main() {
