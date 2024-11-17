@@ -1,0 +1,275 @@
+.rainbow-text {
+    background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 600% 100%;
+    animation: rainbow 0.5s infinite linear;
+}
+
+@keyframes rainbow {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: 100% 0%;
+    }
+}
+
+#pluginMenu {
+    z-index: 2147483644;
+    color: white;
+    position: fixed;
+    top: 50%;
+    right: 0px;
+    padding: 10px;
+    background-color: #565656;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-shadow: 0 0 10px #ccc;
+    transform: translate(2%, -50%);
+}
+
+#pluginMenu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+#pluginMenu li {
+    padding: 5px 10px;
+    cursor: pointer;
+    text-align: center;
+    user-select: none;
+}
+
+#pluginMenu li:hover {
+    background-color: #000000cc;
+    border-radius: 3px;
+}
+
+#pluginConfig {
+    color: var(--text);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 2147483646;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#pluginConfig .main {
+    background-color: var(--body);
+    padding: 24px;
+    margin: 10px;
+    overflow-y: auto;
+    width: 400px;
+}
+
+#pluginConfig .buttonList {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+@media (max-width: 640px) {
+    #pluginConfig .main {
+        width: 100%;
+    }
+}
+
+#pluginConfig button {
+    background-color: blue;
+    margin: 0px 20px 0px 20px;
+    padding: 10px 20px;
+    color: white;
+    font-size: 18px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#pluginConfig button {
+    background-color: blue;
+}
+
+#pluginConfig button[disabled] {
+    background-color: darkgray;
+    cursor: not-allowed;
+}
+
+#pluginConfig p {
+    display: flex;
+    flex-direction: column;
+}
+
+#pluginConfig p label {
+    display: flex;
+    flex-direction: column;
+    margin: 5px 0 5px 0;
+}
+
+#pluginConfig .inputRadioLine {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+#pluginConfig input[type="text"],
+#pluginConfig input[type="password"] {
+    outline: none;
+    border-top: none;
+    border-right: none;
+    border-left: none;
+    border-image: initial;
+    border-bottom: 1px solid var(--muted);
+    line-height: 1;
+    height: 30px;
+    box-sizing: border-box;
+    width: 100%;
+    background-color: var(--body);
+    color: var(--text);
+}
+
+#pluginConfig input[type='checkbox'].switch {
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+    width: 40px;
+    height: 20px;
+    background: #ccc;
+    border-radius: 10px;
+    transition: border-color .2s, background-color .2s;
+}
+
+#pluginConfig input[type='checkbox'].switch::after {
+    content: '';
+    display: inline-block;
+    width: 40%;
+    height: 80%;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0, 0, 2px, #999;
+    transition: .2s;
+    top: 2px;
+    position: absolute;
+    right: 55%;
+}
+
+#pluginConfig input[type='checkbox'].switch:checked {
+    background: rgb(19, 206, 102);
+}
+
+#pluginConfig input[type='checkbox'].switch:checked::after {
+    content: '';
+    position: absolute;
+    right: 2px;
+    top: 2px;
+}
+
+#pluginOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 2147483645;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#pluginOverlay .main {
+    color: white;
+    font-size: 24px;
+    width: 60%;
+    background-color: rgba(64, 64, 64, 0.75);
+    padding: 24px;
+    margin: 10px;
+    overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+    #pluginOverlay .main {
+        width: 100%;
+    }
+}
+
+#pluginOverlay button {
+    padding: 10px 20px;
+    color: white;
+    font-size: 18px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#pluginOverlay button {
+    background-color: blue;
+}
+
+#pluginOverlay button[disabled] {
+    background-color: darkgray;
+    cursor: not-allowed;
+}
+
+#pluginOverlay .checkbox {
+    width: 32px;
+    height: 32px;
+    margin: 0 4px 0 0;
+    padding: 0;
+}
+
+#pluginOverlay .checkbox-container {
+    display: flex;
+    align-items: center;
+    margin: 0 0 10px 0;
+}
+
+#pluginOverlay .checkbox-label {
+    color: white;
+    font-size: 32px;
+    font-weight: bold;
+    margin-left: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.selectButton {
+    accent-color: rgb(50, 110, 193);
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    bottom: 24px;
+    right: 0px;
+    cursor: pointer;
+}
+
+.selectButtonCompatible {
+    width: 32px;
+    height: 32px;
+    bottom: 0px;
+    right: 4px;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.toastify h3 {
+    margin: 0 0 10px 0;
+}
+
+.toastify p {
+    margin: 0;
+}

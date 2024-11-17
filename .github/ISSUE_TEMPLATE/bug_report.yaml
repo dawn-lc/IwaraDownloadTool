@@ -8,13 +8,15 @@ body:
   - type: checkboxes
     id: checks
     attributes:
-      label: 在提问之前...
+      label: 在反馈之前...
       options:
       - label: 我已经搜索了现有的 issues
         required: true
       - label: 我在提问题之前至少花费了 5 分钟来思考和准备
         required: true
       - label: 我正在使用最新版的脚本
+        required: false
+      - label: 我没有完成以上步骤，只是闭眼选中了所有的复选框
         required: false
   - type: textarea
     id: describe

@@ -35,6 +35,7 @@
 // @grant             GM_xmlhttpRequest
 // @grant             GM_openInTab
 // @grant             GM_info
+// @grant             GM_getTabs
 // @grant             unsafeWindow
 // @run-at            document-start
 // @require           https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js

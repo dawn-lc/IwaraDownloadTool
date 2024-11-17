@@ -237,7 +237,8 @@ namespace Iwara {
         id: string
         createdAt: string
         updatedAt: string
-        user: User
+        user: User,
+        message?: string | null
     }
 
     interface Comment extends IResult {
