@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
+    "target": "es2022",
     "module": "System",
     "alwaysStrict": false,
     "esModuleInterop": true, 

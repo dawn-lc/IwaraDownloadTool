@@ -1,4 +1,8 @@
 (function () {
+
+    // @ts-ignore
+    unsafeWindow.IwaraDownloadTool = true;
+
     const originalFetch = unsafeWindow.fetch
 
     const originalPushState = unsafeWindow.history.pushState;
@@ -265,6 +269,7 @@
     }
 
     enum MessageType {
+        Close,
         Request,
         Receive,
         Set,
@@ -347,22 +352,24 @@
     class SyncDictionary<T> extends Dictionary<T> {
         private channel: BroadcastChannel
         private changeTime: number
+        private id: string
         private changeCallback: ((event: MessageEvent) => void) | null
         constructor(id: string, data: Array<[key: string, value: T]> = [], changeCallback: ((event: MessageEvent) => void) | null) {
             super(data)
             this.channel = new BroadcastChannel(`${GM_info.script.name}.${id}`)
             this.changeCallback = changeCallback
             this.changeTime = 0
+            this.id = id
             if (isNull(GM_getValue(id, { timestamp: 0, value: [] }).timestamp))
                 GM_deleteValue(id)
-            unsafeWindow.onbeforeunload = new Proxy(() => {
-                if (this.changeTime > GM_getValue(id, { timestamp: 0, value: [] }).timestamp) GM_setValue(id, { timestamp: this.changeTime, value: super.toArray() })
-            }, { set: () => true })
-            let isLastTab = true
+            originalAddEventListener.call(unsafeWindow, 'beforeunload', this.saveData.bind(this))
+            originalAddEventListener.call(unsafeWindow, 'pagehide', this.saveData.bind(this))
+            originalAddEventListener.call(unsafeWindow, 'unload', this.saveData.bind(this))
             this.channel.onmessage = (event: MessageEvent) => {
                 const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
                 const { type, data: { timestamp, value } } = message
                 GM_getValue('isDebug') && console.debug(`Channel message: ${getString(message)}`)
+                if (timestamp <= this.changeTime) return;
                 switch (type) {
                     case MessageType.Set:
                         value.forEach(item => super.set(item[0], item[1]))
@@ -375,8 +382,8 @@
                         if (this.changeTime > timestamp) return this.channel.postMessage({ type: MessageType.Receive, data: { timestamp: this.changeTime, value: super.toArray() } })
                         this.reinitialize(value)
                         break
+                    case MessageType.Close:
                     case MessageType.Receive:
-                        isLastTab = false
                         if (this.changeTime >= timestamp) return
                         this.reinitialize(value)
                         break
@@ -387,20 +394,37 @@
             this.channel.onmessageerror = (event) => {
                 GM_getValue('isDebug') && console.debug(`Channel message error: ${getString(event)}`)
             }
-            this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: super.toArray() } })
-            setTimeout(() => {
+            GM_getTabs((tabs) => {
+                const tabIds = Object.keys(tabs);
+                const isLastTab = tabIds.length <= 1;
                 if (isLastTab) {
                     let save = GM_getValue(id, { timestamp: 0, value: [] })
                     if (save.timestamp > this.changeTime) {
                         this.changeTime = save.timestamp
                         this.reinitialize(save.value)
                     }
+                } else {
+                    this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: super.toArray() } })
                 }
-            }, 100)
+            })
+        }
+        private saveData() {
+            const savedData = GM_getValue(this.id, { timestamp: 0, value: [] });
+            if (this.changeTime > savedData.timestamp) {
+                GM_getTabs((tabs) => {
+                    const tabIds = Object.keys(tabs);
+                    const isLastTab = tabIds.length <= 1;
+                    if (isLastTab) {
+                        GM_setValue(this.id, { timestamp: this.changeTime, value: super.toArray() });
+                    }else{
+                        this.channel.postMessage({ type: MessageType.Close, data: { timestamp: this.changeTime, value: super.toArray() } })
+                    }
+                })
+            }
         }
         private reinitialize(data: Array<[key: string, value: T]>) {
-            super.clear();
-            data.forEach(([key, value]) => super.set(key, value));
+            super.clear()
+            data.forEach(([key, value]) => super.set(key, value))
         }
         override set(key: string, value: T) {
             super.set(key, value)
@@ -444,6 +468,7 @@
             iwaraDownloaderDownload: 'IwaraDownloader下载',
             autoFollow: '自动关注选中的视频作者',
             autoLike: '自动点赞选中的视频',
+            addUnlistedAndPrivate: '不公开和私有视频强制显示(需关注作者)',
             checkDownloadLink: '第三方网盘下载地址检查',
             checkPriority: '下载画质检查',
             autoInjectCheckbox: '自动注入选择框',
@@ -611,6 +636,7 @@
         language: string
         autoFollow: boolean
         autoLike: boolean
+        addUnlistedAndPrivate: boolean
         autoInjectCheckbox: boolean
         autoCopySaveFileName: boolean
         checkDownloadLink: boolean
@@ -634,6 +660,7 @@
             this.autoInjectCheckbox = true
             this.checkDownloadLink = true
             this.checkPriority = true
+            this.addUnlistedAndPrivate = true
             this.downloadPriority = 'Source'
             this.downloadType = DownloadType.Others
             this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4'
@@ -779,6 +806,7 @@
                             this.switchButton('autoLike'),
                             this.switchButton('autoInjectCheckbox'),
                             this.switchButton('autoCopySaveFileName'),
+                            this.switchButton('addUnlistedAndPrivate'),
                             this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
                         ]
                     },
@@ -981,12 +1009,14 @@
         Author: string
         AuthorID: string
         Private: boolean
+        Unlisted: boolean
         DownloadQuality: string
         External: boolean
         ExternalUrl: string
         State: boolean
         Comments: string
         DownloadUrl: string
+        RAW: Iwara.Video
         constructor(info?: PieceInfo) {
             if (!isNull(info)) {
                 if (!isNull(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
@@ -1000,6 +1030,9 @@
                 this.ID = ID
                 if (isNull(InfoSource)) {
                     config.authorization = `Bearer ${await refreshToken()}`
+                } else {
+                    this.RAW = InfoSource
+                    await db.videos.put(this)
                 }
                 let VideoInfoSource: Iwara.Video = InfoSource ?? await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
                     headers: await getAuth()
@@ -1051,7 +1084,7 @@
                         this.State = false
                         return this
                     }
-                    throw new Error(i18n[language()].parsingFailed.toString())
+                    throw new Error(`${i18n[language()].parsingFailed.toString()} ${VideoInfoSource.message}`)
                 }
                 this.ID = VideoInfoSource.id
                 this.Title = VideoInfoSource.title ?? this.Title
@@ -1061,6 +1094,7 @@
                 this.Liked = VideoInfoSource.liked
                 this.Friend = VideoInfoSource.user.friend
                 this.Private = VideoInfoSource.private
+                this.Unlisted = VideoInfoSource.unlisted
                 this.Alias = VideoInfoSource.user.name
                 this.Author = VideoInfoSource.user.username
                 this.UploadTime = new Date(VideoInfoSource.createdAt)
@@ -1157,6 +1191,19 @@
             });
             this.videos = this.table("videos");
             this.caches = this.table("caches");
+        }
+        // 查询指定时间范围内，Private 或 Unlisted 不是 false 的数据
+        async getFilteredVideos(startTime: Date, endTime: Date) {
+            const allVideos = await this.videos.toArray()
+            // 过滤符合条件的视频
+            return allVideos.filter(video => {
+                const uploadTime = new Date(video.UploadTime);
+                return (
+                    uploadTime >= startTime &&
+                    uploadTime <= endTime &&
+                    (video.Private !== false || video.Unlisted !== false)
+                )
+            })
         }
     }
 
@@ -1316,252 +1363,7 @@
     }
 
     GM_addStyle(GM_getResourceText('toastify-css'))
-    GM_addStyle(`
-        .rainbow-text {
-            background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-size: 600% 100%;
-            animation: rainbow 0.5s infinite linear;
-        }
-        @keyframes rainbow {
-            0% {
-                background-position: 0% 0%;
-            }
-            100% {
-                background-position: 100% 0%;
-            }
-        }
-
-        #pluginMenu {
-            z-index: 2147483644;
-            color: white;
-            position: fixed;
-            top: 50%;
-            right: 0px;
-            padding: 10px;
-            background-color: #565656;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-shadow: 0 0 10px #ccc;
-            transform: translate(2%, -50%);
-        }
-        #pluginMenu ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-        #pluginMenu li {
-            padding: 5px 10px;
-            cursor: pointer;
-            text-align: center;
-            user-select: none;
-        }
-        #pluginMenu li:hover {
-            background-color: #000000cc;
-            border-radius: 3px;
-        }
-
-        #pluginConfig {
-            color: var(--text);
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.75);
-            z-index: 2147483646; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        #pluginConfig .main {
-            background-color: var(--body);
-            padding: 24px;
-            margin: 10px;
-            overflow-y: auto;
-            width: 400px;
-        }
-        #pluginConfig .buttonList {
-            display: flex;
-            flex-direction: row;
-            justify-content: center;
-        }
-        @media (max-width: 640px) {
-            #pluginConfig .main {
-                width: 100%;
-            }
-        }
-        #pluginConfig button {
-            background-color: blue;
-            margin: 0px 20px 0px 20px;
-            padding: 10px 20px;
-            color: white;
-            font-size: 18px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        #pluginConfig button {
-            background-color: blue;
-        }
-        #pluginConfig button[disabled] {
-            background-color: darkgray;
-            cursor: not-allowed;
-        }
-        #pluginConfig p {
-            display: flex;
-            flex-direction: column;
-        }
-        #pluginConfig p label{
-            display: flex;
-            flex-direction: column;
-            margin: 5px 0 5px 0;
-        }
-        #pluginConfig .inputRadioLine {
-            display: flex;
-            align-items: center;
-            flex-direction: row;
-            justify-content: space-between;
-        }
-        #pluginConfig input[type="text"], #pluginConfig input[type="password"] {
-            outline: none;
-            border-top: none;
-            border-right: none;
-            border-left: none;
-            border-image: initial;
-            border-bottom: 1px solid var(--muted);
-            line-height: 1;
-            height: 30px;
-            box-sizing: border-box;
-            width: 100%;
-            background-color: var(--body);
-            color: var(--text);
-        }
-        #pluginConfig input[type='checkbox'].switch{
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            position: relative;
-            width: 40px;
-            height: 20px;
-            background: #ccc;
-            border-radius: 10px;
-            transition: border-color .2s, background-color .2s;
-        }
-        #pluginConfig input[type='checkbox'].switch::after {
-            content: '';
-            display: inline-block;
-            width: 40%;
-            height: 80%;
-            border-radius: 50%;
-            background: #fff;
-            box-shadow: 0, 0, 2px, #999;
-            transition: .2s;
-            top: 2px;
-            position: absolute;
-            right: 55%;
-        }
-        #pluginConfig input[type='checkbox'].switch:checked {
-            background: rgb(19, 206, 102);
-        }
-        #pluginConfig input[type='checkbox'].switch:checked::after {
-            content: '';
-            position: absolute;
-            right: 2px;
-            top: 2px;
-        }
-
-        #pluginOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.75);
-            z-index: 2147483645; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        #pluginOverlay .main {
-            color: white;
-            font-size: 24px;
-            width: 60%;
-            background-color: rgba(64, 64, 64, 0.75);
-            padding: 24px;
-            margin: 10px;
-            overflow-y: auto;
-        }
-        @media (max-width: 640px) {
-            #pluginOverlay .main {
-                width: 100%;
-            }
-        }
-        #pluginOverlay button {
-            padding: 10px 20px;
-            color: white;
-            font-size: 18px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        #pluginOverlay button {
-            background-color: blue;
-        }
-        #pluginOverlay button[disabled] {
-            background-color: darkgray;
-            cursor: not-allowed;
-        }
-        #pluginOverlay .checkbox {
-            width: 32px;
-            height: 32px;
-            margin: 0 4px 0 0;
-            padding: 0;
-        }
-        #pluginOverlay .checkbox-container {
-            display: flex;
-            align-items: center;
-            margin: 0 0 10px 0;
-        }
-        #pluginOverlay .checkbox-label {
-            color: white;
-            font-size: 32px;
-            font-weight: bold;
-            margin-left: 10px;
-            display: flex;
-            align-items: center;
-        }
-        .selectButton {
-            accent-color: rgb(50, 110, 193);
-            position: absolute;
-            width: 38px;
-            height: 38px;
-            bottom: 24px;
-            right: 0px;
-            cursor:pointer;
-        }
-        .selectButtonCompatible {
-            width: 32px;
-            height: 32px;
-            bottom: 0px;
-            right: 4px;
-            transform: translate(-50%, -50%);
-            margin: 0;
-            padding: 0;
-            cursor:pointer;
-        }
-
-        .toastify h3 {
-            margin: 0 0 10px 0;
-        }
-        .toastify p {
-            margin: 0 ;
-        }
-    `)
+    GM_addStyle(`!mainCSS!`)
     var mouseTarget: Element = null
     var compatible = navigator.userAgent.toLowerCase().includes('firefox')
     var i18n = new I18N()
@@ -1633,27 +1435,45 @@
                 }
             }
         }
-        return new Promise((resolve, reject) => {
-            originalFetch(input, init)
-                .then(async (response) => {
-                    if (url.hostname === 'api.iwara.tv' && !url.pathname.isEmpty()) {
-                        let path = url.pathname.split('/').slice(1)
-                        switch (path[0]) {
-                            case 'videos':
-                                let cloneResponse = response.clone()
-                                if (cloneResponse.ok) ((await cloneResponse.json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
-                                break;
-                            default:
-                                break;
+        return new Promise((resolve, reject) => originalFetch(input, init)
+            .then(async (response) => {
+                if (url.hostname !== 'api.iwara.tv' || url.pathname.isEmpty()) return resolve(response)
+                let path = url.pathname.toLowerCase().split('/').slice(1)
+                switch (path[0]) {
+                    case 'videos':
+                        let cloneResponse = response.clone()
+                        if (!cloneResponse.ok) break;
+
+                        let cloneBody = await cloneResponse.json() as Iwara.Page
+                        let list = cloneBody.results as Iwara.Video[]
+                        list.forEach(info => new VideoInfo().init(info.id, info))
+
+                        if (!config.addUnlistedAndPrivate) return resolve(cloneResponse);
+                        
+                        list = list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                        if (url.searchParams.has('subscribed')) break;
+
+                        GM_getValue('isDebug') && console.debug(new Date(list.at(0).createdAt), new Date(list.at(-1).createdAt))
+                        let cache = await db.getFilteredVideos(new Date(list.at(0).createdAt), new Date(list.at(-1).createdAt))
+                        if (cache.any()) {
+                            cloneBody.count = cloneBody.count + cache.length
+                            cloneBody.limit = cloneBody.limit + cache.length
+                            cloneBody.results.push(...cache.map(i => i.RAW))//.map(i => { i.unlisted = false; i.private = false; return i })
                         }
-                    }
-                    resolve(response)
-                })
-                .catch((err) => {
-                    reject(err)
-                })
-        }) as Promise<Response>
+                        
+                        return resolve(new Response(JSON.stringify(cloneBody), {
+                            status: cloneResponse.status,
+                            statusText: cloneResponse.statusText,
+                            headers: Object.fromEntries(cloneResponse.headers.entries())
+                        }))
+                    default:
+                        break
+                }
+                return resolve(response)
+            })
+            .catch((err) => reject(err))) as Promise<Response>
     }
+
     unsafeWindow.fetch = modifyFetch
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
@@ -2139,7 +1959,7 @@
                     UploadTime: uploadTime,
                     AUTHOR: author,
                     ID: id,
-                    TITLE: name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replaceEmojis('_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
+                    TITLE: name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replaceEmojis('_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
                     ALIAS: alias,
                     QUALITY: quality
                 }
@@ -2245,7 +2065,7 @@
                     UploadTime: UploadTime,
                     AUTHOR: Author,
                     ID: ID,
-                    TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
+                    TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
                     ALIAS: Alias,
                     QUALITY: DownloadQuality
                 }
@@ -2296,7 +2116,7 @@
                         UploadTime: UploadTime,
                         AUTHOR: Author,
                         ID: ID,
-                        TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(128),
+                        TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
                         ALIAS: Alias,
                         QUALITY: DownloadQuality
                     }
@@ -2534,7 +2354,6 @@
             mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
         })
 
-
         unsafeWindow.history.pushState = function (...args) {
             originalPushState.apply(this, args)
             pageChange()
@@ -2571,6 +2390,15 @@
             }
         )
         notice.showToast()
+
+        if (config.addUnlistedAndPrivate) {
+            for (let subscribedPage = 0; subscribedPage < 10; subscribedPage++) {
+                ((await (await fetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=ecchi&page=${subscribedPage}`, {
+                    method: 'GET',
+                    headers: await getAuth()
+                })).json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
+            }
+        }
     }
 
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {

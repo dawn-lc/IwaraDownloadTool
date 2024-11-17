@@ -16,6 +16,7 @@
     "dexie": "^3.2.6",
     "terser": "^5.32.0",
     "toastify-js": "^1.12.0",
+    "clean-css": "^5.3.3",
     "typescript": "^5.0.4"
   }
 }

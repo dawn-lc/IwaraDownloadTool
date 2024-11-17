@@ -3,8 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
 const { minify } = require('terser');
+var cleanCSS = require('clean-css');
+
 const configPath = path.resolve(root, 'tsconfig.json');
 const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+
+const sourcePath = path.join(root, 'src');
+let css = new cleanCSS({}).minify(fs.readFileSync(path.join(sourcePath, 'main.css'), 'utf8')).styles;
 
 if (configFile.error) {
     console.error('Error reading tsconfig.json:', configFile.error.messageText);
@@ -25,8 +30,9 @@ const program = ts.createProgram({
 let outputFiles = [];
 
 const emitResult = program.emit(undefined, (fileName, data) => {
-    fs.writeFileSync(path.normalize(fileName), data);
-    outputFiles.push({ fileName: path.normalize(fileName), content: data });
+    let code = data.replaceAll('`!mainCSS!`', `\`${css}\``);
+    fs.writeFileSync(path.normalize(fileName), code);
+    outputFiles.push({ fileName: path.normalize(fileName), content: code });
 });
 
 const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
