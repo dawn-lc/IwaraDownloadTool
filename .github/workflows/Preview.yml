@@ -66,6 +66,7 @@ jobs:
         prerelease: true
         makeLatest: true
         draft: false
+        removeArtifacts: true
         token: ${{ secrets.GITHUB_TOKEN }}
         name: "预览版/Pre-release ${{ steps.package-version.outputs.current-version }}"
         body: "Full Changelog: [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
