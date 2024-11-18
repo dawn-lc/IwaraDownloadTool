@@ -1449,9 +1449,9 @@
                         list.forEach(info => new VideoInfo().init(info.id, info))
 
                         if (!config.addUnlistedAndPrivate) return resolve(cloneResponse);
+                        if (url.searchParams.has('subscribed') || url.searchParams.has('user')) break;
                         
                         list = list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-                        if (url.searchParams.has('subscribed')) break;
 
                         GM_getValue('isDebug') && console.debug(new Date(list.at(0).createdAt), new Date(list.at(-1).createdAt))
                         let cache = await db.getFilteredVideos(new Date(list.at(0).createdAt), new Date(list.at(-1).createdAt))
@@ -1459,6 +1459,7 @@
                             cloneBody.count = cloneBody.count + cache.length
                             cloneBody.limit = cloneBody.limit + cache.length
                             cloneBody.results.push(...cache.map(i => i.RAW))//.map(i => { i.unlisted = false; i.private = false; return i })
+                            cloneBody.results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                         }
                         
                         return resolve(new Response(JSON.stringify(cloneBody), {
