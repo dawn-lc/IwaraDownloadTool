@@ -46,7 +46,6 @@ jobs:
       with:
         prerelease: false
         makeLatest: true
-        draft: false
         removeArtifacts: true
         token: ${{ secrets.GITHUB_TOKEN }}
         name: "正式版/Release ${{ steps.package-version.outputs.current-version }}"
