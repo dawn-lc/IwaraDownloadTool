@@ -502,9 +502,7 @@
             alreadyKnowHowToUse: '我已知晓如何使用!!!',
             notice: [
                 { nodeType: 'br' },
-                '添加取消所有选中按钮，点击该按钮将会清空所有选中，请谨慎操作！',
-                { nodeType: 'br' },
-                '调整下载当前视频功能，默认不再检查第三方下载链接以及是否关注作者和喜欢该视频。'
+                '添加不公开和私有视频强制显示功能，仅支持显示已关注作者的不公开和私有视频，目前仅在视频列表页面且排列方式为最新时生效！'
             ],
             useHelpForBase: `请认真阅读使用指南！`,
             useHelpForInjectCheckbox: `开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框`,
