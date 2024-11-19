@@ -33,7 +33,7 @@ jobs:
     - name: 后处理
       run: npm run postprocess
     - name: 获取版本号
-      uses: martinbeentjes/npm-get-version-action@latest
+      uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
