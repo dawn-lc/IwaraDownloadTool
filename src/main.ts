@@ -1194,10 +1194,13 @@
                 caches: 'ID'
             }).upgrade((trans) => {
                 return trans.table('videos').toCollection().modify(video => {
-                    if (!video.UploadTime) {
+                    if (isNull(video.UploadTime)) {
                         video.UploadTime = new Date(0);
                     } else if (typeof video.UploadTime === 'string') {
                         video.UploadTime = new Date(video.UploadTime);
+                    }
+                    if (isNull(video.RAW)) {
+                        video.RAW = undefined;
                     }
                 })
             })
