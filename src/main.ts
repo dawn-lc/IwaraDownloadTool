@@ -1188,23 +1188,29 @@
             this.version(2).stores({
                 videos: 'ID',
                 caches: 'ID'
-            });
-            this.videos = this.table("videos");
-            this.caches = this.table("caches");
-        }
-        // 查询指定时间范围内，Private 或 Unlisted 不是 false 的数据
-        async getFilteredVideos(startTime: Date, endTime: Date) {
-            const allVideos = await this.videos.toArray()
-            // 过滤符合条件的视频
-            return allVideos.filter(video => {
-                const uploadTime = new Date(video.UploadTime);
-                return (
-                    !isNull(video.RAW) &&
-                    uploadTime >= startTime &&
-                    uploadTime <= endTime &&
-                    (video.Private !== false || video.Unlisted !== false)
-                )
             })
+            this.version(3).stores({
+                videos: 'ID, UploadTime',
+                caches: 'ID'
+            }).upgrade((trans) => {
+                return trans.table('videos').toCollection().modify(video => {
+                    if (!video.UploadTime) {
+                        video.UploadTime = new Date(0);
+                    } else if (typeof video.UploadTime === 'string') {
+                        video.UploadTime = new Date(video.UploadTime);
+                    }
+                })
+            })
+            this.videos = this.table("videos")
+            this.caches = this.table("caches")
+        }
+        async getFilteredVideos(startTime: Date, endTime: Date) {
+            return this.videos
+                .where('UploadTime')
+                .between(startTime, endTime, true, true)
+                .and(video => !isNull(video.RAW)) 
+                .and(video => video.Private !== false || video.Unlisted !== false)
+                .toArray()
         }
     }
 
@@ -1467,7 +1473,7 @@
 
                         GM_getValue('isDebug') && console.debug(url.searchParams)
 
-                        if (url.searchParams.has('subscribed') || url.searchParams.has('user')) break
+                        if (url.searchParams.has('subscribed') || url.searchParams.has('user') || url.searchParams.has('sort') ? url.searchParams.get('sort') !== 'date' : false) break
 
                         let sortList = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
@@ -1479,7 +1485,7 @@
 
                         cloneBody.count = cloneBody.count + cache.length
                         cloneBody.limit = cloneBody.limit + cache.length
-                        cloneBody.results.push(...cache.map(i => i.RAW).filter(Boolean).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                        cloneBody.results.push(...cache.map(i => i.RAW).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
                         //cloneBody.results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                         return resolve(new Response(JSON.stringify(cloneBody), {
                             status: cloneResponse.status,
