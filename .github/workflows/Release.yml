@@ -10,6 +10,7 @@ on:
       - '.github/workflows/*'
 env:
   release-tag: latest
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   Release:
     permissions:
