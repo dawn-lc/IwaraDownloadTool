@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/*'
       - 'build/*'
+      - 'utils/*'
       - '.github/workflows/*'
 env:
   release_tag: latest
@@ -24,7 +25,7 @@ jobs:
       with:
         ref: master
     - name: 预处理
-      run: npm run preprocess -- $release_tag
+      run: npm run preprocess -- ${{ env.release_tag }}
     - name: 安装依赖项
       run: npm ci
     - name: 编译
@@ -35,20 +36,6 @@ jobs:
       uses: martinbeentjes/npm-get-version-action@v1.3.1
       id: package-version
     - name: 删除旧版本
-      uses: dev-drprasad/delete-tag-and-release@v0.2.1
-      with:
-        delete_release: true
-        tag_name: ${{ env.release_tag }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
     - name: 发布新版本
-      uses:  ncipollo/release-action@v1
-      with:
-        prerelease: false
-        makeLatest: true
-        removeArtifacts: true
-        token: ${{ secrets.GITHUB_TOKEN }}
-        name: "正式版/Release ${{ steps.package-version.outputs.current-version }}"
-        body: "Full Changelog: [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
-        tag: ${{ env.release_tag }}
-        artifacts: "temp/*"
+      run: gh release create ${{ env.release_tag }} temp\IwaraDownloadTool.min.user.js temp\IwaraDownloadTool.mata.js temp\IwaraDownloadTool.user.js --latest --title "正式版/Release ${{ steps.package-version.outputs.current-version }}" --notes "Full Changelog [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"

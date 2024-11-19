@@ -16,8 +16,6 @@ body:
         required: true
       - label: 我正在使用最新版的脚本
         required: false
-      - label: 我没有完成以上步骤，只是闭眼选中了所有的复选框
-        required: false
   - type: textarea
     id: describe
     attributes:

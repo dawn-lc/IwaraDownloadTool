@@ -1,9 +1,10 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.2.110",
+  "version": "3.2.117",
   "private": true,
   "scripts": {
+    "release": "node ./build/release.js",
     "build": "node ./build/build.js",
     "preprocess": "node ./build/preprocess.js",
     "postprocess": "node ./build/postprocess.js"
@@ -13,10 +14,10 @@
     "@types/moment": "^2.13.0",
     "@types/tampermonkey": "^4.0.10",
     "@types/toastify-js": "^1.11.1",
+    "clean-css": "^5.3.3",
     "dexie": "^3.2.6",
     "terser": "^5.32.0",
     "toastify-js": "^1.12.0",
-    "clean-css": "^5.3.3",
     "typescript": "^5.0.4"
   }
 }

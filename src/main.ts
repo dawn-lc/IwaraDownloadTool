@@ -1199,6 +1199,7 @@
             return allVideos.filter(video => {
                 const uploadTime = new Date(video.UploadTime);
                 return (
+                    !isNull(video.RAW) &&
                     uploadTime >= startTime &&
                     uploadTime <= endTime &&
                     (video.Private !== false || video.Unlisted !== false)
@@ -1236,7 +1237,7 @@
                 }
             }))
         }
-        private pageChange(pageType: PageType) {
+        private async pageChange(pageType: PageType) {
             while (this.interfacePage.hasChildNodes()) {
                 this.interfacePage.removeChild(this.interfacePage.firstChild)
             }
@@ -1333,6 +1334,17 @@
                     baseButtons.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                     break;
             }
+
+            if ( config.addUnlistedAndPrivate && pageType === PageType.VideoList ) {
+                for (let page = 0; page < 10; page++) {
+                    const response = await fetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${rating}&page=${page}`, {
+                        method: 'GET',
+                        headers: await getAuth()
+                    });
+                    const data = (await response.json() as Iwara.Page).results as Iwara.Video[];
+                    data.forEach(info => new VideoInfo().init(info.id, info));
+                }
+            }
         }
         public inject() {
             if (!unsafeWindow.document.querySelector('#pluginMenu')) {
@@ -1370,6 +1382,7 @@
     var config = new Config()
     var db = new Database()
     var pageSelectButtons = new Dictionary<HTMLInputElement>()
+    var rating = 'all'
 
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.76')) === VersionState.Low) {
         GM_deleteValue('selectList')
@@ -1441,27 +1454,33 @@
                 let path = url.pathname.toLowerCase().split('/').slice(1)
                 switch (path[0]) {
                     case 'videos':
+                        rating = url.searchParams.get('rating')
                         let cloneResponse = response.clone()
+
                         if (!cloneResponse.ok) break;
 
                         let cloneBody = await cloneResponse.json() as Iwara.Page
                         let list = cloneBody.results as Iwara.Video[]
-                        list.forEach(info => new VideoInfo().init(info.id, info))
+                        [...list].forEach(info => new VideoInfo().init(info.id, info))
 
-                        if (!config.addUnlistedAndPrivate) return resolve(cloneResponse);
-                        if (url.searchParams.has('subscribed') || url.searchParams.has('user')) break;
-                        
-                        list = list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                        if (!config.addUnlistedAndPrivate) break
 
-                        GM_getValue('isDebug') && console.debug(new Date(list.at(0).createdAt), new Date(list.at(-1).createdAt))
-                        let cache = await db.getFilteredVideos(new Date(list.at(0).createdAt), new Date(list.at(-1).createdAt))
-                        if (cache.any()) {
-                            cloneBody.count = cloneBody.count + cache.length
-                            cloneBody.limit = cloneBody.limit + cache.length
-                            cloneBody.results.push(...cache.map(i => i.RAW))//.map(i => { i.unlisted = false; i.private = false; return i })
-                            cloneBody.results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                        }
-                        
+                        GM_getValue('isDebug') && console.debug(url.searchParams)
+
+                        if (url.searchParams.has('subscribed') || url.searchParams.has('user')) break
+
+                        let sortList = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+                        GM_getValue('isDebug') && console.debug(new Date(sortList.at(0).createdAt), new Date(sortList.at(-1).createdAt))
+
+                        let cache = await db.getFilteredVideos(new Date(sortList.at(0).createdAt), new Date(sortList.at(-1).createdAt))
+
+                        if (!cache.any()) break
+
+                        cloneBody.count = cloneBody.count + cache.length
+                        cloneBody.limit = cloneBody.limit + cache.length
+                        cloneBody.results.push(...cache.map(i => i.RAW).filter(Boolean).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                        //cloneBody.results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                         return resolve(new Response(JSON.stringify(cloneBody), {
                             status: cloneResponse.status,
                             statusText: cloneResponse.statusText,
@@ -2344,7 +2363,7 @@
             uninjectCheckbox(this)
             return originalRemove.apply(this)
         }
-        new MutationObserver((m, o) => {
+        new MutationObserver(async (m, o) => {
             if (m.some(m => m.type === 'childList' && unsafeWindow.document.getElementById('app'))) {
                 pluginMenu.inject()
                 o.disconnect()
@@ -2391,15 +2410,6 @@
             }
         )
         notice.showToast()
-
-        if (config.addUnlistedAndPrivate) {
-            for (let subscribedPage = 0; subscribedPage < 10; subscribedPage++) {
-                ((await (await fetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=ecchi&page=${subscribedPage}`, {
-                    method: 'GET',
-                    headers: await getAuth()
-                })).json() as Iwara.Page).results as Iwara.Video[]).forEach(info => new VideoInfo().init(info.id, info));
-            }
-        }
     }
 
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {
