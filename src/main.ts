@@ -1199,6 +1199,7 @@
             return allVideos.filter(video => {
                 const uploadTime = new Date(video.UploadTime);
                 return (
+                    !isNull(video.RAW) &&
                     uploadTime >= startTime &&
                     uploadTime <= endTime &&
                     (video.Private !== false || video.Unlisted !== false)
@@ -1460,7 +1461,7 @@
 
                         let cloneBody = await cloneResponse.json() as Iwara.Page
                         let list = cloneBody.results as Iwara.Video[]
-                        list.forEach(info => new VideoInfo().init(info.id, info))
+                        [...list].forEach(info => new VideoInfo().init(info.id, info))
 
                         if (!config.addUnlistedAndPrivate) break
 
@@ -1468,7 +1469,7 @@
 
                         if (url.searchParams.has('subscribed') || url.searchParams.has('user')) break
 
-                        let sortList = list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                        let sortList = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
                         GM_getValue('isDebug') && console.debug(new Date(sortList.at(0).createdAt), new Date(sortList.at(-1).createdAt))
 
@@ -1478,7 +1479,7 @@
 
                         cloneBody.count = cloneBody.count + cache.length
                         cloneBody.limit = cloneBody.limit + cache.length
-                        cloneBody.results.push(...cache.map(i => i.RAW).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                        cloneBody.results.push(...cache.map(i => i.RAW).filter(Boolean).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
                         //cloneBody.results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                         return resolve(new Response(JSON.stringify(cloneBody), {
                             status: cloneResponse.status,
