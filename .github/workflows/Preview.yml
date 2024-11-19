@@ -7,7 +7,6 @@ on:
       - 'src/*'
       - 'build/*'
       - 'utils/*'
-      - '.github/workflows/*'
 env:
   release-tag: preview 
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,5 +44,5 @@ jobs:
       run: |
         gh release create ${{ env.release-tag }} ${{ env.file-list }} \
           --prerelease \
-          --title "预览版/Release ${{ env.current-version }}" \
+          --title "预览版/Release ${{ steps.package-version.outputs.current-version}}" \
           --notes "Full Changelog [${{ env.release-tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release-tag }})"
