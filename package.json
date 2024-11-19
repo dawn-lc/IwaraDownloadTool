@@ -1,9 +1,10 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.2.115",
+  "version": "3.2.117",
   "private": true,
   "scripts": {
+    "release": "node ./build/release.js",
     "build": "node ./build/build.js",
     "preprocess": "node ./build/preprocess.js",
     "postprocess": "node ./build/postprocess.js"
