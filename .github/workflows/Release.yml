@@ -9,8 +9,7 @@ on:
       - 'utils/*'
       - '.github/workflows/*'
 env:
-  release_tag: latest
-  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release-tag: latest
 jobs:
   Release:
     permissions:
@@ -32,10 +31,17 @@ jobs:
       run: npm run build
     - name: 后处理
       run: npm run postprocess
+    - name: 获取编译结果
+      run: |
+        FILES=$(find temp -type f | tr '\n' ' ')
+        echo "file-list=${FILES}" >> $GITHUB_ENV
     - name: 获取版本号
       uses: martinbeentjes/npm-get-version-action@v1.3.1
-      id: package-version
     - name: 删除旧版本
-      run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
+      run: gh release delete ${{ env.release-tag }} --cleanup-tag --yes
     - name: 发布新版本
-      run: gh release create ${{ env.release_tag }} temp\IwaraDownloadTool.min.user.js temp\IwaraDownloadTool.mata.js temp\IwaraDownloadTool.user.js --latest --title "正式版/Release ${{ steps.package-version.outputs.current-version }}" --notes "Full Changelog [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
+      run: |
+        gh release create ${{ env.release-tag }} ${{ env.file-list }} \
+          --latest \
+          --title "正式版/Release ${{ env.current-version }}" \
+          --notes "Full Changelog [${{ env.release-tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release-tag }})"
