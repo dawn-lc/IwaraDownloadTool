@@ -8,7 +8,7 @@ on:
       - 'build/*'
       - 'utils/*'
 env:
-  release-tag: preview 
+  release_tag: preview 
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   Release:
@@ -34,15 +34,17 @@ jobs:
     - name: 获取编译结果
       run: |
         FILES=$(find temp -type f | tr '\n' ' ')
-        echo "file-list=${FILES}" >> $GITHUB_ENV
+        echo "file_list=${FILES}" >> $GITHUB_ENV
     - name: 获取版本号
-      uses: martinbeentjes/npm-get-version-action@v1.3.1
+      run: |
+        PACKAGE_VERSION=$(cat package.json | jq '.version' | tr -d '"')
+        echo "current_version=${PACKAGE_VERSION}" >> $GITHUB_ENV
     - name: 删除旧版本
-      run: gh release delete ${{ env.release-tag }} --cleanup-tag --yes
+      run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       continue-on-error: true
     - name: 发布新版本
       run: |
-        gh release create ${{ env.release-tag }} ${{ env.file-list }} \
+        gh release create ${{ env.release_tag }} ${{ env.file_list }} \
           --prerelease \
-          --title "预览版/Release ${{ steps.package-version.outputs.current-version}}" \
-          --notes "Full Changelog [${{ env.release-tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release-tag }})"
+          --title "预览版/Release ${{ env.current_version }}" \
+          --notes "Full Changelog [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
