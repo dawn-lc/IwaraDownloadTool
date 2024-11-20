@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2022",
-    "module": "System",
+    "module": "ESNext",
     "alwaysStrict": false,
     "esModuleInterop": true, 
     "forceConsistentCasingInFileNames": true,
@@ -10,13 +10,10 @@
     "strictNullChecks": false,
     "removeComments": true,
     "moduleResolution": "node",
-    "newLine": "crlf",
-    "outFile": "temp/main.js"
+    "newLine": "crlf"
   },
   "include": [
-    "utils/*.d.ts"
-  ],
-  "files": [
-    "src/main.ts"
+    "utils/*.d.ts",
+    "src/*.ts"
   ]
 }

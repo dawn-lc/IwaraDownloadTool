@@ -1,15 +1,41 @@
 const root = process.cwd();
 const fs = require('fs');
 const path = require('path');
-const ts = require('typescript');
-const { minify } = require('terser');
+const esbuild = require('esbuild');
 var cleanCSS = require('clean-css');
+
+const sourcePath = path.join(root, 'src');
+const css = new cleanCSS({}).minify(fs.readFileSync(path.join(sourcePath, 'main.css'), 'utf8')).styles;
+
+
+esbuild
+.build({
+    entryPoints: ['src/main.ts'],
+    bundle: true,
+    outfile: 'temp/main.js',
+    minify: false,
+    platform: 'browser',
+    target: ['es2022'],
+})
+.then(() => fs.writeFileSync('temp/main.js', fs.readFileSync('temp/main.js', 'utf8').replaceAll(`@!mainCSS!@`, css)))
+.catch(() => process.exit(1));
+
+esbuild
+.build({
+    entryPoints: ['src/main.ts'],
+    bundle: true,
+    outfile: 'temp/main.min.js',
+    minify: true,
+    platform: 'browser',
+    target: ['es2022'],
+})
+.then(() => fs.writeFileSync('temp/main.min.js', fs.readFileSync('temp/main.min.js', 'utf8').replaceAll(`@!mainCSS!@`, css)))
+.catch(() => process.exit(1));
+/*
+
 
 const configPath = path.resolve(root, 'tsconfig.json');
 const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-
-const sourcePath = path.join(root, 'src');
-let css = new cleanCSS({}).minify(fs.readFileSync(path.join(sourcePath, 'main.css'), 'utf8')).styles;
 
 if (configFile.error) {
     console.error('Error reading tsconfig.json:', configFile.error.messageText);
@@ -21,6 +47,7 @@ const parsedConfig = ts.parseJsonConfigFileContent(
     ts.sys,
     path.dirname(configPath)
 );
+
 
 const program = ts.createProgram({
     rootNames: parsedConfig.fileNames,
@@ -77,3 +104,4 @@ minifyOutputFiles().then(() => {
     console.error('Error during minification:', err);
     process.exit(1);
 });
+*/

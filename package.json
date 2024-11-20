@@ -10,14 +10,16 @@
     "postprocess": "node ./build/postprocess.js"
   },
   "dependencies": {
+    "dexie": "^3.2.7",
+    "moment": "^2.30.1",
+    "toastify-js": "^1.12.0"
+  },
+  "devDependencies": {
     "@types/greasemonkey": "^4.0.4",
-    "@types/moment": "^2.13.0",
     "@types/tampermonkey": "^4.0.10",
-    "@types/toastify-js": "^1.11.1",
+    "@types/toastify-js": "^1.12.3",
     "clean-css": "^5.3.3",
-    "dexie": "^3.2.6",
-    "terser": "^5.32.0",
-    "toastify-js": "^1.12.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.0.4"
   }
 }
