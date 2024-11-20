@@ -1,7 +1,7 @@
 import Dexie from "dexie";
 import { fetch, ceilDiv, getString, isElement, isNull, language, originalAddEventListener, originalNodeAppendChild, prune, renderNode } from "./extension";
 import { localPathCheck, aria2Check, iwaraDownloaderCheck, EnvCheck, refreshToken, getAuth, newToast, toastNode, getSelectButton, pushDownloadTask, addDownloadTask, injectCheckbox, analyzeDownloadTask, aria2TaskCheck } from "./function";
-import { i18n, config, db, rating, compatible, editConfig, selectList, firstRun } from "./main";
+import { i18n, config, db, rating, editConfig, selectList, firstRun, compatible } from "./main";
 
 export enum DownloadType {
     Aria2,

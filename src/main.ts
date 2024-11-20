@@ -3,7 +3,7 @@
 import { I18N, Config, Database, Dictionary, SyncDictionary, VersionState, Version, VideoInfo, MessageType, menu, configEdit, ToastType } from "./class";
 import { findElement, getString, isNull, isStringTupleArray, language, originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState, renderNode } from "./extension"
 import { getSelectButton, getPlayload, injectCheckbox, newToast, pageChange, toastNode, uninjectCheckbox } from "./function";
-export var mouseTarget: Element = null
+var mouseTarget: Element = null
 export var compatible = navigator.userAgent.toLowerCase().includes('firefox')
 export var i18n = new I18N()
 export var config = new Config()
