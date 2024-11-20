@@ -5,7 +5,7 @@
 // @description:ja    Iwara 動画バッチをダウンロード
 // @name:zh-CN        Iwara 批量下载工具
 // @description:zh-CN 批量下载 Iwara 视频
-// @icon              https://www.iwara.tv/logo.png
+// @icon              https://www.google.com/s2/favicons?sz=64&domain=iwara.tv
 // @namespace         https://github.com/dawn-lc/
 // @author            dawn-lc
 // @license           Apache-2.0
