@@ -2,10 +2,6 @@
 import moment from "moment";
 import { config, i18n } from "./main";
 
-
-// @ts-ignore
-unsafeWindow.IwaraDownloadTool = true;
-
 export const originalFetch = unsafeWindow.fetch
 export const originalPushState = unsafeWindow.history.pushState;
 export const originalReplaceState = unsafeWindow.history.replaceState;

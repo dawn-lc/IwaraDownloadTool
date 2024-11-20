@@ -29,6 +29,10 @@ interface IChannelMessage<T> {
     type: MessageType;
     data: T;
 }
+
+interface Window {
+    IwaraDownloadTool: boolean;
+}
 declare var unsafeWindow: Window & typeof globalThis;
 
 interface Array<T> {
