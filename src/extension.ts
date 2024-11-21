@@ -9,13 +9,16 @@ export const originalNodeAppendChild = unsafeWindow.Node.prototype.appendChild
 export const originalRemoveChild = unsafeWindow.Node.prototype.removeChild
 export const originalRemove = unsafeWindow.Element.prototype.remove
 export const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
-export const isNull = (obj: any): obj is null => typeof obj === 'undefined' || obj === null
-export const isObject = (obj: any): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
-export const isString = (obj: any): obj is String => !isNull(obj) && typeof obj === 'string'
-export const isNumber = (obj: any): obj is Number => !isNull(obj) && typeof obj === 'number'
-export const isElement = (obj: any): obj is Element => !isNull(obj) && obj instanceof Element
-export const isNode = (obj: any): obj is Node => !isNull(obj) && obj instanceof Node
-export const isStringTupleArray = (obj: any): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
+export const isNull = (obj: unknown): obj is null => obj === null;
+export const isUndefined = (obj: unknown): obj is undefined => typeof obj === 'undefined';
+export const isNullOrUndefined = (obj: unknown): obj is null | undefined => isUndefined(obj) || isNull(obj);
+export const isObject = (obj: unknown): obj is Object => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj)
+export const isString = (obj: unknown): obj is String => !isNull(obj) && typeof obj === 'string'
+export const isNumber = (obj: unknown): obj is Number => !isNull(obj) && typeof obj === 'number'
+export const isArray = (obj: unknown): obj is any[] => Array.isArray(obj)
+export const isElement = (obj: unknown): obj is Element => !isNull(obj) && obj instanceof Element
+export const isNode = (obj: unknown): obj is Node => !isNull(obj) && obj instanceof Node
+export const isStringTupleArray = (obj: unknown): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 
 export const emojiSeq = String.raw`(?:\p{Emoji}\uFE0F\u20E3?|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation})`
 export const emojiSTags = String.raw`\u{E0061}-\u{E007A}`
@@ -196,7 +199,10 @@ export const ceilDiv = function (dividend: number, divisor: number): number {
 }
 
 export const findElement = function (element: Element, condition: string) {
-    while (element && !element.matches(condition)) {
+    while (!isNullOrUndefined(element) && !element.matches(condition)) {
+        if (isNullOrUndefined(element.parentElement)){
+            return element
+        }
         element = element.parentElement
     }
     return element
@@ -210,7 +216,7 @@ export const language = function () {
 
 export const renderNode = function (renderCode: RenderCode): Node | Element {
     renderCode = prune(renderCode)
-    if (isNull(renderCode)) throw new Error("RenderCode null")
+    if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null")
     if (typeof renderCode === 'string') {
         return document.createTextNode(renderCode.replaceVariable(i18n[language()]).toString())
     }
@@ -222,9 +228,9 @@ export const renderNode = function (renderCode: RenderCode): Node | Element {
     }
     const { nodeType, attributes, events, className, childs } = renderCode
     const node: Element = document.createElement(nodeType);
-    (!isNull(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: [string, string]) => node.setAttribute(key, value));
-    (!isNull(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
-    (!isNull(className) && className.length > 0) && node.classList.add(...[].concat(className))
-    !isNull(childs) && node.append(...[].concat(childs).map(renderNode))
+    (!isNullOrUndefined(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: [string, string]) => node.setAttribute(key, value));
+    (!isNullOrUndefined(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
+    (!isNullOrUndefined(className) && className.length > 0) && node.classList.add(...typeof className === 'string' ? [className] : className);
+    !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : new Array(childs)).map(renderNode))
     return node
 }

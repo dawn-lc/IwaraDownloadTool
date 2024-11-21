@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import { fetch, ceilDiv, getString, isElement, isNull, language, originalAddEventListener, originalNodeAppendChild, prune, renderNode } from "./extension";
+import { fetch, ceilDiv, getString, isElement, isNull, language, originalAddEventListener, originalNodeAppendChild, prune, renderNode, isNullOrUndefined, isString } from "./extension";
 import { localPathCheck, aria2Check, iwaraDownloaderCheck, EnvCheck, refreshToken, getAuth, newToast, toastNode, getSelectButton, pushDownloadTask, addDownloadTask, injectCheckbox, analyzeDownloadTask, aria2TaskCheck } from "./function";
 import { i18n, config, db, rating, editConfig, selectList, firstRun, compatible } from "./main";
 
@@ -439,7 +439,7 @@ export class I18N {
 }
 
 export class Config {
-    configChange: Function
+    configChange?: Function;
     language: string
     autoFollow: boolean
     autoLike: boolean
@@ -456,7 +456,7 @@ export class Config {
     aria2Token: string
     iwaraDownloaderPath: string
     iwaraDownloaderToken: string
-    authorization: string
+    authorization!: string;
     priority: Record<string, number>
     [key: string]: any
     constructor() {
@@ -498,14 +498,14 @@ export class Config {
                 }
                 GM_setValue(property, value)
                 GM_getValue('isDebug') && console.debug(`set: ${property} ${getString(value)}`)
-                target.configChange(property)
+                if (!isNullOrUndefined(target.configChange)) target.configChange(property)
                 return true
             }
         })
         GM_listValues().forEach((value) => {
             GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
                 GM_getValue('isDebug') && console.debug(`$Is Remote: ${remote} Change Value: ${name}`)//old: ${getString(old_value)} new: ${getString(new_value)}
-                if (remote && !isNull(body.configChange)) body.configChange(name)
+                if (remote && !isNullOrUndefined(body.configChange)) body.configChange(name)
             })
         })
         return body
@@ -530,7 +530,7 @@ export class Config {
 }
 
 export class configEdit {
-    source: configEdit
+    source!: configEdit;
     target: Config
     interface: HTMLElement
     interfacePage: HTMLElement
@@ -750,7 +750,7 @@ export class configEdit {
     }
     private pageChange() {
         while (this.interfacePage.hasChildNodes()) {
-            this.interfacePage.removeChild(this.interfacePage.firstChild)
+            this.interfacePage.removeChild(this.interfacePage.firstChild!)
         }
         let variableInfo = renderNode({
             nodeType: 'a',
@@ -803,39 +803,39 @@ export class configEdit {
 
 
 export class VideoInfo {
-    ID: string
-    UploadTime: Date
-    Title: string | null
-    FileName: string
-    Size: number
-    Tags: Array<Iwara.Tag>
-    Liked: boolean
-    Following: boolean
-    Friend: boolean
-    Alias: string
-    Author: string
-    AuthorID: string
-    Private: boolean
-    Unlisted: boolean
-    DownloadQuality: string
-    External: boolean
-    ExternalUrl: string
-    State: boolean
-    Comments: string
-    DownloadUrl: string
-    RAW: Iwara.Video
+    ID!: string;
+    UploadTime!: Date;
+    Title!: string;
+    FileName!: string;
+    Size!: number;
+    Tags!: Array<Iwara.Tag>;
+    Liked!: boolean;
+    Following!: boolean;
+    Friend!: boolean;
+    Alias!: string;
+    Author!: string;
+    AuthorID!: string;
+    Private!: boolean;
+    Unlisted!: boolean;
+    DownloadQuality!: string;
+    External!: boolean;
+    ExternalUrl: string | null | undefined
+    State!: boolean;
+    Comments!: string;
+    DownloadUrl!: string;
+    RAW!: Iwara.Video;
     constructor(info?: PieceInfo) {
-        if (!isNull(info)) {
-            if (!isNull(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
-            if (!isNull(info.Alias) && !info.Alias.isEmpty()) this.Alias = info.Alias
-            if (!isNull(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
+        if (!isNullOrUndefined(info)) {
+            if (!isNullOrUndefined(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
+            if (!isNullOrUndefined(info.Alias) && !info.Alias.isEmpty()) this.Alias = info.Alias
+            if (!isNullOrUndefined(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
         }
         return this
     }
     async init(ID: string, InfoSource?: Iwara.Video) {
         try {
             this.ID = ID
-            if (isNull(InfoSource)) {
+            if (isNullOrUndefined(InfoSource)) {
                 config.authorization = `Bearer ${await refreshToken()}`
             } else {
                 this.RAW = InfoSource
@@ -860,6 +860,7 @@ export class VideoInfo {
                         let dom = new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
                         for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
                             let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
+                            if (isNullOrUndefined(imgID)) continue
                             await db.caches.put({
                                 ID: imgID,
                                 href: `https://mmdfans.net${(i as HTMLLinkElement).getAttribute('href')}`
@@ -879,7 +880,7 @@ export class VideoInfo {
                                     `%#cdnCacheFinded#%`
                                 ], '%#createTask#%'),
                             onClick() {
-                                GM_openInTab(cdnCache.pop().href, { active: false, insert: true, setParent: true })
+                                GM_openInTab(cdnCache.pop()!.href, { active: false, insert: true, setParent: true })
                                 toast.hideToast()
                             },
                         }
@@ -895,7 +896,7 @@ export class VideoInfo {
             }
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
-            this.External = !isNull(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
+            this.External = !isNullOrUndefined(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
             this.AuthorID = VideoInfoSource.user.id
             this.Following = VideoInfoSource.user.following
             this.Liked = VideoInfoSource.liked
@@ -916,10 +917,10 @@ export class VideoInfo {
                 throw new Error(i18n[language()].externalVideo.toString())
             }
 
-            const getCommentData = async (commentID: string = null, page: number = 0): Promise<Iwara.Page> => {
+            const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.Page> => {
                 return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
             }
-            const getCommentDatas = async (commentID: string = null): Promise<Iwara.Comment[]> => {
+            const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
                 let comments: Iwara.Comment[] = []
                 let base = await getCommentData(commentID)
                 comments.append(base.results as Iwara.Comment[])
@@ -969,9 +970,9 @@ export class VideoInfo {
                     async onClick() {
                         toast.hideToast()
                         if (data.External) {
-                            GM_openInTab(data.ExternalUrl, { active: false, insert: true, setParent: true })
+                            GM_openInTab(data.ExternalUrl!, { active: false, insert: true, setParent: true })
                         } else {
-                            pushDownloadTask(await new VideoInfo(data).init(data.ID))
+                            pushDownloadTask(await new VideoInfo(data as PieceInfo).init(data.ID))
                         }
                     },
                 }
@@ -989,7 +990,7 @@ export class VideoInfo {
 export class Database extends Dexie {
     videos: Dexie.Table<VideoInfo, string>;
     caches: Dexie.Table<{ ID: string, href: string }, string>;
-    aria2Tasks: Dexie.Table<VideoInfo, Aria2.Result>;
+    aria2Tasks!: Dexie.Table<VideoInfo, Aria2.Result>;
     constructor() {
         super("VideoDatabase");
         this.version(2).stores({
@@ -1014,7 +1015,10 @@ export class Database extends Dexie {
         this.videos = this.table("videos")
         this.caches = this.table("caches")
     }
-    async getFilteredVideos(startTime: Date, endTime: Date) {
+    async getFilteredVideos(startTime: Date | string | undefined, endTime: Date | string | undefined ) {
+        if (isNullOrUndefined(startTime) || isNullOrUndefined(endTime)) return [];
+        startTime = isString(startTime) ? new Date(startTime) : startTime
+        endTime = isString(endTime) ? new Date(endTime) : endTime
         return this.videos
             .where('UploadTime')
             .between(startTime, endTime, true, true)
@@ -1025,7 +1029,7 @@ export class Database extends Dexie {
 }
 
 export class menu {
-    source: menu
+    source!: menu;
     interface: HTMLElement
     interfacePage: HTMLElement
     constructor() {
@@ -1046,7 +1050,7 @@ export class menu {
             childs: `%#${name}#%`,
             events: {
                 click: (event: Event) => {
-                    click(name, event)
+                    !isNullOrUndefined(click) && click(name, event)
                     event.stopPropagation()
                     return false
                 }
@@ -1055,7 +1059,7 @@ export class menu {
     }
     private async pageChange(pageType: PageType) {
         while (this.interfacePage.hasChildNodes()) {
-            this.interfacePage.removeChild(this.interfacePage.firstChild)
+            this.interfacePage.removeChild(this.interfacePage.firstChild!)
         }
 
         let manualDownloadButton = this.button('manualDownload', (name, event) => {
@@ -1183,7 +1187,7 @@ export class menu {
                     }
                     this.pageChange(page.classList[1].split('-').pop() as PageType)
                 }
-            }).observe(unsafeWindow.document.getElementById('app'), { childList: true, subtree: true });
+            }).observe(unsafeWindow.document.getElementById('app')!, { childList: true, subtree: true });
             originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
             this.pageChange(PageType.Page)
         }

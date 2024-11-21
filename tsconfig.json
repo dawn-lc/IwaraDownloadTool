@@ -1,16 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es2022",
+    "target": "ES2022",
     "module": "ESNext",
-    "alwaysStrict": false,
-    "esModuleInterop": true, 
-    "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
-    "removeComments": true,
     "moduleResolution": "node",
-    "newLine": "crlf"
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "utils/*.d.ts",

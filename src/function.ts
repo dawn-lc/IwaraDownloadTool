@@ -1,6 +1,6 @@
 import Toastify from "toastify-js"
 import { Dictionary, ToastType, DownloadType, VideoInfo } from "./class"
-import { fetch, getString, isNull, language, originalNodeAppendChild, prune, renderNode, UUID } from "./extension"
+import { fetch, getString, isNull, isNullOrUndefined, language, originalNodeAppendChild, prune, renderNode, UUID } from "./extension"
 import { config, db, i18n, pageSelectButtons, selectList } from "./main"
 
 
@@ -32,7 +32,7 @@ export async function getAuth(url?: string) {
             'Cooike': unsafeWindow.document.cookie,
             'Authorization': config.authorization
         },
-        !isNull(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : {}
+        !isNullOrUndefined(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : { 'X-Version': ''}
     )
 }
 export async function addDownloadTask() {
@@ -113,7 +113,7 @@ export function toastNode(body: RenderCode | RenderCode[], title?: string): Elem
     return renderNode({
         nodeType: 'div',
         childs: [
-            !isNull(title) && !title.isEmpty() ? {
+            !isNullOrUndefined(title) && !title.isEmpty() ? {
                 nodeType: 'h3',
                 childs: `%#appName#% - ${title}`
             } : {
@@ -137,37 +137,43 @@ export function getTextNode(node: Node | Element): string {
                 .join('')
             : ''
 }
-export function newToast(type: ToastType, params?: Toastify.Options) {
+export function newToast(type: ToastType, params: Toastify.Options | undefined) {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
         [ToastType.Log]: console.log,
         [ToastType.Info]: console.info,
     }[type] || console.log
-    params = Object.assign({
+    if (isNullOrUndefined(params)) params = {
         newWindow: true,
         gravity: 'top',
         position: 'left',
         stopOnFocus: true
-    },
-        type === ToastType.Warn && {
-            duration: -1,
-            style: {
-                background: 'linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))'
-            }
-        },
-        type === ToastType.Error && {
-            duration: -1,
-            style: {
-                background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
-            }
-        },
-        !isNull(params) && params
-    )
-    if (!isNull(params.text)) {
+    }
+    switch (type) {
+        case ToastType.Warn:
+            params = Object.assign({
+                duration: -1,
+                style: {
+                    background: 'linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))'
+                }
+            }, params)
+            break;
+
+        case ToastType.Error:
+            params = Object.assign({
+                duration: -1,
+                style: {
+                    background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
+                }
+            }, params)    
+        default:
+            break;
+    }
+    if (!isNullOrUndefined(params.text)) {
         params.text = params.text.replaceVariable(i18n[language()]).toString()
     }
-    logFunc((!isNull(params.text) ? params.text : !isNull(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
+    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
     return Toastify(params)
 }
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
@@ -236,7 +242,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                     ], '%#createTask#%'),
                     async onClick() {
                         toast.hideToast()
-                        await pushDownloadTask(await new VideoInfo(videoInfo).init(videoInfo.ID))
+                        await pushDownloadTask(await new VideoInfo(videoInfo as PieceInfo).init(videoInfo.ID))
                     }
                 }
             )
@@ -610,8 +616,8 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
         try {
             // 仅支持路径最后一组[]中包含%#ID#%的路径
             // todo: 支持自定义提取ID表达式 
-            let videoID: string = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
-            if (isNull(videoID) || videoID.isEmpty()) {
+            let videoID: string | null | undefined = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
+            if (isNullOrUndefined(videoID) || videoID.isEmpty()) {
                 GM_getValue('isDebug') && console.debug(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
                 continue
             }
@@ -657,10 +663,10 @@ export async function aria2TaskCheck() {
 export function uninjectCheckbox(element: Element | Node) {
     if (element instanceof HTMLElement) {
         if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
-            element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID'))
+            element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID')!)
         }
         if (element.querySelector('input.selectButton')) {
-            element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')))
+            element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')!))
         }
     }
 }
@@ -669,11 +675,11 @@ export function pageChange() {
     GM_getValue('isDebug') && console.debug(pageSelectButtons)
 }
 
-export function getSelectButton(id: string): HTMLInputElement | null {
+export function getSelectButton(id: string): HTMLInputElement | undefined {
     return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
 }
 export function getPlayload(authorization: string) {
-    return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop().split('.')[1]))))
+    return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))
 }
 
 
@@ -683,10 +689,11 @@ export function getPlayload(authorization: string) {
 
 export function injectCheckbox(element: Element, compatible: boolean) {
     let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title').trim()
+    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title')!.trim()
     let Alias = element.querySelector('a.username')?.getAttribute('title')
     let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
     let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
+    if (isNullOrUndefined(ID) || isNullOrUndefined(Name) || isNullOrUndefined(Alias) || isNullOrUndefined(Author)) return
     let button = renderNode({
         nodeType: 'input',
         attributes: Object.assign(
@@ -736,19 +743,19 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
         ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
         for (let key of list.allKeys().intersect(completed)) {
             let button = getSelectButton(key)
-            if (!isNull(button)) button.checked = false
+            if (!isNullOrUndefined(button)) button.checked = false
             list.delete(key)
-            node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
+            node.firstChild!.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
         }
     }
     let infoList = (await Promise.all(list.allKeys().map(async id => {
         let caches = db.videos.where('ID').equals(id)
         let cache = await caches.first()
-        if ((await caches.count()) < 1) {
+        if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
             let parseToast = newToast(
                 ToastType.Info,
                 {
-                    text: `${list.get(id).Title ?? id} %#parsing#%`,
+                    text: `${list.get(id)?.Title ?? id} %#parsing#%`,
                     duration: -1,
                     close: true,
                     onClick() {
@@ -766,9 +773,9 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
         let button = getSelectButton(videoInfo.ID)
         let video = videoInfo.State ? videoInfo : await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
         video.State && await pushDownloadTask(video)
-        if (!isNull(button)) button.checked = false
+        if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
-        node.firstChild.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
+        node.firstChild!.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
     }
     start.hideToast()
     if (size != 1) {

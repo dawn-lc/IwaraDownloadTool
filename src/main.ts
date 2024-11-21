@@ -1,10 +1,10 @@
 
 
 import { I18N, Config, Database, Dictionary, SyncDictionary, VersionState, Version, VideoInfo, MessageType, menu, configEdit, ToastType } from "./class";
-import { findElement, getString, isNull, isStringTupleArray, language, originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState, renderNode } from "./extension"
+import { findElement, getString, isNull, isNullOrUndefined, isStringTupleArray, isUndefined, language, originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState, renderNode } from "./extension"
 import { getSelectButton, getPlayload, injectCheckbox, newToast, pageChange, toastNode, uninjectCheckbox } from "./function";
 
-var mouseTarget: Element = null
+var mouseTarget: Element | null = null
 export var compatible = navigator.userAgent.toLowerCase().includes('firefox')
 export var i18n = new I18N()
 export var config = new Config()
@@ -51,7 +51,7 @@ export function firstRun() {
             click: () => {
                 GM_setValue('isFirstRun', false)
                 GM_setValue('version', GM_info.script.version)
-                unsafeWindow.document.querySelector('#pluginOverlay').remove()
+                unsafeWindow.document.querySelector('#pluginOverlay')?.remove()
                 editConfig.inject()
             }
         }
@@ -114,8 +114,7 @@ export function firstRun() {
     const modifyFetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
-        if (url.hostname.includes('sentry.io')) return undefined
-        if (!isNull(init) && !isNull(init.headers) && !isStringTupleArray(init.headers)) {
+        if (!isNullOrUndefined(init) && !isNull(init.headers) && !isStringTupleArray(init.headers)) {
             let authorization = null
             if (init.headers instanceof Headers) {
                 authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
@@ -127,11 +126,11 @@ export function firstRun() {
                     }
                 }
             }
-            if (!isNull(authorization) && authorization !== config.authorization) {
+            if (!isNullOrUndefined(authorization) && authorization !== config.authorization) {
                 let playload = getPlayload(authorization)
                 if (playload['type'] === 'refresh_token') {
                     GM_getValue('isDebug') && console.debug(`refresh_token: ${authorization.split(' ').pop()}`)
-                    isNull(localStorage.getItem('token')) && localStorage.setItem('token', authorization.split(' ').pop())
+                    if (isNullOrUndefined(localStorage.getItem('token'))) localStorage.setItem('token', authorization.split(' ').pop() ?? '')
                 }
                 if (playload['type'] === 'access_token') {
                     config.authorization = `Bearer ${authorization.split(' ').pop()}`
@@ -146,7 +145,7 @@ export function firstRun() {
                 let path = url.pathname.toLowerCase().split('/').slice(1)
                 switch (path[0]) {
                     case 'videos':
-                        rating = url.searchParams.get('rating')
+                        rating = url.searchParams.get('rating') ?? 'all'
                         let cloneResponse = response.clone()
                         if (!cloneResponse.ok) break;
                         let cloneBody = await cloneResponse.json() as Iwara.Page
@@ -156,8 +155,7 @@ export function firstRun() {
                         GM_getValue('isDebug') && console.debug(url.searchParams)
                         if (url.searchParams.has('subscribed') || url.searchParams.has('user') || url.searchParams.has('sort') ? url.searchParams.get('sort') !== 'date' : false) break
                         let sortList = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-                        GM_getValue('isDebug') && console.debug(new Date(sortList.at(0).createdAt), new Date(sortList.at(-1).createdAt))
-                        let cache = await db.getFilteredVideos(new Date(sortList.at(0).createdAt), new Date(sortList.at(-1).createdAt))
+                        let cache = await db.getFilteredVideos(sortList.at(0)?.createdAt, sortList.at(-1)?.createdAt)
                         if (!cache.any()) break
                         cloneBody.count = cloneBody.count + cache.length
                         cloneBody.limit = cloneBody.limit + cache.length
