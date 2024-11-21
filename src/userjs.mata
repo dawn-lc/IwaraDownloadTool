@@ -5,7 +5,7 @@
 // @description:ja    Iwara 動画バッチをダウンロード
 // @name:zh-CN        Iwara 批量下载工具
 // @description:zh-CN 批量下载 Iwara 视频
-// @icon              https://www.iwara.tv/logo.png
+// @icon              https://www.google.com/s2/favicons?sz=64&domain=iwara.tv
 // @namespace         https://github.com/dawn-lc/
 // @author            dawn-lc
 // @license           Apache-2.0
@@ -38,8 +38,5 @@
 // @grant             GM_getTabs
 // @grant             unsafeWindow
 // @run-at            document-start
-// @require           https://cdn.jsdelivr.net/npm/dexie@3.2.4/dist/dexie.min.js
-// @require           https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.js
-// @require           https://cdn.jsdelivr.net/npm/moment@2.30.1/min/moment-with-locales.min.js
 // @resource          toastify-css https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.css
 // ==/UserScript==

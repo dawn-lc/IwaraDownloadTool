@@ -1,15 +1,83 @@
 const root = process.cwd();
-const fs = require('fs');
-const path = require('path');
-const ts = require('typescript');
-const { minify } = require('terser');
-var cleanCSS = require('clean-css');
+import { promises } from 'fs';
+import { join } from 'path';
+import esbuild from 'esbuild';
 
+const sourcePath = join(root, 'src');
+const outPath = join(root, 'temp');
+
+const mainPath = join(sourcePath, 'main.ts');
+const cssPath = join(sourcePath, 'main.css');
+
+const distPath = join(outPath, 'main.js');
+const distCompressPath = join(outPath, 'main.min.js');
+
+let result = esbuild.buildSync({
+    entryPoints: [cssPath],
+    outfile: '/dev/null',
+    write: false,
+    minify: true,
+    loader: {
+        '.css': 'css'
+    },
+    platform: 'browser',
+    charset: 'utf8'
+});
+
+if (result.errors.length > 0) {
+    debugger
+    process.exit(1);
+}
+const css = result.outputFiles.at(0).text.replaceAll(/\r?\n/g, '');
+
+esbuild.build({
+    entryPoints: [mainPath],
+    bundle: true,
+    outfile: distPath,
+    minify: false,
+    platform: 'browser',
+    target: ['es2022'],
+    loader: { '.json': 'json' },
+    charset: 'utf8'
+})
+.then(() => {
+    promises.readFile(distPath, 'utf8')
+        .then(data => {
+            const processed = data
+                .replaceAll(/\r?\n/g, '\r\n')
+                .replaceAll('"@!mainCSS!@"', `\`${css}\``);
+            return promises.writeFile(distPath, processed);
+        })
+        .catch(err => console.error('Error during file processing:', err));
+})
+.catch(() => process.exit(1));
+
+esbuild.build({
+    entryPoints: [mainPath],
+    bundle: true,
+    outfile: distCompressPath,
+    minify: true,
+    platform: 'browser',
+    loader: { '.json': 'json' },
+    target: ['es2022'],
+    charset: 'utf8'
+})
+.then(() => {
+    promises.readFile(distCompressPath, 'utf8')
+        .then(data => {
+            const processed = data
+                .replaceAll('"@!mainCSS!@"', `\`${css}\``);
+            return promises.writeFile(distCompressPath, processed);
+        })
+        .catch(err => console.error('Error during file processing:', err));
+})
+.catch(() => process.exit(1));
+
+
+
+/*
 const configPath = path.resolve(root, 'tsconfig.json');
 const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-
-const sourcePath = path.join(root, 'src');
-let css = new cleanCSS({}).minify(fs.readFileSync(path.join(sourcePath, 'main.css'), 'utf8')).styles;
 
 if (configFile.error) {
     console.error('Error reading tsconfig.json:', configFile.error.messageText);
@@ -21,6 +89,7 @@ const parsedConfig = ts.parseJsonConfigFileContent(
     ts.sys,
     path.dirname(configPath)
 );
+
 
 const program = ts.createProgram({
     rootNames: parsedConfig.fileNames,
@@ -77,3 +146,4 @@ minifyOutputFiles().then(() => {
     console.error('Error during minification:', err);
     process.exit(1);
 });
+*/

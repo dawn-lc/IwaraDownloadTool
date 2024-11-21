@@ -1,4 +1,7 @@
-
+declare module '../i18n/*.json' {
+    const content: { [key: string]: RenderCode | RenderCode[] };
+    export default content;
+}
 interface Date {
     format(format?: string): String;
 }
@@ -29,13 +32,16 @@ interface IChannelMessage<T> {
     type: MessageType;
     data: T;
 }
+
+interface Window {
+    IwaraDownloadTool: boolean;
+}
 declare var unsafeWindow: Window & typeof globalThis;
 
 interface Array<T> {
     any(): boolean;
     prune(): Array<T>;
     unique(): Array<T>;
-    append(arr: Array<T>): void;
     /**
      * @name unique
      * @description 根据元素值或特定属性移除数组中的重复元素。

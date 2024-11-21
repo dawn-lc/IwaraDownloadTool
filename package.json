@@ -1,23 +1,26 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.2.121",
+  "version": "3.2.133",
   "private": true,
+  "type": "module",
   "scripts": {
-    "release": "node ./build/release.js",
-    "build": "node ./build/build.js",
+    "prerelease": "node ./build/prerelease.js",
     "preprocess": "node ./build/preprocess.js",
+    "build": "node ./build/build.js",
     "postprocess": "node ./build/postprocess.js"
   },
   "dependencies": {
+    "dexie": "^3.2.7",
+    "moment": "^2.30.1",
+    "toastify-js": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/moment": "^2.11.29",
     "@types/greasemonkey": "^4.0.4",
-    "@types/moment": "^2.13.0",
     "@types/tampermonkey": "^4.0.10",
-    "@types/toastify-js": "^1.11.1",
-    "clean-css": "^5.3.3",
-    "dexie": "^3.2.6",
-    "terser": "^5.32.0",
-    "toastify-js": "^1.12.0",
+    "@types/toastify-js": "^1.12.3",
+    "esbuild": "^0.24.0",
     "typescript": "^5.0.4"
   }
 }

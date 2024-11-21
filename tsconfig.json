@@ -1,22 +1,16 @@
 {
   "compilerOptions": {
-    "target": "es2022",
-    "module": "System",
-    "alwaysStrict": false,
-    "esModuleInterop": true, 
-    "forceConsistentCasingInFileNames": true,
+    "target": "ES2022",
+    "module": "ESNext",
     "strict": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
-    "removeComments": true,
     "moduleResolution": "node",
-    "newLine": "crlf",
-    "outFile": "temp/main.js"
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": [
-    "utils/*.d.ts"
-  ],
-  "files": [
-    "src/main.ts"
+    "i18n/*.json",
+    "utils/*.d.ts",
+    "src/*.ts"
   ]
 }
