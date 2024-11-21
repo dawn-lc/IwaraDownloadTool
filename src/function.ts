@@ -1,8 +1,9 @@
 import Toastify from "toastify-js"
+import { i18n } from "./i18n"
+import { isNullOrUndefined, originalNodeAppendChild } from "./env"
+import { fetch, getString, prune, renderNode, UUID } from "./extension"
 import { Dictionary, ToastType, DownloadType, VideoInfo } from "./class"
-import { fetch, getString, isNull, isNullOrUndefined, language, originalNodeAppendChild, prune, renderNode, UUID } from "./extension"
-import { config, db, i18n, pageSelectButtons, selectList } from "./main"
-
+import { config, db, pageSelectButtons, selectList } from "./main"
 
 export async function refreshToken(): Promise<string> {
     let refresh = config.authorization
@@ -39,7 +40,7 @@ export async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
         attributes: {
-            placeholder: i18n[language()].manualDownloadTips,
+            placeholder: i18n[config.language].manualDownloadTips,
             style: 'margin-bottom: 10px;',
             rows: "16",
             cols: "96"
@@ -56,7 +57,7 @@ export async function addDownloadTask() {
                 nodeType: "button",
                 events: {
                     click: (e: Event) => {
-                        if (!isNull(textArea.value) && !textArea.value.isEmpty()) {
+                        if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
                             try {
                                 let list = JSON.parse(textArea.value) as Array<[key: string, value: PieceInfo]>
                                 analyzeDownloadTask(new Dictionary<PieceInfo>(list))
@@ -78,7 +79,7 @@ export async function addDownloadTask() {
 
 
 export function checkIsHaveDownloadLink(comment: string): boolean {
-    if (!config.checkDownloadLink || isNull(comment) || comment.isEmpty()) {
+    if (!config.checkDownloadLink || isNullOrUndefined(comment) || comment.isEmpty()) {
         return false
     }
     return [
@@ -144,12 +145,13 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
         [ToastType.Log]: console.log,
         [ToastType.Info]: console.info,
     }[type] || console.log
-    if (isNullOrUndefined(params)) params = {
+    if (isNullOrUndefined(params)) params = {}
+    params = Object.assign(params,{
         newWindow: true,
         gravity: 'top',
         position: 'left',
         stopOnFocus: true
-    }
+    })
     switch (type) {
         case ToastType.Warn:
             params = Object.assign({
@@ -171,9 +173,9 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
             break;
     }
     if (!isNullOrUndefined(params.text)) {
-        params.text = params.text.replaceVariable(i18n[language()]).toString()
+        params.text = params.text.replaceVariable(i18n[config.language]).toString()
     }
-    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[language()]))
+    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
     return Toastify(params)
 }
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
@@ -267,7 +269,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
 }
 export function analyzeLocalPath(path: string): LocalPath {
     let matchPath = path.replaceAll('//', '/').replaceAll('\\\\', '/').match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
-    if (isNull(matchPath)) throw new Error(`%#downloadPathError#%["${path}"]`)
+    if (isNullOrUndefined(matchPath)) throw new Error(`%#downloadPathError#%["${path}"]`)
     try {
         return {
             fullPath: matchPath[0],
@@ -603,13 +605,13 @@ export async function aria2API(method: string, params: any) {
     })).json()
 }
 export function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
-    if (isNull(task.files)) {
+    if (isNullOrUndefined(task.files)) {
         GM_getValue('isDebug') && console.debug(`check aria2 task files fail! ${JSON.stringify(task)}`)
         return null
     }
     for (let index = 0; index < task.files.length; index++) {
         const file = task.files[index]
-        if (isNull(file)) {
+        if (isNullOrUndefined(file)) {
             GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
             continue
         }
@@ -635,7 +637,7 @@ export async function aria2TaskCheck() {
         'files',
         'errorCode',
         'bittorrent'
-    ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
+    ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
 
     let active = await aria2API('aria2.tellActive', [[
         'gid',
@@ -644,12 +646,12 @@ export async function aria2TaskCheck() {
         'bittorrent'
     ]])
 
-    let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNull(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024)
+    let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNullOrUndefined(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024)
 
     for (let index = 0; index < needRestart.length; index++) {
         const task = needRestart[index]
         let videoID = aria2TaskExtractVideoID(task)
-        if (!isNull(videoID) && !videoID.isEmpty()) {
+        if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) {
             if (!completed.includes(videoID.toLowerCase())) {
                 let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
                 let videoInfo = await (new VideoInfo(cache)).init(videoID)
@@ -681,10 +683,6 @@ export function getSelectButton(id: string): HTMLInputElement | undefined {
 export function getPlayload(authorization: string) {
     return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))
 }
-
-
-
-
 
 
 export function injectCheckbox(element: Element, compatible: boolean) {
@@ -740,12 +738,12 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
             'files',
             'errorCode',
             'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNull(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+        ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
         for (let key of list.allKeys().intersect(completed)) {
             let button = getSelectButton(key)
             if (!isNullOrUndefined(button)) button.checked = false
             list.delete(key)
-            node.firstChild!.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
+            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
         }
     }
     let infoList = (await Promise.all(list.allKeys().map(async id => {
@@ -775,7 +773,7 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
         video.State && await pushDownloadTask(video)
         if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[language()].parsingProgress}[${list.size}/${size}]`
+        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
     }
     start.hideToast()
     if (size != 1) {

@@ -37,6 +37,7 @@ esbuild.build({
     minify: false,
     platform: 'browser',
     target: ['es2022'],
+    loader: { '.json': 'json' },
     charset: 'utf8'
 })
 .then(() => {
@@ -57,6 +58,7 @@ esbuild.build({
     outfile: distCompressPath,
     minify: true,
     platform: 'browser',
+    loader: { '.json': 'json' },
     target: ['es2022'],
     charset: 'utf8'
 })
