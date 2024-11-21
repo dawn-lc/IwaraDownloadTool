@@ -718,18 +718,18 @@ export class VideoInfo {
             const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
                 let comments: Iwara.Comment[] = []
                 let base = await getCommentData(commentID)
-                comments.append(base.results as Iwara.Comment[])
+                comments.push(...base.results as Iwara.Comment[])
                 for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
-                    comments.append((await getCommentData(commentID, page)).results as Iwara.Comment[])
+                    comments.push(...(await getCommentData(commentID, page)).results as Iwara.Comment[])
                 }
                 let replies: Iwara.Comment[] = []
                 for (let index = 0; index < comments.length; index++) {
                     const comment = comments[index]
                     if (comment.numReplies > 0) {
-                        replies.append(await getCommentDatas(comment.id))
+                        replies.push(...await getCommentDatas(comment.id))
                     }
                 }
-                comments.append(replies)
+                comments.push(...replies)
                 return comments.prune()
             }
 

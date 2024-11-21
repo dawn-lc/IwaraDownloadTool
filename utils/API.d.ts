@@ -42,7 +42,6 @@ interface Array<T> {
     any(): boolean;
     prune(): Array<T>;
     unique(): Array<T>;
-    append(arr: Array<T>): void;
     /**
      * @name unique
      * @description 根据元素值或特定属性移除数组中的重复元素。

@@ -146,12 +146,12 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
         [ToastType.Info]: console.info,
     }[type] || console.log
     if (isNullOrUndefined(params)) params = {}
-    params = Object.assign(params,{
+    params = Object.assign({
         newWindow: true,
         gravity: 'top',
         position: 'left',
         stopOnFocus: true
-    })
+    }, params)
     switch (type) {
         case ToastType.Warn:
             params = Object.assign({
