@@ -1,7 +1,9 @@
 import Dexie from "dexie";
-import { fetch, ceilDiv, getString, isElement, isNull, language, originalAddEventListener, originalNodeAppendChild, prune, renderNode, isNullOrUndefined, isString } from "./extension";
+import { i18n } from "./i18n";
+import { compatible, isElement, isNullOrUndefined, isString, originalAddEventListener, originalNodeAppendChild } from "./env";
+import { fetch, ceilDiv, getString, prune, renderNode, } from "./extension";
 import { localPathCheck, aria2Check, iwaraDownloaderCheck, EnvCheck, refreshToken, getAuth, newToast, toastNode, getSelectButton, pushDownloadTask, addDownloadTask, injectCheckbox, analyzeDownloadTask, aria2TaskCheck } from "./function";
-import { i18n, config, db, rating, editConfig, selectList, firstRun, compatible } from "./main";
+import { config, db, editConfig, firstRun, rating, selectList } from "./main";
 
 export enum DownloadType {
     Aria2,
@@ -127,7 +129,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
         this.changeCallback = changeCallback
         this.changeTime = 0
         this.id = id
-        if (isNull(GM_getValue(id, { timestamp: 0, value: [] }).timestamp))
+        if (isNullOrUndefined(GM_getValue(id, { timestamp: 0, value: [] }).timestamp))
             GM_deleteValue(id)
         originalAddEventListener.call(unsafeWindow, 'beforeunload', this.saveData.bind(this))
         originalAddEventListener.call(unsafeWindow, 'pagehide', this.saveData.bind(this))
@@ -209,6 +211,31 @@ export class SyncDictionary<T> extends Dictionary<T> {
     }
 }
 
+const DEFAULT_CONFIG = {
+    language: 'en',
+    autoFollow: false,
+    autoLike: false,
+    autoCopySaveFileName: false,
+    autoInjectCheckbox: true,
+    checkDownloadLink: true,
+    checkPriority: true,
+    addUnlistedAndPrivate: true,
+    downloadPriority: 'Source',
+    downloadType: DownloadType.Others,
+    downloadPath: '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4',
+    downloadProxy: '',
+    aria2Path: 'http://127.0.0.1:6800/jsonrpc',
+    aria2Token: '',
+    iwaraDownloaderPath: 'http://127.0.0.1:6800/jsonrpc',
+    iwaraDownloaderToken: '',
+    priority: {
+        'Source': 100,
+        '540': 99,
+        '360': 98,
+        'preview': 1
+    }
+};
+
 export class Config {
     configChange?: Function;
     language: string
@@ -231,28 +258,23 @@ export class Config {
     priority: Record<string, number>
     [key: string]: any
     constructor() {
-        this.language = language()
-        this.autoFollow = false
-        this.autoLike = false
-        this.autoCopySaveFileName = false
-        this.autoInjectCheckbox = true
-        this.checkDownloadLink = true
-        this.checkPriority = true
-        this.addUnlistedAndPrivate = true
-        this.downloadPriority = 'Source'
-        this.downloadType = DownloadType.Others
-        this.downloadPath = '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4'
-        this.downloadProxy = ''
-        this.aria2Path = 'http://127.0.0.1:6800/jsonrpc'
-        this.aria2Token = ''
-        this.iwaraDownloaderPath = 'http://127.0.0.1:6800/jsonrpc'
-        this.iwaraDownloaderToken = ''
-        this.priority = {
-            'Source': 100,
-            '540': 99,
-            '360': 98,
-            'preview': 1
-        }
+        this.language = DEFAULT_CONFIG.language
+        this.autoFollow = DEFAULT_CONFIG.autoFollow
+        this.autoLike = DEFAULT_CONFIG.autoLike
+        this.autoCopySaveFileName = DEFAULT_CONFIG.autoCopySaveFileName
+        this.autoInjectCheckbox = DEFAULT_CONFIG.autoInjectCheckbox
+        this.checkDownloadLink = DEFAULT_CONFIG.checkDownloadLink
+        this.checkPriority = DEFAULT_CONFIG.checkPriority
+        this.addUnlistedAndPrivate = DEFAULT_CONFIG.addUnlistedAndPrivate
+        this.downloadPriority = DEFAULT_CONFIG.downloadPriority
+        this.downloadType = DEFAULT_CONFIG.downloadType
+        this.downloadPath = DEFAULT_CONFIG.downloadPath
+        this.downloadProxy = DEFAULT_CONFIG.downloadProxy
+        this.aria2Path = DEFAULT_CONFIG.aria2Path
+        this.aria2Token = DEFAULT_CONFIG.aria2Token
+        this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath
+        this.iwaraDownloaderToken =DEFAULT_CONFIG.iwaraDownloaderToken
+        this.priority = DEFAULT_CONFIG.priority
         let body = new Proxy(this, {
             get: function (target, property: string) {
                 if (property === 'configChange') {
@@ -315,7 +337,7 @@ export class configEdit {
             nodeType: 'button',
             childs: '%#save#%',
             attributes: {
-                title: i18n[language()].save
+                title: i18n[config.language].save
             },
             events: {
                 click: async () => {
@@ -331,7 +353,7 @@ export class configEdit {
             nodeType: 'button',
             childs: '%#reset#%',
             attributes: {
-                title: i18n[language()].reset
+                title: i18n[config.language].reset
             },
             events: {
                 click: () => {
@@ -664,7 +686,7 @@ export class VideoInfo {
                     this.State = false
                     return this
                 }
-                throw new Error(`${i18n[language()].parsingFailed.toString()} ${VideoInfoSource.message}`)
+                throw new Error(`${i18n[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
             }
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
@@ -682,15 +704,15 @@ export class VideoInfo {
             this.Description = VideoInfoSource.body
             this.ExternalUrl = VideoInfoSource.embedUrl
             await db.videos.put(this)
-            if (!isNull(InfoSource)) {
+            if (!isNullOrUndefined(InfoSource)) {
                 return this
             }
             if (this.External) {
-                throw new Error(i18n[language()].externalVideo.toString())
+                throw new Error(i18n[config.language].externalVideo.toString())
             }
 
             const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.Page> => {
-                return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNull(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
+                return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
             }
             const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
                 let comments: Iwara.Comment[] = []
@@ -713,15 +735,15 @@ export class VideoInfo {
             this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
             this.FileName = VideoInfoSource.file.name
             this.Size = VideoInfoSource.file.size
-            let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNull(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNull(config.priority[a.name]) ? config.priority[a.name] : 0))
-            if (isNull(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
-                throw new Error(i18n[language()].getVideoSourceFailed.toString())
+            let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
+            if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
+                throw new Error(i18n[config.language].getVideoSourceFailed.toString())
             }
             this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
             let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
-            if (!fileList.any()) throw new Error(i18n[language()].noAvailableVideoSource.toString())
+            if (!fileList.any()) throw new Error(i18n[config.language].noAvailableVideoSource.toString())
             let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-            if (isNull(Source) || Source.isEmpty()) throw new Error(i18n[language()].videoSourceNotAvailable.toString())
+            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18n[config.language].videoSourceNotAvailable.toString())
             this.DownloadUrl = decodeURIComponent(`https:${Source}`)
             this.State = true
 
@@ -774,12 +796,12 @@ export class Database extends Dexie {
             caches: 'ID'
         }).upgrade((trans) => {
             return trans.table('videos').toCollection().modify(video => {
-                if (isNull(video.UploadTime)) {
+                if (isNullOrUndefined(video.UploadTime)) {
                     video.UploadTime = new Date(0);
                 } else if (typeof video.UploadTime === 'string') {
                     video.UploadTime = new Date(video.UploadTime);
                 }
-                if (isNull(video.RAW)) {
+                if (isNullOrUndefined(video.RAW)) {
                     video.RAW = undefined;
                 }
             })
@@ -794,7 +816,7 @@ export class Database extends Dexie {
         return this.videos
             .where('UploadTime')
             .between(startTime, endTime, true, true)
-            .and(video => !isNull(video.RAW))
+            .and(video => !isNullOrUndefined(video.RAW))
             .and(video => video.Private !== false || video.Unlisted !== false)
             .toArray()
     }

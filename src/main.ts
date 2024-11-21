@@ -1,17 +1,16 @@
-import { Config, Database, Dictionary, SyncDictionary, VersionState, Version, VideoInfo, MessageType, menu, configEdit, ToastType } from "./class";
-import { findElement, getString, isNull, isNullOrUndefined, isStringTupleArray, isUndefined, language, originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState, renderNode } from "./extension"
-import { getSelectButton, getPlayload, injectCheckbox, newToast, pageChange, toastNode, uninjectCheckbox } from "./function";
-import { I18N } from "./i18n";
 
-var mouseTarget: Element | null = null
-export var compatible = navigator.userAgent.toLowerCase().includes('firefox')
-export var i18n = new I18N()
+import { i18n } from "./i18n";
+import { compatible, isNull, isNullOrUndefined, isStringTupleArray, originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./env";
+import { findElement, getString, renderNode } from "./extension"
+import { getPlayload, getSelectButton, injectCheckbox, newToast, pageChange, toastNode, uninjectCheckbox } from "./function";
+import { Config, VersionState, Version, VideoInfo, configEdit, ToastType, Database, menu, SyncDictionary, MessageType, Dictionary } from "./class";
+
+
+export var rating = 'all';
 export var config = new Config()
 export var db = new Database()
-export var pageSelectButtons = new Dictionary<HTMLInputElement>()
-export var rating = 'all';
-export var editConfig = new configEdit(config)
 export var pluginMenu = new menu()
+export var editConfig = new configEdit(config)
 export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
     const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: PieceInfo]> }>
     const updateButtonState = (videoID: string) => {
@@ -34,16 +33,23 @@ export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) 
             break
     }
 });
+export var pageSelectButtons = new Dictionary<HTMLInputElement>()
+
+
+
+
+
+
 export function firstRun() {
     console.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
-    config = new Config()
+    config.reset()
     editConfig = new configEdit(config)
     let confirmButton = renderNode({
         nodeType: 'button',
         attributes: {
             disabled: true,
-            title: i18n[language()].ok
+            title: i18n[config.language].ok
         },
         childs: '%#ok#%',
         events: {
@@ -68,8 +74,8 @@ export function firstRun() {
                     { nodeType: 'p', childs: '%#useHelpForBase#%' },
                     { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                     { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                    { nodeType: 'p', childs: i18n[language()].useHelpForManualDownload },
-                    { nodeType: 'p', childs: i18n[language()].useHelpForBugreport }
+                    { nodeType: 'p', childs: i18n[config.language].useHelpForManualDownload },
+                    { nodeType: 'p', childs: i18n[config.language].useHelpForBugreport }
                 ]
             },
             {
@@ -99,8 +105,9 @@ export function firstRun() {
     }))
 }
 (function () {
-    unsafeWindow.IwaraDownloadTool = true;
+    var mouseTarget: Element | null = null
     if (unsafeWindow.IwaraDownloadTool) return;
+    unsafeWindow.IwaraDownloadTool = true;
     GM_addStyle(GM_getResourceText('toastify-css'));
     GM_addStyle('@!mainCSS!@');
     if (GM_getValue('isDebug')) {
@@ -233,12 +240,7 @@ export function firstRun() {
         let notice = newToast(
             ToastType.Info,
             {
-                node: toastNode([
-                    `加载完成`,
-                    { nodeType: 'br' },
-                    `公告: `,
-                    ...i18n[language()].notice as RenderCode[]
-                ]),
+                node: toastNode(i18n[config.language].notice),
                 duration: 10000,
                 gravity: 'bottom',
                 position: 'center',
@@ -251,7 +253,7 @@ export function firstRun() {
     }
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
-        alert(i18n[language()].configurationIncompatible)
+        alert(i18n[config.language].configurationIncompatible)
     }
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 })();

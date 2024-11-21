@@ -1,3 +1,7 @@
+declare module '../i18n/*.json' {
+    const content: { [key: string]: RenderCode | RenderCode[] };
+    export default content;
+}
 interface Date {
     format(format?: string): String;
 }
