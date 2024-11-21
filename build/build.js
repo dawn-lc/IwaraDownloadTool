@@ -16,6 +16,7 @@ esbuild
     minify: false,
     platform: 'browser',
     target: ['es2022'],
+    charset: 'utf8'
 })
 .then(() => fs.writeFileSync('temp/main.js', fs.readFileSync('temp/main.js', 'utf8').replaceAll(`@!mainCSS!@`, css)))
 .catch(() => process.exit(1));
@@ -28,6 +29,7 @@ esbuild
     minify: true,
     platform: 'browser',
     target: ['es2022'],
+    charset: 'utf8'
 })
 .then(() => fs.writeFileSync('temp/main.min.js', fs.readFileSync('temp/main.min.js', 'utf8').replaceAll(`@!mainCSS!@`, css)))
 .catch(() => process.exit(1));
