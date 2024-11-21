@@ -1,5 +1,7 @@
 import { i18n } from "./i18n";
-import { isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray, language, originalAddEventListener, originalFetch } from "./env";
+import { getLanguage, isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray, language} from "./env";
+import { originalAddEventListener, originalFetch } from "./hijack";
+import { Config } from "./class";
 
 export const hasFunction = (obj: any, method: string): boolean => {
     return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
@@ -48,7 +50,7 @@ export function isNotEmpty(obj: any): boolean {
     return true
 }
 
-export function fetch (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> {
+export function unlimitedFetch (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
     if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
     return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
@@ -87,11 +89,11 @@ export const findElement = function (element: Element, condition: string) {
     return element
 }
 
-export const renderNode = function (renderCode: RenderCode): Node | Element {
+export const renderNode = function (renderCode: RenderCode, config: Config): Node | Element {
     renderCode = prune(renderCode)
     if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null")
     if (typeof renderCode === 'string') {
-        return document.createTextNode(renderCode.replaceVariable(i18n[language]).toString())
+        return document.createTextNode(renderCode.replaceVariable(i18n[getLanguage(config)]))
     }
     if (renderCode instanceof Node) {
         return renderCode
@@ -104,6 +106,6 @@ export const renderNode = function (renderCode: RenderCode): Node | Element {
     (!isNullOrUndefined(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: [string, string]) => node.setAttribute(key, value));
     (!isNullOrUndefined(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
     (!isNullOrUndefined(className) && className.length > 0) && node.classList.add(...typeof className === 'string' ? [className] : className);
-    !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : new Array(childs)).map(renderNode))
+    !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : new Array(childs)).map(i=>renderNode(i,config)))
     return node
 }

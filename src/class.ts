@@ -1,55 +1,14 @@
-import Dexie from "dexie";
+
 import { i18n } from "./i18n";
-import { compatible, isElement, isNullOrUndefined, isString, originalAddEventListener, originalNodeAppendChild } from "./env";
-import { fetch, ceilDiv, getString, prune, renderNode, } from "./extension";
-import { localPathCheck, aria2Check, iwaraDownloaderCheck, EnvCheck, refreshToken, getAuth, newToast, toastNode, getSelectButton, pushDownloadTask, addDownloadTask, injectCheckbox, analyzeDownloadTask, aria2TaskCheck } from "./function";
-import { config, db, editConfig, firstRun, rating, selectList } from "./main";
+import { DownloadType, getCompatible, getLanguage, getRating, isElement, isNullOrUndefined, isString, MessageType, PageType, ToastType, VersionState} from "./env";
+import { unlimitedFetch, ceilDiv, getString, prune, renderNode, } from "./extension";
+import { originalAddEventListener, originalNodeAppendChild } from "./hijack";
+import Dexie from "dexie";
 
-export enum DownloadType {
-    Aria2,
-    IwaraDownloader,
-    Browser,
-    Others
-}
 
-export enum PageType {
-    Video = 'video',
-    Image = 'image',
-    VideoList = 'videoList',
-    ImageList = 'imageList',
-    Forum = 'forum',
-    ForumSection = 'forumSection',
-    ForumThread = 'forumThread',
-    Page = 'page',
-    Home = 'home',
-    Profile = 'profile',
-    Subscriptions = 'subscriptions',
-    Playlist = 'playlist',
-    Favorites = 'favorites',
-    Search = 'search',
-    Account = 'account'
-}
+import { localPathCheck, aria2Check, iwaraDownloaderCheck, EnvCheck, refreshToken, getAuth, newToast, toastNode, addDownloadTask, aria2TaskCheck } from "./function";
+import { analyzeDownloadTask, config, db, editConfig, firstRun, getSelectButton, injectCheckbox, pushDownloadTask, selectList } from "./main";
 
-export enum ToastType {
-    Log,
-    Info,
-    Warn,
-    Error
-}
-
-export enum MessageType {
-    Close,
-    Request,
-    Receive,
-    Set,
-    Del
-}
-
-export enum VersionState {
-    Low,
-    Equal,
-    High
-}
 
 export class Version implements IVersion {
     major: number;
@@ -211,7 +170,6 @@ export class SyncDictionary<T> extends Dictionary<T> {
         return isDeleted
     }
 }
-
 const DEFAULT_CONFIG = {
     language: 'en',
     autoFollow: false,
@@ -305,14 +263,14 @@ export class Config {
         return body
     }
     public async check() {
-        if (await localPathCheck()) {
+        if (await localPathCheck(this)) {
             switch (this.downloadType) {
                 case DownloadType.Aria2:
-                    return await aria2Check()
+                    return await aria2Check(this)
                 case DownloadType.IwaraDownloader:
-                    return await iwaraDownloaderCheck()
+                    return await iwaraDownloaderCheck(this)
                 case DownloadType.Browser:
-                    return await EnvCheck()
+                    return await EnvCheck(this)
                 default:
                     break
             }
@@ -333,12 +291,12 @@ export class configEdit {
         this.target.configChange = (item: string) => { this.configChange.call(this, item) }
         this.interfacePage = renderNode({
             nodeType: 'p'
-        }) as HTMLElement
+        },config) as HTMLElement
         let save = renderNode({
             nodeType: 'button',
             childs: '%#save#%',
             attributes: {
-                title: i18n[config.language].save
+                title: i18n[getLanguage(config)].save
             },
             events: {
                 click: async () => {
@@ -349,12 +307,12 @@ export class configEdit {
                     save.disabled = !save.disabled
                 }
             }
-        }) as HTMLButtonElement
+        },config) as HTMLButtonElement
         let reset = renderNode({
             nodeType: 'button',
             childs: '%#reset#%',
             attributes: {
-                title: i18n[config.language].reset
+                title: i18n[getLanguage(config)].reset
             },
             events: {
                 click: () => {
@@ -362,7 +320,7 @@ export class configEdit {
                     unsafeWindow.location.reload()
                 }
             }
-        }) as HTMLButtonElement
+        },config) as HTMLButtonElement
         this.interface = renderNode({
             nodeType: 'div',
             attributes: {
@@ -420,7 +378,7 @@ export class configEdit {
                     ]
                 }
             ]
-        }) as HTMLElement
+        },config) as HTMLElement
 
     }
     private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
@@ -453,7 +411,7 @@ export class configEdit {
                     }
                 }
             ]
-        }) as HTMLElement
+        },config) as HTMLElement
         (button.querySelector(`[name='${name}']`) as HTMLInputElement).checked = get !== undefined ? get(name, defaultValue) : this.target[name] ?? defaultValue ?? false
         return button
     }
@@ -496,7 +454,7 @@ export class configEdit {
                     childs: Object.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((i: string) => renderNode({
                         nodeType: 'option',
                         childs: i
-                    })),
+                    },config)),
                     attributes: {
                         name: 'downloadType'
                     },
@@ -507,7 +465,7 @@ export class configEdit {
                     }
                 }
             ]
-        }) as HTMLSelectElement
+        },config) as HTMLSelectElement
         select.selectedIndex = Number(this.target.downloadType)
 
         return select
@@ -552,23 +510,23 @@ export class configEdit {
             attributes: {
                 href: 'https://github.com/dawn-lc/IwaraDownloadTool#路径可用变量'
             }
-        })
+        },config)
         let downloadConfigInput = [
             variableInfo,
-            renderNode(this.inputComponent('downloadPath')),
-            renderNode(this.inputComponent('downloadProxy'))
+            renderNode(this.inputComponent('downloadPath'),config),
+            renderNode(this.inputComponent('downloadProxy'),config)
         ]
         let aria2ConfigInput = [
-            renderNode(this.inputComponent('aria2Path')),
-            renderNode(this.inputComponent('aria2Token', 'password'))
+            renderNode(this.inputComponent('aria2Path'),config),
+            renderNode(this.inputComponent('aria2Token', 'password'),config)
         ]
         let iwaraDownloaderConfigInput = [
-            renderNode(this.inputComponent('iwaraDownloaderPath')),
-            renderNode(this.inputComponent('iwaraDownloaderToken', 'password'))
+            renderNode(this.inputComponent('iwaraDownloaderPath'),config),
+            renderNode(this.inputComponent('iwaraDownloaderToken', 'password'),config)
         ]
         let BrowserConfigInput = [
             variableInfo,
-            renderNode(this.inputComponent('downloadPath'))
+            renderNode(this.inputComponent('downloadPath'),config)
         ]
         switch (this.target.downloadType) {
             case DownloadType.Aria2:
@@ -584,7 +542,7 @@ export class configEdit {
                 break
         }
         if (this.target.checkPriority) {
-            originalNodeAppendChild.call(this.interfacePage, renderNode(this.inputComponent('downloadPriority')))
+            originalNodeAppendChild.call(this.interfacePage, renderNode(this.inputComponent('downloadPriority'),config))
         }
     }
     public inject() {
@@ -594,7 +552,6 @@ export class configEdit {
         }
     }
 }
-
 
 export class VideoInfo {
     ID!: string;
@@ -631,13 +588,13 @@ export class VideoInfo {
         try {
             this.ID = ID
             if (isNullOrUndefined(InfoSource)) {
-                config.authorization = `Bearer ${await refreshToken()}`
+                config.authorization = `Bearer ${await refreshToken(config)}`
             } else {
                 this.RAW = InfoSource
                 await db.videos.put(this)
             }
-            let VideoInfoSource: Iwara.Video = InfoSource ?? await (await fetch(`https://api.iwara.tv/video/${this.ID}`, {
-                headers: await getAuth()
+            let VideoInfoSource: Iwara.Video = InfoSource ?? await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}`, {
+                headers: await getAuth(config)
             })).json()
 
             if (VideoInfoSource.id === undefined) {
@@ -652,7 +609,7 @@ export class VideoInfo {
                         title: this.Title
                     })
                     for (const key in query) {
-                        let dom = new DOMParser().parseFromString(await (await fetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
+                        let dom = new DOMParser().parseFromString(await (await unlimitedFetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
                         for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
                             let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
                             if (isNullOrUndefined(imgID)) continue
@@ -665,11 +622,11 @@ export class VideoInfo {
                 }
                 cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                 if (cdnCache.any()) {
-                    let toast = newToast(
+                    let toast = newToast(config,
                         ToastType.Warn,
                         {
                             node:
-                                toastNode([
+                                toastNode(config,[
                                     `${this.Title}[${this.ID}] %#parsingFailed#%`,
                                     { nodeType: 'br' },
                                     `%#cdnCacheFinded#%`
@@ -687,7 +644,7 @@ export class VideoInfo {
                     this.State = false
                     return this
                 }
-                throw new Error(`${i18n[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
+                throw new Error(`${i18n[getLanguage(config)].parsingFailed.toString()} ${VideoInfoSource.message}`)
             }
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
@@ -709,11 +666,11 @@ export class VideoInfo {
                 return this
             }
             if (this.External) {
-                throw new Error(i18n[config.language].externalVideo.toString())
+                throw new Error(i18n[getLanguage(config)].externalVideo.toString())
             }
 
             const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.Page> => {
-                return await (await fetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
+                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth(config) })).json() as Iwara.Page
             }
             const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
                 let comments: Iwara.Comment[] = []
@@ -736,15 +693,15 @@ export class VideoInfo {
             this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
             this.FileName = VideoInfoSource.file.name
             this.Size = VideoInfoSource.file.size
-            let VideoFileSource = (await (await fetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
+            let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth(config, VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
             if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
-                throw new Error(i18n[config.language].getVideoSourceFailed.toString())
+                throw new Error(i18n[getLanguage(config)].getVideoSourceFailed.toString())
             }
             this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
             let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
-            if (!fileList.any()) throw new Error(i18n[config.language].noAvailableVideoSource.toString())
+            if (!fileList.any()) throw new Error(i18n[getLanguage(config)].noAvailableVideoSource.toString())
             let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18n[config.language].videoSourceNotAvailable.toString())
+            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18n[getLanguage(config)].videoSourceNotAvailable.toString())
             this.DownloadUrl = decodeURIComponent(`https:${Source}`)
             this.State = true
 
@@ -752,10 +709,10 @@ export class VideoInfo {
             return this
         } catch (error) {
             let data = this
-            let toast = newToast(
+            let toast = newToast(config,
                 ToastType.Error,
                 {
-                    node: toastNode([
+                    node: toastNode(config,[
                         `${this.Title}[${this.ID}] %#parsingFailed#%`,
                         { nodeType: 'br' },
                         `${getString(error)}`,
@@ -767,7 +724,7 @@ export class VideoInfo {
                         if (data.External) {
                             GM_openInTab(data.ExternalUrl!, { active: false, insert: true, setParent: true })
                         } else {
-                            pushDownloadTask(await new VideoInfo(data as PieceInfo).init(data.ID))
+                            pushDownloadTask(config, await new VideoInfo(data as PieceInfo).init(data.ID))
                         }
                     },
                 }
@@ -830,14 +787,14 @@ export class menu {
     constructor() {
         this.interfacePage = renderNode({
             nodeType: 'ul'
-        }) as HTMLElement
+        },config) as HTMLElement
         this.interface = renderNode({
             nodeType: 'div',
             attributes: {
                 id: 'pluginMenu'
             },
             childs: this.interfacePage
-        }) as HTMLElement
+        },config) as HTMLElement
     }
     private button(name: string, click?: (name: string, e: Event) => void) {
         return renderNode(prune({
@@ -850,7 +807,7 @@ export class menu {
                     return false
                 }
             }
-        }))
+        }),config)
     }
     private async pageChange(pageType: PageType) {
         while (this.interfacePage.hasChildNodes()) {
@@ -858,7 +815,7 @@ export class menu {
         }
 
         let manualDownloadButton = this.button('manualDownload', (name, event) => {
-            addDownloadTask()
+            addDownloadTask(config)
         })
         let settingsButton = this.button('settings', (name, event) => {
             editConfig.inject()
@@ -872,7 +829,7 @@ export class menu {
                 })
             } else {
                 unsafeWindow.document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
-                    injectCheckbox(element, compatible)
+                    injectCheckbox(element, getCompatible())
                 })
             }
         })
@@ -903,7 +860,7 @@ export class menu {
         })
         let downloadSelectedButton = this.button('downloadSelected', (name, event) => {
             analyzeDownloadTask()
-            newToast(ToastType.Info, {
+            newToast(config,ToastType.Info, {
                 text: `%#${name}#%`,
                 close: true
             }).showToast()
@@ -914,11 +871,11 @@ export class menu {
             let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
             let Title = unsafeWindow.document.querySelector('.page-video__details')?.childNodes[0]?.textContent
             let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
-            videoInfo.State && await pushDownloadTask(videoInfo, true)
+            videoInfo.State && await pushDownloadTask(config, videoInfo, true)
         })
 
         let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
-            aria2TaskCheck()
+            aria2TaskCheck(config, db)
         })
         GM_getValue('isDebug') && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
 
@@ -952,9 +909,9 @@ export class menu {
 
         if (config.addUnlistedAndPrivate && pageType === PageType.VideoList) {
             for (let page = 0; page < 10; page++) {
-                const response = await fetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${rating}&page=${page}`, {
+                const response = await unlimitedFetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${page}`, {
                     method: 'GET',
-                    headers: await getAuth()
+                    headers: await getAuth(config)
                 });
                 const data = (await response.json() as Iwara.Page).results as Iwara.Video[];
                 data.forEach(info => new VideoInfo().init(info.id, info));
