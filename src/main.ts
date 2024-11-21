@@ -1,6 +1,7 @@
-import { I18N, Config, Database, Dictionary, SyncDictionary, VersionState, Version, VideoInfo, MessageType, menu, configEdit, ToastType } from "./class";
+import { Config, Database, Dictionary, SyncDictionary, VersionState, Version, VideoInfo, MessageType, menu, configEdit, ToastType } from "./class";
 import { findElement, getString, isNull, isNullOrUndefined, isStringTupleArray, isUndefined, language, originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState, renderNode } from "./extension"
 import { getSelectButton, getPlayload, injectCheckbox, newToast, pageChange, toastNode, uninjectCheckbox } from "./function";
+import { I18N } from "./i18n";
 
 var mouseTarget: Element | null = null
 export var compatible = navigator.userAgent.toLowerCase().includes('firefox')

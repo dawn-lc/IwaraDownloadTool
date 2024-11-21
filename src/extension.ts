@@ -209,6 +209,7 @@ export const findElement = function (element: Element, condition: string) {
 }
 
 export const language = function () {
+    //browser.i18n.getAcceptLanguages()
     let env = (!isNull(config) ? config.language : (navigator.language ?? navigator.languages[0] ?? 'en')).replace('-', '_')
     let main = env.split('_').shift() ?? 'en'
     return (!isNull(i18n[env]) ? env : !isNull(i18n[main]) ? main : 'en')
