@@ -821,6 +821,7 @@ export class VideoInfo {
     External!: boolean;
     ExternalUrl: string | null | undefined
     State!: boolean;
+    Description!: string | null | undefined
     Comments!: string;
     DownloadUrl!: string;
     RAW!: Iwara.Video;
@@ -907,7 +908,7 @@ export class VideoInfo {
             this.Author = VideoInfoSource.user.username
             this.UploadTime = new Date(VideoInfoSource.createdAt)
             this.Tags = VideoInfoSource.tags
-            this.Comments = `${VideoInfoSource.body}\n`
+            this.Description = VideoInfoSource.body
             this.ExternalUrl = VideoInfoSource.embedUrl
             await db.videos.put(this)
             if (!isNull(InfoSource)) {

@@ -193,7 +193,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 headers: await getAuth()
             })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
         }
-        if (config.checkDownloadLink && checkIsHaveDownloadLink(videoInfo.Comments)) {
+        if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
             let toastBody = toastNode([
                 `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
                 { nodeType: 'br' },

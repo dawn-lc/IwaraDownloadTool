@@ -1,4 +1,3 @@
-
 interface Date {
     format(format?: string): String;
 }

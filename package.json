@@ -1,8 +1,9 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.2.127",
+  "version": "3.2.128",
   "private": true,
+  "type": "module",
   "scripts": {
     "prerelease": "node ./build/prerelease.js",
     "preprocess": "node ./build/preprocess.js",
@@ -18,7 +19,6 @@
     "@types/greasemonkey": "^4.0.4",
     "@types/tampermonkey": "^4.0.10",
     "@types/toastify-js": "^1.12.3",
-    "clean-css": "^5.3.3",
     "esbuild": "^0.24.0",
     "typescript": "^5.0.4"
   }

@@ -1,5 +1,5 @@
-const path = require('path');
-const fs = require('fs');
+import { join } from 'path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 const root = process.cwd();
 
 const isNull = (obj) => typeof obj === 'undefined' || obj === null;
@@ -159,24 +159,24 @@ function serializeMetadata(metadata) {
 };
 
 function mkdir(path) {
-    return fs.existsSync(path) || fs.mkdirSync(path)
+    return existsSync(path) || mkdirSync(path)
 }
 
-const tempPath = path.join(root, 'temp');
+const tempPath = join(root, 'temp');
 
 mkdir(tempPath);
 
-const sourcePath = path.join(root, 'src');
+const sourcePath = join(root, 'src');
 
-const packagePath = path.join(root, 'package.json');
-const mataTemplatePath = path.join(sourcePath, 'userjs.mata');
-const mataTempPath= path.join(tempPath, 'mata.js');
+const packagePath = join(root, 'package.json');
+const mataTemplatePath = join(sourcePath, 'userjs.mata');
+const mataTempPath= join(tempPath, 'mata.js');
 
-let package = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-let mataTemplate = parseMetadata(fs.readFileSync(mataTemplatePath, 'utf8'));
+let packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
+let mataTemplate = parseMetadata(readFileSync(mataTemplatePath, 'utf8'));
 let mata = {...mataTemplate};
 
-mata.version = package.version;
+mata.version = packageInfo.version;
 
 mata.updateURL = mata.updateURL.replaceVariable({
     'release_tag': process.argv[2]
@@ -185,4 +185,4 @@ mata.downloadURL = mata.downloadURL.replaceVariable({
     'release_tag': process.argv[2]
 });
 
-fs.writeFileSync(mataTempPath, serializeMetadata(mata));
+writeFileSync(mataTempPath, serializeMetadata(mata));
