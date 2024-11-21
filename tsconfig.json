@@ -9,7 +9,6 @@
   },
   "include": [
     "utils/*.d.ts",
-    "src/*.ts",
-    "src/*.css"
+    "src/*.ts"
   ]
 }
