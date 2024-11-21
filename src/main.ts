@@ -43,7 +43,7 @@ export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 export function firstRun() {
     console.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
-    config.reset()
+    config = new Config()
     editConfig = new configEdit(config)
     let confirmButton = renderNode({
         nodeType: 'button',
