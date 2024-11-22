@@ -1,6 +1,6 @@
 
 import { i18n } from "./i18n";
-import { DownloadType, getLanguage, isNullOrUndefined, MessageType, ToastType, VersionState } from "./env";
+import { DownloadType, getLanguage, isNullOrUndefined, MessageType, PageType, ToastType, VersionState } from "./env";
 import { findElement, getString, renderNode, unlimitedFetch } from "./extension"
 import { hijackElementRemove, hijackFetch, hijackHistoryPushState, hijackHistoryReplaceState, hijackNodeAppendChild, hijackNodeRemoveChild, originalAddEventListener, originalNodeAppendChild } from "./hijack";
 
@@ -110,11 +110,12 @@ export function uninjectCheckbox(element: Element | Node) {
         }
     }
 }
-export function injectCheckbox(element: Element, compatible: boolean) {
+export async function injectCheckbox(element: Element, compatible: boolean) {
     let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title')!.trim()
-    let Alias = element.querySelector('a.username')?.getAttribute('title')
-    let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
+    let videoInfo = await db.videos.where('ID').equals(ID).first()
+    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title')!.trim() ?? videoInfo?.Title
+    let Alias =  element.querySelector('a.username')?.getAttribute('title') ?? videoInfo?.Alias
+    let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop() ?? videoInfo?.Author
     let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
     if (isNullOrUndefined(ID) || isNullOrUndefined(Name) || isNullOrUndefined(Alias) || isNullOrUndefined(Author)) return
     let button = renderNode({
@@ -145,6 +146,7 @@ export function injectCheckbox(element: Element, compatible: boolean) {
     originalNodeAppendChild.call(node, button)
 }
 export function pageChange() {
+    pluginMenu.pageChange(unsafeWindow.document.querySelector('.page')?.classList[1].split('-').pop() as PageType)
     GM_getValue('isDebug') && console.debug(pageSelectButtons)
 } 
 export function getSelectButton(id: string): HTMLInputElement | undefined {

@@ -781,7 +781,8 @@ export class Database extends Dexie {
 }
 
 export class menu {
-    source!: menu;
+    observer: MutationObserver;
+    pageType: PageType
     interface: HTMLElement
     interfacePage: HTMLElement
     constructor() {
@@ -795,6 +796,27 @@ export class menu {
             },
             childs: this.interfacePage
         },config) as HTMLElement
+        this.observer = new MutationObserver((mutationsList) => {
+            for (let mutation of mutationsList) {
+                if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
+                    continue;
+                }
+                let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
+                if (pages.length < 1) {
+                    continue;
+                }
+                if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() === 'search') {
+                    this.pageChange(PageType.Search)
+                    continue;
+                }
+                let page = pages.find(i => i.classList.length > 1)
+                if (!page) {
+                    continue;
+                }
+                this.pageChange(page.classList[1].split('-').pop() as PageType)
+            }
+        })
+        this.pageType = PageType.Page;
     }
     private button(name: string, click?: (name: string, e: Event) => void) {
         return renderNode(prune({
@@ -809,11 +831,12 @@ export class menu {
             }
         }),config)
     }
-    private async pageChange(pageType: PageType) {
+    public async pageChange(pageType?: PageType) {
+        if (isNullOrUndefined(pageType) || this.pageType === pageType) return
+        this.pageType = pageType
         while (this.interfacePage.hasChildNodes()) {
             this.interfacePage.removeChild(this.interfacePage.firstChild!)
         }
-
         let manualDownloadButton = this.button('manualDownload', (name, event) => {
             addDownloadTask(config)
         })
@@ -919,27 +942,8 @@ export class menu {
         }
     }
     public inject() {
+        this.observer.observe(unsafeWindow.document.getElementById('app')!, { childList: true, subtree: true });
         if (!unsafeWindow.document.querySelector('#pluginMenu')) {
-            new MutationObserver((mutationsList) => {
-                for (let mutation of mutationsList) {
-                    if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
-                        continue;
-                    }
-                    let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
-                    if (pages.length < 1) {
-                        continue;
-                    }
-                    if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() === 'search') {
-                        this.pageChange(PageType.Search)
-                        continue;
-                    }
-                    let page = pages.find(i => i.classList.length > 1)
-                    if (!page) {
-                        continue;
-                    }
-                    this.pageChange(page.classList[1].split('-').pop() as PageType)
-                }
-            }).observe(unsafeWindow.document.getElementById('app')!, { childList: true, subtree: true });
             originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
             this.pageChange(PageType.Page)
         }
