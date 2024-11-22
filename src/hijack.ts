@@ -1,4 +1,4 @@
-import { compatible, isNullOrUndefined, isStringTupleArray } from "./env";
+import { getCompatible, isNullOrUndefined, isStringTupleArray } from "./env";
 import { Config, Database, VideoInfo } from "./class";
 import { getPlayload } from "./function";
 import { injectCheckbox, pageChange, uninjectCheckbox } from "./main";
@@ -83,7 +83,7 @@ export function hijackAddEventListener() {
 export function hijackNodeAppendChild() {
     Node.prototype.appendChild = function <T extends Node>(node: T): T {
         if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
-            injectCheckbox(node, compatible)
+            injectCheckbox(node, getCompatible())
         }
         return originalNodeAppendChild.call(this, node) as T
     }

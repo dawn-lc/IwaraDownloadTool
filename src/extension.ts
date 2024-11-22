@@ -1,5 +1,5 @@
 import { i18n } from "./i18n";
-import { getLanguage, isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray, language} from "./env";
+import { getLanguage, isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray} from "./env";
 import { originalAddEventListener, originalFetch } from "./hijack";
 import { Config } from "./class";
 
