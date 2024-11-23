@@ -87,10 +87,14 @@ String.prototype.toURL = function () {
     return new URL(URLString.toString())
 }
 
-export const getLanguage = function (config?: Config) {
+export const getLanguage = function (config?: Config): string {
+    if (!isNullOrUndefined(config)) {
+        GM_getValue('isDebug') && !isNullOrUndefined(i18n[config.language]) && console.debug(`language not found ${config.language}`)
+        return isNullOrUndefined(i18n[config.language]) ? getLanguage() : config.language
+    }
     let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_');
     let main = env.split('_').shift() ?? 'en';
-    return isNullOrUndefined(config) ? !isNullOrUndefined(i18n[env]) ? env : (!isNullOrUndefined(i18n[main]) ? main : 'en') : config.language
+    return !isNullOrUndefined(i18n[env]) ? env : (!isNullOrUndefined(i18n[main]) ? main : 'en') 
 }
 export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
 export const getCompatible = () => navigator.userAgent.toLowerCase().includes('firefox')
