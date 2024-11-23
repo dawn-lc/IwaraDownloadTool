@@ -29,8 +29,6 @@ jobs:
       run: npm ci
     - name: 编译
       run: npm run build
-    - name: 后处理
-      run: npm run postprocess
     - name: 获取编译结果
       run: |
         FILES=$(find temp -type f | tr '\n' ' ')

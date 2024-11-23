@@ -1,14 +1,13 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.2.137",
+  "version": "3.2.140",
   "private": true,
   "type": "module",
   "scripts": {
-    "prerelease": "node ./build/prerelease.js",
     "preprocess": "node ./build/preprocess.js",
     "build": "node ./build/build.js",
-    "postprocess": "node ./build/postprocess.js"
+    "prerelease": "node ./build/prerelease.js"
   },
   "dependencies": {
     "dexie": "^3.2.7",

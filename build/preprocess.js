@@ -169,10 +169,12 @@ mkdir(tempPath);
 const sourcePath = join(root, 'src');
 
 const packagePath = join(root, 'package.json');
-const mataTemplatePath = join(sourcePath, 'userjs.mata');
-const mataTempPath= join(tempPath, 'mata.js');
-
 let packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
+
+const mataTemplatePath = join(sourcePath, 'userjs.mata');
+
+const mataTempPath= join(tempPath, `${packageInfo.displayName}.mata.js`);
+
 let mataTemplate = parseMetadata(readFileSync(mataTemplatePath, 'utf8'));
 let mata = {...mataTemplate};
 
