@@ -2,6 +2,10 @@ const root = process.cwd();
 import { promises } from 'fs';
 import { join } from 'path';
 import esbuild from 'esbuild';
+import { readFileSync} from 'fs';
+
+const packagePath = join(root, 'package.json');
+const packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
 
 const sourcePath = join(root, 'src');
 const outPath = join(root, 'temp');
@@ -9,12 +13,13 @@ const outPath = join(root, 'temp');
 const mainPath = join(sourcePath, 'main.ts');
 const cssPath = join(sourcePath, 'main.css');
 
-const distPath = join(outPath, 'main.js');
-const distCompressPath = join(outPath, 'main.min.js');
+const mata = readFileSync(join(outPath, `${packageInfo.displayName}.mata.js`), 'utf8');
+
+const distPath = join(outPath, `${packageInfo.displayName}.user.js`);
+const distCompressPath = join(outPath, `${packageInfo.displayName}.min.user.js`);
 
 let result = esbuild.buildSync({
     entryPoints: [cssPath],
-    outfile: '/dev/null',
     write: false,
     minify: true,
     loader: {
@@ -35,6 +40,9 @@ esbuild.build({
     bundle: true,
     outfile: distPath,
     minify: false,
+    banner: {
+        js: mata
+    },
     platform: 'browser',
     target: ['es2022'],
     loader: { '.json': 'json' },
@@ -57,6 +65,9 @@ esbuild.build({
     bundle: true,
     outfile: distCompressPath,
     minify: true,
+    banner: {
+        js: mata
+    },
     platform: 'browser',
     loader: { '.json': 'json' },
     target: ['es2022'],
