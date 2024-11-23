@@ -1,6 +1,7 @@
 import moment from "moment";
 import { i18n } from "./i18n";
 import { getString, hasFunction } from "./extension";
+import { Config } from "./class";
 
 export const isNull = (obj: unknown): obj is null => obj === null;
 export const isUndefined = (obj: unknown): obj is undefined => typeof obj === 'undefined';
@@ -86,8 +87,16 @@ String.prototype.toURL = function () {
     return new URL(URLString.toString())
 }
 
+export const getLanguage = function (config?: Config) {
+    let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_');
+    let main = env.split('_').shift() ?? 'en';
+    return isNullOrUndefined(config) ? !isNullOrUndefined(i18n[env]) ? env : (!isNullOrUndefined(i18n[main]) ? main : 'en') : config.language
+}
+export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
+export const getCompatible = () => navigator.userAgent.toLowerCase().includes('firefox')
+
 Date.prototype.format = function (format?: string) {
-    return moment(this).locale(language).format(format)
+    return moment(this).locale(getLanguage()).format(format)
 }
 
 String.prototype.replaceVariable = function (replacements, count = 0) {
@@ -111,21 +120,48 @@ String.prototype.replaceVariable = function (replacements, count = 0) {
     }
 }
 
-export const originalFetch = unsafeWindow.fetch
-export const originalPushState = unsafeWindow.history.pushState;
-export const originalReplaceState = unsafeWindow.history.replaceState;
-export const originalNodeAppendChild = unsafeWindow.Node.prototype.appendChild
-export const originalRemoveChild = unsafeWindow.Node.prototype.removeChild
-export const originalRemove = unsafeWindow.Element.prototype.remove
-export const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener
-
-const getLanguage = function () {
-    let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_');
-    let main = env.split('_').shift() ?? 'en';
-    return !isNullOrUndefined(i18n[env]) ? env : (!isNullOrUndefined(i18n[main]) ? main : 'en')
+export enum DownloadType {
+    Aria2,
+    IwaraDownloader,
+    Browser,
+    Others
 }
-export var language = getLanguage() ?? 'en'
-export var compatible = navigator.userAgent.toLowerCase().includes('firefox')
 
+export enum PageType {
+    Video = 'video',
+    Image = 'image',
+    VideoList = 'videoList',
+    ImageList = 'imageList',
+    Forum = 'forum',
+    ForumSection = 'forumSection',
+    ForumThread = 'forumThread',
+    Page = 'page',
+    Home = 'home',
+    Profile = 'profile',
+    Subscriptions = 'subscriptions',
+    Playlist = 'playlist',
+    Favorites = 'favorites',
+    Search = 'search',
+    Account = 'account'
+}
 
+export enum ToastType {
+    Log,
+    Info,
+    Warn,
+    Error
+}
 
+export enum MessageType {
+    Close,
+    Request,
+    Receive,
+    Set,
+    Del
+}
+
+export enum VersionState {
+    Low,
+    Equal,
+    High
+}

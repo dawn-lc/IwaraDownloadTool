@@ -1,14 +1,14 @@
 import Toastify from "toastify-js"
 import { i18n } from "./i18n"
-import { isNullOrUndefined, originalNodeAppendChild } from "./env"
-import { fetch, getString, prune, renderNode, UUID } from "./extension"
-import { Dictionary, ToastType, DownloadType, VideoInfo } from "./class"
-import { config, db, pageSelectButtons, selectList } from "./main"
+import { getLanguage, isNullOrUndefined, ToastType } from "./env"
+import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
+import { Dictionary, VideoInfo, Config, Database } from "./class"
+import { analyzeDownloadTask, pushDownloadTask } from "./main"
 
-export async function refreshToken(): Promise<string> {
+export async function refreshToken(config: Config): Promise<string> {
     let refresh = config.authorization
     try {
-        refresh = (await (await fetch(`https://api.iwara.tv/user/token`, {
+        refresh = (await (await unlimitedFetch(`https://api.iwara.tv/user/token`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -27,7 +27,7 @@ export async function getXVersion(urlString: string): Promise<string> {
         .map(b => b.toString(16).padStart(2, '0'))
         .join('')
 }
-export async function getAuth(url?: string) {
+export async function getAuth(config: Config, url?: string) {
     return Object.assign(
         {
             'Cooike': unsafeWindow.document.cookie,
@@ -36,16 +36,16 @@ export async function getAuth(url?: string) {
         !isNullOrUndefined(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : { 'X-Version': ''}
     )
 }
-export async function addDownloadTask() {
+export async function addDownloadTask(config: Config) {
     let textArea = renderNode({
         nodeType: "textarea",
         attributes: {
-            placeholder: i18n[config.language].manualDownloadTips,
+            placeholder: i18n[getLanguage(config)].manualDownloadTips,
             style: 'margin-bottom: 10px;',
             rows: "16",
             cols: "96"
         }
-    }) as HTMLTextAreaElement
+    },config) as HTMLTextAreaElement
     let body = renderNode({
         nodeType: "div",
         attributes: {
@@ -73,12 +73,12 @@ export async function addDownloadTask() {
                 childs: "确认"
             }
         ]
-    }) as Element
+    },config) as Element
     unsafeWindow.document.body.appendChild(body)
 }
 
 
-export function checkIsHaveDownloadLink(comment: string): boolean {
+export function checkIsHaveDownloadLink(config: Config, comment: string): boolean {
     if (!config.checkDownloadLink || isNullOrUndefined(comment) || comment.isEmpty()) {
         return false
     }
@@ -110,7 +110,7 @@ export function checkIsHaveDownloadLink(comment: string): boolean {
         'gigafile.nu'
     ].filter(i => comment.toLowerCase().includes(i)).any()
 }
-export function toastNode(body: RenderCode | RenderCode[], title?: string): Element | Node {
+export function toastNode(config: Config, body: RenderCode | RenderCode[], title?: string): Element | Node {
     return renderNode({
         nodeType: 'div',
         childs: [
@@ -127,7 +127,7 @@ export function toastNode(body: RenderCode | RenderCode[], title?: string): Elem
                 childs: body
             }
         ]
-    })
+    }, config)
 }
 export function getTextNode(node: Node | Element): string {
     return node.nodeType === Node.TEXT_NODE
@@ -138,7 +138,7 @@ export function getTextNode(node: Node | Element): string {
                 .join('')
             : ''
 }
-export function newToast(type: ToastType, params: Toastify.Options | undefined) {
+export function newToast(config: Config, type: ToastType, params: Toastify.Options | undefined) {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
@@ -173,99 +173,10 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
             break;
     }
     if (!isNullOrUndefined(params.text)) {
-        params.text = params.text.replaceVariable(i18n[config.language]).toString()
+        params.text = params.text.replaceVariable(i18n[getLanguage(config)]).toString()
     }
-    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
+    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[getLanguage(config)]))
     return Toastify(params)
-}
-export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
-    if (!videoInfo.State) {
-        return
-    }
-    if (!bypass) {
-        if (config.autoFollow && !videoInfo.Following) {
-            if ((await fetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
-                method: 'POST',
-                headers: await getAuth()
-            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).showToast()
-        }
-        if (config.autoLike && !videoInfo.Liked) {
-            if ((await fetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
-                method: 'POST',
-                headers: await getAuth()
-            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
-        }
-        if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
-            let toastBody = toastNode([
-                `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
-                { nodeType: 'br' },
-                `%#openVideoLink#%`
-            ], '%#createTask#%')
-            let toast = newToast(
-                ToastType.Warn,
-                {
-                    node: toastBody,
-                    close: config.autoCopySaveFileName,
-                    onClick() {
-                        GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
-                        if (config.autoCopySaveFileName) {
-                            GM_setClipboard(analyzeLocalPath(config.downloadPath.replaceVariable(
-                                {
-                                    NowTime: new Date(),
-                                    UploadTime: videoInfo.UploadTime,
-                                    AUTHOR: videoInfo.Author,
-                                    ID: videoInfo.ID,
-                                    TITLE: videoInfo.Title,
-                                    ALIAS: videoInfo.Alias,
-                                    QUALITY: videoInfo.DownloadQuality
-                                }
-                            ).trim()).filename, "text")
-                            toastBody.appendChild(renderNode({
-                                nodeType: 'p',
-                                childs: '%#copySucceed#%'
-                            }))
-                        } else {
-                            toast.hideToast()
-                        }
-                    }
-                }
-            )
-            toast.showToast()
-            return
-        }
-        if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
-            let toast = newToast(
-                ToastType.Warn,
-                {
-                    node: toastNode([
-                        `${videoInfo.Title}[${videoInfo.ID}] %#downloadQualityError#%`,
-                        { nodeType: 'br' },
-                        `%#tryReparseDownload#%`
-                    ], '%#createTask#%'),
-                    async onClick() {
-                        toast.hideToast()
-                        await pushDownloadTask(await new VideoInfo(videoInfo as PieceInfo).init(videoInfo.ID))
-                    }
-                }
-            )
-            toast.showToast()
-            return
-        }
-    }
-    switch (config.downloadType) {
-        case DownloadType.Aria2:
-            aria2Download(videoInfo)
-            break
-        case DownloadType.IwaraDownloader:
-            iwaraDownloaderDownload(videoInfo)
-            break
-        case DownloadType.Browser:
-            browserDownload(videoInfo)
-            break
-        default:
-            othersDownload(videoInfo)
-            break
-    }
 }
 export function analyzeLocalPath(path: string): LocalPath {
     let matchPath = path.replaceAll('//', '/').replaceAll('\\\\', '/').match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
@@ -280,17 +191,17 @@ export function analyzeLocalPath(path: string): LocalPath {
         throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`)
     }
 }
-export async function EnvCheck(): Promise<boolean> {
+export async function EnvCheck(config: Config): Promise<boolean> {
     try {
         if (GM_info.downloadMode !== 'browser') {
             GM_getValue('isDebug') && console.debug(GM_info)
             throw new Error('%#browserDownloadModeError#%')
         }
     } catch (error: any) {
-        let toast = newToast(
+        let toast = newToast(config,
             ToastType.Error,
             {
-                node: toastNode([
+                node: toastNode(config,[
                     `%#configError#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -306,7 +217,7 @@ export async function EnvCheck(): Promise<boolean> {
     }
     return true
 }
-export async function localPathCheck(): Promise<boolean> {
+export async function localPathCheck(config: Config): Promise<boolean> {
     try {
         let pathTest = analyzeLocalPath(config.downloadPath)
         for (const key in pathTest) {
@@ -315,10 +226,10 @@ export async function localPathCheck(): Promise<boolean> {
             }
         }
     } catch (error: any) {
-        let toast = newToast(
+        let toast = newToast(config,
             ToastType.Error,
             {
-                node: toastNode([
+                node: toastNode(config,[
                     `%#downloadPathError#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -334,9 +245,9 @@ export async function localPathCheck(): Promise<boolean> {
     }
     return true
 }
-export async function aria2Check(): Promise<boolean> {
+export async function aria2Check(config: Config): Promise<boolean> {
     try {
-        let res = await (await fetch(config.aria2Path, {
+        let res = await (await unlimitedFetch(config.aria2Path, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -353,10 +264,10 @@ export async function aria2Check(): Promise<boolean> {
             throw new Error(res.error.message)
         }
     } catch (error: any) {
-        let toast = newToast(
+        let toast = newToast(config,
             ToastType.Error,
             {
-                node: toastNode([
+                node: toastNode(config,[
                     `Aria2 RPC %#connectionTest#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -372,9 +283,9 @@ export async function aria2Check(): Promise<boolean> {
     }
     return true
 }
-export async function iwaraDownloaderCheck(): Promise<boolean> {
+export async function iwaraDownloaderCheck(config: Config): Promise<boolean> {
     try {
-        let res = await (await fetch(config.iwaraDownloaderPath, {
+        let res = await (await unlimitedFetch(config.iwaraDownloaderPath, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -392,10 +303,10 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
         }
 
     } catch (error) {
-        let toast = newToast(
+        let toast = newToast(config,
             ToastType.Error,
             {
-                node: toastNode([
+                node: toastNode(config,[
                     `IwaraDownloader RPC %#connectionTest#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -411,7 +322,7 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
     }
     return true
 }
-export function aria2Download(videoInfo: VideoInfo) {
+export function aria2Download(config: Config, videoInfo: VideoInfo) {
     ( async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
         id: string
         type: string
@@ -428,7 +339,7 @@ export function aria2Download(videoInfo: VideoInfo) {
             }
         ).trim())
 
-        let res = await aria2API('aria2.addUri', [
+        let res = await aria2API(config,'aria2.addUri', [
             [downloadUrl],
             prune({
                 'all-proxy': config.downloadProxy,
@@ -444,17 +355,17 @@ export function aria2Download(videoInfo: VideoInfo) {
 
 
         console.log(`Aria2 ${name} ${JSON.stringify(res)}`)
-        newToast(
+        newToast(config,
             ToastType.Info,
             {
-                node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
+                node: toastNode(config,`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
             }
         ).showToast()
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
-export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
+export function iwaraDownloaderDownload(config: Config, videoInfo: VideoInfo) {
     ( async function (videoInfo: VideoInfo) {
-        let r = await (await fetch(config.iwaraDownloaderPath, {
+        let r = await (await unlimitedFetch(config.iwaraDownloaderPath, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -496,17 +407,17 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         })).json()
         if (r.code === 0) {
             console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
-            newToast(
+            newToast(config,
                 ToastType.Info,
                 {
-                    node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
+                    node: toastNode(config,`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
         } else {
-            let toast = newToast(
+            let toast = newToast(config,
                 ToastType.Error,
                 {
-                    node: toastNode([
+                    node: toastNode(config,[
                         `${videoInfo.Title}[${videoInfo.ID}] %#pushTaskFailed#% `,
                         { nodeType: 'br' },
                         r.msg
@@ -520,7 +431,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         }
     }(videoInfo))
 }
-export function othersDownload(videoInfo: VideoInfo) {
+export function othersDownload(config: Config, videoInfo: VideoInfo) {
     ( async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, Alias: string, DownloadUrl: URL) {
         DownloadUrl.searchParams.set('download', analyzeLocalPath(config.downloadPath.replaceVariable(
             {
@@ -536,7 +447,7 @@ export function othersDownload(videoInfo: VideoInfo) {
         GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
-export function browserDownload(videoInfo: VideoInfo) {
+export function browserDownload(config: Config, videoInfo: VideoInfo) {
     ( async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
         id: string
         type: string
@@ -552,10 +463,10 @@ export function browserDownload(videoInfo: VideoInfo) {
                     'not_succeeded': `%#browserDownloadNotSucceeded#% ${error.details ?? getString(error.details)}`
                 }[error.error] || `%#browserDownloadUnknownError#%`
             }
-            let toast = newToast(
+            let toast = newToast(config,
                 ToastType.Error,
                 {
-                    node: toastNode([
+                    node: toastNode(config,[
                         `${Name}[${ID}] %#downloadFailed#%`,
                         { nodeType: 'br' },
                         errorInfo,
@@ -564,7 +475,7 @@ export function browserDownload(videoInfo: VideoInfo) {
                     ], '%#browserDownload#%'),
                     async onClick() {
                         toast.hideToast()
-                        await pushDownloadTask(videoInfo)
+                        await pushDownloadTask(config, videoInfo)
                     }
                 }
             )
@@ -589,8 +500,8 @@ export function browserDownload(videoInfo: VideoInfo) {
         })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
-export async function aria2API(method: string, params: any) {
-    return await (await fetch(config.aria2Path, {
+export async function aria2API(config: Config, method: string, params: any) {
+    return await (await unlimitedFetch(config.aria2Path, {
         headers: {
             'accept': 'application/json',
             'content-type': 'application/json'
@@ -630,8 +541,8 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
     }
     return null
 }
-export async function aria2TaskCheck() {
-    let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
+export async function aria2TaskCheck(config: Config, db: Database) {
+    let completed: Array<string> = (await aria2API(config, 'aria2.tellStopped', [0, 2048, [
         'gid',
         'status',
         'files',
@@ -639,7 +550,7 @@ export async function aria2TaskCheck() {
         'bittorrent'
     ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
 
-    let active = await aria2API('aria2.tellActive', [[
+    let active = await aria2API(config, 'aria2.tellActive', [[
         'gid',
         'downloadSpeed',
         'files',
@@ -655,139 +566,12 @@ export async function aria2TaskCheck() {
             if (!completed.includes(videoID.toLowerCase())) {
                 let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
                 let videoInfo = await (new VideoInfo(cache)).init(videoID)
-                videoInfo.State && await pushDownloadTask(videoInfo)
+                videoInfo.State && await pushDownloadTask(config, videoInfo)
             }
-            await aria2API('aria2.forceRemove', [task.gid])
+            await aria2API(config, 'aria2.forceRemove', [task.gid])
         }
     }
-}
-
-export function uninjectCheckbox(element: Element | Node) {
-    if (element instanceof HTMLElement) {
-        if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
-            element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID')!)
-        }
-        if (element.querySelector('input.selectButton')) {
-            element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')!))
-        }
-    }
-}
-
-export function pageChange() {
-    GM_getValue('isDebug') && console.debug(pageSelectButtons)
-}
-
-export function getSelectButton(id: string): HTMLInputElement | undefined {
-    return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
 }
 export function getPlayload(authorization: string) {
     return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))
-}
-
-
-export function injectCheckbox(element: Element, compatible: boolean) {
-    let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title')!.trim()
-    let Alias = element.querySelector('a.username')?.getAttribute('title')
-    let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
-    let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
-    if (isNullOrUndefined(ID) || isNullOrUndefined(Name) || isNullOrUndefined(Alias) || isNullOrUndefined(Author)) return
-    let button = renderNode({
-        nodeType: 'input',
-        attributes: Object.assign(
-            selectList.has(ID) ? { checked: true } : {}, {
-            type: 'checkbox',
-            videoID: ID,
-            videoName: Name,
-            videoAlias: Alias,
-            videoAuthor: Author
-        }),
-        className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
-        events: {
-            click: (event: Event) => {
-                (event.target as HTMLInputElement).checked ? selectList.set(ID, {
-                    Title: Name,
-                    Alias: Alias,
-                    Author: Author
-                }) : selectList.delete(ID)
-                event.stopPropagation()
-                event.stopImmediatePropagation()
-                return false
-            }
-        }
-    }) as HTMLInputElement
-    pageSelectButtons.set(ID, button)
-    originalNodeAppendChild.call(node, button)
-}
-
-export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
-    let size = list.size
-    let node = renderNode({
-        nodeType: 'p',
-        childs: `%#parsingProgress#%[${list.size}/${size}]`
-    })
-    let start = newToast(ToastType.Info, {
-        node: node,
-        duration: -1
-    })
-    start.showToast()
-    if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
-        let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
-            'gid',
-            'status',
-            'files',
-            'errorCode',
-            'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
-        for (let key of list.allKeys().intersect(completed)) {
-            let button = getSelectButton(key)
-            if (!isNullOrUndefined(button)) button.checked = false
-            list.delete(key)
-            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
-        }
-    }
-    let infoList = (await Promise.all(list.allKeys().map(async id => {
-        let caches = db.videos.where('ID').equals(id)
-        let cache = await caches.first()
-        if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
-            let parseToast = newToast(
-                ToastType.Info,
-                {
-                    text: `${list.get(id)?.Title ?? id} %#parsing#%`,
-                    duration: -1,
-                    close: true,
-                    onClick() {
-                        parseToast.hideToast()
-                    }
-                }
-            )
-            parseToast.showToast()
-            cache = await new VideoInfo(list.get(id)).init(id)
-            parseToast.hideToast()
-        }
-        return cache
-    }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
-    for (let videoInfo of infoList) {
-        let button = getSelectButton(videoInfo.ID)
-        let video = videoInfo.State ? videoInfo : await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
-        video.State && await pushDownloadTask(video)
-        if (!isNullOrUndefined(button)) button.checked = false
-        list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
-    }
-    start.hideToast()
-    if (size != 1) {
-        let completed = newToast(
-            ToastType.Info,
-            {
-                text: `%#allCompleted#%`,
-                duration: -1,
-                close: true,
-                onClick() {
-                    completed.hideToast()
-                }
-            }
-        )
-        completed.showToast()
-    }
 }

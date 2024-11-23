@@ -7,11 +7,11 @@ interface Date {
 }
 interface String {
     replaceEmojis(replace?: string | null): string
-    replaceVariable(replacements: Record<string, any>, count?: number): String;
+    replaceVariable(replacements: Record<string, any>, count?: number): string;
     isEmpty(): boolean;
     notEmpty(): boolean;
     toURL(): URL;
-    among(start: string, end: string, greedy?: boolean): String;
+    among(start: string, end: string, greedy?: boolean): string;
     splitLimit(separator: string, limit?: number): string[];
     truncate(maxLength: number): string
     trimHead(prefix: string): string;
