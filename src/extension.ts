@@ -1,7 +1,7 @@
 import { i18n } from "./i18n";
 import { getLanguage, isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray} from "./env";
 import { originalAddEventListener, originalFetch } from "./hijack";
-import { Config } from "./class";
+import { Config } from "./config";
 
 export const hasFunction = (obj: any, method: string): boolean => {
     return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false

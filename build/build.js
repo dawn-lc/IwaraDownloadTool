@@ -8,15 +8,15 @@ const packagePath = join(root, 'package.json');
 const packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
 
 const sourcePath = join(root, 'src');
-const outPath = join(root, 'temp');
+const distPath = join(root, 'dist');
 
 const mainPath = join(sourcePath, 'main.ts');
 const cssPath = join(sourcePath, 'main.css');
 
-const mata = readFileSync(join(outPath, `${packageInfo.displayName}.mata.js`), 'utf8');
+const mata = readFileSync(join(distPath, `${packageInfo.displayName}.mata.js`), 'utf8');
 
-const distPath = join(outPath, `${packageInfo.displayName}.user.js`);
-const distCompressPath = join(outPath, `${packageInfo.displayName}.min.user.js`);
+const distUncompressPath = join(distPath, `${packageInfo.displayName}.user.js`);
+const distCompressPath = join(distPath, `${packageInfo.displayName}.min.user.js`);
 
 let result = esbuild.buildSync({
     entryPoints: [cssPath],
@@ -38,7 +38,7 @@ const css = result.outputFiles.at(0).text.replaceAll(/\r?\n/g, '');
 esbuild.build({
     entryPoints: [mainPath],
     bundle: true,
-    outfile: distPath,
+    outfile: distUncompressPath,
     minify: false,
     banner: {
         js: mata
@@ -49,12 +49,12 @@ esbuild.build({
     charset: 'utf8'
 })
 .then(() => {
-    promises.readFile(distPath, 'utf8')
+    promises.readFile(distUncompressPath, 'utf8')
         .then(data => {
             const processed = data
                 .replaceAll(/\r?\n/g, '\r\n')
                 .replaceAll('"@!mainCSS!@"', `\`${css}\``);
-            return promises.writeFile(distPath, processed);
+            return promises.writeFile(distUncompressPath, processed);
         })
         .catch(err => console.error('Error during file processing:', err));
 })

@@ -1,7 +1,7 @@
 import moment from "moment";
 import { i18n } from "./i18n";
 import { getString, hasFunction } from "./extension";
-import { Config } from "./class";
+import { Config } from "./config";
 
 export const isNull = (obj: unknown): obj is null => obj === null;
 export const isUndefined = (obj: unknown): obj is undefined => typeof obj === 'undefined';
@@ -92,9 +92,9 @@ export const getLanguage = function (config?: Config): string {
         GM_getValue('isDebug') && !isNullOrUndefined(i18n[config.language]) && console.debug(`language not found ${config.language}`)
         return isNullOrUndefined(i18n[config.language]) ? getLanguage() : config.language
     }
-    let env = (navigator.language ?? navigator.languages[0] ?? 'en').replace('-', '_');
-    let main = env.split('_').shift() ?? 'en';
-    return !isNullOrUndefined(i18n[env]) ? env : (!isNullOrUndefined(i18n[main]) ? main : 'en') 
+    let env = (navigator.language ?? navigator.languages[0] ?? 'zh_CN').replace('-', '_');
+    let main = env.split('_').shift() ?? 'zh';
+    return !isNullOrUndefined(i18n[env]) ? env : (!isNullOrUndefined(i18n[main]) ? main : 'zh_CN') 
 }
 export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
 export const getCompatible = () => navigator.userAgent.toLowerCase().includes('firefox')
