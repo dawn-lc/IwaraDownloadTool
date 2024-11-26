@@ -99,6 +99,8 @@ export const getLanguage = function (config?: Config): string {
 export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
 export const getCompatible = () => navigator.userAgent.toLowerCase().includes('firefox')
 
+export const delay = (time: number) =>  new Promise(resolve => setTimeout(resolve, time))
+
 Date.prototype.format = function (format?: string) {
     return moment(this).locale(getLanguage()).format(format)
 }

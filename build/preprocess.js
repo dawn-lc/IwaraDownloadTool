@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { execSync } from 'child_process';
 const root = process.cwd();
 
 const isNull = (obj) => typeof obj === 'undefined' || obj === null;
@@ -157,6 +158,9 @@ function serializeMetadata(metadata) {
     results.push('// ==/UserScript==');
     return results.join('\r\n');
 };
+const UUID = function () {
+    return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
+}
 
 function mkdir(path) {
     return existsSync(path) || mkdirSync(path)
@@ -178,7 +182,9 @@ const mataTempPath= join(distPath, `${packageInfo.displayName}.mata.js`);
 let mataTemplate = parseMetadata(readFileSync(mataTemplatePath, 'utf8'));
 let mata = {...mataTemplate};
 
-mata.version = `${packageInfo.version}-${process.argv[2]}`;
+mata.version = `${packageInfo.version}${process.argv[2] === 'dev' ? '-dev.' + UUID() : '' }`;
+
+console.log(mata.version);
 
 mata.updateURL = mata.updateURL.replaceVariable({
     'release_tag': process.argv[2]

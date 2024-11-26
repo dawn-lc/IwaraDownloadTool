@@ -1,6 +1,6 @@
 
 import { i18n } from "./i18n";
-import { isElement, isNullOrUndefined, getCompatible, getLanguage, getRating, DownloadType, MessageType, PageType, ToastType, VersionState } from "./env";
+import { isElement, isNullOrUndefined, getCompatible, getLanguage, getRating, DownloadType, MessageType, PageType, ToastType, VersionState, delay } from "./env";
 import { findElement, getString, prune, renderNode, unlimitedFetch } from "./extension"
 import { hijackElementRemove, hijackFetch, hijackHistoryPushState, hijackHistoryReplaceState, hijackNodeAppendChild, hijackNodeRemoveChild, originalAddEventListener, originalNodeAppendChild } from "./hijack";
 import { addDownloadTask, analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, checkIsHaveDownloadLink, getAuth, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
@@ -441,6 +441,7 @@ class menu {
                 });
                 const data = (await response.json() as Iwara.Page).results as Iwara.Video[];
                 data.forEach(info => new VideoInfo().init(info.id, info));
+                await delay(3000)
             }
         }
     }
@@ -655,6 +656,7 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
         if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
         node.firstChild!.textContent = `${i18n[getLanguage(config)].parsingProgress}[${list.size}/${size}]`
+        await delay(5000)
     }
     start.hideToast()
     if (size != 1) {
