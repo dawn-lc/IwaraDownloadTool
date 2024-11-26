@@ -31,7 +31,7 @@ jobs:
       run: npm run build
     - name: 获取编译结果
       run: |
-        FILES=$(find temp -type f | tr '\n' ' ')
+        FILES=$(find dist -type f | tr '\n' ' ')
         echo "file_list=${FILES}" >> $GITHUB_ENV
     - name: 获取版本号
       run: |

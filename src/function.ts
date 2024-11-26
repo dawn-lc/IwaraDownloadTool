@@ -2,8 +2,9 @@ import Toastify from "toastify-js"
 import { i18n } from "./i18n"
 import { getLanguage, isNullOrUndefined, ToastType } from "./env"
 import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
-import { Dictionary, VideoInfo, Config, Database } from "./class"
+import { Dictionary, VideoInfo, Database } from "./class"
 import { analyzeDownloadTask, pushDownloadTask } from "./main"
+import { Config } from "./config"
 
 export async function refreshToken(config: Config): Promise<string> {
     let refresh = config.authorization

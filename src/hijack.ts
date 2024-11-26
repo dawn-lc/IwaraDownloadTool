@@ -1,7 +1,8 @@
 import { getCompatible, isNullOrUndefined, isStringTupleArray } from "./env";
-import { Config, Database, VideoInfo } from "./class";
+import { Database, VideoInfo } from "./class";
 import { getPlayload } from "./function";
 import { injectCheckbox, pageChange, uninjectCheckbox } from "./main";
+import { Config } from "./config";
 
 export const originalFetch = unsafeWindow.fetch
 export const originalPushState = unsafeWindow.history.pushState;
@@ -53,7 +54,9 @@ export function hijackFetch(config: Config, db: Database) {
                         [...list].forEach(info => new VideoInfo().init(info.id, info))
                         if (!config.addUnlistedAndPrivate) break
                         GM_getValue('isDebug') && console.debug(url.searchParams)
-                        if (url.searchParams.has('subscribed') || url.searchParams.has('user') || url.searchParams.has('sort') ? url.searchParams.get('sort') !== 'date' : false) break
+                        if (url.searchParams.has('user')) break
+                        if (url.searchParams.has('subscribed')) break
+                        if (url.searchParams.has('sort') ? url.searchParams.get('sort') !== 'date' : false) break
                         let sortList = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
                         let cache = await db.getFilteredVideos(sortList.at(0)?.createdAt, sortList.at(-1)?.createdAt)
                         if (!cache.any()) break
