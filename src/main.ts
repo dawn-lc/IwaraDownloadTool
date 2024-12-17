@@ -29,7 +29,7 @@ class configEdit {
             events: {
                 click: async () => {
                     save.disabled = !save.disabled
-                    if (await this.target.check()) {
+                    if (await check()) {
                         unsafeWindow.location.reload()
                     }
                     save.disabled = !save.disabled
