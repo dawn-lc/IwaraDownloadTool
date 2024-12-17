@@ -90,6 +90,21 @@ interface IDictionary<T> extends Map<string, T> {
 }
 
 
+interface HTMLElement {
+    [key: string]: any;
+}
+interface RenderCode<T extends keyof HTMLElementTagNameMap> {
+    nodeType: T;
+    attributes?: Record<string, any>;
+    events?: Record<string, EventListenerOrEventListenerObject>;
+    className?: string | string[];
+    childs?: RenderCode<any> | string | (RenderCode<any> | string)[];
+}
+
+type ElementTypeFromNodeType<T extends keyof HTMLElementTagNameMap> = HTMLElementTagNameMap[T];
+
+/*
+
 type RenderCode = string | Node | Element | {
     nodeType: string;
     attributes?: Record<string, any>;
@@ -97,6 +112,7 @@ type RenderCode = string | Node | Element | {
     className?: string | string[];
     childs?: RenderCode | RenderCode[];
 }
+*/
 interface PieceInfo {
     Title?: string;
     Alias?: string;

@@ -253,8 +253,10 @@
     bottom: 24px;
     right: 0px;
     cursor: pointer;
+    z-index: 101;
 }
 
+/*
 .selectButtonCompatible {
     width: 32px;
     height: 32px;
@@ -265,6 +267,7 @@
     padding: 0;
     cursor: pointer;
 }
+*/
 
 .toastify h3 {
     margin: 0 0 10px 0;

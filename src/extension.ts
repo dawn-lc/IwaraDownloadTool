@@ -1,7 +1,8 @@
 import { i18n } from "./i18n";
-import { getLanguage, isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray} from "./env";
+import { config } from "./config";
+
+import { isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray} from "./env";
 import { originalAddEventListener, originalFetch } from "./hijack";
-import { Config } from "./config";
 
 export const hasFunction = (obj: any, method: string): boolean => {
     return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
@@ -73,7 +74,7 @@ export function unlimitedFetch (input: RequestInfo, init?: RequestInit, force?: 
 }
 
 export const UUID = function () {
-    return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
+    return isNullOrUndefined(crypto) ? Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('') : crypto.randomUUID().replaceAll('-','')
 }
 export const ceilDiv = function (dividend: number, divisor: number): number {
     return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0)
@@ -89,11 +90,37 @@ export const findElement = function (element: Element, condition: string) {
     return element
 }
 
-export const renderNode = function (renderCode: RenderCode, config: Config): Node | Element {
+
+export function renderNode<T extends keyof HTMLElementTagNameMap>(renderCode: RenderCode<T> | string):  HTMLElementTagNameMap[T]
+{
+    renderCode = prune(renderCode);
+    if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null");
+    if (typeof renderCode === 'string') {
+        return document.createTextNode(renderCode.replaceVariable(i18n[config.language])) as any;
+    }
+    if (renderCode instanceof Node) {
+        return renderCode as any;
+    }
+    if (typeof renderCode !== 'object' || !renderCode.nodeType) {
+        throw new Error('Invalid arguments');
+    }
+    const { nodeType, attributes, events, className, childs } = renderCode;
+    const node: ElementTypeFromNodeType<T> = document.createElement(nodeType);
+
+    (!isNullOrUndefined(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
+    (!isNullOrUndefined(className) && className.length > 0) && node.classList.add(...(typeof className === 'string' ? [className] : className));
+    !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : [childs]).map(renderNode));
+    (!isNullOrUndefined(attributes) && Object.keys(attributes).length > 0) && Object.entries(attributes).forEach(([key, value]: [string, string]) => { node[key] = value; node.setAttribute(key, value) });
+
+    return node;
+}
+
+/*
+export function renderNode(renderCode: RenderCode) {
     renderCode = prune(renderCode)
     if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null")
     if (typeof renderCode === 'string') {
-        return document.createTextNode(renderCode.replaceVariable(i18n[getLanguage(config)]))
+        return document.createTextNode(renderCode.replaceVariable(i18n[config.language]))
     }
     if (renderCode instanceof Node) {
         return renderCode
@@ -106,6 +133,7 @@ export const renderNode = function (renderCode: RenderCode, config: Config): Nod
     (!isNullOrUndefined(attributes) && Object.keys(attributes).any()) && Object.entries(attributes).forEach(([key, value]: [string, string]) => node.setAttribute(key, value));
     (!isNullOrUndefined(events) && Object.keys(events).any()) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
     (!isNullOrUndefined(className) && className.length > 0) && node.classList.add(...typeof className === 'string' ? [className] : className);
-    !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : new Array(childs)).map(i=>renderNode(i,config)))
+    !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : new Array(childs)).map(renderNode))
     return node
 }
+*/

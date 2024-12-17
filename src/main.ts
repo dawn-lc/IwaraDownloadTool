@@ -1,15 +1,13 @@
 
 import { i18n } from "./i18n";
-import { isElement, isNullOrUndefined, getCompatible, getLanguage, getRating, DownloadType, MessageType, PageType, ToastType, VersionState, delay } from "./env";
+import { config, Config } from "./config";
+import { db } from "./db";
+
+import { isElement, isNullOrUndefined, getCompatible, getRating, DownloadType, MessageType, PageType, ToastType, VersionState, delay, isStringTupleArray } from "./env";
 import { findElement, getString, prune, renderNode, unlimitedFetch } from "./extension"
-import { hijackElementRemove, hijackFetch, hijackHistoryPushState, hijackHistoryReplaceState, hijackNodeAppendChild, hijackNodeRemoveChild, originalAddEventListener, originalNodeAppendChild } from "./hijack";
-import { addDownloadTask, analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, checkIsHaveDownloadLink, getAuth, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-import { Version, Database, SyncDictionary, Dictionary, VideoInfo } from "./class";
-import { Config } from "./config";
-
-export var config = new Config()
-export var db = new Database()
-
+import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
+import { addDownloadTask, analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, EnvCheck, getAuth, getPlayload, iwaraDownloaderCheck, iwaraDownloaderDownload, localPathCheck, newToast, othersDownload, toastNode } from "./function";
+import { Version, SyncDictionary, Dictionary, VideoInfo } from "./class";
 
 class configEdit {
     source!: configEdit;
@@ -21,12 +19,12 @@ class configEdit {
         this.target.configChange = (item: string) => { this.configChange.call(this, item) }
         this.interfacePage = renderNode({
             nodeType: 'p'
-        },config) as HTMLElement
+        }) as HTMLElement
         let save = renderNode({
             nodeType: 'button',
             childs: '%#save#%',
             attributes: {
-                title: i18n[getLanguage(config)].save
+                title: i18n[config.language].save
             },
             events: {
                 click: async () => {
@@ -37,12 +35,12 @@ class configEdit {
                     save.disabled = !save.disabled
                 }
             }
-        },config) as HTMLButtonElement
+        }) as HTMLButtonElement
         let reset = renderNode({
             nodeType: 'button',
             childs: '%#reset#%',
             attributes: {
-                title: i18n[getLanguage(config)].reset
+                title: i18n[config.language].reset
             },
             events: {
                 click: () => {
@@ -50,7 +48,7 @@ class configEdit {
                     unsafeWindow.location.reload()
                 }
             }
-        },config) as HTMLButtonElement
+        })
         this.interface = renderNode({
             nodeType: 'div',
             attributes: {
@@ -108,11 +106,11 @@ class configEdit {
                     ]
                 }
             ]
-        },config) as HTMLElement
+        }) as HTMLElement
 
     }
-    private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean): RenderCode {
-        let button = renderNode({
+    private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean) {
+        return renderNode({
             nodeType: 'p',
             className: 'inputRadioLine',
             childs: [
@@ -125,10 +123,11 @@ class configEdit {
                 }, {
                     nodeType: 'input',
                     className: 'switch',
-                    attributes: {
+                    attributes: prune({
                         type: 'checkbox',
                         name: name,
-                    },
+                        checked: get !== undefined ? get(name, defaultValue) : this.target[name] ?? defaultValue ?? false
+                    }),
                     events: {
                         change: (e: Event) => {
                             if (set !== undefined) {
@@ -141,12 +140,10 @@ class configEdit {
                     }
                 }
             ]
-        },config) as HTMLElement
-        (button.querySelector(`[name='${name}']`) as HTMLInputElement).checked = get !== undefined ? get(name, defaultValue) : this.target[name] ?? defaultValue ?? false
-        return button
+        })
     }
-    private inputComponent(name: string, type?: string, get?: (name: string) => void, set?: (name: string, e: Event) => void): RenderCode {
-        return {
+    private inputComponent(name: string, type?: string, get?: (name: string) => void, set?: (name: string, e: Event) => void): RenderCode<any> {
+        return renderNode({
             nodeType: 'label',
             childs: [
                 `%#${name}#% `,
@@ -171,9 +168,9 @@ class configEdit {
                     }
                 }
             ]
-        }
+        })
     }
-    private downloadTypeSelect(): RenderCode {
+    private downloadTypeSelect() {
         let select = renderNode({
             nodeType: 'p',
             className: 'inputRadioLine',
@@ -184,9 +181,10 @@ class configEdit {
                     childs: Object.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((i: string) => renderNode({
                         nodeType: 'option',
                         childs: i
-                    },config)),
+                    })),
                     attributes: {
-                        name: 'downloadType'
+                        name: 'downloadType',
+                        selectedIndex: Number(this.target.downloadType)
                     },
                     events: {
                         change: (e) => {
@@ -195,9 +193,7 @@ class configEdit {
                     }
                 }
             ]
-        },config) as HTMLSelectElement
-        select.selectedIndex = Number(this.target.downloadType)
-
+        })
         return select
     }
     private configChange(item: string) {
@@ -240,23 +236,23 @@ class configEdit {
             attributes: {
                 href: 'https://github.com/dawn-lc/IwaraDownloadTool#路径可用变量'
             }
-        },config)
+        })
         let downloadConfigInput = [
             variableInfo,
-            renderNode(this.inputComponent('downloadPath'),config),
-            renderNode(this.inputComponent('downloadProxy'),config)
+            renderNode(this.inputComponent('downloadPath')),
+            renderNode(this.inputComponent('downloadProxy'))
         ]
         let aria2ConfigInput = [
-            renderNode(this.inputComponent('aria2Path'),config),
-            renderNode(this.inputComponent('aria2Token', 'password'),config)
+            renderNode(this.inputComponent('aria2Path')),
+            renderNode(this.inputComponent('aria2Token', 'password'))
         ]
         let iwaraDownloaderConfigInput = [
-            renderNode(this.inputComponent('iwaraDownloaderPath'),config),
-            renderNode(this.inputComponent('iwaraDownloaderToken', 'password'),config)
+            renderNode(this.inputComponent('iwaraDownloaderPath')),
+            renderNode(this.inputComponent('iwaraDownloaderToken', 'password'))
         ]
         let BrowserConfigInput = [
             variableInfo,
-            renderNode(this.inputComponent('downloadPath'),config)
+            renderNode(this.inputComponent('downloadPath'))
         ]
         switch (this.target.downloadType) {
             case DownloadType.Aria2:
@@ -272,7 +268,7 @@ class configEdit {
                 break
         }
         if (this.target.checkPriority) {
-            originalNodeAppendChild.call(this.interfacePage, renderNode(this.inputComponent('downloadPriority'),config))
+            originalNodeAppendChild.call(this.interfacePage, renderNode(this.inputComponent('downloadPriority')))
         }
     }
     public inject() {
@@ -291,14 +287,14 @@ class menu {
     constructor() {
         this.interfacePage = renderNode({
             nodeType: 'ul'
-        },config) as HTMLElement
+        }) as HTMLElement
         this.interface = renderNode({
             nodeType: 'div',
             attributes: {
                 id: 'pluginMenu'
             },
             childs: this.interfacePage
-        },config) as HTMLElement
+        }) as HTMLElement
         this.observer = new MutationObserver((mutationsList) => {
             for (let mutation of mutationsList) {
                 if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
@@ -332,7 +328,7 @@ class menu {
                     return false
                 }
             }
-        }),config)
+        }))
     }
     public async pageChange(pageType?: PageType) {
         if (isNullOrUndefined(pageType) || this.pageType === pageType) return
@@ -341,7 +337,7 @@ class menu {
             this.interfacePage.removeChild(this.interfacePage.firstChild!)
         }
         let manualDownloadButton = this.button('manualDownload', (name, event) => {
-            addDownloadTask(config)
+            addDownloadTask()
         })
         let settingsButton = this.button('settings', (name, event) => {
             editConfig.inject()
@@ -355,7 +351,7 @@ class menu {
                 })
             } else {
                 unsafeWindow.document.querySelectorAll(`.videoTeaser`).forEach((element: Element) => {
-                    injectCheckbox(element, getCompatible())
+                    injectCheckbox(element)
                 })
             }
         })
@@ -386,7 +382,7 @@ class menu {
         })
         let downloadSelectedButton = this.button('downloadSelected', (name, event) => {
             analyzeDownloadTask()
-            newToast(config,ToastType.Info, {
+            newToast(ToastType.Info, {
                 text: `%#${name}#%`,
                 close: true
             }).showToast()
@@ -397,11 +393,11 @@ class menu {
             let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
             let Title = unsafeWindow.document.querySelector('.page-video__details')?.childNodes[0]?.textContent
             let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
-            videoInfo.State && await pushDownloadTask(config, videoInfo, true)
+            videoInfo.State && await pushDownloadTask(videoInfo, true)
         })
 
         let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
-            aria2TaskCheck(config, db)
+            aria2TaskCheck()
         })
         GM_getValue('isDebug') && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
 
@@ -437,7 +433,7 @@ class menu {
             for (let page = 0; page < 10; page++) {
                 const response = await unlimitedFetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${page}`, {
                     method: 'GET',
-                    headers: await getAuth(config)
+                    headers: await getAuth()
                 });
                 const data = (await response.json() as Iwara.Page).results as Iwara.Video[];
                 data.forEach(info => new VideoInfo().init(info.id, info));
@@ -489,13 +485,13 @@ export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) 
 export function firstRun() {
     console.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
-    config = new Config()
+    config.destroyInstance()
     editConfig = new configEdit(config)
     let confirmButton = renderNode({
         nodeType: 'button',
         attributes: {
             disabled: true,
-            title: i18n[getLanguage(config)].ok
+            title: i18n[config.language].ok
         },
         childs: '%#ok#%',
         events: {
@@ -506,7 +502,7 @@ export function firstRun() {
                 editConfig.inject()
             }
         }
-    },config) as HTMLButtonElement
+    }) as HTMLButtonElement
     originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
         nodeType: 'div',
         attributes: {
@@ -520,8 +516,8 @@ export function firstRun() {
                     { nodeType: 'p', childs: '%#useHelpForBase#%' },
                     { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                     { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                    { nodeType: 'p', childs: i18n[getLanguage(config)].useHelpForManualDownload },
-                    { nodeType: 'p', childs: i18n[getLanguage(config)].useHelpForBugreport }
+                    { nodeType: 'p', childs: i18n[config.language].useHelpForManualDownload },
+                    { nodeType: 'p', childs: i18n[config.language].useHelpForBugreport }
                 ]
             },
             {
@@ -548,7 +544,7 @@ export function firstRun() {
             },
             confirmButton
         ]
-    },config))
+    }))
 }
 export function uninjectCheckbox(element: Element | Node) {
     if (element instanceof HTMLElement) {
@@ -560,14 +556,13 @@ export function uninjectCheckbox(element: Element | Node) {
         }
     }
 }
-export async function injectCheckbox(element: Element, compatible: boolean) {
+export async function injectCheckbox(element: Element) {
     let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
     let videoInfo = await db.videos.where('ID').equals(ID).first()
     let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title')!.trim() ?? videoInfo?.Title
-    let Alias =  element.querySelector('a.username')?.getAttribute('title') ?? videoInfo?.Alias
+    let Alias = element.querySelector('a.username')?.getAttribute('title') ?? videoInfo?.Alias
     let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop() ?? videoInfo?.Author
-    let node = compatible ? element : element.querySelector('.videoTeaser__thumbnail')
-    if (isNullOrUndefined(ID) || isNullOrUndefined(Name) || isNullOrUndefined(Alias) || isNullOrUndefined(Author)) return
+    if (isNullOrUndefined(ID)) return
     let button = renderNode({
         nodeType: 'input',
         attributes: Object.assign(
@@ -578,7 +573,7 @@ export async function injectCheckbox(element: Element, compatible: boolean) {
             videoAlias: Alias,
             videoAuthor: Author
         }),
-        className: compatible ? ['selectButton', 'selectButtonCompatible'] : 'selectButton',
+        className: 'selectButton',
         events: {
             click: (event: Event) => {
                 (event.target as HTMLInputElement).checked ? selectList.set(ID, {
@@ -591,14 +586,14 @@ export async function injectCheckbox(element: Element, compatible: boolean) {
                 return false
             }
         }
-    },config) as HTMLInputElement
+    })
     pageSelectButtons.set(ID, button)
-    originalNodeAppendChild.call(node, button)
+    originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
 }
 export function pageChange() {
     pluginMenu.pageChange(unsafeWindow.document.querySelector('.page')?.classList[1].split('-').pop() as PageType)
     GM_getValue('isDebug') && console.debug(pageSelectButtons)
-} 
+}
 export function getSelectButton(id: string): HTMLInputElement | undefined {
     return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
 }
@@ -607,14 +602,14 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
     let node = renderNode({
         nodeType: 'p',
         childs: `%#parsingProgress#%[${list.size}/${size}]`
-    },config)
-    let start = newToast(config,ToastType.Info, {
+    })
+    let start = newToast(ToastType.Info, {
         node: node,
         duration: -1
     })
     start.showToast()
     if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
-        let completed: Array<string> = (await aria2API(config, 'aria2.tellStopped', [0, 2048, [
+        let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
             'gid',
             'status',
             'files',
@@ -625,14 +620,14 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
             let button = getSelectButton(key)
             if (!isNullOrUndefined(button)) button.checked = false
             list.delete(key)
-            node.firstChild!.textContent = `${i18n[getLanguage(config)].parsingProgress}[${list.size}/${size}]`
+            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
         }
     }
     let infoList = (await Promise.all(list.allKeys().map(async id => {
         let caches = db.videos.where('ID').equals(id)
         let cache = await caches.first()
         if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
-            let parseToast = newToast(config,
+            let parseToast = newToast(
                 ToastType.Info,
                 {
                     text: `${list.get(id)?.Title ?? id} %#parsing#%`,
@@ -651,16 +646,16 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
     for (let videoInfo of infoList) {
         let button = getSelectButton(videoInfo.ID)
-        let video = videoInfo.State ? videoInfo : await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
-        video.State && await pushDownloadTask(config, video)
+        let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
+        video.State && await pushDownloadTask(video)
         if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[getLanguage(config)].parsingProgress}[${list.size}/${size}]`
+        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
         await delay(5000)
     }
     start.hideToast()
     if (size != 1) {
-        let completed = newToast(config,
+        let completed = newToast(
             ToastType.Info,
             {
                 text: `%#allCompleted#%`,
@@ -674,7 +669,7 @@ export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectL
         completed.showToast()
     }
 }
-export async function pushDownloadTask(config: Config, videoInfo: VideoInfo, bypass: boolean = false) {
+export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
         return
     }
@@ -682,22 +677,22 @@ export async function pushDownloadTask(config: Config, videoInfo: VideoInfo, byp
         if (config.autoFollow && !videoInfo.Following) {
             if ((await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                 method: 'POST',
-                headers: await getAuth(config)
-            })).status !== 201) newToast(config,ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).showToast()
+                headers: await getAuth()
+            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).showToast()
         }
         if (config.autoLike && !videoInfo.Liked) {
             if ((await unlimitedFetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
                 method: 'POST',
-                headers: await getAuth(config)
-            })).status !== 201) newToast(config,ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
+                headers: await getAuth()
+            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
         }
-        if (config.checkDownloadLink && checkIsHaveDownloadLink(config, `${videoInfo.Description} ${videoInfo.Comments}`)) {
-            let toastBody = toastNode(config,[
+        if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
+            let toastBody = toastNode([
                 `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
                 { nodeType: 'br' },
                 `%#openVideoLink#%`
             ], '%#createTask#%')
-            let toast = newToast(config,
+            let toast = newToast(
                 ToastType.Warn,
                 {
                     node: toastBody,
@@ -719,7 +714,7 @@ export async function pushDownloadTask(config: Config, videoInfo: VideoInfo, byp
                             toastBody.appendChild(renderNode({
                                 nodeType: 'p',
                                 childs: '%#copySucceed#%'
-                            },config))
+                            }))
                         } else {
                             toast.hideToast()
                         }
@@ -730,17 +725,17 @@ export async function pushDownloadTask(config: Config, videoInfo: VideoInfo, byp
             return
         }
         if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
-            let toast = newToast(config,
+            let toast = newToast(
                 ToastType.Warn,
                 {
-                    node: toastNode(config,[
+                    node: toastNode([
                         `${videoInfo.Title}[${videoInfo.ID}] %#downloadQualityError#%`,
                         { nodeType: 'br' },
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     async onClick() {
                         toast.hideToast()
-                        await pushDownloadTask(config, await new VideoInfo(videoInfo as PieceInfo).init(videoInfo.ID))
+                        await pushDownloadTask(await new VideoInfo(videoInfo as PieceInfo).init(videoInfo.ID))
                     }
                 }
             )
@@ -750,17 +745,58 @@ export async function pushDownloadTask(config: Config, videoInfo: VideoInfo, byp
     }
     switch (config.downloadType) {
         case DownloadType.Aria2:
-            aria2Download(config, videoInfo)
+            aria2Download(videoInfo)
             break
         case DownloadType.IwaraDownloader:
-            iwaraDownloaderDownload(config,videoInfo)
+            iwaraDownloaderDownload(videoInfo)
             break
         case DownloadType.Browser:
-            browserDownload(config,videoInfo)
+            browserDownload(videoInfo)
             break
         default:
-            othersDownload(config, videoInfo)
+            othersDownload(videoInfo)
             break
+    }
+}
+
+export function hijackAddEventListener() {
+    unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
+        originalAddEventListener.call(this, type, listener, options)
+    }
+}
+
+export function hijackNodeAppendChild() {
+    Node.prototype.appendChild = function <T extends Node>(node: T): T {
+        if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
+            injectCheckbox(node)
+        }
+        return originalNodeAppendChild.call(this, node) as T
+    }
+}
+export function hijackNodeRemoveChild() {
+    Node.prototype.removeChild = function <T extends Node>(child: T): T {
+        uninjectCheckbox(child)
+        return originalRemoveChild.apply(this, [child]) as T
+    }
+
+}
+export function hijackElementRemove() {
+    Element.prototype.remove = function () {
+        uninjectCheckbox(this)
+        return originalRemove.apply(this)
+    }
+}
+export function hijackHistoryPushState() {
+    unsafeWindow.history.pushState = function (...args) {
+        originalPushState.apply(this, args)
+        pageChange()
+    }
+}
+
+export function hijackHistoryReplaceState() {
+    unsafeWindow.history.replaceState = function (...args) {
+        originalReplaceState.apply(this, args)
+        pageChange()
     }
 }
 
@@ -780,7 +816,69 @@ if (!unsafeWindow.IwaraDownloadTool) {
         GM_deleteValue('selectList')
     }
 
-    hijackFetch(config, db)
+    unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
+        GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
+        let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
+        if (!isNullOrUndefined(init) && !isNullOrUndefined(init.headers) && !isStringTupleArray(init.headers)) {
+            let authorization = null
+            if (init.headers instanceof Headers) {
+                authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
+            } else {
+                for (const key in init.headers) {
+                    if (key.toLowerCase() === "authorization") {
+                        authorization = init.headers[key]
+                        break
+                    }
+                }
+            }
+            if (!isNullOrUndefined(authorization) && authorization !== config.authorization) {
+                let playload = getPlayload(authorization)
+                if (playload['type'] === 'refresh_token') {
+                    GM_getValue('isDebug') && console.debug(`refresh_token: ${authorization.split(' ').pop()}`)
+                    if (isNullOrUndefined(localStorage.getItem('token'))) localStorage.setItem('token', authorization.split(' ').pop() ?? '')
+                }
+                if (playload['type'] === 'access_token') {
+                    config.authorization = `Bearer ${authorization.split(' ').pop()}`
+                    GM_getValue('isDebug') && console.debug(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
+                    GM_getValue('isDebug') && console.debug(`access_token: ${config.authorization.split(' ').pop()}`)
+                }
+            }
+        }
+        return new Promise((resolve, reject) => originalFetch(input, init)
+            .then(async (response) => {
+                if (url.hostname !== 'api.iwara.tv' || url.pathname.isEmpty()) return resolve(response)
+                let path = url.pathname.toLowerCase().split('/').slice(1)
+                switch (path[0]) {
+                    case 'videos':
+                        let cloneResponse = response.clone()
+                        if (!cloneResponse.ok) break;
+                        let cloneBody = await cloneResponse.json() as Iwara.Page
+                        let list = cloneBody.results as Iwara.Video[]
+                        [...list].forEach(info => new VideoInfo().init(info.id, info))
+                        if (!config.addUnlistedAndPrivate) break
+                        GM_getValue('isDebug') && console.debug(url.searchParams)
+                        if (url.searchParams.has('user')) break
+                        if (url.searchParams.has('subscribed')) break
+                        if (url.searchParams.has('sort') ? url.searchParams.get('sort') !== 'date' : false) break
+                        let sortList = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                        let cache = await db.getFilteredVideos(sortList.at(0)?.createdAt, sortList.at(-1)?.createdAt)
+                        if (!cache.any()) break
+                        cloneBody.count = cloneBody.count + cache.length
+                        cloneBody.limit = cloneBody.limit + cache.length
+                        cloneBody.results.push(...cache.map(i => i.RAW).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+                        return resolve(new Response(JSON.stringify(cloneBody), {
+                            status: cloneResponse.status,
+                            statusText: cloneResponse.statusText,
+                            headers: Object.fromEntries(cloneResponse.headers.entries())
+                        }))
+                    default:
+                        break
+                }
+                return resolve(response)
+            })
+            .catch((err) => reject(err))) as Promise<Response>
+    }
+
 
     async function main() {
         if (GM_getValue('isFirstRun', true)) {
@@ -788,8 +886,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
             return
         }
 
-        if (!await config.check()) {
-            newToast(config,ToastType.Info, {
+        if (!await check()) {
+            newToast(ToastType.Info, {
                 text: `%#configError#%`,
                 duration: 60 * 1000,
             }).showToast()
@@ -836,10 +934,10 @@ if (!unsafeWindow.IwaraDownloadTool) {
 
 
 
-        let notice = newToast(config,
+        let notice = newToast(
             ToastType.Info,
             {
-                node: toastNode(config,i18n[getLanguage(config)].notice),
+                node: toastNode(i18n[config.language].notice),
                 duration: 10000,
                 gravity: 'bottom',
                 position: 'center',
@@ -852,7 +950,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
     }
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.5')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
-        alert(i18n[getLanguage(config)].configurationIncompatible)
+        alert(i18n[config.language].configurationIncompatible)
     }
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 }

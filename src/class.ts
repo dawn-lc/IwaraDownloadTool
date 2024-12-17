@@ -1,13 +1,14 @@
-
 import { i18n } from "./i18n";
-import { getLanguage,isNullOrUndefined, isString, MessageType,ToastType, VersionState} from "./env";
+import { config } from "./config";
+import { db } from "./db";
+
+import { isNullOrUndefined, MessageType, ToastType, VersionState} from "./env";
 import { unlimitedFetch, ceilDiv, getString, prune,  } from "./extension";
 import { originalAddEventListener } from "./hijack";
-import Dexie from "dexie";
 
 
 import {  refreshToken, getAuth, newToast, toastNode } from "./function";
-import { config, db, getSelectButton, pushDownloadTask, selectList } from "./main";
+import { getSelectButton, pushDownloadTask, selectList } from "./main";
 
 
 export class Version implements IVersion {
@@ -203,13 +204,13 @@ export class VideoInfo {
         try {
             this.ID = ID
             if (isNullOrUndefined(InfoSource)) {
-                config.authorization = `Bearer ${await refreshToken(config)}`
+                config.authorization = `Bearer ${await refreshToken()}`
             } else {
                 this.RAW = InfoSource
                 await db.videos.put(this)
             }
             let VideoInfoSource: Iwara.Video = InfoSource ?? await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}`, {
-                headers: await getAuth(config)
+                headers: await getAuth()
             })).json()
 
             if (VideoInfoSource.id === undefined) {
@@ -237,11 +238,11 @@ export class VideoInfo {
                 }
                 cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                 if (cdnCache.any()) {
-                    let toast = newToast(config,
+                    let toast = newToast(
                         ToastType.Warn,
                         {
                             node:
-                                toastNode(config,[
+                                toastNode([
                                     `${this.Title}[${this.ID}] %#parsingFailed#%`,
                                     { nodeType: 'br' },
                                     `%#cdnCacheFinded#%`
@@ -259,7 +260,7 @@ export class VideoInfo {
                     this.State = false
                     return this
                 }
-                throw new Error(`${i18n[getLanguage(config)].parsingFailed.toString()} ${VideoInfoSource.message}`)
+                throw new Error(`${i18n[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
             }
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
@@ -281,11 +282,11 @@ export class VideoInfo {
                 return this
             }
             if (this.External) {
-                throw new Error(i18n[getLanguage(config)].externalVideo.toString())
+                throw new Error(i18n[config.language].externalVideo.toString())
             }
 
             const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.Page> => {
-                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth(config) })).json() as Iwara.Page
+                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
             }
             const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
                 let comments: Iwara.Comment[] = []
@@ -308,15 +309,15 @@ export class VideoInfo {
             this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
             this.FileName = VideoInfoSource.file.name
             this.Size = VideoInfoSource.file.size
-            let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth(config, VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
+            let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth( VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
             if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
-                throw new Error(i18n[getLanguage(config)].getVideoSourceFailed.toString())
+                throw new Error(i18n[config.language].getVideoSourceFailed.toString())
             }
             this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
             let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
-            if (!fileList.any()) throw new Error(i18n[getLanguage(config)].noAvailableVideoSource.toString())
+            if (!fileList.any()) throw new Error(i18n[config.language].noAvailableVideoSource.toString())
             let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18n[getLanguage(config)].videoSourceNotAvailable.toString())
+            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18n[config.language].videoSourceNotAvailable.toString())
             this.DownloadUrl = decodeURIComponent(`https:${Source}`)
             this.State = true
 
@@ -324,10 +325,10 @@ export class VideoInfo {
             return this
         } catch (error) {
             let data = this
-            let toast = newToast(config,
+            let toast = newToast(
                 ToastType.Error,
                 {
-                    node: toastNode(config,[
+                    node: toastNode([
                         `${this.Title}[${this.ID}] %#parsingFailed#%`,
                         { nodeType: 'br' },
                         `${getString(error)}`,
@@ -339,7 +340,7 @@ export class VideoInfo {
                         if (data.External) {
                             GM_openInTab(data.ExternalUrl!, { active: false, insert: true, setParent: true })
                         } else {
-                            pushDownloadTask(config, await new VideoInfo(data as PieceInfo).init(data.ID))
+                            pushDownloadTask( await new VideoInfo(data as PieceInfo).init(data.ID))
                         }
                     },
                 }
@@ -351,46 +352,5 @@ export class VideoInfo {
             this.State = false
             return this
         }
-    }
-}
-
-export class Database extends Dexie {
-    videos: Dexie.Table<VideoInfo, string>;
-    caches: Dexie.Table<{ ID: string, href: string }, string>;
-    aria2Tasks!: Dexie.Table<VideoInfo, Aria2.Result>;
-    constructor() {
-        super("VideoDatabase");
-        this.version(2).stores({
-            videos: 'ID',
-            caches: 'ID'
-        })
-        this.version(3).stores({
-            videos: 'ID, UploadTime',
-            caches: 'ID'
-        }).upgrade((trans) => {
-            return trans.table('videos').toCollection().modify(video => {
-                if (isNullOrUndefined(video.UploadTime)) {
-                    video.UploadTime = new Date(0);
-                } else if (typeof video.UploadTime === 'string') {
-                    video.UploadTime = new Date(video.UploadTime);
-                }
-                if (isNullOrUndefined(video.RAW)) {
-                    video.RAW = undefined;
-                }
-            })
-        })
-        this.videos = this.table("videos")
-        this.caches = this.table("caches")
-    }
-    async getFilteredVideos(startTime: Date | string | undefined, endTime: Date | string | undefined ) {
-        if (isNullOrUndefined(startTime) || isNullOrUndefined(endTime)) return [];
-        startTime = isString(startTime) ? new Date(startTime) : startTime
-        endTime = isString(endTime) ? new Date(endTime) : endTime
-        return this.videos
-            .where('UploadTime')
-            .between(startTime, endTime, true, true)
-            .and(video => !isNullOrUndefined(video.RAW))
-            .and(video => video.Private !== false || video.Unlisted !== false)
-            .toArray()
     }
 }

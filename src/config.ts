@@ -1,7 +1,7 @@
-import { DownloadType, isNullOrUndefined } from "./env";
-import { getString } from "./extension";
-import { localPathCheck, aria2Check, iwaraDownloaderCheck, EnvCheck } from "./function";
 
+import { i18n } from "./i18n";
+import { isNullOrUndefined, DownloadType} from "./env";
+import { getString } from "./extension";
 const DEFAULT_CONFIG = {
     language: 'zh_CN',
     autoFollow: false,
@@ -26,8 +26,8 @@ const DEFAULT_CONFIG = {
         'preview': 1
     }
 };
-
 export class Config {
+    private static instance: Config;
     configChange?: Function;
     language: string
     autoFollow: boolean
@@ -49,7 +49,9 @@ export class Config {
     priority: Record<string, number>
     [key: string]: any
     constructor() {
-        this.language = DEFAULT_CONFIG.language
+        let env = (navigator.language ?? navigator.languages[0] ?? DEFAULT_CONFIG.language).replace('-', '_')
+        let main = env.split('_').shift() ?? DEFAULT_CONFIG.language.split('_').shift()!
+        this.language = isNullOrUndefined(i18n[env]) ? (!isNullOrUndefined(i18n[main]) ? main : DEFAULT_CONFIG.language) : env
         this.autoFollow = DEFAULT_CONFIG.autoFollow
         this.autoLike = DEFAULT_CONFIG.autoLike
         this.autoCopySaveFileName = DEFAULT_CONFIG.autoCopySaveFileName
@@ -94,21 +96,12 @@ export class Config {
         })
         return body
     }
-    public async check() {
-        if (await localPathCheck(this)) {
-            switch (this.downloadType) {
-                case DownloadType.Aria2:
-                    return await aria2Check(this)
-                case DownloadType.IwaraDownloader:
-                    return await iwaraDownloaderCheck(this)
-                case DownloadType.Browser:
-                    return await EnvCheck(this)
-                default:
-                    break
-            }
-            return true
-        } else {
-            return false
-        }
+    public static getInstance(): Config {
+        if (isNullOrUndefined(Config.instance)) Config.instance = new Config()
+        return Config.instance;
+    }
+    public static destroyInstance() {
+        Config.instance = undefined as any;
     }
 }
+export const config = Config.getInstance();

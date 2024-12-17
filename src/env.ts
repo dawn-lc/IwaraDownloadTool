@@ -1,7 +1,8 @@
-import moment from "moment";
-import { i18n } from "./i18n";
+
+import { config } from "./config"
+
 import { getString, hasFunction } from "./extension";
-import { Config } from "./config";
+import moment from "moment";
 
 export const isNull = (obj: unknown): obj is null => obj === null;
 export const isUndefined = (obj: unknown): obj is undefined => typeof obj === 'undefined';
@@ -87,22 +88,13 @@ String.prototype.toURL = function () {
     return new URL(URLString.toString())
 }
 
-export const getLanguage = function (config?: Config): string {
-    if (!isNullOrUndefined(config)) {
-        GM_getValue('isDebug') && !isNullOrUndefined(i18n[config.language]) && console.debug(`language not found ${config.language}`)
-        return isNullOrUndefined(i18n[config.language]) ? getLanguage() : config.language
-    }
-    let env = (navigator.language ?? navigator.languages[0] ?? 'zh_CN').replace('-', '_');
-    let main = env.split('_').shift() ?? 'zh';
-    return !isNullOrUndefined(i18n[env]) ? env : (!isNullOrUndefined(i18n[main]) ? main : 'zh_CN') 
-}
 export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
-export const getCompatible = () => navigator.userAgent.toLowerCase().includes('firefox')
+export const getCompatible = () => false // navigator.userAgent.toLowerCase().includes('firefox')
 
 export const delay = (time: number) =>  new Promise(resolve => setTimeout(resolve, time))
 
 Date.prototype.format = function (format?: string) {
-    return moment(this).locale(getLanguage()).format(format)
+    return moment(this).locale(config.language).format(format)
 }
 
 String.prototype.replaceVariable = function (replacements, count = 0) {
@@ -119,7 +111,7 @@ String.prototype.replaceVariable = function (replacements, count = 0) {
             replaceString
         )
         count++
-        return Object.keys(replacements).map((key) => this.includes(`%#${key}#%`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
+        return Object.keys(replacements).map((key) => this.includes(`%#${key}`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
     } catch (error) {
         GM_getValue('isDebug') && console.debug(`replace variable error: ${getString(error)}`)
         return replaceString

@@ -1,12 +1,15 @@
-import Toastify from "toastify-js"
 import { i18n } from "./i18n"
-import { getLanguage, isNullOrUndefined, ToastType } from "./env"
-import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
-import { Dictionary, VideoInfo, Database } from "./class"
-import { analyzeDownloadTask, pushDownloadTask } from "./main"
-import { Config } from "./config"
+import { config } from "./config"
+import { db } from "./db"
 
-export async function refreshToken(config: Config): Promise<string> {
+import { DownloadType, isNullOrUndefined, ToastType } from "./env"
+import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
+import { Dictionary, VideoInfo } from "./class"
+import { analyzeDownloadTask, pushDownloadTask } from "./main"
+
+
+import Toastify from "toastify-js"
+export async function refreshToken(): Promise<string> {
     let refresh = config.authorization
     try {
         refresh = (await (await unlimitedFetch(`https://api.iwara.tv/user/token`, {
@@ -28,25 +31,25 @@ export async function getXVersion(urlString: string): Promise<string> {
         .map(b => b.toString(16).padStart(2, '0'))
         .join('')
 }
-export async function getAuth(config: Config, url?: string) {
+export async function getAuth(url?: string) {
     return Object.assign(
         {
             'Cooike': unsafeWindow.document.cookie,
             'Authorization': config.authorization
         },
-        !isNullOrUndefined(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : { 'X-Version': ''}
+        !isNullOrUndefined(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : { 'X-Version': '' }
     )
 }
-export async function addDownloadTask(config: Config) {
+export async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
         attributes: {
-            placeholder: i18n[getLanguage(config)].manualDownloadTips,
+            placeholder: i18n[config.language].manualDownloadTips,
             style: 'margin-bottom: 10px;',
             rows: "16",
             cols: "96"
         }
-    },config) as HTMLTextAreaElement
+    }) as HTMLTextAreaElement
     let body = renderNode({
         nodeType: "div",
         attributes: {
@@ -74,12 +77,12 @@ export async function addDownloadTask(config: Config) {
                 childs: "确认"
             }
         ]
-    },config) as Element
+    }) as Element
     unsafeWindow.document.body.appendChild(body)
 }
 
 
-export function checkIsHaveDownloadLink(config: Config, comment: string): boolean {
+export function checkIsHaveDownloadLink(comment: string): boolean {
     if (!config.checkDownloadLink || isNullOrUndefined(comment) || comment.isEmpty()) {
         return false
     }
@@ -111,7 +114,7 @@ export function checkIsHaveDownloadLink(config: Config, comment: string): boolea
         'gigafile.nu'
     ].filter(i => comment.toLowerCase().includes(i)).any()
 }
-export function toastNode(config: Config, body: RenderCode | RenderCode[], title?: string): Element | Node {
+export function toastNode(body: RenderCode<any>["childs"], title?: string): Element | Node {
     return renderNode({
         nodeType: 'div',
         childs: [
@@ -128,7 +131,7 @@ export function toastNode(config: Config, body: RenderCode | RenderCode[], title
                 childs: body
             }
         ]
-    }, config)
+    })
 }
 export function getTextNode(node: Node | Element): string {
     return node.nodeType === Node.TEXT_NODE
@@ -139,7 +142,7 @@ export function getTextNode(node: Node | Element): string {
                 .join('')
             : ''
 }
-export function newToast(config: Config, type: ToastType, params: Toastify.Options | undefined) {
+export function newToast(type: ToastType, params: Toastify.Options | undefined) {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
@@ -169,14 +172,14 @@ export function newToast(config: Config, type: ToastType, params: Toastify.Optio
                 style: {
                     background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
                 }
-            }, params)    
+            }, params)
         default:
             break;
     }
     if (!isNullOrUndefined(params.text)) {
-        params.text = params.text.replaceVariable(i18n[getLanguage(config)]).toString()
+        params.text = params.text.replaceVariable(i18n[config.language]).toString()
     }
-    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[getLanguage(config)]))
+    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
     return Toastify(params)
 }
 export function analyzeLocalPath(path: string): LocalPath {
@@ -192,17 +195,17 @@ export function analyzeLocalPath(path: string): LocalPath {
         throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`)
     }
 }
-export async function EnvCheck(config: Config): Promise<boolean> {
+export async function EnvCheck(): Promise<boolean> {
     try {
         if (GM_info.downloadMode !== 'browser') {
             GM_getValue('isDebug') && console.debug(GM_info)
             throw new Error('%#browserDownloadModeError#%')
         }
     } catch (error: any) {
-        let toast = newToast(config,
+        let toast = newToast(
             ToastType.Error,
             {
-                node: toastNode(config,[
+                node: toastNode([
                     `%#configError#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -218,7 +221,7 @@ export async function EnvCheck(config: Config): Promise<boolean> {
     }
     return true
 }
-export async function localPathCheck(config: Config): Promise<boolean> {
+export async function localPathCheck(): Promise<boolean> {
     try {
         let pathTest = analyzeLocalPath(config.downloadPath)
         for (const key in pathTest) {
@@ -227,10 +230,10 @@ export async function localPathCheck(config: Config): Promise<boolean> {
             }
         }
     } catch (error: any) {
-        let toast = newToast(config,
+        let toast = newToast(
             ToastType.Error,
             {
-                node: toastNode(config,[
+                node: toastNode([
                     `%#downloadPathError#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -246,7 +249,7 @@ export async function localPathCheck(config: Config): Promise<boolean> {
     }
     return true
 }
-export async function aria2Check(config: Config): Promise<boolean> {
+export async function aria2Check(): Promise<boolean> {
     try {
         let res = await (await unlimitedFetch(config.aria2Path, {
             method: 'POST',
@@ -265,10 +268,10 @@ export async function aria2Check(config: Config): Promise<boolean> {
             throw new Error(res.error.message)
         }
     } catch (error: any) {
-        let toast = newToast(config,
+        let toast = newToast(
             ToastType.Error,
             {
-                node: toastNode(config,[
+                node: toastNode([
                     `Aria2 RPC %#connectionTest#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -284,7 +287,7 @@ export async function aria2Check(config: Config): Promise<boolean> {
     }
     return true
 }
-export async function iwaraDownloaderCheck(config: Config): Promise<boolean> {
+export async function iwaraDownloaderCheck(): Promise<boolean> {
     try {
         let res = await (await unlimitedFetch(config.iwaraDownloaderPath, {
             method: 'POST',
@@ -304,10 +307,10 @@ export async function iwaraDownloaderCheck(config: Config): Promise<boolean> {
         }
 
     } catch (error) {
-        let toast = newToast(config,
+        let toast = newToast(
             ToastType.Error,
             {
-                node: toastNode(config,[
+                node: toastNode([
                     `IwaraDownloader RPC %#connectionTest#%`,
                     { nodeType: 'br' },
                     getString(error)
@@ -323,8 +326,8 @@ export async function iwaraDownloaderCheck(config: Config): Promise<boolean> {
     }
     return true
 }
-export function aria2Download(config: Config, videoInfo: VideoInfo) {
-    ( async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
+export function aria2Download(videoInfo: VideoInfo) {
+    (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
         id: string
         type: string
     }>, quality: string, alias: string, downloadUrl: string) {
@@ -340,7 +343,7 @@ export function aria2Download(config: Config, videoInfo: VideoInfo) {
             }
         ).trim())
 
-        let res = await aria2API(config,'aria2.addUri', [
+        let res = await aria2API('aria2.addUri', [
             [downloadUrl],
             prune({
                 'all-proxy': config.downloadProxy,
@@ -356,16 +359,16 @@ export function aria2Download(config: Config, videoInfo: VideoInfo) {
 
 
         console.log(`Aria2 ${name} ${JSON.stringify(res)}`)
-        newToast(config,
+        newToast(
             ToastType.Info,
             {
-                node: toastNode(config,`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
+                node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
             }
         ).showToast()
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
-export function iwaraDownloaderDownload(config: Config, videoInfo: VideoInfo) {
-    ( async function (videoInfo: VideoInfo) {
+export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
+    (async function (videoInfo: VideoInfo) {
         let r = await (await unlimitedFetch(config.iwaraDownloaderPath, {
             method: 'POST',
             headers: {
@@ -408,17 +411,17 @@ export function iwaraDownloaderDownload(config: Config, videoInfo: VideoInfo) {
         })).json()
         if (r.code === 0) {
             console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
-            newToast(config,
+            newToast(
                 ToastType.Info,
                 {
-                    node: toastNode(config,`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
+                    node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
             ).showToast()
         } else {
-            let toast = newToast(config,
+            let toast = newToast(
                 ToastType.Error,
                 {
-                    node: toastNode(config,[
+                    node: toastNode([
                         `${videoInfo.Title}[${videoInfo.ID}] %#pushTaskFailed#% `,
                         { nodeType: 'br' },
                         r.msg
@@ -432,8 +435,8 @@ export function iwaraDownloaderDownload(config: Config, videoInfo: VideoInfo) {
         }
     }(videoInfo))
 }
-export function othersDownload(config: Config, videoInfo: VideoInfo) {
-    ( async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, Alias: string, DownloadUrl: URL) {
+export function othersDownload(videoInfo: VideoInfo) {
+    (async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, Alias: string, DownloadUrl: URL) {
         DownloadUrl.searchParams.set('download', analyzeLocalPath(config.downloadPath.replaceVariable(
             {
                 NowTime: new Date(),
@@ -448,8 +451,8 @@ export function othersDownload(config: Config, videoInfo: VideoInfo) {
         GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
-export function browserDownload(config: Config, videoInfo: VideoInfo) {
-    ( async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
+export function browserDownload(videoInfo: VideoInfo) {
+    (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
         id: string
         type: string
     }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
@@ -464,10 +467,10 @@ export function browserDownload(config: Config, videoInfo: VideoInfo) {
                     'not_succeeded': `%#browserDownloadNotSucceeded#% ${error.details ?? getString(error.details)}`
                 }[error.error] || `%#browserDownloadUnknownError#%`
             }
-            let toast = newToast(config,
+            let toast = newToast(
                 ToastType.Error,
                 {
-                    node: toastNode(config,[
+                    node: toastNode([
                         `${Name}[${ID}] %#downloadFailed#%`,
                         { nodeType: 'br' },
                         errorInfo,
@@ -476,7 +479,7 @@ export function browserDownload(config: Config, videoInfo: VideoInfo) {
                     ], '%#browserDownload#%'),
                     async onClick() {
                         toast.hideToast()
-                        await pushDownloadTask(config, videoInfo)
+                        await pushDownloadTask(videoInfo)
                     }
                 }
             )
@@ -501,7 +504,7 @@ export function browserDownload(config: Config, videoInfo: VideoInfo) {
         })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
-export async function aria2API(config: Config, method: string, params: any) {
+export async function aria2API(method: string, params: any) {
     return await (await unlimitedFetch(config.aria2Path, {
         headers: {
             'accept': 'application/json',
@@ -542,8 +545,8 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
     }
     return null
 }
-export async function aria2TaskCheck(config: Config, db: Database) {
-    let completed: Array<string> = (await aria2API(config, 'aria2.tellStopped', [0, 2048, [
+export async function aria2TaskCheck() {
+    let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
         'gid',
         'status',
         'files',
@@ -551,7 +554,7 @@ export async function aria2TaskCheck(config: Config, db: Database) {
         'bittorrent'
     ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
 
-    let active = await aria2API(config, 'aria2.tellActive', [[
+    let active = await aria2API('aria2.tellActive', [[
         'gid',
         'downloadSpeed',
         'files',
@@ -567,12 +570,29 @@ export async function aria2TaskCheck(config: Config, db: Database) {
             if (!completed.includes(videoID.toLowerCase())) {
                 let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
                 let videoInfo = await (new VideoInfo(cache)).init(videoID)
-                videoInfo.State && await pushDownloadTask(config, videoInfo)
+                videoInfo.State && await pushDownloadTask(videoInfo)
             }
-            await aria2API(config, 'aria2.forceRemove', [task.gid])
+            await aria2API('aria2.forceRemove', [task.gid])
         }
     }
 }
 export function getPlayload(authorization: string) {
     return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))
+}
+export async function check() {
+    if (await localPathCheck()) {
+        switch (config.downloadType) {
+            case DownloadType.Aria2:
+                return await aria2Check()
+            case DownloadType.IwaraDownloader:
+                return await iwaraDownloaderCheck()
+            case DownloadType.Browser:
+                return await EnvCheck()
+            default:
+                break
+        }
+        return true
+    } else {
+        return false
+    }
 }
