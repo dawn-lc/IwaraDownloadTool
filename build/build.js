@@ -37,12 +37,12 @@ const css = result.outputFiles.at(0).text.replaceAll(/\r?\n/g, '');
 
 
 esbuild.build({
-    keepNames: true,
     allowOverwrite: true,
     format: 'iife',
     entryPoints: [mainPath],
     bundle: true,
     outfile: distUncompressPath,
+    treeShaking: false,
     minify: false,
     sourcemap: false,
     banner: {
@@ -51,11 +51,13 @@ esbuild.build({
     platform: 'browser',
     target: ['es2022'],
     loader: { '.json': 'json' },
+    legalComments: 'none', 
     charset: 'utf8'
 }).then(() => {
     promises.readFile(distUncompressPath, 'utf8')
         .then(data => {
             const processed = data
+                .replaceAll('/* @__PURE__ */','')
                 .replaceAll(/\r?\n/g, '\r\n')
                 .replaceAll('"@!mainCSS!@"', `\`${css}\``);
             return promises.writeFile(distUncompressPath, processed);
@@ -64,6 +66,7 @@ esbuild.build({
 }).catch(() => process.exit(1));
 
 esbuild.build({
+    keepNames: true,
     allowOverwrite: true,
     format: 'iife',
     entryPoints: [mainPath],
