@@ -1,3 +1,6 @@
+type GMDownloadErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';
+type ElementTypeFromNodeType<T extends keyof HTMLElementTagNameMap> = HTMLElementTagNameMap[T];
+
 declare module '../i18n/*.json' {
     const content: { [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[] };
     export default content;
@@ -26,7 +29,6 @@ interface IVersion {
     buildMetadata: string;
     compare(other: IVersion): VersionState;
 }
-
 
 interface IChannelMessage<T> {
     type: MessageType;
@@ -89,7 +91,6 @@ interface IDictionary<T> extends Map<string, T> {
     allValues(): Array<T>;
 }
 
-
 interface HTMLElement {
     [key: string]: any;
 }
@@ -101,18 +102,6 @@ interface RenderCode<T extends keyof HTMLElementTagNameMap> {
     childs?: RenderCode<any> | string | (RenderCode<any> | string)[];
 }
 
-type ElementTypeFromNodeType<T extends keyof HTMLElementTagNameMap> = HTMLElementTagNameMap[T];
-
-/*
-
-type RenderCode = string | Node | Element | {
-    nodeType: string;
-    attributes?: Record<string, any>;
-    events?: Record<string, (event: Event) => void>;
-    className?: string | string[];
-    childs?: RenderCode | RenderCode[];
-}
-*/
 interface PieceInfo {
     Title?: string;
     Alias?: string;
@@ -301,7 +290,3 @@ namespace Iwara {
         type: string
     }
 }
-
-
-
-type ErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';

@@ -1,7 +1,8 @@
 
+import { isNullOrUndefined } from "./env"
 import { i18n } from "./i18n";
-import { isNullOrUndefined, DownloadType } from "./env";
 import { getString } from "./extension";
+import { DownloadType } from "./type";
 const DEFAULT_CONFIG = {
     language: 'zh_CN',
     autoFollow: false,

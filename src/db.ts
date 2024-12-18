@@ -1,6 +1,7 @@
-import Dexie from "dexie";
+import { isNullOrUndefined, isString } from "./env"
 import { VideoInfo } from "./class";
-import { isNullOrUndefined, isString } from "./env";
+import { Dexie } from "./import";
+
 export class Database extends Dexie {
     private static instance: Database;
     videos: Dexie.Table<VideoInfo, string>;
