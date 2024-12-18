@@ -330,6 +330,7 @@ class menu {
             }
         }))
     }
+    
     public async pageChange(pageType?: PageType) {
         if (isNullOrUndefined(pageType) || this.pageType === pageType) return
         this.pageType = pageType
