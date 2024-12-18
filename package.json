@@ -5,9 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "preprocess": "node ./build/preprocess.js",
     "build": "node ./build/build.js",
-    "prerelease": "node ./build/prerelease.js"
+    "release": "node ./build/release.js"
   },
   "dependencies": {
     "dexie": "^3.2.7",
