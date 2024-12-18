@@ -23,12 +23,10 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: master
-    - name: 预处理
-      run: npm run preprocess -- ${{ env.release_tag }}
     - name: 安装依赖项
       run: npm ci
     - name: 编译
-      run: npm run build
+      run: npm run build ${{ env.release_tag }}
     - name: 获取编译结果
       run: |
         FILES=$(find dist -type f | tr '\n' ' ')
@@ -44,5 +42,5 @@ jobs:
       run: |
         gh release create ${{ env.release_tag }} ${{ env.file_list }} \
           --latest \
-          --title "正式版/Release ${{ env.current_version}}" \
+          --title "正式版/Release ${{ env.current_version }}" \
           --notes "Full Changelog [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
