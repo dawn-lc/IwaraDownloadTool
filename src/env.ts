@@ -5,8 +5,8 @@ export const isNull = (obj: unknown): obj is null => obj === null;
 export const isUndefined = (obj: unknown): obj is undefined => typeof obj === 'undefined';
 export const isNullOrUndefined = (obj: unknown): obj is null | undefined => isUndefined(obj) || isNull(obj);
 export const isObject = (obj: unknown): obj is Object => !isNullOrUndefined(obj) && typeof obj === 'object' && !Array.isArray(obj)
-export const isString = (obj: unknown): obj is String => !isNullOrUndefined(obj) && typeof obj === 'string'
-export const isNumber = (obj: unknown): obj is Number => !isNullOrUndefined(obj) && typeof obj === 'number'
+export const isString = (obj: unknown): obj is string => !isNullOrUndefined(obj) && typeof obj === 'string';
+export const isNumber = (obj: unknown): obj is number => !isNullOrUndefined(obj) && typeof obj === 'number';
 export const isArray = (obj: unknown): obj is any[] => Array.isArray(obj)
 export const isElement = (obj: unknown): obj is Element => !isNullOrUndefined(obj) && obj instanceof Element
 export const isNode = (obj: unknown): obj is Node => !isNullOrUndefined(obj) && obj instanceof Node

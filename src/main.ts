@@ -44,7 +44,7 @@ class configEdit {
             },
             events: {
                 click: () => {
-                    firstRun()
+                    GM_setValue('isFirstRun', true)
                     unsafeWindow.location.reload()
                 }
             }
@@ -426,6 +426,7 @@ class menu {
                 break;
         }
 
+        const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
         if (config.addUnlistedAndPrivate && pageType === PageType.VideoList) {
             for (let page = 0; page < 10; page++) {
                 const response = await unlimitedFetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${page}`, {
@@ -446,7 +447,6 @@ class menu {
         }
     }
 }
-const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
 
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
