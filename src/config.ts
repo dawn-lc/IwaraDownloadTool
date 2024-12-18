@@ -1,7 +1,7 @@
-import { DownloadType, isNullOrUndefined } from "./env";
-import { getString } from "./extension";
-import { localPathCheck, aria2Check, iwaraDownloaderCheck, EnvCheck } from "./function";
 
+import { i18n } from "./i18n";
+import { isNullOrUndefined, DownloadType } from "./env";
+import { getString } from "./extension";
 const DEFAULT_CONFIG = {
     language: 'zh_CN',
     autoFollow: false,
@@ -26,8 +26,8 @@ const DEFAULT_CONFIG = {
         'preview': 1
     }
 };
-
 export class Config {
+    private static instance: Config;
     configChange?: Function;
     language: string
     autoFollow: boolean
@@ -64,7 +64,7 @@ export class Config {
         this.aria2Path = DEFAULT_CONFIG.aria2Path
         this.aria2Token = DEFAULT_CONFIG.aria2Token
         this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath
-        this.iwaraDownloaderToken =DEFAULT_CONFIG.iwaraDownloaderToken
+        this.iwaraDownloaderToken = DEFAULT_CONFIG.iwaraDownloaderToken
         this.priority = DEFAULT_CONFIG.priority
         let body = new Proxy(this, {
             get: function (target, property: string) {
@@ -72,6 +72,9 @@ export class Config {
                     return target.configChange
                 }
                 let value = GM_getValue(property, target[property])
+                if (property === 'language') {
+                    return Config.getLanguage(value)
+                }
                 GM_getValue('isDebug') && console.debug(`get: ${property} ${getString(value)}`)
                 return value
             },
@@ -94,21 +97,17 @@ export class Config {
         })
         return body
     }
-    public async check() {
-        if (await localPathCheck(this)) {
-            switch (this.downloadType) {
-                case DownloadType.Aria2:
-                    return await aria2Check(this)
-                case DownloadType.IwaraDownloader:
-                    return await iwaraDownloaderCheck(this)
-                case DownloadType.Browser:
-                    return await EnvCheck(this)
-                default:
-                    break
-            }
-            return true
-        } else {
-            return false
-        }
+    private static getLanguage(value?: string): string {
+        let env = (navigator.language ?? navigator.languages[0] ?? DEFAULT_CONFIG.language).replace('-', '_')
+        let main = env.split('_').shift() ?? DEFAULT_CONFIG.language.split('_').shift()!
+        return isNullOrUndefined(value) ? isNullOrUndefined(i18n[env]) ? (!isNullOrUndefined(i18n[main]) ? main : DEFAULT_CONFIG.language) : env : !isNullOrUndefined(i18n[value]) ? value : Config.getLanguage()
+    }
+    public static getInstance(): Config {
+        if (isNullOrUndefined(Config.instance)) Config.instance = new Config()
+        return Config.instance;
+    }
+    public static destroyInstance() {
+        Config.instance = undefined as any;
     }
 }
+export const config = Config.getInstance();

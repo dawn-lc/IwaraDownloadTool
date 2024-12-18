@@ -1,5 +1,5 @@
 declare module '../i18n/*.json' {
-    const content: { [key: string]: RenderCode | RenderCode[] };
+    const content: { [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[] };
     export default content;
 }
 interface Date {
@@ -84,11 +84,26 @@ interface Array<T> {
 }
 
 interface IDictionary<T> extends Map<string, T> {
-    toArray(): Array<[ key: string, value: T ]>;
+    toArray(): Array<[key: string, value: T]>;
     allKeys(): Array<string>;
     allValues(): Array<T>;
 }
 
+
+interface HTMLElement {
+    [key: string]: any;
+}
+interface RenderCode<T extends keyof HTMLElementTagNameMap> {
+    nodeType: T;
+    attributes?: Record<string, any>;
+    events?: Record<string, EventListenerOrEventListenerObject>;
+    className?: string | string[];
+    childs?: RenderCode<any> | string | (RenderCode<any> | string)[];
+}
+
+type ElementTypeFromNodeType<T extends keyof HTMLElementTagNameMap> = HTMLElementTagNameMap[T];
+
+/*
 
 type RenderCode = string | Node | Element | {
     nodeType: string;
@@ -97,6 +112,7 @@ type RenderCode = string | Node | Element | {
     className?: string | string[];
     childs?: RenderCode | RenderCode[];
 }
+*/
 interface PieceInfo {
     Title?: string;
     Alias?: string;
@@ -132,7 +148,7 @@ interface LogCode {
 }
 
 namespace Aria2 {
-    
+
     interface Result {
         id: string,
         jsonrpc: string,

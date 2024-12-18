@@ -3,13 +3,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { execSync } from 'child_process';
 const root = process.cwd();
 
-const isNull = (obj) => typeof obj === 'undefined' || obj === null;
-const isObject = (obj) => !isNull(obj) && typeof obj === 'object' && !Array.isArray(obj);
+const isNull = (obj) => obj === null;
+const isUndefined = (obj) => typeof obj === "undefined";
+const isNullOrUndefined = (obj) => isUndefined(obj) || isNull(obj);
+const isObject = (obj) => !isNullOrUndefined(obj) && typeof obj === 'object' && !Array.isArray(obj);
 const emojiSeq = String.raw `(?:\p{Emoji}\uFE0F\u20E3?|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation})`;
 const emojiSTags = String.raw `\u{E0061}-\u{E007A}`;
 const emojiRegex = new RegExp(String.raw `[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[${emojiSTags}]{2}[\u{E0030}-\u{E0039}${emojiSTags}]{1,3}\u{E007F}|${emojiSeq}(?:\u200D${emojiSeq})*`, 'gu');
 const hasFunction = (obj, method) => {
-    return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false;
+    return !method.isEmpty() && !isNullOrUndefined(obj) ? method in obj && typeof obj[method] === 'function' : false;
 };
 const getString = (obj) => {
     obj = obj instanceof Error ? String(obj) : obj;
@@ -37,7 +39,7 @@ Array.prototype.complement = function (that, prop) {
     return this.union(that, prop).difference(this.intersect(that, prop), prop);
 };
 String.prototype.isEmpty = function () {
-    return !isNull(this) && this.length === 0;
+    return !isNullOrUndefined(this) && this.length === 0;
 };
 String.prototype.among = function (start, end, greedy = false) {
     if (this.isEmpty() || start.isEmpty() || end.isEmpty())
@@ -52,7 +54,7 @@ String.prototype.among = function (start, end, greedy = false) {
     return this.slice(adjustedStartIndex, endIndex);
 };
 String.prototype.splitLimit = function (separator, limit) {
-    if (this.isEmpty() || isNull(separator)) {
+    if (this.isEmpty() || isNullOrUndefined(separator)) {
         throw new Error('Empty');
     }
     let body = this.split(separator);
@@ -101,7 +103,7 @@ function prune(obj) {
     return isNotEmpty(obj) ? obj : undefined;
 }
 function isNotEmpty(obj) {
-    if (isNull(obj)) {
+    if (isNullOrUndefined(obj)) {
         return false;
     }
     if (Array.isArray(obj)) {
@@ -133,10 +135,10 @@ function parseMetadata(content) {
     let results = {};
     lines.reduce((result, line) => {
         const [key, value] = line.splitLimit(' ', 1).map(i=> i.trim()).filter(i => !i.isEmpty());
-        !isNull(key) && !isNull(value) &&
+        !isNullOrUndefined(key) && !isNullOrUndefined(value) &&
         !key.isEmpty() && !value.isEmpty()
         &&
-            (!isNull(result[key])
+            (!isNullOrUndefined(result[key])
                 ? Array.isArray(result[key])
                     ? result[key].push(value)
                     : result[key] = [result[key], value]
@@ -159,7 +161,7 @@ function serializeMetadata(metadata) {
     return results.join('\r\n');
 };
 const UUID = function () {
-    return Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('')
+    return isNullOrUndefined(crypto) ? Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('') : crypto.randomUUID().replaceAll('-','')
 }
 
 function mkdir(path) {
