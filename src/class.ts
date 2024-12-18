@@ -1,14 +1,12 @@
+import { isNullOrUndefined } from "./env";
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
-
-import { isNullOrUndefined, MessageType, ToastType, VersionState } from "./env";
 import { unlimitedFetch, ceilDiv, getString, prune } from "./extension";
 import { originalAddEventListener } from "./hijack";
-
-
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
+import { MessageType, ToastType, VersionState } from "./type";
 
 
 export class Version implements IVersion {

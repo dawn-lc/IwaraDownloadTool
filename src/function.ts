@@ -1,14 +1,13 @@
+import { isNullOrUndefined } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
-
-import { DownloadType, isNullOrUndefined, ToastType } from "./env"
+import { DownloadType, ToastType } from "./type"
+import { Toastify } from "./import"
 import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
 import { VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 
-
-import Toastify from "toastify-js"
 export async function refreshToken(): Promise<string> {
     let refresh = config.authorization
     try {

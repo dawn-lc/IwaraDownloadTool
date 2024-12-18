@@ -1,9 +1,6 @@
-
-import { config } from "./config"
-
-import { getString, hasFunction } from "./extension";
-import moment from "moment";
-
+const emojiSeq = String.raw`(?:\p{Emoji}\uFE0F\u20E3?|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation})`
+const emojiSTags = String.raw`\u{E0061}-\u{E007A}`
+export const emojiRegex = new RegExp(String.raw`[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[${emojiSTags}]{2}[\u{E0030}-\u{E0039}${emojiSTags}]{1,3}\u{E007F}|${emojiSeq}(?:\u200D${emojiSeq})*`, 'gu')
 export const isNull = (obj: unknown): obj is null => obj === null;
 export const isUndefined = (obj: unknown): obj is undefined => typeof obj === 'undefined';
 export const isNullOrUndefined = (obj: unknown): obj is null | undefined => isUndefined(obj) || isNull(obj);
@@ -14,11 +11,6 @@ export const isArray = (obj: unknown): obj is any[] => Array.isArray(obj)
 export const isElement = (obj: unknown): obj is Element => !isNull(obj) && obj instanceof Element
 export const isNode = (obj: unknown): obj is Node => !isNull(obj) && obj instanceof Node
 export const isStringTupleArray = (obj: unknown): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
-
-const emojiSeq = String.raw`(?:\p{Emoji}\uFE0F\u20E3?|\p{Emoji_Modifier_Base}\p{Emoji_Modifier}?|\p{Emoji_Presentation})`
-const emojiSTags = String.raw`\u{E0061}-\u{E007A}`
-const emojiRegex = new RegExp(String.raw`[\u{1F1E6}-\u{1F1FF}]{2}|\u{1F3F4}[${emojiSTags}]{2}[\u{E0030}-\u{E0039}${emojiSTags}]{1,3}\u{E007F}|${emojiSeq}(?:\u200D${emojiSeq})*`, 'gu')
-
 Array.prototype.any = function () {
     return this.prune().length > 0
 }
@@ -48,9 +40,6 @@ Array.prototype.difference = function <T>(this: T[], that: T[], prop?: keyof T):
 Array.prototype.complement = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
     return this.union(that, prop).difference(this.intersect(that, prop), prop)
 }
-String.prototype.isEmpty = function () {
-    return !isNull(this) && this.length === 0
-}
 String.prototype.among = function (start: string, end: string, greedy: boolean = false) {
     if (this.isEmpty() || start.isEmpty() || end.isEmpty()) return ''
     const startIndex = this.indexOf(start)
@@ -60,13 +49,7 @@ String.prototype.among = function (start: string, end: string, greedy: boolean =
     if (endIndex === -1 || endIndex < adjustedStartIndex) return ''
     return this.slice(adjustedStartIndex, endIndex)
 }
-String.prototype.splitLimit = function (separator: string, limit?: number) {
-    if (this.isEmpty() || isNull(separator)) {
-        throw new Error('Empty')
-    }
-    let body = this.split(separator)
-    return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body
-}
+
 String.prototype.truncate = function (maxLength) {
     return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
 }
@@ -79,86 +62,10 @@ String.prototype.trimTail = function (suffix: string) {
 String.prototype.replaceEmojis = function (replace?: string | null) {
     return this.replaceAll(emojiRegex, replace ?? '')
 }
-
 String.prototype.toURL = function () {
     let URLString = this
     if (URLString.split('//')[0].isEmpty()) {
         URLString = `${unsafeWindow.location.protocol}${URLString}`
     }
     return new URL(URLString.toString())
-}
-
-export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
-
-export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
-
-Date.prototype.format = function (format?: string) {
-    return moment(this).locale(config.language).format(format)
-}
-
-String.prototype.replaceVariable = function (replacements, count = 0) {
-    let replaceString = this.toString()
-    try {
-        replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
-            if (str.includes(`%#${key}:`)) {
-                let format = str.among(`%#${key}:`, '#%').toString()
-                return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
-            } else {
-                return str.replaceAll(`%#${key}#%`, getString(value))
-            }
-        },
-            replaceString
-        )
-        count++
-        return Object.keys(replacements).map((key) => this.includes(`%#${key}`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
-    } catch (error) {
-        GM_getValue('isDebug') && console.debug(`replace variable error: ${getString(error)}`)
-        return replaceString
-    }
-}
-
-export enum DownloadType {
-    Aria2,
-    IwaraDownloader,
-    Browser,
-    Others
-}
-
-export enum PageType {
-    Video = 'video',
-    Image = 'image',
-    VideoList = 'videoList',
-    ImageList = 'imageList',
-    Forum = 'forum',
-    ForumSection = 'forumSection',
-    ForumThread = 'forumThread',
-    Page = 'page',
-    Home = 'home',
-    Profile = 'profile',
-    Subscriptions = 'subscriptions',
-    Playlist = 'playlist',
-    Favorites = 'favorites',
-    Search = 'search',
-    Account = 'account'
-}
-
-export enum ToastType {
-    Log,
-    Info,
-    Warn,
-    Error
-}
-
-export enum MessageType {
-    Close,
-    Request,
-    Receive,
-    Set,
-    Del
-}
-
-export enum VersionState {
-    Low,
-    Equal,
-    High
 }
