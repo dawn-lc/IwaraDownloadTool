@@ -49,9 +49,7 @@ export class Config {
     priority: Record<string, number>
     [key: string]: any
     constructor() {
-        let env = (navigator.language ?? navigator.languages[0] ?? DEFAULT_CONFIG.language).replace('-', '_')
-        let main = env.split('_').shift() ?? DEFAULT_CONFIG.language.split('_').shift()!
-        this.language = isNullOrUndefined(i18n[env]) ? (!isNullOrUndefined(i18n[main]) ? main : DEFAULT_CONFIG.language) : env
+        this.language = DEFAULT_CONFIG.language
         this.autoFollow = DEFAULT_CONFIG.autoFollow
         this.autoLike = DEFAULT_CONFIG.autoLike
         this.autoCopySaveFileName = DEFAULT_CONFIG.autoCopySaveFileName
@@ -74,6 +72,9 @@ export class Config {
                     return target.configChange
                 }
                 let value = GM_getValue(property, target[property])
+                if (property === 'language') {
+                    return Config.getLanguage(value)
+                }
                 GM_getValue('isDebug') && console.debug(`get: ${property} ${getString(value)}`)
                 return value
             },
@@ -95,6 +96,11 @@ export class Config {
             })
         })
         return body
+    }
+    private static getLanguage(value?: string): string {
+        let env = (navigator.language ?? navigator.languages[0] ?? DEFAULT_CONFIG.language).replace('-', '_')
+        let main = env.split('_').shift() ?? DEFAULT_CONFIG.language.split('_').shift()!
+        return isNullOrUndefined(value) ? isNullOrUndefined(i18n[env]) ? (!isNullOrUndefined(i18n[main]) ? main : DEFAULT_CONFIG.language) : env : !isNullOrUndefined(i18n[value]) ? value : Config.getLanguage()
     }
     public static getInstance(): Config {
         if (isNullOrUndefined(Config.instance)) Config.instance = new Config()
