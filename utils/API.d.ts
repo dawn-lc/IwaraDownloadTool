@@ -84,7 +84,7 @@ interface Array<T> {
 }
 
 interface IDictionary<T> extends Map<string, T> {
-    toArray(): Array<[ key: string, value: T ]>;
+    toArray(): Array<[key: string, value: T]>;
     allKeys(): Array<string>;
     allValues(): Array<T>;
 }
@@ -148,7 +148,7 @@ interface LogCode {
 }
 
 namespace Aria2 {
-    
+
     interface Result {
         id: string,
         jsonrpc: string,

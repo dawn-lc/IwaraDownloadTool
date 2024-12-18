@@ -12,14 +12,14 @@ import { Version, SyncDictionary, Dictionary, VideoInfo } from "./class";
 class configEdit {
     source!: configEdit;
     target: Config
-    interface: HTMLElement
-    interfacePage: HTMLElement
+    interfacePage: HTMLParagraphElement;
+    interface: HTMLDivElement;
     constructor(config: Config) {
         this.target = config
         this.target.configChange = (item: string) => { this.configChange.call(this, item) }
         this.interfacePage = renderNode({
             nodeType: 'p'
-        }) as HTMLElement
+        })
         let save = renderNode({
             nodeType: 'button',
             childs: '%#save#%',
@@ -35,7 +35,7 @@ class configEdit {
                     save.disabled = !save.disabled
                 }
             }
-        }) as HTMLButtonElement
+        })
         let reset = renderNode({
             nodeType: 'button',
             childs: '%#reset#%',
@@ -70,13 +70,11 @@ class configEdit {
                                 {
                                     nodeType: 'input',
                                     className: 'inputRadioLine',
-                                    attributes: Object.assign(
-                                        {
-                                            name: 'language',
-                                            type: 'text',
-                                            value: this.target.language
-                                        }
-                                    ),
+                                    attributes: {
+                                        name: 'language',
+                                        type: 'text',
+                                        value: this.target.language
+                                    },
                                     events: {
                                         change: (event: Event) => {
                                             this.target.language = (event.target as HTMLInputElement).value
@@ -123,11 +121,11 @@ class configEdit {
                 }, {
                     nodeType: 'input',
                     className: 'switch',
-                    attributes: prune({
+                    attributes: {
                         type: 'checkbox',
                         name: name,
                         checked: get !== undefined ? get(name, defaultValue) : this.target[name] ?? defaultValue ?? false
-                    }),
+                    },
                     events: {
                         change: (e: Event) => {
                             if (set !== undefined) {
@@ -142,20 +140,18 @@ class configEdit {
             ]
         })
     }
-    private inputComponent(name: string, type?: string, get?: (name: string) => void, set?: (name: string, e: Event) => void): RenderCode<any> {
+    private inputComponent(name: string, type?: string, get?: (name: string) => void, set?: (name: string, e: Event) => void) {
         return renderNode({
             nodeType: 'label',
             childs: [
                 `%#${name}#% `,
                 {
                     nodeType: 'input',
-                    attributes: Object.assign(
-                        {
-                            name: name,
-                            type: type ?? 'text',
-                            value: get !== undefined ? get(name) : this.target[name]
-                        }
-                    ),
+                    attributes: {
+                        name: name,
+                        type: type ?? 'text',
+                        value: get !== undefined ? get(name) : this.target[name]
+                    },
                     events: {
                         change: (e: Event) => {
                             if (set !== undefined) {
@@ -239,20 +235,20 @@ class configEdit {
         })
         let downloadConfigInput = [
             variableInfo,
-            renderNode(this.inputComponent('downloadPath')),
-            renderNode(this.inputComponent('downloadProxy'))
+            this.inputComponent('downloadPath'),
+            this.inputComponent('downloadProxy')
         ]
         let aria2ConfigInput = [
-            renderNode(this.inputComponent('aria2Path')),
-            renderNode(this.inputComponent('aria2Token', 'password'))
+            this.inputComponent('aria2Path'),
+            this.inputComponent('aria2Token', 'password')
         ]
         let iwaraDownloaderConfigInput = [
-            renderNode(this.inputComponent('iwaraDownloaderPath')),
-            renderNode(this.inputComponent('iwaraDownloaderToken', 'password'))
+            this.inputComponent('iwaraDownloaderPath'),
+            this.inputComponent('iwaraDownloaderToken', 'password')
         ]
         let BrowserConfigInput = [
             variableInfo,
-            renderNode(this.inputComponent('downloadPath'))
+            this.inputComponent('downloadPath')
         ]
         switch (this.target.downloadType) {
             case DownloadType.Aria2:
@@ -268,7 +264,7 @@ class configEdit {
                 break
         }
         if (this.target.checkPriority) {
-            originalNodeAppendChild.call(this.interfacePage, renderNode(this.inputComponent('downloadPriority')))
+            originalNodeAppendChild.call(this.interfacePage, this.inputComponent('downloadPriority'))
         }
     }
     public inject() {
@@ -282,19 +278,19 @@ class configEdit {
 class menu {
     observer: MutationObserver;
     pageType: PageType
-    interface: HTMLElement
-    interfacePage: HTMLElement
+    interface: HTMLDivElement
+    interfacePage: HTMLUListElement
     constructor() {
         this.interfacePage = renderNode({
             nodeType: 'ul'
-        }) as HTMLElement
+        })
         this.interface = renderNode({
             nodeType: 'div',
             attributes: {
                 id: 'pluginMenu'
             },
             childs: this.interfacePage
-        }) as HTMLElement
+        })
         this.observer = new MutationObserver((mutationsList) => {
             for (let mutation of mutationsList) {
                 if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
@@ -318,7 +314,7 @@ class menu {
         this.pageType = PageType.Page;
     }
     private button(name: string, click?: (name: string, e: Event) => void) {
-        return renderNode(prune({
+        return renderNode({
             nodeType: 'li',
             childs: `%#${name}#%`,
             events: {
@@ -328,9 +324,9 @@ class menu {
                     return false
                 }
             }
-        }))
+        })
     }
-    
+
     public async pageChange(pageType?: PageType) {
         if (isNullOrUndefined(pageType) || this.pageType === pageType) return
         this.pageType = pageType
@@ -655,14 +651,14 @@ async function injectCheckbox(element: Element) {
     if (isNullOrUndefined(ID)) return
     let button = renderNode({
         nodeType: 'input',
-        attributes: Object.assign(
-            selectList.has(ID) ? { checked: true } : {}, {
+        attributes: {
             type: 'checkbox',
             videoID: ID,
+            checked: selectList.has(ID) ? true : undefined,
             videoName: Name,
             videoAlias: Alias,
             videoAuthor: Author
-        }),
+        },
         className: 'selectButton',
         events: {
             click: (event: Event) => {

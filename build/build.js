@@ -2,7 +2,7 @@ const root = process.cwd();
 import { promises } from 'fs';
 import { join } from 'path';
 import esbuild from 'esbuild';
-import { readFileSync} from 'fs';
+import { readFileSync } from 'fs';
 
 const packagePath = join(root, 'package.json');
 const packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
@@ -15,7 +15,6 @@ const cssPath = join(sourcePath, 'main.css');
 
 const mata = readFileSync(join(distPath, `${packageInfo.displayName}.mata.js`), 'utf8');
 
-//const distUncompressDevPath = join(distPath, `${packageInfo.displayName}.dev.user.js`);
 const distUncompressPath = join(distPath, `${packageInfo.displayName}.user.js`);
 const distCompressPath = join(distPath, `${packageInfo.displayName}.min.user.js`);
 
@@ -53,8 +52,7 @@ esbuild.build({
     target: ['es2022'],
     loader: { '.json': 'json' },
     charset: 'utf8'
-})
-.then(() => {
+}).then(() => {
     promises.readFile(distUncompressPath, 'utf8')
         .then(data => {
             const processed = data
@@ -63,8 +61,7 @@ esbuild.build({
             return promises.writeFile(distUncompressPath, processed);
         })
         .catch(err => console.error('Error during file processing:', err));
-})
-.catch(() => process.exit(1));
+}).catch(() => process.exit(1));
 
 esbuild.build({
     allowOverwrite: true,
@@ -80,8 +77,7 @@ esbuild.build({
     loader: { '.json': 'json' },
     target: ['es2022'],
     charset: 'utf8'
-})
-.then(() => {
+}).then(() => {
     promises.readFile(distCompressPath, 'utf8')
         .then(data => {
             const processed = data
@@ -89,5 +85,4 @@ esbuild.build({
             return promises.writeFile(distCompressPath, processed);
         })
         .catch(err => console.error('Error during file processing:', err));
-})
-.catch(() => process.exit(1));
+}).catch(() => process.exit(1));

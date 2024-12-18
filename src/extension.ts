@@ -1,7 +1,7 @@
 import { i18n } from "./i18n";
 import { config } from "./config";
 
-import { isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray} from "./env";
+import { isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray } from "./env";
 import { originalAddEventListener, originalFetch } from "./hijack";
 
 export const hasFunction = (obj: any, method: string): boolean => {
@@ -30,7 +30,6 @@ export function prune(obj: any): any {
     }
     return isNotEmpty(obj) ? obj : undefined;
 }
-
 export function isNotEmpty(obj: any): boolean {
     if (isNull(obj)) {
         return false
@@ -53,7 +52,7 @@ export function isNotEmpty(obj: any): boolean {
     return true
 }
 
-export function unlimitedFetch (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> {
+export function unlimitedFetch(input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
     if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
     return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
@@ -76,7 +75,7 @@ export function unlimitedFetch (input: RequestInfo, init?: RequestInit, force?: 
 }
 
 export const UUID = function () {
-    return isNullOrUndefined(crypto) ? Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('') : crypto.randomUUID().replaceAll('-','')
+    return isNullOrUndefined(crypto) ? Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('') : crypto.randomUUID().replaceAll('-', '')
 }
 export const ceilDiv = function (dividend: number, divisor: number): number {
     return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0)
@@ -84,7 +83,7 @@ export const ceilDiv = function (dividend: number, divisor: number): number {
 
 export const findElement = function (element: Element, condition: string) {
     while (!isNullOrUndefined(element) && !element.matches(condition)) {
-        if (isNullOrUndefined(element.parentElement)){
+        if (isNullOrUndefined(element.parentElement)) {
             return element
         }
         element = element.parentElement
@@ -93,8 +92,7 @@ export const findElement = function (element: Element, condition: string) {
 }
 
 
-export function renderNode<T extends keyof HTMLElementTagNameMap>(renderCode: RenderCode<T> | string):  HTMLElementTagNameMap[T]
-{
+export function renderNode<T extends keyof HTMLElementTagNameMap>(renderCode: RenderCode<T> | string): HTMLElementTagNameMap[T] {
     renderCode = prune(renderCode);
     if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null");
     if (typeof renderCode === 'string') {

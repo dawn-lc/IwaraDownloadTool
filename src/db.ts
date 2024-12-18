@@ -37,7 +37,7 @@ export class Database extends Dexie {
     public static destroyInstance() {
         Database.instance = undefined as any;
     }
-    async getFilteredVideos(startTime: Date | string | undefined, endTime: Date | string | undefined ) {
+    async getFilteredVideos(startTime: Date | string | undefined, endTime: Date | string | undefined) {
         if (isNullOrUndefined(startTime) || isNullOrUndefined(endTime)) return [];
         startTime = isString(startTime) ? new Date(startTime) : startTime
         endTime = isString(endTime) ? new Date(endTime) : endTime

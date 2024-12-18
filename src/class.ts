@@ -2,12 +2,12 @@ import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
 
-import { isNullOrUndefined, MessageType, ToastType, VersionState} from "./env";
-import { unlimitedFetch, ceilDiv, getString, prune,  } from "./extension";
+import { isNullOrUndefined, MessageType, ToastType, VersionState } from "./env";
+import { unlimitedFetch, ceilDiv, getString, prune } from "./extension";
 import { originalAddEventListener } from "./hijack";
 
 
-import {  refreshToken, getAuth, newToast, toastNode } from "./function";
+import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
 
 
@@ -309,7 +309,7 @@ export class VideoInfo {
             this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
             this.FileName = VideoInfoSource.file.name
             this.Size = VideoInfoSource.file.size
-            let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth( VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
+            let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
             if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
                 throw new Error(i18n[config.language].getVideoSourceFailed.toString())
             }
@@ -340,7 +340,7 @@ export class VideoInfo {
                         if (data.External) {
                             GM_openInTab(data.ExternalUrl!, { active: false, insert: true, setParent: true })
                         } else {
-                            pushDownloadTask( await new VideoInfo(data as PieceInfo).init(data.ID))
+                            pushDownloadTask(await new VideoInfo(data as PieceInfo).init(data.ID))
                         }
                     },
                 }

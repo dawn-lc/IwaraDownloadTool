@@ -1,6 +1,6 @@
 
 import { i18n } from "./i18n";
-import { isNullOrUndefined, DownloadType} from "./env";
+import { isNullOrUndefined, DownloadType } from "./env";
 import { getString } from "./extension";
 const DEFAULT_CONFIG = {
     language: 'zh_CN',
@@ -66,7 +66,7 @@ export class Config {
         this.aria2Path = DEFAULT_CONFIG.aria2Path
         this.aria2Token = DEFAULT_CONFIG.aria2Token
         this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath
-        this.iwaraDownloaderToken =DEFAULT_CONFIG.iwaraDownloaderToken
+        this.iwaraDownloaderToken = DEFAULT_CONFIG.iwaraDownloaderToken
         this.priority = DEFAULT_CONFIG.priority
         let body = new Proxy(this, {
             get: function (target, property: string) {

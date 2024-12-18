@@ -90,7 +90,7 @@ String.prototype.toURL = function () {
 
 export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
 
-export const delay = (time: number) =>  new Promise(resolve => setTimeout(resolve, time))
+export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
 
 Date.prototype.format = function (format?: string) {
     return moment(this).locale(config.language).format(format)
