@@ -7,6 +7,7 @@ import { originalAddEventListener, originalFetch } from "./hijack";
 export const hasFunction = (obj: any, method: string): boolean => {
     return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
 }
+
 export const getString = (obj: any): string => {
     obj = obj instanceof Error ? String(obj) : obj
     obj = obj instanceof Date ? obj.format('YYYY-MM-DD') : obj
@@ -29,6 +30,7 @@ export function prune(obj: any): any {
     }
     return isNotEmpty(obj) ? obj : undefined;
 }
+
 export function isNotEmpty(obj: any): boolean {
     if (isNull(obj)) {
         return false

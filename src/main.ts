@@ -3,10 +3,10 @@ import { i18n } from "./i18n";
 import { config, Config } from "./config";
 import { db } from "./db";
 
-import { isElement, isNullOrUndefined, getCompatible, getRating, DownloadType, MessageType, PageType, ToastType, VersionState, delay, isStringTupleArray } from "./env";
+import { isElement, isNullOrUndefined, getRating, DownloadType, MessageType, PageType, ToastType, VersionState, delay, isStringTupleArray } from "./env";
 import { findElement, getString, prune, renderNode, unlimitedFetch } from "./extension"
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
-import { addDownloadTask, analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, EnvCheck, getAuth, getPlayload, iwaraDownloaderCheck, iwaraDownloaderDownload, localPathCheck, newToast, othersDownload, toastNode } from "./function";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, EnvCheck, getAuth, getPlayload, iwaraDownloaderCheck, iwaraDownloaderDownload, localPathCheck, newToast, othersDownload, toastNode } from "./function";
 import { Version, SyncDictionary, Dictionary, VideoInfo } from "./class";
 
 class configEdit {
@@ -106,7 +106,7 @@ class configEdit {
                     ]
                 }
             ]
-        }) as HTMLElement
+        })
 
     }
     private switchButton(name: string, get?: (name: string, defaultValue?: any) => any, set?: (name: string, e: Event) => void, defaultValue?: boolean) {
@@ -450,15 +450,14 @@ class menu {
     }
 }
 
-
-
-
-
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
 
-
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
+export function getSelectButton(id: string): HTMLInputElement | undefined {
+    return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
+}
+
 export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
     const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: PieceInfo]> }>
     const updateButtonState = (videoID: string) => {
@@ -482,193 +481,6 @@ export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) 
     }
 });
 
-export function firstRun() {
-    console.log('First run config reset!')
-    GM_listValues().forEach(i => GM_deleteValue(i))
-    config.destroyInstance()
-    editConfig = new configEdit(config)
-    let confirmButton = renderNode({
-        nodeType: 'button',
-        attributes: {
-            disabled: true,
-            title: i18n[config.language].ok
-        },
-        childs: '%#ok#%',
-        events: {
-            click: () => {
-                GM_setValue('isFirstRun', false)
-                GM_setValue('version', GM_info.script.version)
-                unsafeWindow.document.querySelector('#pluginOverlay')?.remove()
-                editConfig.inject()
-            }
-        }
-    }) as HTMLButtonElement
-    originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
-        nodeType: 'div',
-        attributes: {
-            id: 'pluginOverlay'
-        },
-        childs: [
-            {
-                nodeType: 'div',
-                className: 'main',
-                childs: [
-                    { nodeType: 'p', childs: '%#useHelpForBase#%' },
-                    { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
-                    { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                    { nodeType: 'p', childs: i18n[config.language].useHelpForManualDownload },
-                    { nodeType: 'p', childs: i18n[config.language].useHelpForBugreport }
-                ]
-            },
-            {
-                nodeType: 'div',
-                className: 'checkbox-container',
-                childs: {
-                    nodeType: 'label',
-                    className: ['checkbox-label', 'rainbow-text'],
-                    childs: [{
-                        nodeType: 'input',
-                        className: 'checkbox',
-                        attributes: {
-                            type: 'checkbox',
-                            name: 'agree-checkbox'
-                        },
-                        events: {
-                            change: (event: Event) => {
-                                confirmButton.disabled = !(event.target as HTMLInputElement).checked
-                            }
-                        }
-                    }, '%#alreadyKnowHowToUse#%'
-                    ]
-                }
-            },
-            confirmButton
-        ]
-    }))
-}
-export function uninjectCheckbox(element: Element | Node) {
-    if (element instanceof HTMLElement) {
-        if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
-            element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID')!)
-        }
-        if (element.querySelector('input.selectButton')) {
-            element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')!))
-        }
-    }
-}
-export async function injectCheckbox(element: Element) {
-    let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-    let videoInfo = await db.videos.where('ID').equals(ID).first()
-    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title')!.trim() ?? videoInfo?.Title
-    let Alias = element.querySelector('a.username')?.getAttribute('title') ?? videoInfo?.Alias
-    let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop() ?? videoInfo?.Author
-    if (isNullOrUndefined(ID)) return
-    let button = renderNode({
-        nodeType: 'input',
-        attributes: Object.assign(
-            selectList.has(ID) ? { checked: true } : {}, {
-            type: 'checkbox',
-            videoID: ID,
-            videoName: Name,
-            videoAlias: Alias,
-            videoAuthor: Author
-        }),
-        className: 'selectButton',
-        events: {
-            click: (event: Event) => {
-                (event.target as HTMLInputElement).checked ? selectList.set(ID, {
-                    Title: Name,
-                    Alias: Alias,
-                    Author: Author
-                }) : selectList.delete(ID)
-                event.stopPropagation()
-                event.stopImmediatePropagation()
-                return false
-            }
-        }
-    })
-    pageSelectButtons.set(ID, button)
-    originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
-}
-export function pageChange() {
-    pluginMenu.pageChange(unsafeWindow.document.querySelector('.page')?.classList[1].split('-').pop() as PageType)
-    GM_getValue('isDebug') && console.debug(pageSelectButtons)
-}
-export function getSelectButton(id: string): HTMLInputElement | undefined {
-    return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
-}
-export async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
-    let size = list.size
-    let node = renderNode({
-        nodeType: 'p',
-        childs: `%#parsingProgress#%[${list.size}/${size}]`
-    })
-    let start = newToast(ToastType.Info, {
-        node: node,
-        duration: -1
-    })
-    start.showToast()
-    if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
-        let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
-            'gid',
-            'status',
-            'files',
-            'errorCode',
-            'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
-        for (let key of list.allKeys().intersect(completed)) {
-            let button = getSelectButton(key)
-            if (!isNullOrUndefined(button)) button.checked = false
-            list.delete(key)
-            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
-        }
-    }
-    let infoList = (await Promise.all(list.allKeys().map(async id => {
-        let caches = db.videos.where('ID').equals(id)
-        let cache = await caches.first()
-        if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
-            let parseToast = newToast(
-                ToastType.Info,
-                {
-                    text: `${list.get(id)?.Title ?? id} %#parsing#%`,
-                    duration: -1,
-                    close: true,
-                    onClick() {
-                        parseToast.hideToast()
-                    }
-                }
-            )
-            parseToast.showToast()
-            cache = await new VideoInfo(list.get(id)).init(id)
-            parseToast.hideToast()
-        }
-        return cache
-    }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
-    for (let videoInfo of infoList) {
-        let button = getSelectButton(videoInfo.ID)
-        let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
-        video.State && await pushDownloadTask(video)
-        if (!isNullOrUndefined(button)) button.checked = false
-        list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
-        await delay(5000)
-    }
-    start.hideToast()
-    if (size != 1) {
-        let completed = newToast(
-            ToastType.Info,
-            {
-                text: `%#allCompleted#%`,
-                duration: -1,
-                close: true,
-                onClick() {
-                    completed.hideToast()
-                }
-            }
-        )
-        completed.showToast()
-    }
-}
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
         return
@@ -759,13 +571,240 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
     }
 }
 
-export function hijackAddEventListener() {
+function firstRun() {
+    console.log('First run config reset!')
+    GM_listValues().forEach(i => GM_deleteValue(i))
+    config.destroyInstance()
+    editConfig = new configEdit(config)
+    let confirmButton = renderNode({
+        nodeType: 'button',
+        attributes: {
+            disabled: true,
+            title: i18n[config.language].ok
+        },
+        childs: '%#ok#%',
+        events: {
+            click: () => {
+                GM_setValue('isFirstRun', false)
+                GM_setValue('version', GM_info.script.version)
+                unsafeWindow.document.querySelector('#pluginOverlay')?.remove()
+                editConfig.inject()
+            }
+        }
+    })
+    originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
+        nodeType: 'div',
+        attributes: {
+            id: 'pluginOverlay'
+        },
+        childs: [
+            {
+                nodeType: 'div',
+                className: 'main',
+                childs: [
+                    { nodeType: 'p', childs: '%#useHelpForBase#%' },
+                    { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
+                    { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
+                    { nodeType: 'p', childs: i18n[config.language].useHelpForManualDownload },
+                    { nodeType: 'p', childs: i18n[config.language].useHelpForBugreport }
+                ]
+            },
+            {
+                nodeType: 'div',
+                className: 'checkbox-container',
+                childs: {
+                    nodeType: 'label',
+                    className: ['checkbox-label', 'rainbow-text'],
+                    childs: [{
+                        nodeType: 'input',
+                        className: 'checkbox',
+                        attributes: {
+                            type: 'checkbox',
+                            name: 'agree-checkbox'
+                        },
+                        events: {
+                            change: (event: Event) => {
+                                confirmButton.disabled = !(event.target as HTMLInputElement).checked
+                            }
+                        }
+                    }, '%#alreadyKnowHowToUse#%'
+                    ]
+                }
+            },
+            confirmButton
+        ]
+    }))
+}
+function uninjectCheckbox(element: Element | Node) {
+    if (element instanceof HTMLElement) {
+        if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
+            element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID')!)
+        }
+        if (element.querySelector('input.selectButton')) {
+            element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')!))
+        }
+    }
+}
+async function injectCheckbox(element: Element) {
+    let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
+    let videoInfo = await db.videos.where('ID').equals(ID).first()
+    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title')!.trim() ?? videoInfo?.Title
+    let Alias = element.querySelector('a.username')?.getAttribute('title') ?? videoInfo?.Alias
+    let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop() ?? videoInfo?.Author
+    if (isNullOrUndefined(ID)) return
+    let button = renderNode({
+        nodeType: 'input',
+        attributes: Object.assign(
+            selectList.has(ID) ? { checked: true } : {}, {
+            type: 'checkbox',
+            videoID: ID,
+            videoName: Name,
+            videoAlias: Alias,
+            videoAuthor: Author
+        }),
+        className: 'selectButton',
+        events: {
+            click: (event: Event) => {
+                (event.target as HTMLInputElement).checked ? selectList.set(ID, {
+                    Title: Name,
+                    Alias: Alias,
+                    Author: Author
+                }) : selectList.delete(ID)
+                event.stopPropagation()
+                event.stopImmediatePropagation()
+                return false
+            }
+        }
+    })
+    pageSelectButtons.set(ID, button)
+    originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
+}
+function pageChange() {
+    pluginMenu.pageChange(unsafeWindow.document.querySelector('.page')?.classList[1].split('-').pop() as PageType)
+    GM_getValue('isDebug') && console.debug(pageSelectButtons)
+}
+
+async function addDownloadTask() {
+    let textArea = renderNode({
+        nodeType: "textarea",
+        attributes: {
+            placeholder: i18n[config.language].manualDownloadTips,
+            style: 'margin-bottom: 10px;',
+            rows: "16",
+            cols: "96"
+        }
+    })
+    let body = renderNode({
+        nodeType: "div",
+        attributes: {
+            id: "pluginOverlay"
+        },
+        childs: [
+            textArea,
+            {
+                nodeType: "button",
+                events: {
+                    click: (e: Event) => {
+                        if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
+                            try {
+                                let list = JSON.parse(textArea.value) as Array<[key: string, value: PieceInfo]>
+                                analyzeDownloadTask(new Dictionary<PieceInfo>(list))
+                            } catch (error) {
+                                let IDList = new Dictionary<PieceInfo>()
+                                textArea.value.split('|').map(ID => IDList.set(ID, {}))
+                                analyzeDownloadTask(IDList)
+                            }
+                        }
+                        body.remove()
+                    }
+                },
+                childs: "确认"
+            }
+        ]
+    })
+    unsafeWindow.document.body.appendChild(body)
+}
+
+async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
+    let size = list.size
+    let node = renderNode({
+        nodeType: 'p',
+        childs: `%#parsingProgress#%[${list.size}/${size}]`
+    })
+    let start = newToast(ToastType.Info, {
+        node: node,
+        duration: -1
+    })
+    start.showToast()
+    if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
+        let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
+            'gid',
+            'status',
+            'files',
+            'errorCode',
+            'bittorrent'
+        ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
+        for (let key of list.allKeys().intersect(completed)) {
+            let button = getSelectButton(key)
+            if (!isNullOrUndefined(button)) button.checked = false
+            list.delete(key)
+            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
+        }
+    }
+    let infoList = (await Promise.all(list.allKeys().map(async id => {
+        let caches = db.videos.where('ID').equals(id)
+        let cache = await caches.first()
+        if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
+            let parseToast = newToast(
+                ToastType.Info,
+                {
+                    text: `${list.get(id)?.Title ?? id} %#parsing#%`,
+                    duration: -1,
+                    close: true,
+                    onClick() {
+                        parseToast.hideToast()
+                    }
+                }
+            )
+            parseToast.showToast()
+            cache = await new VideoInfo(list.get(id)).init(id)
+            parseToast.hideToast()
+        }
+        return cache
+    }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
+    for (let videoInfo of infoList) {
+        let button = getSelectButton(videoInfo.ID)
+        let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
+        video.State && await pushDownloadTask(video)
+        if (!isNullOrUndefined(button)) button.checked = false
+        list.delete(videoInfo.ID)
+        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
+        await delay(5000)
+    }
+    start.hideToast()
+    if (size != 1) {
+        let completed = newToast(
+            ToastType.Info,
+            {
+                text: `%#allCompleted#%`,
+                duration: -1,
+                close: true,
+                onClick() {
+                    completed.hideToast()
+                }
+            }
+        )
+        completed.showToast()
+    }
+}
+
+function hijackAddEventListener() {
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
 }
 
-export function hijackNodeAppendChild() {
+function hijackNodeAppendChild() {
     Node.prototype.appendChild = function <T extends Node>(node: T): T {
         if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
             injectCheckbox(node)
@@ -773,27 +812,27 @@ export function hijackNodeAppendChild() {
         return originalNodeAppendChild.call(this, node) as T
     }
 }
-export function hijackNodeRemoveChild() {
+function hijackNodeRemoveChild() {
     Node.prototype.removeChild = function <T extends Node>(child: T): T {
         uninjectCheckbox(child)
         return originalRemoveChild.apply(this, [child]) as T
     }
 
 }
-export function hijackElementRemove() {
+function hijackElementRemove() {
     Element.prototype.remove = function () {
         uninjectCheckbox(this)
         return originalRemove.apply(this)
     }
 }
-export function hijackHistoryPushState() {
+function hijackHistoryPushState() {
     unsafeWindow.history.pushState = function (...args) {
         originalPushState.apply(this, args)
         pageChange()
     }
 }
 
-export function hijackHistoryReplaceState() {
+function hijackHistoryReplaceState() {
     unsafeWindow.history.replaceState = function (...args) {
         originalReplaceState.apply(this, args)
         pageChange()
@@ -879,7 +918,6 @@ if (!unsafeWindow.IwaraDownloadTool) {
             .catch((err) => reject(err))) as Promise<Response>
     }
 
-
     async function main() {
         if (GM_getValue('isFirstRun', true)) {
             firstRun()
@@ -896,6 +934,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
         }
 
         GM_setValue('version', GM_info.script.version)
+
+        hijackAddEventListener()
 
         if (config.autoInjectCheckbox) hijackNodeAppendChild()
 

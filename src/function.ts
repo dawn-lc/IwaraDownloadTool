@@ -4,8 +4,8 @@ import { db } from "./db"
 
 import { DownloadType, isNullOrUndefined, ToastType } from "./env"
 import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
-import { Dictionary, VideoInfo } from "./class"
-import { analyzeDownloadTask, pushDownloadTask } from "./main"
+import { VideoInfo } from "./class"
+import { pushDownloadTask } from "./main"
 
 
 import Toastify from "toastify-js"
@@ -23,14 +23,6 @@ export async function refreshToken(): Promise<string> {
     }
     return refresh
 }
-export async function getXVersion(urlString: string): Promise<string> {
-    let url = urlString.toURL()
-    const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${url.searchParams.get('expires')}_5nFp9kmbNnHdAFhaqMvt`)
-    const hashBuffer = await crypto.subtle.digest('SHA-1', data)
-    return Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
-}
 export async function getAuth(url?: string) {
     return Object.assign(
         {
@@ -40,48 +32,6 @@ export async function getAuth(url?: string) {
         !isNullOrUndefined(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : { 'X-Version': '' }
     )
 }
-export async function addDownloadTask() {
-    let textArea = renderNode({
-        nodeType: "textarea",
-        attributes: {
-            placeholder: i18n[config.language].manualDownloadTips,
-            style: 'margin-bottom: 10px;',
-            rows: "16",
-            cols: "96"
-        }
-    }) as HTMLTextAreaElement
-    let body = renderNode({
-        nodeType: "div",
-        attributes: {
-            id: "pluginOverlay"
-        },
-        childs: [
-            textArea,
-            {
-                nodeType: "button",
-                events: {
-                    click: (e: Event) => {
-                        if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
-                            try {
-                                let list = JSON.parse(textArea.value) as Array<[key: string, value: PieceInfo]>
-                                analyzeDownloadTask(new Dictionary<PieceInfo>(list))
-                            } catch (error) {
-                                let IDList = new Dictionary<PieceInfo>()
-                                textArea.value.split('|').map(ID => IDList.set(ID, {}))
-                                analyzeDownloadTask(IDList)
-                            }
-                        }
-                        body.remove()
-                    }
-                },
-                childs: "确认"
-            }
-        ]
-    }) as Element
-    unsafeWindow.document.body.appendChild(body)
-}
-
-
 export function checkIsHaveDownloadLink(comment: string): boolean {
     if (!config.checkDownloadLink || isNullOrUndefined(comment) || comment.isEmpty()) {
         return false
@@ -355,9 +305,6 @@ export function aria2Download(videoInfo: VideoInfo) {
                 ]
             })
         ])
-
-
-
         console.log(`Aria2 ${name} ${JSON.stringify(res)}`)
         newToast(
             ToastType.Info,
@@ -595,4 +542,12 @@ export async function check() {
     } else {
         return false
     }
+}
+async function getXVersion(urlString: string): Promise<string> {
+    let url = urlString.toURL()
+    const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${url.searchParams.get('expires')}_5nFp9kmbNnHdAFhaqMvt`)
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data)
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
 }

@@ -89,7 +89,6 @@ String.prototype.toURL = function () {
 }
 
 export const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
-export const getCompatible = () => false // navigator.userAgent.toLowerCase().includes('firefox')
 
 export const delay = (time: number) =>  new Promise(resolve => setTimeout(resolve, time))
 
