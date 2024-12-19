@@ -572,7 +572,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
 function firstRun() {
     console.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
-    config.destroyInstance()
+    Config.destroyInstance()
     editConfig = new configEdit(config)
     let confirmButton = renderNode({
         nodeType: 'button',
