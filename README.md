@@ -3,6 +3,8 @@
 [日本語](.github/README/README_ja.md) <sup>*日本語ローカライズを提供してくれる翻訳ボランティアを必要としています。</sup>
 
 # Iwara 视频下载工具
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool?ref=badge_shield)
+
 
  * 批量下载
  * 支持基于Aria2实现的下载器
@@ -63,3 +65,6 @@
 - [Dexie.js](https://github.com/dexie/Dexie.js) - [Apache-2.0 License](https://opensource.org/license/apache-2-0)
 - [emoji-regex](https://github.com/slevithan/emoji-regex-xs/) - [MIT License](https://opensource.org/licenses/MIT)
 - [aria2rpc](https://github.com/pboymt/aria2rpc)
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool?ref=badge_large)
