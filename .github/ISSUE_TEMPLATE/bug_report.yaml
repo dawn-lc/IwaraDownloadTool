@@ -31,7 +31,7 @@ body:
       value: |
         1. 前往 '...'
         2. 点击 '....'
-        4. 出现问题
+        3. 出现问题
     validations:
       required: true
   - type: dropdown
