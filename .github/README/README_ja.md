@@ -1,52 +1,61 @@
 # Iwara ビデオダウンローダーツール
-  * 一括ダウンロード
-  * Aria2 に基づいて実装されたダウンローダーをサポート
-  * ビデオの紹介およびコメント領域に作成者が提供するサードパーティのネットワーク ディスクのダウンロード リンクがあるかどうかを自動的に確認します
-  * 保存場所とファイル名をカスタマイズします <sup>* Aria2 と IwaraDownloader のみをサポートし、他のダウンロード モードはカスタム ファイル名のみをサポートします</sup>
-  * 選択したビデオ作成者を自動的にフォローします <sup>*デフォルトではオフになっています。この機能は手動でオンにする必要があります</sup>
-  * 選択したビデオを自動的に「いいね！」します <sup>*デフォルトではオフになっています。この機能は手動でオンにする必要があります</sup>
-  * プライベートビデオのダウンロードをサポート <sup>* ダウンロードするには、作者と友達になったアカウントを使用する必要があります</sup>
-  * 隠しビデオのダウンロードをサポート <sup>* ビデオ ID を知る必要があります</sup>
 
-## 使用説明書
+[![GitHub license](https://img.shields.io/github/license/dawn-lc/IwaraDownloadTool.svg?style=flat-square&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
+[![GitHub Star](https://img.shields.io/github/stars/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Star&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
+[![GitHub Fork](https://img.shields.io/github/forks/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Fork&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
 
-### インストールスクリプト
+# Iwara 動画ダウンロードツール
 
-* からインストールされます
-   **[GreasyFork](https://sleazyfork.org/scripts/422239)**
-* GitHub Release
-   **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
-* GitHub Release \[プレビュー版\]
-   **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
+* 一括ダウンロード
+* Aria2 ベースのダウンローダーをサポート
+* 動画の説明文やコメント欄に、作者が提供したサードパーティのクラウドストレージリンクがあるか自動でチェック
+* 保存場所およびファイル名をカスタマイズ可能 <sup>*Aria2、IwaraDownloader モードでのみサポート。他のダウンロードモードではファイル名のカスタマイズのみサポート</sup>
+* 選択した動画の作者を自動フォロー <sup>*デフォルトでは無効。手動で有効化する必要あり</sup>
+* 選択した動画を自動で「いいね」または「お気に入り」に登録 <sup>*デフォルトでは無効。手動で有効化する必要あり</sup>
+* 非公開およびプライベート動画を強制表示 <sup>*作者をフォローする必要あり</sup>
+* プライベート動画のダウンロードをサポート <sup>*作者と友達関係にあるアカウントが必要</sup>
+* 非公開動画のダウンロードをサポート <sup>*動画IDを知っている必要あり</sup>
 
-#### 次のブラウザをサポートします
+## 使用方法
 
-* Chrome または Chromium コアに基づくブラウザ (Edge など) <sup>*version ≥85</sup>
-* Firefox <sup>*version ≥79</sup>
+### スクリプトのインストール
 
-#### 推奨されるスクリプト マネージャー プラグイン
+* GreasyFork からインストール  
+ **[訪問](https://sleazyfork.org/scripts/422239)**
+* GitHub リリース版  
+ **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
+* GitHub リリース版 [プレビュー版]  
+ **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 
-* [Tampermonkey](https://www.tampermonkey.net/)
+#### サポートされているブラウザ
 
-#### 詳しい使用説明書
+* Chrome または Chromium ベースのブラウザ（例：Edge） <sup>*バージョン ≥ 85</sup>
+* Firefox <sup>*バージョン ≥ 79</sup>
+
+#### 推奨スクリプトマネージャー
+
+* Tampermonkey **[公式サイト](https://www.tampermonkey.net/)**
+
+#### 詳細な使用説明
 
 * [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
 
-#### パスで使用可能な変数
+#### 利用可能なパス変数
 
 * ダウンロード時間 %#NowTime#%
-* アップロード時間 %#UploadTime#%
-* 動画のタイトル %#TITLE#%
-* ビデオ ID %#ID#%
-* 動画作成者 %#AUTHOR#%
-* 動画作成者 (ニックネーム) %#ALIAS#%
+* 公開時間 %#UploadTime#%
+* 動画タイトル %#TITLE#%
+* 動画ID %#ID#%
+* 動画作者 %#AUTHOR#%
+* 動画作者（ニックネーム） %#ALIAS#%
 * 画質 %#QUALITY#%
 
-  使用例:
+  例:  
+  `%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#UploadTime:YYYY-MM-DD#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4`
 
-  %\#NowTime:YYYY\-MM\-DD\#%\_%\#AUTHOR\#%\_%\#UploadTime:YYYY\-MM\-DD\#%\_%\#TITLE\#%\_%\#QUALITY\#%\[%\#ID\#%\]\.MP4
+  出力例:
 
-  2024\-02\-19\_ExampleAuthorID\_2024\-02\-18\_ExampleTitle\_Source\[ExampleID\]\.MP4
+  `2024-02-19_ExampleAuthorID_2024-02-18_ExampleTitle_Source[ExampleID].MP4`
 
 ## 依存ライブラリ
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)

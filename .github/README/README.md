@@ -1,52 +1,59 @@
 # Iwara Download Tool
-  * Batch download
-  * Support downloader implemented based on Aria2
-  * Automatically check whether there is a third-party network disk download link provided by the author in the video introduction and comment area
-  * Customize the save location and file name <sup>*Only supports Aria2 and IwaraDownloader, other download modes only support custom file names</sup>
-  * Automatically follow the selected video author <sup>*Off by default, this function needs to be turned on manually</sup>
-  * Automatically like/like the selected video <sup>*Off by default, this function needs to be turned on manually</sup>
-  * Supports downloading private videos <sup>*You need to use an account that has become friends with the author to download</sup>
-  * Support downloading hidden videos <sup>*Need to know the video ID</sup>
 
-## Instructions for use
+[![GitHub license](https://img.shields.io/github/license/dawn-lc/IwaraDownloadTool.svg?style=flat-square&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
+[![GitHub Star](https://img.shields.io/github/stars/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Star&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
+[![GitHub Fork](https://img.shields.io/github/forks/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Fork&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
 
-### Installation script
+* Batch downloading
+* Supports downloader based on Aria2
+* Automatically checks if third-party cloud storage links are provided by the author in the video description or comments
+* Customizable save location and file names <sup>*Supported only in Aria2 and IwaraDownloader modes; other download modes support file name customization only</sup>
+* Automatically follow the authors of selected videos <sup>*Disabled by default, needs to be enabled manually</sup>
+* Automatically like/favorite selected videos <sup>*Disabled by default, needs to be enabled manually</sup>
+* Forced display of unlisted and private videos <sup>*Requires following the author</sup>
+* Supports downloading private videos <sup>*Requires an account that is friends with the author</sup>
+* Supports downloading hidden videos <sup>*Requires knowing the video ID</sup>
 
-* Installed from 
-  **[GreasyFork](https://sleazyfork.org/scripts/422239)**
-* GitHub Release
-  **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
-* GitHub Release \[Preview version\]
-  **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
+## Instructions
 
-#### Support the following browsers
+### Install the Script
 
-* Chrome or a browser based on Chromium core (such as Edge) <sup>*version ≥85</sup>
-* Firefox <sup>*version ≥79</sup>
+* Install from GreasyFork   
+ **[Visit](https://sleazyfork.org/scripts/422239)**
+* GitHub Release  
+ **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
+* GitHub Release [Preview Version]  
+ **[Install](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 
-#### Recommended script manager plug-in
+#### Supported Browsers
 
-* [Tampermonkey](https://www.tampermonkey.net/)
+* Chrome or Chromium-based browsers (e.g., Edge) <sup>*Version ≥ 85</sup>
+* Firefox <sup>*Version ≥ 79</sup>
 
-#### Detailed instructions for use
+#### Recommended Script Managers
+
+* Tampermonkey **[Official Website](https://www.tampermonkey.net/)**
+
+#### Detailed Usage Instructions
 
 * [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
 
-#### Path available variables
+#### Available Path Variables
 
-* Download time %#NowTime#%
-* Upload time %#UploadTime#%
-* Video title %#TITLE#%
+* Download Time %#NowTime#%
+* Upload Time %#UploadTime#%
+* Video Title %#TITLE#%
 * Video ID %#ID#%
-* Video author %#AUTHOR#%
-* Video author (nickname) %#ALIAS#%
-* Image quality %#QUALITY#%
+* Video Author %#AUTHOR#%
+* Video Author (Nickname) %#ALIAS#%
+* Quality %#QUALITY#%
 
-  %\#NowTime:YYYY\-MM\-DD\#%\_%\#AUTHOR\#%\_%\#UploadTime:YYYY\-MM\-DD\#%\_%\#TITLE\#%\_%\#QUALITY\#%\[%\#ID\#%\]\.MP4
+  Example:  
+  `%#NowTime:YYYY-MM-DD#%_%#AUTHOR#%_%#UploadTime:YYYY-MM-DD#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4`
 
-  Output：
+  Output:
 
-  2024\-02\-19\_ExampleAuthorID\_2024\-02\-18\_ExampleTitle\_Source\[ExampleID\]\.MP4
+  `2024-02-19_ExampleAuthorID_2024-02-18_ExampleTitle_Source[ExampleID].MP4`
 
 ## Dependencies
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
