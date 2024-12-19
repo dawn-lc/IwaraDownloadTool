@@ -78,12 +78,10 @@ export const ceilDiv = (dividend: number, divisor: number): number => {
 }
 export const findElement = (element: Element, condition: string) => {
     while (!isNullOrUndefined(element) && !element.matches(condition)) {
-        if (isNullOrUndefined(element.parentElement)) {
-            return element
-        }
+        if (isNullOrUndefined(element.parentElement)) return undefined
         element = element.parentElement
     }
-    return element
+    return element.querySelectorAll(condition).length > 1 ? undefined : element
 }
 export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: RenderCode<T> | string): HTMLElementTagNameMap[T] => {
     renderCode = prune(renderCode);

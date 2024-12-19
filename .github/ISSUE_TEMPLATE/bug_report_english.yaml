@@ -31,7 +31,7 @@ body:
       value: |
         1. Go to '...'
         2. Click on '....'
-        4. See error
+        3. See error
     validations:
       required: true
   - type: dropdown
