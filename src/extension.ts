@@ -1,11 +1,12 @@
-import { isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray } from "./env"
+import "./env"
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
+import { isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray } from "./env";
 
 export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
 export const hasFunction = (obj: any, method: string): boolean => {
-    return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
+    return !method.isEmpty() && !isNullOrUndefined(obj) ? method in obj && typeof obj[method] === 'function' : false
 }
 export const getString = (obj: any): string => {
     obj = obj instanceof Error ? String(obj) : obj

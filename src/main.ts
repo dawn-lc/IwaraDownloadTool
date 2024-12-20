@@ -1,3 +1,4 @@
+import "./env";
 import { isElement, isNullOrUndefined, isStringTupleArray } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18n } from "./i18n";
@@ -5,9 +6,9 @@ import { DownloadType, MessageType, PageType, ToastType, VersionState } from "./
 import { config, Config } from "./config";
 import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
+import "./date";
 import { delay, findElement, getString, prune, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-
 
 class configEdit {
     source!: configEdit;
@@ -92,7 +93,10 @@ class configEdit {
                         this.switchButton('autoInjectCheckbox'),
                         this.switchButton('autoCopySaveFileName'),
                         this.switchButton('addUnlistedAndPrivate'),
-                        this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
+                        this.switchButton('isDebug', GM_getValue, (name: string, e) => {
+                            GM_setValue(name, (e.target as HTMLInputElement).checked)
+                            unsafeWindow.location.reload()
+                        }, false),
                     ]
                 },
                 {
@@ -846,6 +850,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
 
     if (GM_getValue('isDebug')) {
         console.debug(getString(GM_info))
+        // @ts-ignore
+        unsafeWindow.unlimitedFetch = unlimitedFetch
         debugger
     }
 
