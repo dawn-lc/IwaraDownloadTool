@@ -1,3 +1,4 @@
+import "./env";
 import { isNullOrUndefined, isString } from "./env"
 import { VideoInfo } from "./class";
 import { Dexie } from "./import";

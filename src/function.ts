@@ -1,3 +1,4 @@
+import "./env";
 import { isNullOrUndefined } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
@@ -276,7 +277,7 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
     return true
 }
 export function aria2Download(videoInfo: VideoInfo) {
-    (async function (id: string, author: string, name: string, uploadTime: Date, info: string, tag: Array<{
+    (async function (id: string, author: string, title: string, uploadTime: Date, info: string, tag: Array<{
         id: string
         type: string
     }>, quality: string, alias: string, downloadUrl: string) {
@@ -286,7 +287,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 UploadTime: uploadTime,
                 AUTHOR: author,
                 ID: id,
-                TITLE: name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replaceEmojis('_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+                TITLE: title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replaceEmojis('_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
                 ALIAS: alias,
                 QUALITY: quality
             }
@@ -304,7 +305,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 ]
             })
         ])
-        console.log(`Aria2 ${name} ${JSON.stringify(res)}`)
+        console.log(`Aria2 ${title} ${JSON.stringify(res)}`)
         newToast(
             ToastType.Info,
             {
@@ -389,8 +390,8 @@ export function othersDownload(videoInfo: VideoInfo) {
                 UploadTime: UploadTime,
                 AUTHOR: Author,
                 ID: ID,
-                TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                ALIAS: Alias,
+                TITLE: Name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+                ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
                 QUALITY: DownloadQuality
             }
         ).trim()).filename)
@@ -398,7 +399,7 @@ export function othersDownload(videoInfo: VideoInfo) {
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
 export function browserDownload(videoInfo: VideoInfo) {
-    (async function (ID: string, Author: string, Name: string, UploadTime: Date, Info: string, Tag: Array<{
+    (async function (ID: string, Author: string, Title: string, UploadTime: Date, Info: string, Tag: Array<{
         id: string
         type: string
     }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
@@ -417,7 +418,7 @@ export function browserDownload(videoInfo: VideoInfo) {
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `${Name}[${ID}] %#downloadFailed#%`,
+                        `${Title}[${ID}] %#downloadFailed#%`,
                         { nodeType: 'br' },
                         errorInfo,
                         { nodeType: 'br' },
@@ -440,8 +441,8 @@ export function browserDownload(videoInfo: VideoInfo) {
                     UploadTime: UploadTime,
                     AUTHOR: Author,
                     ID: ID,
-                    TITLE: Name.normalize('NFKC').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                    ALIAS: Alias,
+                    TITLE: Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+                    ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
                     QUALITY: DownloadQuality
                 }
             ).trim(),

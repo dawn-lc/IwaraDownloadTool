@@ -1,4 +1,4 @@
-
+import "./env";
 import { isNullOrUndefined } from "./env"
 import { i18n } from "./i18n";
 import { getString } from "./extension";
