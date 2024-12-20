@@ -187,15 +187,16 @@ const mataTempPath= join(distPath, `${packageInfo.displayName}.mata.js`);
 let mataTemplate = parseMetadata(readFileSync(mataTemplatePath, 'utf8'));
 let mata = {...mataTemplate};
 
-mata.version = `${packageInfo.version}${process.argv[2] === 'dev' ? '-dev.' + UUID() : '' }`;
+const releaseTag = process.argv[2] ?? 'dev';
+mata.version = `${packageInfo.version}${releaseTag === 'dev' ? '-dev.' + UUID() : '' }`;
 
 console.log(mata.version);
 
 mata.updateURL = mata.updateURL.replaceVariable({
-    'release_tag': process.argv[2]
+    'release_tag':releaseTag
 });
 mata.downloadURL = mata.downloadURL.replaceVariable({
-    'release_tag': process.argv[2]
+    'release_tag': releaseTag
 });
 
 const matadata = serializeMetadata(mata)

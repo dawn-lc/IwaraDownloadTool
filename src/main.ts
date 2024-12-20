@@ -7,8 +7,7 @@ import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import { delay, findElement, getString, prune, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-
-
+import "./date";
 class configEdit {
     source!: configEdit;
     target: Config
@@ -92,7 +91,10 @@ class configEdit {
                         this.switchButton('autoInjectCheckbox'),
                         this.switchButton('autoCopySaveFileName'),
                         this.switchButton('addUnlistedAndPrivate'),
-                        this.switchButton('isDebug', GM_getValue, (name: string, e) => { GM_setValue(name, (e.target as HTMLInputElement).checked) }, false),
+                        this.switchButton('isDebug', GM_getValue, (name: string, e) => {
+                            GM_setValue(name, (e.target as HTMLInputElement).checked)
+                            unsafeWindow.location.reload()
+                        }, false),
                     ]
                 },
                 {
@@ -846,6 +848,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
 
     if (GM_getValue('isDebug')) {
         console.debug(getString(GM_info))
+        // @ts-ignore
+        unsafeWindow.unlimitedFetch = unlimitedFetch
         debugger
     }
 

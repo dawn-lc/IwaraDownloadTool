@@ -5,7 +5,7 @@ import { originalAddEventListener, originalFetch } from "./hijack";
 
 export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
 export const hasFunction = (obj: any, method: string): boolean => {
-    return !method.isEmpty() && !isNull(obj) ? method in obj && typeof obj[method] === 'function' : false
+    return !method.isEmpty() && !isNullOrUndefined(obj) ? method in obj && typeof obj[method] === 'function' : false
 }
 export const getString = (obj: any): string => {
     obj = obj instanceof Error ? String(obj) : obj
