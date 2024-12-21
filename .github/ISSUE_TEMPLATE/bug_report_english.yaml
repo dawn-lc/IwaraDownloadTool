@@ -43,7 +43,7 @@ body:
         - Chrome
         - Safari
         - Microsoft Edge
-        - Other (e.g., XXXSpeed, XXXSecure, etc.)
+        - Other
     validations:
       required: true
   - type: dropdown

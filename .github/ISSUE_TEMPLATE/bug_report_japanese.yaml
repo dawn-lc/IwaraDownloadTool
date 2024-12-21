@@ -43,7 +43,7 @@ body:
         - Chrome
         - Safari
         - Microsoft Edge
-        - その他（例：XXXスピード、XXXセキュアなど）
+        - その他
     validations:
       required: true
   - type: dropdown
