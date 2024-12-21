@@ -1,5 +1,5 @@
-name: Report a Bug
-description: Report a bug you encountered during usage
+name: Bug Report
+description: Feedback on encountered BUGs, abnormal phenomena in use, etc.
 title: "[Bug]: "
 labels: ["bug"]
 assignees:
