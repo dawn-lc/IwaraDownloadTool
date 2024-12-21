@@ -1,5 +1,5 @@
 name: 反馈BUG
-description: 反馈使用中遇到的BUG
+description: 反馈遇到的BUG、使用中的异常现象等
 title: "[Bug]: "
 labels: ["BUG"]
 assignees:
@@ -10,12 +10,12 @@ body:
     attributes:
       label: 在反馈之前...
       options:
-      - label: 我已经搜索了现有的 issues
+      - label: 我在提问题之前至少花费了 5 分钟来思考和准备。
         required: true
-      - label: 我在提问题之前至少花费了 5 分钟来思考和准备
+      - label: 我已经阅读了相关文档并且搜索了现有的 issues。
         required: true
-      - label: 我正在使用最新版的脚本
-        required: false
+      - label: 我知道如果不提供足够的信息，问题可能会被忽略。
+        required: true
   - type: textarea
     id: describe
     attributes:
@@ -80,17 +80,17 @@ body:
     id: logs
     attributes:
       label: 相关日志
-      description: 请复制并粘贴任何相关的日志输出。
+      description: 请打开开发者工具复制并粘贴相关的日志到下方的文本框中。
       render: Text
     validations:
-      required: false
+      required: true
   - type: textarea
     id: screenshots
     attributes:
       label: 截图
       description: |
         如果有，添加屏幕截图以帮助解释你的问题。
-        提示: 可以通过点击这个区域，然后把文件拖进来添加图片或日志文件。
+        提示: 可以通过点击这个区域，然后把截图文件拖进来添加图片。
     validations:
       required: false
   - type: textarea
@@ -100,5 +100,6 @@ body:
       description: |
         相关的配置？链接？参考资料？
         任何能让我们对你所遇到的问题有更多了解的东西。
+        提示: 可以通过点击这个区域，然后把文件拖进文本框中以上传并共享该文件。
     validations:
       required: false
