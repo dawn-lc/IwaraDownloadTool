@@ -1,0 +1,105 @@
+name: Bug報告
+description: 使用中に発生したバグを報告する
+title: "[Bug]: "
+labels: ["bug"]
+assignees:
+  - dawn-lc
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 報告の前に...
+      options:
+      - label: 問題を提出する前に少なくとも5分間、考えたり準備したりしました。
+        required: true
+      - label: 関連するドキュメントを読み、既存のIssueを検索しました。
+        required: true
+      - label: 十分な情報を提供しない場合、問題が無視される可能性があることを理解しています。
+        required: true
+  - type: textarea
+    id: describe
+    attributes:
+      label: 問題を説明してください
+      description: 発生している問題を簡潔に説明してください。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 再現手順
+      description: 問題を再現する手順を記載してください。
+      value: |
+        1. 「...」に移動します。
+        2. 「...」をクリックします。
+        3. 問題が発生します。
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: 使用しているブラウザは何ですか？
+      options:
+        - Firefox
+        - Chrome
+        - Safari
+        - Microsoft Edge
+        - その他（例：XXXスピード、XXXセキュアなど）
+    validations:
+      required: true
+  - type: dropdown
+    id: scriptManager
+    attributes:
+      label: 使用しているスクリプトマネージャーは何ですか？
+      options:
+        - Tampermonkey
+        - Tampermonkey Beta
+        - ScriptCat
+        - Violentmonkey
+        - その他
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: スクリプトのバージョンは何ですか？
+      placeholder: 例: 3.1.1
+    validations:
+      required: true
+  - type: dropdown
+    id: downloadMode
+    attributes:
+      label: ダウンロードモードは何ですか？
+      options:
+        - Aria2
+        - IwaraDownloader
+        - ブラウザ
+        - その他
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 関連するログ
+      description: 開発者ツールを開き、関連するログをコピーしてここに貼り付けてください。
+      render: Text
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: スクリーンショット
+      description: |
+        可能であれば、問題を説明するスクリーンショットを追加してください。
+        ヒント: このエリアをクリックし、スクリーンショットファイルをドラッグしてアップロードできます。
+    validations:
+      required: false
+  - type: textarea
+    id: others
+    attributes:
+      label: その他の情報
+      description: |
+        関連する設定、リンク、参考資料などはありますか？
+        問題をより理解するための情報を提供してください。
+        ヒント: このエリアをクリックし、ファイルをドラッグしてテキストボックスにアップロードできます。
+    validations:
+      required: false

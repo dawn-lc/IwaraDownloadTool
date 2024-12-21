@@ -1,55 +1,55 @@
-name: Bug report
-description: Feedback on encountered BUGs, abnormal phenomena in use, etc.
+name: Report a Bug
+description: Report a bug you encountered during usage
 title: "[Bug]: "
-labels: ["BUG"]
+labels: ["bug"]
 assignees:
   - dawn-lc
 body:
   - type: checkboxes
     id: checks
     attributes:
-      label: Before asking...
+      label: Before Reporting...
       options:
-      - label: I have searched the existing issues
+      - label: I have spent at least 5 minutes thinking and preparing before submitting this issue.
         required: true
-      - label: I spent at least 5 minutes thinking and preparing before asking
+      - label: I have read the relevant documentation and searched existing issues.
         required: true
-      - label: I am using the latest version of the script
-        required: false
+      - label: I understand that if I do not provide enough information, the issue may be ignored.
+        required: true
   - type: textarea
     id: describe
     attributes:
-      label: Describe your issue
-      description: Briefly describe your issue
+      label: Describe Your Issue
+      description: Briefly describe the issue you are experiencing.
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
-      label: How to reproduce
-      description: Steps to reproduce the behavior
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
       value: |
         1. Go to '...'
-        2. Click on '....'
-        3. See error
+        2. Click on '...'
+        3. The issue appears.
     validations:
       required: true
   - type: dropdown
     id: browsers
     attributes:
-      label: What browser are you using?
+      label: Which browser are you using?
       options:
         - Firefox
         - Chrome
         - Safari
         - Microsoft Edge
-        - Other
+        - Other (e.g., XXXSpeed, XXXSecure, etc.)
     validations:
       required: true
   - type: dropdown
     id: scriptManager
     attributes:
-      label: What script manager are you using?
+      label: Which script manager are you using?
       options:
         - Tampermonkey
         - Tampermonkey Beta
@@ -61,7 +61,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: What is the version of the script?
+      label: What is the script version?
       placeholder: e.g., 3.1.1
     validations:
       required: true
@@ -79,26 +79,27 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Related logs
-      description: Please copy and paste any relevant log output.
+      label: Relevant Logs
+      description: Open developer tools and copy-paste the relevant logs here.
       render: Text
     validations:
-      required: false
+      required: true
   - type: textarea
     id: screenshots
     attributes:
       label: Screenshots
       description: |
-        If applicable, add screenshots to help explain your problem.
-        Tip: You can add images or log files by clicking this area and then dragging the file in.
+        If available, add screenshots to help explain your issue.
+        Tip: You can click this area and drag your screenshot file into it to upload the image.
     validations:
       required: false
   - type: textarea
     id: others
     attributes:
-      label: Other information
+      label: Other Information
       description: |
-        Related configuration? Links? References?
-        Anything that can give us a better understanding of the problem you are encountering.
+        Any related configurations, links, or references?
+        Anything that helps us understand the issue better.
+        Tip: You can click this area and drag files into the text box to upload and share them.
     validations:
       required: false
