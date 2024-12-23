@@ -563,26 +563,39 @@ export async function aria2TaskCheck() {
         )
         .unique('id');
 
+    let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
+        .filter(
+            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
+        )
+        .unique('id');
+
     let downloadToSlowTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
             (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 1024
         )
         .unique('id');
 
-    let needRestart = [...downloadToSlowTasks, ...downloadUncompleted].unique('id');
+    let needRestart = [...downloadToSlowTasks, ...downloadUncompleted.difference(downloadCompleted, 'id')].unique('id');
 
-    for (let index = 0; index < needRestart.length; index++) {
-        const task = needRestart[index]
-        let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
-        if (!isNullOrUndefined(cache)) {
-            cache.State = false
+    let toast = newToast(
+        ToastType.Warn,
+        {
+            node: toastNode(`发现 ${needRestart.length} 个需要重启的下载任务！`, '%#browserDownload#%'),
+            async onClick() {
+                toast.hideToast()
+                for (let index = 0; index < needRestart.length; index++) {
+                    const task = needRestart[index]
+                    let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
+                    let videoInfo = await (new VideoInfo(cache)).init(task.id)
+                    if (videoInfo.State){
+                        await pushDownloadTask(videoInfo)
+                        await aria2API('aria2.forceRemove', [task.data.gid]) 
+                    }
+                }
+            }
         }
-        let videoInfo = await (new VideoInfo(cache)).init(task.id)
-        if (videoInfo.State){
-            await pushDownloadTask(videoInfo)
-            await aria2API('aria2.forceRemove', [task.data.gid]) 
-        }
-    }
+    )
+    toast.showToast()
 }
 export function getPlayload(authorization: string) {
     return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))

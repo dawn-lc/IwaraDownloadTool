@@ -213,10 +213,9 @@ export class VideoInfo {
             })).json()
 
             if (VideoInfoSource.id === undefined) {
-                let cache = await db.videos.where('ID').equals(this.ID).toArray()
-                if (cache.any()) {
-                    Object.assign(this, cache.pop())
-                }
+                let cache = (await db.videos.where('ID').equals(this.ID).toArray()).pop()
+                Object.assign(this, cache ?? {})
+                this.State = false
                 let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                 if (!cdnCache.any()) {
                     let query = prune({
