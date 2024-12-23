@@ -297,25 +297,29 @@ class menu {
         })
         this.observer = new MutationObserver((mutationsList) => {
             for (let mutation of mutationsList) {
-                if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
-                    continue;
-                }
-                let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
-                if (pages.length < 1) {
-                    continue;
-                }
-                if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() === 'search') {
+                if (unsafeWindow.location.pathname.toLowerCase().endsWith('/search')) {
                     this.pageChange(PageType.Search)
-                    continue;
+                    continue
                 }
+
+                if (mutation.type !== 'childList' || mutation.addedNodes.length === 0) continue
+
+                let pages = [...mutation.addedNodes].filter(
+                    node => node instanceof Element && node.classList.contains('page')
+                ) as Element[]
+        
+                if (pages.length === 0) continue
+
                 let page = pages.find(i => i.classList.length > 1)
-                if (!page) {
-                    continue;
-                }
-                this.pageChange(page.classList[1].split('-').pop() as PageType)
+
+                if (isNullOrUndefined(page)) continue
+
+                let pageClass = page.classList[1]?.split('-').pop()
+
+                this.pageChange(isNullOrUndefined(pageClass) || !(pageClass in PageType) ? PageType.Page : pageClass as PageType)
             }
         })
-        this.pageType = PageType.Page;
+        this.pageType = PageType.Page
     }
     private button(name: string, click?: (name: string, e: Event) => void) {
         return renderNode({
