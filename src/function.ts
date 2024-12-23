@@ -493,33 +493,94 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
     return null
 }
 export async function aria2TaskCheck() {
-    let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
-        'gid',
-        'status',
-        'files',
-        'errorCode',
-        'bittorrent'
-    ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
+    let stoped: Array<{ id: string, data: Aria2.Status }> = (
+        await aria2API(
+            'aria2.tellStopped',
+            [
+                0,
+                2048,
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'errorCode',
+                    'bittorrent'
+                ]
+            ]
+        ))
+        .result
+        .filter(
+            (task: Aria2.Status) =>
+                isNullOrUndefined(task.bittorrent)
+        )
+        .map(
+            (task: Aria2.Status) => {
+                let ID = aria2TaskExtractVideoID(task)
+                if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                    return {
+                        id: ID.toLowerCase(),
+                        data: task
+                    }
+                }
+            }
+        )
+        .prune();
 
-    let active = await aria2API('aria2.tellActive', [[
-        'gid',
-        'downloadSpeed',
-        'files',
-        'bittorrent'
-    ]])
+    let active: Array<{ id: string, data: Aria2.Status }> = (
+        await aria2API(
+            'aria2.tellActive',
+            [
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'downloadSpeed',
+                    'bittorrent'
+                ]
+            ]
+        ))
+        .result
+        .filter(
+            (task: Aria2.Status) =>
+                isNullOrUndefined(task.bittorrent)
+        )
+        .map(
+            (task: Aria2.Status) => {
+                let ID = aria2TaskExtractVideoID(task)
+                if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                    return {
+                        id: ID.toLowerCase(),
+                        data: task
+                    }
+                }
+            }
+        )
+        .prune();
 
-    let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNullOrUndefined(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024)
+    let downloadUncompleted: Array<{ id: string, data: Aria2.Status }> = stoped
+        .filter(
+            (task: { id: string, data: Aria2.Status }) => task.data.status !== 'complete' || task.data.errorCode !== '13'
+        )
+        .unique('id');
+
+    let downloadToSlowTasks: Array<{ id: string, data: Aria2.Status }> = active
+        .filter(
+            (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 1024
+        )
+        .unique('id');
+
+    let needRestart = [...downloadToSlowTasks, ...downloadUncompleted].unique('id');
 
     for (let index = 0; index < needRestart.length; index++) {
         const task = needRestart[index]
-        let videoID = aria2TaskExtractVideoID(task)
-        if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) {
-            if (!completed.includes(videoID.toLowerCase())) {
-                let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
-                let videoInfo = await (new VideoInfo(cache)).init(videoID)
-                videoInfo.State && await pushDownloadTask(videoInfo)
-            }
-            await aria2API('aria2.forceRemove', [task.gid])
+        let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
+        if (!isNullOrUndefined(cache)) {
+            cache.State = false
+        }
+        let videoInfo = await (new VideoInfo(cache)).init(task.id)
+        if (videoInfo.State){
+            await pushDownloadTask(videoInfo)
+            await aria2API('aria2.forceRemove', [task.data.gid]) 
         }
     }
 }
