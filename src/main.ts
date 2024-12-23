@@ -2,7 +2,7 @@ import "./env";
 import { isElement, isNullOrUndefined, isStringTupleArray } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18n } from "./i18n";
-import { DownloadType, MessageType, PageType, ToastType, VersionState } from "./type";
+import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
 import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
@@ -295,30 +295,7 @@ class menu {
             },
             childs: this.interfacePage
         })
-        this.observer = new MutationObserver((mutationsList) => {
-            for (let mutation of mutationsList) {
-                if (unsafeWindow.location.pathname.toLowerCase().endsWith('/search')) {
-                    this.pageChange(PageType.Search)
-                    continue
-                }
-
-                if (mutation.type !== 'childList' || mutation.addedNodes.length === 0) continue
-
-                let pages = [...mutation.addedNodes].filter(
-                    node => node instanceof Element && node.classList.contains('page')
-                ) as Element[]
-        
-                if (pages.length === 0) continue
-
-                let page = pages.find(i => i.classList.length > 1)
-
-                if (isNullOrUndefined(page)) continue
-
-                let pageClass = page.classList[1]?.split('-').pop()
-
-                this.pageChange(isNullOrUndefined(pageClass) || !(pageClass in PageType) ? PageType.Page : pageClass as PageType)
-            }
-        })
+        this.observer = new MutationObserver((mutationsList) => this.pageChange(getPageType(mutationsList)))
         this.pageType = PageType.Page
     }
     private button(name: string, click?: (name: string, e: Event) => void) {
@@ -338,6 +315,7 @@ class menu {
     public async pageChange(pageType?: PageType) {
         if (isNullOrUndefined(pageType) || this.pageType === pageType) return
         this.pageType = pageType
+        GM_getValue('isDebug') && console.debug(`Page change to ${this.pageType}`)
         while (this.interfacePage.hasChildNodes()) {
             this.interfacePage.removeChild(this.interfacePage.firstChild!)
         }
@@ -451,7 +429,7 @@ class menu {
         this.observer.observe(unsafeWindow.document.getElementById('app')!, { childList: true, subtree: true });
         if (!unsafeWindow.document.querySelector('#pluginMenu')) {
             originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
-            this.pageChange(PageType.Page)
+            this.pageChange(getPageType())
         }
     }
 }
@@ -685,8 +663,37 @@ async function injectCheckbox(element: Element) {
     pageSelectButtons.set(ID, button)
     originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
 }
+
+function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
+    if (unsafeWindow.location.pathname.toLowerCase().endsWith('/search')) {
+        return PageType.Search;
+    }
+
+    const extractPageType = (page: Element | null | undefined): PageType | undefined => {
+        if (isNullOrUndefined(page)) return undefined;
+        if (page.classList.length < 2) return PageType.Page;
+        const pageClass = page.classList[1]?.split('-').pop();
+        return !isNullOrUndefined(pageClass) && isPageType(pageClass) ? (pageClass as PageType) : PageType.Page;
+    };
+
+    if (isNullOrUndefined(mutationsList)) {
+        return extractPageType(unsafeWindow.document.querySelector('.page'));
+    }
+
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) return extractPageType(Array.from(mutation.addedNodes)
+            .find(
+                (node): node is Element =>
+                    node instanceof Element &&
+                    node.classList.contains('page') &&
+                    node.classList.length > 1
+            ))
+    }
+}
+
+
 function pageChange() {
-    pluginMenu.pageChange(unsafeWindow.document.querySelector('.page')?.classList[1].split('-').pop() as PageType)
+    pluginMenu.pageChange(getPageType())
     GM_getValue('isDebug') && console.debug(pageSelectButtons)
 }
 
@@ -834,14 +841,14 @@ function hijackElementRemove() {
 function hijackHistoryPushState() {
     unsafeWindow.history.pushState = function (...args) {
         originalPushState.apply(this, args)
-        pageChange()
+        //pageChange()
     }
 }
 
 function hijackHistoryReplaceState() {
     unsafeWindow.history.replaceState = function (...args) {
         originalReplaceState.apply(this, args)
-        pageChange()
+        //pageChange()
     }
 }
 
