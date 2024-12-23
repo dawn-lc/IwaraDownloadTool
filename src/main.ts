@@ -2,7 +2,7 @@ import "./env";
 import { isElement, isNullOrUndefined, isStringTupleArray } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18n } from "./i18n";
-import { DownloadType, MessageType, PageType, ToastType, VersionState } from "./type";
+import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
 import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
@@ -280,42 +280,37 @@ class configEdit {
 }
 
 class menu {
-    observer: MutationObserver;
-    pageType: PageType
-    interface: HTMLDivElement
-    interfacePage: HTMLUListElement
+    [key: string | symbol]: any
+    observer!: MutationObserver;
+    pageType!: PageType;
+    interface!: HTMLDivElement;
+    interfacePage!: HTMLUListElement;
     constructor() {
-        this.interfacePage = renderNode({
+        let body = new Proxy(this, {
+            set: (target, prop, value) => {
+                if (prop === 'pageType') {
+                    if (isNullOrUndefined(value) || this.pageType === value) return true
+                    target[prop] = value
+                    this.pageChange()
+                    GM_getValue('isDebug') && console.debug(`Page change to ${this.pageType}`)
+                    return true 
+                }
+                return target[prop] = value;
+            }
+        })
+        body.interfacePage = renderNode({
             nodeType: 'ul'
         })
-        this.interface = renderNode({
+        body.interface = renderNode({
             nodeType: 'div',
             attributes: {
                 id: 'pluginMenu'
             },
-            childs: this.interfacePage
+            childs: body.interfacePage
         })
-        this.observer = new MutationObserver((mutationsList) => {
-            for (let mutation of mutationsList) {
-                if (mutation.type !== 'childList' || mutation.addedNodes.length < 1) {
-                    continue;
-                }
-                let pages = ([...mutation.addedNodes].filter(i => isElement(i)) as Element[]).filter(i => i.classList.contains('page'))
-                if (pages.length < 1) {
-                    continue;
-                }
-                if (unsafeWindow.location.pathname.toLowerCase().split('/').pop() === 'search') {
-                    this.pageChange(PageType.Search)
-                    continue;
-                }
-                let page = pages.find(i => i.classList.length > 1)
-                if (!page) {
-                    continue;
-                }
-                this.pageChange(page.classList[1].split('-').pop() as PageType)
-            }
-        })
-        this.pageType = PageType.Page;
+        body.observer = new MutationObserver((mutationsList) => body.pageType = getPageType(mutationsList) ?? body.pageType)
+        body.pageType = PageType.Page
+        return body
     }
     private button(name: string, click?: (name: string, e: Event) => void) {
         return renderNode({
@@ -331,9 +326,7 @@ class menu {
         })
     }
 
-    public async pageChange(pageType?: PageType) {
-        if (isNullOrUndefined(pageType) || this.pageType === pageType) return
-        this.pageType = pageType
+    public async pageChange() {
         while (this.interfacePage.hasChildNodes()) {
             this.interfacePage.removeChild(this.interfacePage.firstChild!)
         }
@@ -402,7 +395,7 @@ class menu {
         })
         GM_getValue('isDebug') && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
 
-        switch (pageType) {
+        switch (this.pageType) {
             case PageType.Video:
                 originalNodeAppendChild.call(this.interfacePage, downloadThisButton)
                 selectButtons.map(i => originalNodeAppendChild.call(this.interfacePage, i))
@@ -431,7 +424,7 @@ class menu {
         }
 
         const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
-        if (config.addUnlistedAndPrivate && pageType === PageType.VideoList) {
+        if (config.addUnlistedAndPrivate && this.pageType === PageType.VideoList) {
             for (let page = 0; page < 10; page++) {
                 const response = await unlimitedFetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${page}`, {
                     method: 'GET',
@@ -447,7 +440,7 @@ class menu {
         this.observer.observe(unsafeWindow.document.getElementById('app')!, { childList: true, subtree: true });
         if (!unsafeWindow.document.querySelector('#pluginMenu')) {
             originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
-            this.pageChange(PageType.Page)
+            this.pageType = getPageType() ?? this.pageType
         }
     }
 }
@@ -681,8 +674,33 @@ async function injectCheckbox(element: Element) {
     pageSelectButtons.set(ID, button)
     originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
 }
+
+function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
+    if (unsafeWindow.location.pathname.toLowerCase().endsWith('/search')) {
+        return PageType.Search;
+    }
+
+    const extractPageType = (page: Element | null | undefined): PageType | undefined => {
+        if (isNullOrUndefined(page)) return undefined;
+        if (page.classList.length < 2) return PageType.Page;
+        const pageClass = page.classList[1]?.split('-').pop();
+        return !isNullOrUndefined(pageClass) && isPageType(pageClass) ? (pageClass as PageType) : PageType.Page;
+    };
+
+    if (isNullOrUndefined(mutationsList)) {
+        return extractPageType(unsafeWindow.document.querySelector('.page'));
+    }
+
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            return extractPageType(Array.from(mutation.addedNodes).find((node):node is Element => node instanceof Element && node.classList.contains('page')))
+        }
+    }
+}
+
+
 function pageChange() {
-    pluginMenu.pageChange(unsafeWindow.document.querySelector('.page')?.classList[1].split('-').pop() as PageType)
+    pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
     GM_getValue('isDebug') && console.debug(pageSelectButtons)
 }
 
