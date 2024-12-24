@@ -1,7 +1,6 @@
 import "./env";
 import { isNullOrUndefined } from "./env"
 import { i18n } from "./i18n";
-import { getString } from "./extension";
 import { DownloadType } from "./type";
 const DEFAULT_CONFIG = {
     language: 'zh_CN',
@@ -76,7 +75,7 @@ export class Config {
                 if (property === 'language') {
                     return Config.getLanguage(value)
                 }
-                GM_getValue('isDebug') && console.debug(`get: ${property} ${getString(value)}`)
+                GM_getValue('isDebug') && console.debug(`get: ${property} ${value.stringify()}`)
                 return value
             },
             set: function (target, property: string, value) {
@@ -85,7 +84,7 @@ export class Config {
                     return true
                 }
                 GM_setValue(property, value)
-                GM_getValue('isDebug') && console.debug(`set: ${property} ${getString(value)}`)
+                GM_getValue('isDebug') && console.debug(`set: ${property} ${value.stringify()}`)
                 if (!isNullOrUndefined(target.configChange)) target.configChange(property)
                 return true
             }

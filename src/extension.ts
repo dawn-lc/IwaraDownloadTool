@@ -2,12 +2,13 @@ import "./env"
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
-import { isArray, isElement, isNode, isNull, isNullOrUndefined, isNumber, isObject, isString, isStringTupleArray } from "./env";
+import { isArray, isNullOrUndefined, isStringTupleArray } from "./env";
 
 export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
 export const hasFunction = (obj: any, method: string): boolean => {
     return !method.isEmpty() && !isNullOrUndefined(obj) ? method in obj && typeof obj[method] === 'function' : false
 }
+/*
 export const getString = (obj: any): string => {
     obj = obj instanceof Error ? String(obj) : obj
     obj = obj instanceof Date ? obj.toISOString() : obj
@@ -29,32 +30,12 @@ export const prune = (obj: any): any => {
     }
     return isNotEmpty(obj) ? obj : undefined;
 }
-export const isNotEmpty = (obj: any): boolean => {
-    if (isNull(obj)) {
-        return false
-    }
-    if (Array.isArray(obj)) {
-        return obj.some(isNotEmpty);
-    }
-    if (isString(obj)) {
-        return !obj.isEmpty();
-    }
-    if (isNumber(obj)) {
-        return !Number.isNaN(obj)
-    }
-    if (isElement(obj) || isNode(obj)) {
-        return true
-    }
-    if (isObject(obj)) {
-        return Object.values(obj).some(isNotEmpty)
-    }
-    return true
-}
+*/
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
     if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
     return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
-        GM_xmlhttpRequest(prune({
+        GM_xmlhttpRequest({
             method: (init && init.method) as "GET" | "HEAD" | "POST" || 'GET',
             url: typeof input === 'string' ? input : input.url,
             headers: (init && init.headers) as Tampermonkey.RequestHeaders || {},
@@ -65,10 +46,10 @@ export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: b
                     statusText: response.statusText,
                 }))
             },
-            onerror: function (error: Error) {
-                reject(error)
+            onerror: function (error: Tampermonkey.ErrorResponse) {
+                reject(error);
             }
-        }))
+        })
     }) : originalFetch(input, init)
 }
 export const UUID = () => {
@@ -85,7 +66,7 @@ export const findElement = (element: Element, condition: string) => {
     return element.querySelectorAll(condition).length > 1 ? undefined : element
 }
 export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: RenderCode<T> | string): HTMLElementTagNameMap[T] => {
-    renderCode = prune(renderCode);
+    renderCode = renderCode.prune();
     if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null");
     if (typeof renderCode === 'string') {
         return document.createTextNode(renderCode.replaceVariable(i18n[config.language])) as any;
@@ -107,34 +88,23 @@ export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: Re
     return node;
 }
 
-
-String.prototype.isEmpty = function () {
-    return !isNullOrUndefined(this) && this.length === 0
-}
-String.prototype.splitLimit = function (separator: string, limit?: number) {
-    if (this.isEmpty() || isNullOrUndefined(separator)) {
-        throw new Error('Empty')
-    }
-    let body = this.split(separator)
-    return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body
-}
 String.prototype.replaceVariable = function (replacements, count = 0) {
     let replaceString = this.toString()
     try {
         replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
             if (str.includes(`%#${key}:`)) {
                 let format = str.among(`%#${key}:`, '#%').toString()
-                return str.replaceAll(`%#${key}:${format}#%`, getString(hasFunction(value, 'format') ? value.format(format) : value))
+                return str.replaceAll(`%#${key}:${format}#%`, (hasFunction(value, 'format') ? value.format(format) : value).stringify())
             } else {
-                return str.replaceAll(`%#${key}#%`, getString(value))
+                return str.replaceAll(`%#${key}#%`, value.stringify())
             }
         },
             replaceString
         )
         count++
         return Object.keys(replacements).map((key) => this.includes(`%#${key}`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
-    } catch (error) {
-        GM_getValue('isDebug') && console.debug(`replace variable error: ${getString(error)}`)
+    } catch (error: any) {
+        GM_getValue('isDebug') && console.debug(`replace variable error: ${error.stringify()}`)
         return replaceString
     }
 }

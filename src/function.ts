@@ -1,11 +1,11 @@
 import "./env";
-import { isNullOrUndefined } from "./env"
+import { isNotEmpty, isNullOrUndefined } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
 import { DownloadType, ToastType } from "./type"
 import { Toastify } from "./import"
-import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
+import { unlimitedFetch, renderNode, UUID } from "./extension"
 import { VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 
@@ -18,8 +18,8 @@ export async function refreshToken(): Promise<string> {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         })).json())['accessToken']
-    } catch (error) {
-        console.warn(`Refresh token error: ${getString(error)}`)
+    } catch (error: any) {
+        console.warn(`Refresh token error: ${error.stringify()}`)
     }
     return refresh
 }
@@ -158,7 +158,7 @@ export async function EnvCheck(): Promise<boolean> {
                 node: toastNode([
                     `%#configError#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -186,7 +186,7 @@ export async function localPathCheck(): Promise<boolean> {
                 node: toastNode([
                     `%#downloadPathError#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -224,7 +224,7 @@ export async function aria2Check(): Promise<boolean> {
                 node: toastNode([
                     `Aria2 RPC %#connectionTest#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -245,25 +245,25 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify(prune({
+            body: JSON.stringify({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State',
                 'token': config.iwaraDownloaderToken
-            }))
+            }.prune())
         })).json()
 
         if (res.code !== 0) {
             throw new Error(res.msg)
         }
 
-    } catch (error) {
+    } catch (error: any) {
         let toast = newToast(
             ToastType.Error,
             {
                 node: toastNode([
                     `IwaraDownloader RPC %#connectionTest#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -295,7 +295,7 @@ export function aria2Download(videoInfo: VideoInfo) {
 
         let res = await aria2API('aria2.addUri', [
             [downloadUrl],
-            prune({
+            {
                 'all-proxy': config.downloadProxy,
                 'out': localPath.filename,
                 'dir': localPath.fullPath.replace(localPath.filename, ''),
@@ -303,7 +303,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 'header': [
                     'Cookie:' + unsafeWindow.document.cookie
                 ]
-            })
+            }.prune()
         ])
         console.log(`Aria2 ${title} ${JSON.stringify(res)}`)
         newToast(
@@ -322,7 +322,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify(prune({
+            body: JSON.stringify({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
                 'token': config.iwaraDownloaderToken,
@@ -354,7 +354,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                         'cookies': unsafeWindow.document.cookie
                     }
                 }
-            }))
+            }.prune())
         })).json()
         if (r.code === 0) {
             console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
@@ -404,14 +404,14 @@ export function browserDownload(videoInfo: VideoInfo) {
         type: string
     }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
         function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
-            let errorInfo = getString(Error)
+            let errorInfo = error.stringify()
             if (!(error instanceof Error)) {
                 errorInfo = {
                     'not_enabled': `%#browserDownloadNotEnabled#%`,
                     'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
                     'not_permitted': `%#browserDownloadNotPermitted#%`,
                     'not_supported': `%#browserDownloadNotSupported#%`,
-                    'not_succeeded': `%#browserDownloadNotSucceeded#% ${error.details ?? getString(error.details)}`
+                    'not_succeeded': `%#browserDownloadNotSucceeded#% ${ isNullOrUndefined(error.details) ? 'UnknownError' : error.details}`,
                 }[error.error] || `%#browserDownloadUnknownError#%`
             }
             let toast = newToast(
@@ -451,7 +451,7 @@ export function browserDownload(videoInfo: VideoInfo) {
         })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
-export async function aria2API(method: string, params: any) {
+export async function aria2API(method: string, params: any): Promise<Aria2.Result> {
     return await (await unlimitedFetch(config.aria2Path, {
         headers: {
             'accept': 'application/json',
@@ -580,7 +580,12 @@ export async function aria2TaskCheck() {
     let toast = newToast(
         ToastType.Warn,
         {
-            node: toastNode(`发现 ${needRestart.length} 个需要重启的下载任务！`, '%#browserDownload#%'),
+            node: toastNode(
+                [
+                    `发现 ${needRestart.length} 个需要重启的下载任务！`,
+                    { nodeType: 'br' },
+                    '%#tryRestartingDownload#%'
+                ], '%#aria2TaskCheck#%'),
             async onClick() {
                 toast.hideToast()
                 for (let index = 0; index < needRestart.length; index++) {

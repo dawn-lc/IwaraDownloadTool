@@ -11,12 +11,103 @@ export const isArray = (obj: unknown): obj is any[] => Array.isArray(obj)
 export const isElement = (obj: unknown): obj is Element => !isNullOrUndefined(obj) && obj instanceof Element
 export const isNode = (obj: unknown): obj is Node => !isNullOrUndefined(obj) && obj instanceof Node
 export const isStringTupleArray = (obj: unknown): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
-Array.prototype.any = function () {
-    return this.prune().length > 0
+export const isNotEmpty = (obj: unknown): boolean => {
+    if (isNullOrUndefined(obj)) {
+        return false
+    }
+    if (Array.isArray(obj)) {
+        return obj.some(isNotEmpty);
+    }
+    if (isString(obj)) {
+        return !obj.isEmpty();
+    }
+    if (isNumber(obj)) {
+        return !Number.isNaN(obj)
+    }
+    if (isElement(obj) || isNode(obj)) {
+        return true
+    }
+    if (isObject(obj)) {
+        return Object.values(obj).some(isNotEmpty)
+    }
+    return true
 }
+
+
+/*
+Object.defineProperty(Object.prototype, 'prune', {
+    set: function () {
+        return new Proxy(this, {
+            get: function (target, property) {
+                return () => {
+                    if (Array.isArray(target)) {
+                        return target.filter(isNotEmpty).map(i => i.prune());
+                    }
+                    if (isElement(target) || isNode(target)) {
+                        return target
+                    }
+                    if (isObject(target)) {
+                        return Object.fromEntries(
+                            Object.entries(target)
+                                .filter(([k, v]) => isNotEmpty(v))
+                                .map(([k, v]: [string, any]) => [k, v.prune()])
+                        )
+                    }
+                    return isNotEmpty(target) ? target : undefined
+                }
+            },
+            set: function (target, property, value) {
+                console.log('set', target, property, value)
+                return true
+            }
+        });
+    },
+    writable: true,
+    configurable: false,
+    enumerable: false,
+});
+*/
+
+Object.defineProperty(Object.prototype, 'prune',{
+    value: function() {
+        if (Array.isArray(this)) {
+            return this.filter(isNotEmpty).map(i => i.prune());
+        }
+        if (isElement(this) || isNode(this)) {
+            return this
+        }
+        if (isObject(this)) {
+            return Object.fromEntries(
+                Object.entries(this)
+                    .filter(([k, v]) => isNotEmpty(v))
+                    .map(([k, v]: [string, any]) => [k, v.prune()])
+            )
+        }
+        return isNotEmpty(this) ? this : undefined
+    },
+    writable: false,
+    configurable: false,
+    enumerable: false,
+})
+
+Object.defineProperty(Object.prototype, 'stringify',{
+    value: function() {
+        let obj = this instanceof Error ? String(this) : this
+        obj = obj instanceof Date ? obj.toISOString() : obj
+        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
+    },
+    writable: true,
+    configurable: false,
+    enumerable: false,
+})
+Array.prototype.any = function () {
+    return this.filter(i => !isNullOrUndefined(i)).length > 0
+}
+/*
 Array.prototype.prune = function () {
     return this.filter(i => i !== null && typeof i !== 'undefined')
 }
+*/
 Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {
     return this.filter((item, index, self) =>
         index === self.findIndex((t) => (
@@ -49,7 +140,16 @@ String.prototype.among = function (start: string, end: string, greedy: boolean =
     if (endIndex === -1 || endIndex < adjustedStartIndex) return ''
     return this.slice(adjustedStartIndex, endIndex)
 }
-
+String.prototype.isEmpty = function () {
+    return !isNullOrUndefined(this) && this.length === 0
+}
+String.prototype.splitLimit = function (separator: string, limit?: number) {
+    if (this.isEmpty() || isNullOrUndefined(separator)) {
+        throw new Error('Empty')
+    }
+    let body = this.split(separator)
+    return limit ? body.slice(0, limit).concat(body.slice(limit).join(separator)) : body
+}
 String.prototype.truncate = function (maxLength) {
     return this.length > maxLength ? this.substring(0, maxLength) : this.toString()
 }
