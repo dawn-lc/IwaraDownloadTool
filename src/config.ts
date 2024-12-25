@@ -15,6 +15,8 @@ const DEFAULT_CONFIG = {
     downloadType: DownloadType.Others,
     downloadPath: '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4',
     downloadProxy: '',
+    downloadProxyUsername: '',
+    downloadProxyPassword: '',
     aria2Path: 'http://127.0.0.1:6800/jsonrpc',
     aria2Token: '',
     iwaraDownloaderPath: 'http://127.0.0.1:6800/jsonrpc',
@@ -41,6 +43,8 @@ export class Config {
     downloadType: DownloadType
     downloadPath: string
     downloadProxy: string
+    downloadProxyUsername: string
+    downloadProxyPassword: string
     aria2Path: string
     aria2Token: string
     iwaraDownloaderPath: string
@@ -61,6 +65,8 @@ export class Config {
         this.downloadType = DEFAULT_CONFIG.downloadType
         this.downloadPath = DEFAULT_CONFIG.downloadPath
         this.downloadProxy = DEFAULT_CONFIG.downloadProxy
+        this.downloadProxyUsername = DEFAULT_CONFIG.downloadProxyUsername
+        this.downloadProxyPassword = DEFAULT_CONFIG.downloadProxyPassword
         this.aria2Path = DEFAULT_CONFIG.aria2Path
         this.aria2Token = DEFAULT_CONFIG.aria2Token
         this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath

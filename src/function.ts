@@ -280,7 +280,7 @@ export function aria2Download(videoInfo: VideoInfo) {
     (async function (id: string, author: string, title: string, uploadTime: Date, info: string, tag: Array<{
         id: string
         type: string
-    }>, quality: string, alias: string, downloadUrl: string) {
+    }>, quality: string, alias: string, downloadUrl: URL) {
         let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
             {
                 NowTime: new Date(),
@@ -292,11 +292,14 @@ export function aria2Download(videoInfo: VideoInfo) {
                 QUALITY: quality
             }
         ).trim())
-
+        downloadUrl.searchParams.set('videoid', id)
+        downloadUrl.searchParams.set('download', localPath.filename)
         let res = await aria2API('aria2.addUri', [
-            [downloadUrl],
+            [downloadUrl.href],
             {
                 'all-proxy': config.downloadProxy,
+                'all-proxy-passwd': config.downloadProxyPassword,
+                'all-proxy-user': config.downloadProxyUsername,
                 'out': localPath.filename,
                 'dir': localPath.fullPath.replace(localPath.filename, ''),
                 'referer': window.location.hostname,
@@ -312,7 +315,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
             }
         ).showToast()
-    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
+    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
 export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
     (async function (videoInfo: VideoInfo) {
@@ -466,33 +469,28 @@ export async function aria2API(method: string, params: any): Promise<Aria2.Resul
         method: 'POST'
     })).json()
 }
-export function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
-    if (isNullOrUndefined(task.files)) {
-        GM_getValue('isDebug') && console.debug(`check aria2 task files fail! ${JSON.stringify(task)}`)
-        return null
+export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined {
+    try {
+        if (isNullOrUndefined(task.files) || task.files.length !== 1) return
+        const file = task.files[0]
+        if (isNullOrUndefined(file)) return
+        if (file.uris.length < 1) return  
+        let downloadUrl = file.uris[0].uri.toURL()
+        if (isNullOrUndefined(downloadUrl)) return
+        let videoID: string | undefined | null
+        if (downloadUrl.searchParams.has('videoid')) videoID = downloadUrl.searchParams.get('videoid')
+        if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
+        let path = analyzeLocalPath(file.path)
+        if (isNullOrUndefined(path.filename) || path.filename.isEmpty()) return 
+        videoID = path.filename.among('[', ']')
+        if (videoID.isEmpty()) return 
+        return videoID
+    } catch (error) {
+        GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${task.stringify()}`)
+        return
     }
-    for (let index = 0; index < task.files.length; index++) {
-        const file = task.files[index]
-        if (isNullOrUndefined(file)) {
-            GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
-            continue
-        }
-        try {
-            // 仅支持路径最后一组[]中包含%#ID#%的路径
-            // todo: 支持自定义提取ID表达式 
-            let videoID: string | null | undefined = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
-            if (isNullOrUndefined(videoID) || videoID.isEmpty()) {
-                GM_getValue('isDebug') && console.debug(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
-                continue
-            }
-            return videoID
-        } catch (error) {
-            continue
-        }
-    }
-    return null
 }
-export async function aria2TaskCheck() {
+export async function aria2TaskCheckAndRestart() {
     let stoped: Array<{ id: string, data: Aria2.Status }> = (
         await aria2API(
             'aria2.tellStopped',
@@ -593,7 +591,7 @@ export async function aria2TaskCheck() {
                     let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
                     let videoInfo = await (new VideoInfo(cache)).init(task.id)
                     if (videoInfo.State){
-                        await pushDownloadTask(videoInfo)
+                        await pushDownloadTask(videoInfo, true)
                         await aria2API('aria2.forceRemove', [task.data.gid]) 
                     }
                 }

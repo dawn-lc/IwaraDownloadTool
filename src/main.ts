@@ -8,7 +8,7 @@ import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
-import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 
 class configEdit {
     source!: configEdit;
@@ -239,16 +239,22 @@ class configEdit {
         })
         let downloadConfigInput = [
             variableInfo,
-            this.inputComponent('downloadPath'),
-            this.inputComponent('downloadProxy')
+            this.inputComponent('downloadPath')
+        ]
+        let proxyConfigInput = [
+            this.inputComponent('downloadProxy'),
+            this.inputComponent('downloadProxyUsername'),
+            this.inputComponent('downloadProxyPassword', 'password')
         ]
         let aria2ConfigInput = [
             this.inputComponent('aria2Path'),
-            this.inputComponent('aria2Token', 'password')
+            this.inputComponent('aria2Token', 'password'),
+            ...proxyConfigInput
         ]
         let iwaraDownloaderConfigInput = [
             this.inputComponent('iwaraDownloaderPath'),
-            this.inputComponent('iwaraDownloaderToken', 'password')
+            this.inputComponent('iwaraDownloaderToken', 'password'),
+            ...proxyConfigInput
         ]
         let BrowserConfigInput = [
             variableInfo,
@@ -391,7 +397,7 @@ class menu {
         })
 
         let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
-            aria2TaskCheck()
+            aria2TaskCheckAndRestart()
         })
         GM_getValue('isDebug') && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
 

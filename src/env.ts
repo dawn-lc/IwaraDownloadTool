@@ -131,6 +131,9 @@ Array.prototype.difference = function <T>(this: T[], that: T[], prop?: keyof T):
 Array.prototype.complement = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
     return this.union(that, prop).difference(this.intersect(that, prop), prop)
 }
+String.prototype.isEmpty = function () {
+    return !isNullOrUndefined(this) && this.length === 0
+}
 String.prototype.among = function (start: string, end: string, greedy: boolean = false) {
     if (this.isEmpty() || start.isEmpty() || end.isEmpty()) return ''
     const startIndex = this.indexOf(start)
@@ -139,9 +142,6 @@ String.prototype.among = function (start: string, end: string, greedy: boolean =
     const endIndex = greedy ? this.lastIndexOf(end) : this.indexOf(end, adjustedStartIndex)
     if (endIndex === -1 || endIndex < adjustedStartIndex) return ''
     return this.slice(adjustedStartIndex, endIndex)
-}
-String.prototype.isEmpty = function () {
-    return !isNullOrUndefined(this) && this.length === 0
 }
 String.prototype.splitLimit = function (separator: string, limit?: number) {
     if (this.isEmpty() || isNullOrUndefined(separator)) {
