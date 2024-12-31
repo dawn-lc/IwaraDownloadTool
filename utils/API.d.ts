@@ -6,13 +6,12 @@ declare module '../i18n/*.json' {
     export default content;
 }
 interface Date {
-    format(format?: string): String;
+    format(format?: string): string;
 }
 interface String {
     replaceEmojis(replace?: string | null): string
     replaceVariable(replacements: Record<string, any>, count?: number): string;
     isEmpty(): boolean;
-    notEmpty(): boolean;
     toURL(): URL;
     among(start: string, end: string, greedy?: boolean): string;
     splitLimit(separator: string, limit?: number): string[];
@@ -40,9 +39,13 @@ interface Window {
 }
 declare var unsafeWindow: Window & typeof globalThis;
 
+interface Object{
+    prune(): T;
+    stringify(): string;
+}
 interface Array<T> {
     any(): boolean;
-    prune(): Array<T>;
+    //prune(): Array<T>;
     unique(): Array<T>;
     /**
      * @name unique
@@ -103,9 +106,9 @@ interface RenderCode<T extends keyof HTMLElementTagNameMap> {
 }
 
 interface PieceInfo {
-    Title?: string;
-    Alias?: string;
-    Author?: string;
+    Title?: string | null;
+    Alias?: string | null;
+    Author?: string | null;
 }
 interface LocalPath {
     [key: string]: any;
@@ -141,7 +144,7 @@ namespace Aria2 {
     interface Result {
         id: string,
         jsonrpc: string,
-        result: string
+        result: Array<Status>
     }
 
     interface Uri {

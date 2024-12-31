@@ -4,6 +4,8 @@
     "downloadPriority": "下载画质: ",
     "downloadPath": "下载到: ",
     "downloadProxy": "下载代理: ",
+    "downloadProxyUsername": "下载代理用户名: ",
+    "downloadProxyPassword": "下载代理密码: ",
     "aria2Path": "Aria2 RPC: ",
     "aria2Token": "Aria2 密钥: ",
     "iwaraDownloaderPath": "IwaraDownloader RPC: ",

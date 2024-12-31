@@ -3,7 +3,7 @@ import { isNullOrUndefined } from "./env";
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
-import { unlimitedFetch, ceilDiv, getString, prune } from "./extension";
+import { unlimitedFetch, ceilDiv } from "./extension";
 import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
@@ -95,7 +95,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
         this.channel.onmessage = (event: MessageEvent) => {
             const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
             const { type, data: { timestamp, value } } = message
-            GM_getValue('isDebug') && console.debug(`Channel message: ${getString(message)}`)
+            GM_getValue('isDebug') && console.debug(`Channel message: ${message.stringify()}`)
             if (timestamp <= this.changeTime) return;
             switch (type) {
                 case MessageType.Set:
@@ -119,7 +119,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
             this.changeCallback?.(event)
         }
         this.channel.onmessageerror = (event) => {
-            GM_getValue('isDebug') && console.debug(`Channel message error: ${getString(event)}`)
+            GM_getValue('isDebug') && console.debug(`Channel message error: ${event.stringify()}`)
         }
         GM_getTabs((tabs) => {
             const tabIds = Object.keys(tabs);
@@ -213,16 +213,15 @@ export class VideoInfo {
             })).json()
 
             if (VideoInfoSource.id === undefined) {
-                let cache = await db.videos.where('ID').equals(this.ID).toArray()
-                if (cache.any()) {
-                    Object.assign(this, cache.pop())
-                }
+                let cache = (await db.videos.where('ID').equals(this.ID).toArray()).pop()
+                Object.assign(this, cache ?? {})
+                this.State = false
                 let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                 if (!cdnCache.any()) {
-                    let query = prune({
+                    let query = {
                         author: this.Alias ?? this.Author,
                         title: this.Title
-                    })
+                    }.prune()
                     for (const key in query) {
                         let dom = new DOMParser().parseFromString(await (await unlimitedFetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
                         for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
@@ -322,7 +321,7 @@ export class VideoInfo {
 
             await db.videos.put(this)
             return this
-        } catch (error) {
+        } catch (error:any) {
             let data = this
             let toast = newToast(
                 ToastType.Error,
@@ -330,7 +329,7 @@ export class VideoInfo {
                     node: toastNode([
                         `${this.Title}[${this.ID}] %#parsingFailed#%`,
                         { nodeType: 'br' },
-                        `${getString(error)}`,
+                        error.stringify(),
                         { nodeType: 'br' },
                         this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
                     ], '%#createTask#%'),

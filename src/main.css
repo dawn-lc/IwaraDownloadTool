@@ -245,6 +245,21 @@
     align-items: center;
 }
 
+.fixed-bottom-right {
+    position: fixed;
+    bottom: 0px;
+    right: 0px;
+    background-color: var(--body);
+    color: var(--text);
+    border-top: 1px solid var(--primary);
+    border-left: 1px solid var(--primary);
+    border-top-left-radius: 6px;
+    padding: 2px 5px 2px 5px;
+    margin: 0px;
+    user-select: none;
+    z-index: 102;
+}
+
 .selectButton {
     accent-color: rgb(50, 110, 193);
     position: absolute;
@@ -255,19 +270,6 @@
     cursor: pointer;
     z-index: 101;
 }
-
-/*
-.selectButtonCompatible {
-    width: 32px;
-    height: 32px;
-    bottom: 0px;
-    right: 4px;
-    transform: translate(-50%, -50%);
-    margin: 0;
-    padding: 0;
-    cursor: pointer;
-}
-*/
 
 .toastify h3 {
     margin: 0 0 10px 0;

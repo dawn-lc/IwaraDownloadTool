@@ -7,8 +7,8 @@ import { config, Config } from "./config";
 import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
-import { delay, findElement, getString, prune, renderNode, unlimitedFetch } from "./extension";
-import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheck, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
+import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 
 class configEdit {
     source!: configEdit;
@@ -239,16 +239,22 @@ class configEdit {
         })
         let downloadConfigInput = [
             variableInfo,
-            this.inputComponent('downloadPath'),
-            this.inputComponent('downloadProxy')
+            this.inputComponent('downloadPath')
+        ]
+        let proxyConfigInput = [
+            this.inputComponent('downloadProxy'),
+            this.inputComponent('downloadProxyUsername'),
+            this.inputComponent('downloadProxyPassword', 'password')
         ]
         let aria2ConfigInput = [
             this.inputComponent('aria2Path'),
-            this.inputComponent('aria2Token', 'password')
+            this.inputComponent('aria2Token', 'password'),
+            ...proxyConfigInput
         ]
         let iwaraDownloaderConfigInput = [
             this.inputComponent('iwaraDownloaderPath'),
-            this.inputComponent('iwaraDownloaderToken', 'password')
+            this.inputComponent('iwaraDownloaderToken', 'password'),
+            ...proxyConfigInput
         ]
         let BrowserConfigInput = [
             variableInfo,
@@ -386,12 +392,12 @@ class menu {
         let downloadThisButton = this.button('downloadThis', async (name, event) => {
             let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
             let Title = unsafeWindow.document.querySelector('.page-video__details')?.childNodes[0]?.textContent
-            let videoInfo = await (new VideoInfo(prune({ Title: Title, }))).init(ID)
+            let videoInfo = await (new VideoInfo({ Title: Title, })).init(ID)
             videoInfo.State && await pushDownloadTask(videoInfo, true)
         })
 
         let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
-            aria2TaskCheck()
+            aria2TaskCheckAndRestart()
         })
         GM_getValue('isDebug') && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
 
@@ -757,14 +763,79 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
     })
     start.showToast()
     if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
-        let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
-            'gid',
-            'status',
-            'files',
-            'errorCode',
-            'bittorrent'
-        ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean)
-        for (let key of list.allKeys().intersect(completed)) {
+        let stoped: Array<{ id: string, data: Aria2.Status }> = (
+            await aria2API(
+                'aria2.tellStopped',
+                [
+                    0,
+                    2048,
+                    [
+                        'gid',
+                        'status',
+                        'files',
+                        'errorCode',
+                        'bittorrent'
+                    ]
+                ]
+            ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+            .prune();
+
+        let active: Array<{ id: string, data: Aria2.Status }> = (
+            await aria2API(
+                'aria2.tellActive',
+                [
+                    [
+                        'gid',
+                        'status',
+                        'files',
+                        'downloadSpeed',
+                        'bittorrent'
+                    ]
+                ]
+            ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+            .prune();
+
+        let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
+            .filter(
+                (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
+            )
+            .unique('id');
+        
+        let startedAndCompleted = [...active, ...downloadCompleted];
+
+        for (let key of list.allKeys().intersect(startedAndCompleted.map(i => i.id))) {
             let button = getSelectButton(key)
             if (!isNullOrUndefined(button)) button.checked = false
             list.delete(key)
@@ -867,7 +938,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
     GM_addStyle('@!mainCSS!@');
 
     if (GM_getValue('isDebug')) {
-        console.debug(getString(GM_info))
+        console.debug(GM_info.stringify())
         // @ts-ignore
         unsafeWindow.unlimitedFetch = unlimitedFetch
         debugger
@@ -994,7 +1065,14 @@ if (!unsafeWindow.IwaraDownloadTool) {
             }
         }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
 
-
+        originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
+            nodeType:'p',
+            className: 'fixed-bottom-right',
+            childs: [
+                `%#appName#% ${GM_getValue('version')} `,
+                GM_getValue('isDebug') ? `%#isDebug#%` : ''
+            ].prune()
+        }))
 
         let notice = newToast(
             ToastType.Info,

@@ -1,7 +1,6 @@
 import "./env";
 import { isNullOrUndefined } from "./env"
 import { i18n } from "./i18n";
-import { getString } from "./extension";
 import { DownloadType } from "./type";
 const DEFAULT_CONFIG = {
     language: 'zh_CN',
@@ -16,6 +15,8 @@ const DEFAULT_CONFIG = {
     downloadType: DownloadType.Others,
     downloadPath: '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4',
     downloadProxy: '',
+    downloadProxyUsername: '',
+    downloadProxyPassword: '',
     aria2Path: 'http://127.0.0.1:6800/jsonrpc',
     aria2Token: '',
     iwaraDownloaderPath: 'http://127.0.0.1:6800/jsonrpc',
@@ -42,6 +43,8 @@ export class Config {
     downloadType: DownloadType
     downloadPath: string
     downloadProxy: string
+    downloadProxyUsername: string
+    downloadProxyPassword: string
     aria2Path: string
     aria2Token: string
     iwaraDownloaderPath: string
@@ -62,6 +65,8 @@ export class Config {
         this.downloadType = DEFAULT_CONFIG.downloadType
         this.downloadPath = DEFAULT_CONFIG.downloadPath
         this.downloadProxy = DEFAULT_CONFIG.downloadProxy
+        this.downloadProxyUsername = DEFAULT_CONFIG.downloadProxyUsername
+        this.downloadProxyPassword = DEFAULT_CONFIG.downloadProxyPassword
         this.aria2Path = DEFAULT_CONFIG.aria2Path
         this.aria2Token = DEFAULT_CONFIG.aria2Token
         this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath
@@ -76,7 +81,7 @@ export class Config {
                 if (property === 'language') {
                     return Config.getLanguage(value)
                 }
-                GM_getValue('isDebug') && console.debug(`get: ${property} ${getString(value)}`)
+                GM_getValue('isDebug') && console.debug(`get: ${property} ${value.stringify()}`)
                 return value
             },
             set: function (target, property: string, value) {
@@ -85,7 +90,7 @@ export class Config {
                     return true
                 }
                 GM_setValue(property, value)
-                GM_getValue('isDebug') && console.debug(`set: ${property} ${getString(value)}`)
+                GM_getValue('isDebug') && console.debug(`set: ${property} ${value.stringify()}`)
                 if (!isNullOrUndefined(target.configChange)) target.configChange(property)
                 return true
             }

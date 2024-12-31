@@ -1,11 +1,11 @@
 import "./env";
-import { isNullOrUndefined } from "./env"
+import { isNotEmpty, isNullOrUndefined } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
 import { DownloadType, ToastType } from "./type"
 import { Toastify } from "./import"
-import { unlimitedFetch, getString, prune, renderNode, UUID } from "./extension"
+import { unlimitedFetch, renderNode, UUID } from "./extension"
 import { VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 
@@ -18,8 +18,8 @@ export async function refreshToken(): Promise<string> {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }
         })).json())['accessToken']
-    } catch (error) {
-        console.warn(`Refresh token error: ${getString(error)}`)
+    } catch (error: any) {
+        console.warn(`Refresh token error: ${error.stringify()}`)
     }
     return refresh
 }
@@ -158,7 +158,7 @@ export async function EnvCheck(): Promise<boolean> {
                 node: toastNode([
                     `%#configError#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -186,7 +186,7 @@ export async function localPathCheck(): Promise<boolean> {
                 node: toastNode([
                     `%#downloadPathError#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -224,7 +224,7 @@ export async function aria2Check(): Promise<boolean> {
                 node: toastNode([
                     `Aria2 RPC %#connectionTest#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -245,25 +245,25 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify(prune({
+            body: JSON.stringify({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State',
                 'token': config.iwaraDownloaderToken
-            }))
+            }.prune())
         })).json()
 
         if (res.code !== 0) {
             throw new Error(res.msg)
         }
 
-    } catch (error) {
+    } catch (error: any) {
         let toast = newToast(
             ToastType.Error,
             {
                 node: toastNode([
                     `IwaraDownloader RPC %#connectionTest#%`,
                     { nodeType: 'br' },
-                    getString(error)
+                    error.stringify()
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -280,7 +280,7 @@ export function aria2Download(videoInfo: VideoInfo) {
     (async function (id: string, author: string, title: string, uploadTime: Date, info: string, tag: Array<{
         id: string
         type: string
-    }>, quality: string, alias: string, downloadUrl: string) {
+    }>, quality: string, alias: string, downloadUrl: URL) {
         let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
             {
                 NowTime: new Date(),
@@ -292,18 +292,21 @@ export function aria2Download(videoInfo: VideoInfo) {
                 QUALITY: quality
             }
         ).trim())
-
+        downloadUrl.searchParams.set('videoid', id)
+        downloadUrl.searchParams.set('download', localPath.filename)
         let res = await aria2API('aria2.addUri', [
-            [downloadUrl],
-            prune({
+            [downloadUrl.href],
+            {
                 'all-proxy': config.downloadProxy,
+                'all-proxy-passwd': config.downloadProxyPassword,
+                'all-proxy-user': config.downloadProxyUsername,
                 'out': localPath.filename,
                 'dir': localPath.fullPath.replace(localPath.filename, ''),
                 'referer': window.location.hostname,
                 'header': [
                     'Cookie:' + unsafeWindow.document.cookie
                 ]
-            })
+            }.prune()
         ])
         console.log(`Aria2 ${title} ${JSON.stringify(res)}`)
         newToast(
@@ -312,7 +315,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
             }
         ).showToast()
-    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
+    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
 export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
     (async function (videoInfo: VideoInfo) {
@@ -322,7 +325,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify(prune({
+            body: JSON.stringify({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
                 'token': config.iwaraDownloaderToken,
@@ -354,7 +357,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                         'cookies': unsafeWindow.document.cookie
                     }
                 }
-            }))
+            }.prune())
         })).json()
         if (r.code === 0) {
             console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
@@ -404,14 +407,14 @@ export function browserDownload(videoInfo: VideoInfo) {
         type: string
     }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
         function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
-            let errorInfo = getString(Error)
+            let errorInfo = error.stringify()
             if (!(error instanceof Error)) {
                 errorInfo = {
                     'not_enabled': `%#browserDownloadNotEnabled#%`,
                     'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
                     'not_permitted': `%#browserDownloadNotPermitted#%`,
                     'not_supported': `%#browserDownloadNotSupported#%`,
-                    'not_succeeded': `%#browserDownloadNotSucceeded#% ${error.details ?? getString(error.details)}`
+                    'not_succeeded': `%#browserDownloadNotSucceeded#% ${ isNullOrUndefined(error.details) ? 'UnknownError' : error.details}`,
                 }[error.error] || `%#browserDownloadUnknownError#%`
             }
             let toast = newToast(
@@ -451,7 +454,7 @@ export function browserDownload(videoInfo: VideoInfo) {
         })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
-export async function aria2API(method: string, params: any) {
+export async function aria2API(method: string, params: any): Promise<Aria2.Result> {
     return await (await unlimitedFetch(config.aria2Path, {
         headers: {
             'accept': 'application/json',
@@ -466,62 +469,136 @@ export async function aria2API(method: string, params: any) {
         method: 'POST'
     })).json()
 }
-export function aria2TaskExtractVideoID(task: Aria2.Status): string | null {
-    if (isNullOrUndefined(task.files)) {
-        GM_getValue('isDebug') && console.debug(`check aria2 task files fail! ${JSON.stringify(task)}`)
-        return null
+export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined {
+    try {
+        if (isNullOrUndefined(task.files) || task.files.length !== 1) return
+        const file = task.files[0]
+        if (isNullOrUndefined(file)) return
+        if (file.uris.length < 1) return  
+        let downloadUrl = file.uris[0].uri.toURL()
+        if (isNullOrUndefined(downloadUrl)) return
+        let videoID: string | undefined | null
+        if (downloadUrl.searchParams.has('videoid')) videoID = downloadUrl.searchParams.get('videoid')
+        if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
+        let path = analyzeLocalPath(file.path)
+        if (isNullOrUndefined(path.filename) || path.filename.isEmpty()) return 
+        videoID = path.filename.among('[', ']')
+        if (videoID.isEmpty()) return 
+        return videoID
+    } catch (error) {
+        GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${task.stringify()}`)
+        return
     }
-    for (let index = 0; index < task.files.length; index++) {
-        const file = task.files[index]
-        if (isNullOrUndefined(file)) {
-            GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${JSON.stringify(task.files)}`)
-            continue
-        }
-        try {
-            // 仅支持路径最后一组[]中包含%#ID#%的路径
-            // todo: 支持自定义提取ID表达式 
-            let videoID: string | null | undefined = analyzeLocalPath(file?.path)?.filename?.match(/\[([^\[\]]*)\](?=[^\[]*$)/g)?.pop()?.trimHead('[')?.trimTail(']');
-            if (isNullOrUndefined(videoID) || videoID.isEmpty()) {
-                GM_getValue('isDebug') && console.debug(`check aria2 task videoID fail! ${JSON.stringify(file.path)}`)
-                continue
-            }
-            return videoID
-        } catch (error) {
-            continue
-        }
-    }
-    return null
 }
-export async function aria2TaskCheck() {
-    let completed: Array<string> = (await aria2API('aria2.tellStopped', [0, 2048, [
-        'gid',
-        'status',
-        'files',
-        'errorCode',
-        'bittorrent'
-    ]])).result.filter((task: Aria2.Status) => isNullOrUndefined(task.bittorrent) && (task.status === 'complete' || task.errorCode === '13')).map((task: Aria2.Status) => aria2TaskExtractVideoID(task)).filter(Boolean).map((i: string) => i.toLowerCase())
-
-    let active = await aria2API('aria2.tellActive', [[
-        'gid',
-        'downloadSpeed',
-        'files',
-        'bittorrent'
-    ]])
-
-    let needRestart: Aria2.Status[] = active.result.filter((i: Aria2.Status) => isNullOrUndefined(i.bittorrent) && !Number.isNaN(i.downloadSpeed) && Number(i.downloadSpeed) <= 1024)
-
-    for (let index = 0; index < needRestart.length; index++) {
-        const task = needRestart[index]
-        let videoID = aria2TaskExtractVideoID(task)
-        if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) {
-            if (!completed.includes(videoID.toLowerCase())) {
-                let cache = (await db.videos.where('ID').equals(videoID).toArray()).pop()
-                let videoInfo = await (new VideoInfo(cache)).init(videoID)
-                videoInfo.State && await pushDownloadTask(videoInfo)
+export async function aria2TaskCheckAndRestart() {
+    let stoped: Array<{ id: string, data: Aria2.Status }> = (
+        await aria2API(
+            'aria2.tellStopped',
+            [
+                0,
+                2048,
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'errorCode',
+                    'bittorrent'
+                ]
+            ]
+        ))
+        .result
+        .filter(
+            (task: Aria2.Status) =>
+                isNullOrUndefined(task.bittorrent)
+        )
+        .map(
+            (task: Aria2.Status) => {
+                let ID = aria2TaskExtractVideoID(task)
+                if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                    return {
+                        id: ID.toLowerCase(),
+                        data: task
+                    }
+                }
             }
-            await aria2API('aria2.forceRemove', [task.gid])
+        )
+        .prune();
+
+    let active: Array<{ id: string, data: Aria2.Status }> = (
+        await aria2API(
+            'aria2.tellActive',
+            [
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'downloadSpeed',
+                    'bittorrent'
+                ]
+            ]
+        ))
+        .result
+        .filter(
+            (task: Aria2.Status) =>
+                isNullOrUndefined(task.bittorrent)
+        )
+        .map(
+            (task: Aria2.Status) => {
+                let ID = aria2TaskExtractVideoID(task)
+                if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                    return {
+                        id: ID.toLowerCase(),
+                        data: task
+                    }
+                }
+            }
+        )
+        .prune();
+
+    let downloadUncompleted: Array<{ id: string, data: Aria2.Status }> = stoped
+        .filter(
+            (task: { id: string, data: Aria2.Status }) => task.data.status !== 'complete' || task.data.errorCode !== '13'
+        )
+        .unique('id');
+
+    let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
+        .filter(
+            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
+        )
+        .unique('id');
+
+    let downloadToSlowTasks: Array<{ id: string, data: Aria2.Status }> = active
+        .filter(
+            (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 1024
+        )
+        .unique('id');
+
+    let needRestart = [...downloadToSlowTasks, ...downloadUncompleted.difference(downloadCompleted, 'id')].unique('id');
+
+    let toast = newToast(
+        ToastType.Warn,
+        {
+            node: toastNode(
+                [
+                    `发现 ${needRestart.length} 个需要重启的下载任务！`,
+                    { nodeType: 'br' },
+                    '%#tryRestartingDownload#%'
+                ], '%#aria2TaskCheck#%'),
+            async onClick() {
+                toast.hideToast()
+                for (let index = 0; index < needRestart.length; index++) {
+                    const task = needRestart[index]
+                    let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
+                    let videoInfo = await (new VideoInfo(cache)).init(task.id)
+                    if (videoInfo.State){
+                        await pushDownloadTask(videoInfo, true)
+                        await aria2API('aria2.forceRemove', [task.data.gid]) 
+                    }
+                }
+            }
         }
-    }
+    )
+    toast.showToast()
 }
 export function getPlayload(authorization: string) {
     return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))
