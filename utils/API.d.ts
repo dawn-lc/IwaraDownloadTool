@@ -6,7 +6,7 @@ declare module '../i18n/*.json' {
     export default content;
 }
 interface Date {
-    format(format?: string): String;
+    format(format?: string): string;
 }
 interface String {
     replaceEmojis(replace?: string | null): string

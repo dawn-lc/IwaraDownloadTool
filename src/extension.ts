@@ -95,6 +95,8 @@ String.prototype.replaceVariable = function (replacements, count = 0) {
             if (str.includes(`%#${key}:`)) {
                 let format = str.among(`%#${key}:`, '#%').toString()
                 return str.replaceAll(`%#${key}:${format}#%`, (hasFunction(value, 'format') ? value.format(format) : value).stringify())
+            } if (value instanceof Date) {
+                return str.replaceAll(`%#${key}#%`, value.format('yyyy-MM-dd'))
             } else {
                 return str.replaceAll(`%#${key}#%`, value.stringify())
             }
