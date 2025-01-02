@@ -14,38 +14,34 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-issue-message: |
-            ### ⚠️ 此 Issue 被标记为过期
-            这个 issue 因为最近没有活动而被自动标记为过期。如果近期仍然没有进一步的活动，它将被关闭。
-            感谢您的贡献！
-
-            ---
-
-            ### ⚠️ This Issue Has Been Marked as Stale
-            This issue has been automatically marked as stale because it has not had recent activity.
-            If no further activity occurs, it will be closed soon.
-            Thank you for your contributions!
-
-            ---
-
-            ### ⚠️ この Issue は期限切れとしてマークされました
-            この issue は最近活動がなかったため、自動的に期限切れとしてマークされました。
-            近日中にさらなる活動がない場合は、閉鎖されます。
-            ご協力ありがとうございます！
+            ### ⚠️ 此 Issue 被标记为过期  
+            这个 issue 因为最近没有活动而被自动标记为过期。如果近期仍然没有进一步的活动，它将被关闭。  
+            感谢您的贡献！  
+            
+            ---  
+            ### ⚠️ This Issue Has Been Marked as Stale  
+            This issue has been automatically marked as stale because it has not had recent activity.  
+            If no further activity occurs, it will be closed soon.  
+            Thank you for your contributions!  
+            
+            ---  
+            ### ⚠️ この Issue は期限切れとしてマークされました  
+            この issue は最近活動がなかったため、自動的に期限切れとしてマークされました。  
+            近日中にさらなる活動がない場合は、閉鎖されます。  
+            ご協力ありがとうございます！  
           close-issue-message: |
             ### 🚪 此 Issue 已被关闭  
             由于此 issue 在被标记为过期后，近期仍然没有进一步的活动，因此它已被自动关闭。  
-            如果您认为这是一个错误，请随时重新打开此 issue 或创建一个新 issue。  
+            如果您认为这是一个错误，请随时重新打开此issue或创建一个新issue。  
             感谢您的贡献！  
 
             ---  
-
             ### 🚪 This Issue Has Been Closed  
             This issue has been automatically closed because it has remained stale without further activity.  
             If you believe this was done in error, please feel free to reopen it or create a new issue.  
             Thank you for your contributions!  
 
             ---  
-
             ### 🚪 この Issue は閉鎖されました  
             この issue は期限切れとしてマークされた後、最近活動がなかったため、自動的に閉鎖されました。  
             これが間違いであると思われる場合は、この issue を再開するか、新しい issue を作成してください。  
