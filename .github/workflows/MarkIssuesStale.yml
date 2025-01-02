@@ -14,13 +14,26 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-issue-message: |
-            这个 issue 因为最近没有活动而被自动标记为过期。如果没有进一步的活动，它将被关闭。感谢您的贡献。
-            This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs. Thank you for your contributions.
-            この issue は最近活動がなかったため、自動的に期限切れとしてマークされました。さらなる活動がない場合は、閉鎖されます。ご協力ありがとうございます。
+            ### ⚠️ 此 Issue 被标记为过期
+            这个 issue 因为最近没有活动而被自动标记为过期。如果近期仍然没有进一步的活动，它将被关闭。
+            感谢您的贡献！
+
+            ---
+
+            ### ⚠️ This Issue Has Been Marked as Stale
+            This issue has been automatically marked as stale because it has not had recent activity.
+            If no further activity occurs, it will be closed soon. Thank you for your contributions!
+
+            ---
+
+            ### ⚠️ この Issue は期限切れとしてマークされました
+            この issue は最近活動がなかったため、自動的に期限切れとしてマークされました。
+            近日中にさらなる活動がない場合は、閉鎖されます。
+            ご協力ありがとうございます！
           days-before-stale: 4
           days-before-close: 3
           stale-issue-label: '过期'
-          exempt-issue-labels: '安全,pinned,BUG,增强'
+          exempt-issue-labels: 'pinned,安全,增强,BUG'
           operations-per-run: 30
           remove-stale-when-updated: true
           debug-only: false
