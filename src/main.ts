@@ -751,6 +751,55 @@ async function addDownloadTask() {
     unsafeWindow.document.body.appendChild(body)
 }
 
+class TaskController {
+    private lastTaskStartTime: number = 0;
+    private counter: number = 0;
+    private waiting: Array<() => Promise<void>> = [];
+    private isProcessing: boolean = false;
+
+    constructor(private maxConcurrent: number, private minInterval: number) { }
+
+    addTask(task: () => Promise<void>) {
+        this.waiting.push(task);
+        GM_getValue('isDebug') && console.debug(`TaskController: Task added to queue. Queue length: ${this.waiting.length}`);
+        this.processQueue();
+    }
+
+    private async processQueue() {
+        if (this.isProcessing) return;
+        this.isProcessing = true;
+
+        while (this.waiting.length > 0) {
+            if (this.counter >= this.maxConcurrent) {
+                GM_getValue('isDebug') && console.debug(`TaskController: Max concurrent tasks (${this.maxConcurrent}) reached. Pausing queue processing.`);
+                this.isProcessing = false;
+                return;
+            }
+
+            const now = Date.now();
+            const timeSinceLastTask = now - this.lastTaskStartTime;
+            if (timeSinceLastTask < this.minInterval) {
+                GM_getValue('isDebug') && console.debug(`TaskController: Waiting ${this.minInterval - timeSinceLastTask}ms to maintain minimum interval`);
+                await delay(this.minInterval - timeSinceLastTask);
+            }
+
+            const task = this.waiting.shift();
+            if (task) {
+                this.counter++;
+                this.lastTaskStartTime = Date.now();
+                GM_getValue('isDebug') && console.debug(`TaskController: Starting task. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
+
+                task().finally(() => {
+                    this.counter--;
+                    GM_getValue('isDebug') && console.debug(`TaskController: Task completed. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
+                    this.processQueue();
+                });
+            }
+        }
+        this.isProcessing = false;
+    }
+}
+
 async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
     let size = list.size
     let node = renderNode({
@@ -863,15 +912,22 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         }
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
+
+    const taskController = new TaskController(5, 5000);
     for (let videoInfo of infoList) {
         let button = getSelectButton(videoInfo.ID)
-        let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
-        video.State && await pushDownloadTask(video)
-        if (!isNullOrUndefined(button)) button.checked = false
-        list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
-        await delay(5000)
+        taskController.addTask(async () => {
+            let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
+            video.State && await pushDownloadTask(video)
+            if (!isNullOrUndefined(button)) button.checked = false
+            list.delete(videoInfo.ID)
+            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
+        })
     }
+    while (list.size > 0) {
+        await delay(1000);
+    }
+
     start.hideToast()
     if (size != 1) {
         let completed = newToast(
