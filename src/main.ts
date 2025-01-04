@@ -867,6 +867,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
 
     const taskController = new TaskController(5, 5000);
+
     for (let videoInfo of infoList) {
         let button = getSelectButton(videoInfo.ID)
         taskController.addTask(async () => {
@@ -876,9 +877,6 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
             list.delete(videoInfo.ID)
             node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
         })
-    }
-    while (list.size > 0) {
-        await delay(1000);
     }
 
     start.hideToast()

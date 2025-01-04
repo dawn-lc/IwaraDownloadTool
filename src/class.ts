@@ -386,11 +386,10 @@ export class TaskController {
             }
 
             const task = this.waiting.shift();
-            if (task) {
+            if (!isNullOrUndefined(task)) {
                 this.counter++;
                 this.lastTaskStartTime = Date.now();
                 GM_getValue('isDebug') && console.debug(`TaskController: Starting task. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
-
                 task().finally(() => {
                     this.counter--;
                     GM_getValue('isDebug') && console.debug(`TaskController: Task completed. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
