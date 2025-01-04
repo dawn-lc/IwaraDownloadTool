@@ -4,7 +4,7 @@ import { originalAddEventListener, originalFetch, originalNodeAppendChild, origi
 import { i18n } from "./i18n";
 import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
-import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, SyncDictionary, Version, VideoInfo, TaskController } from "./class";
 import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
@@ -751,6 +751,8 @@ async function addDownloadTask() {
     unsafeWindow.document.body.appendChild(body)
 }
 
+
+
 async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
     let size = list.size
     let node = renderNode({
@@ -863,15 +865,20 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         }
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
+
+    const taskController = new TaskController(5, 5000);
+
     for (let videoInfo of infoList) {
         let button = getSelectButton(videoInfo.ID)
-        let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
-        video.State && await pushDownloadTask(video)
-        if (!isNullOrUndefined(button)) button.checked = false
-        list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
-        await delay(5000)
+        taskController.addTask(async () => {
+            let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
+            video.State && await pushDownloadTask(video)
+            if (!isNullOrUndefined(button)) button.checked = false
+            list.delete(videoInfo.ID)
+            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
+        })
     }
+
     start.hideToast()
     if (size != 1) {
         let completed = newToast(

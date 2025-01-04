@@ -3,7 +3,7 @@ import { isNullOrUndefined } from "./env";
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
-import { unlimitedFetch, ceilDiv } from "./extension";
+import { unlimitedFetch, ceilDiv, delay } from "./extension";
 import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
@@ -350,5 +350,53 @@ export class VideoInfo {
             this.State = false
             return this
         }
+    }
+}
+
+export class TaskController {
+    private lastTaskStartTime: number = 0;
+    private counter: number = 0;
+    private waiting: Array<() => Promise<void>> = [];
+    private isProcessing: boolean = false;
+
+    constructor(private maxConcurrent: number, private minInterval: number) { }
+
+    addTask(task: () => Promise<void>) {
+        this.waiting.push(task);
+        GM_getValue('isDebug') && console.debug(`TaskController: Task added to queue. Queue length: ${this.waiting.length}`);
+        this.processQueue();
+    }
+
+    private async processQueue() {
+        if (this.isProcessing) return;
+        this.isProcessing = true;
+
+        while (this.waiting.length > 0) {
+            if (this.counter >= this.maxConcurrent) {
+                GM_getValue('isDebug') && console.debug(`TaskController: Max concurrent tasks (${this.maxConcurrent}) reached. Pausing queue processing.`);
+                this.isProcessing = false;
+                return;
+            }
+
+            const now = Date.now();
+            const timeSinceLastTask = now - this.lastTaskStartTime;
+            if (timeSinceLastTask < this.minInterval) {
+                GM_getValue('isDebug') && console.debug(`TaskController: Waiting ${this.minInterval - timeSinceLastTask}ms to maintain minimum interval`);
+                await delay(this.minInterval - timeSinceLastTask);
+            }
+
+            const task = this.waiting.shift();
+            if (!isNullOrUndefined(task)) {
+                this.counter++;
+                this.lastTaskStartTime = Date.now();
+                GM_getValue('isDebug') && console.debug(`TaskController: Starting task. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
+                task().finally(() => {
+                    this.counter--;
+                    GM_getValue('isDebug') && console.debug(`TaskController: Task completed. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
+                    this.processQueue();
+                });
+            }
+        }
+        this.isProcessing = false;
     }
 }
