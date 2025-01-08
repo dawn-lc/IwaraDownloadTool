@@ -93,6 +93,8 @@ class configEdit {
                         this.switchButton('autoInjectCheckbox'),
                         this.switchButton('autoCopySaveFileName'),
                         this.switchButton('addUnlistedAndPrivate'),
+                        this.switchButton('experimentalFeatures'),
+                        this.switchButton('enableUnsafeMode'),
                         this.switchButton('isDebug', GM_getValue, (name: string, e) => {
                             GM_setValue(name, (e.target as HTMLInputElement).checked)
                             unsafeWindow.location.reload()
@@ -764,7 +766,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         duration: -1
     })
     start.showToast()
-    if (GM_getValue('isDebug') && config.downloadType === DownloadType.Aria2) {
+    if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
         let stoped: Array<{ id: string, data: Aria2.Status }> = (
             await aria2API(
                 'aria2.tellStopped',
@@ -869,7 +871,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
     for (let videoInfo of infoList) {
         let button = getSelectButton(videoInfo.ID)
         let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID)
-        await delay(3000)
+        !config.enableUnsafeMode && await delay(3000)
         video.State && await pushDownloadTask(video)
         if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
