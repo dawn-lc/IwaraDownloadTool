@@ -127,10 +127,6 @@ interface DownloadTask {
     ontimeout: () => void;
 }
 
-interface QueueItem<T> {
-    id: string;
-    data: T;
-}
 
 interface LogCode {
     content?: RenderCode;

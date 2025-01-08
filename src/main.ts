@@ -1,10 +1,10 @@
 import "./env";
-import { isElement, isNullOrUndefined, isStringTupleArray } from "./env";
+import { isNullOrUndefined, isStringTupleArray } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18n } from "./i18n";
 import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
-import { Dictionary, SyncDictionary, Version, VideoInfo, TaskController } from "./class";
+import { Dictionary, SyncDictionary, Version, VideoInfo, TaskQueue } from "./class";
 import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
@@ -866,11 +866,11 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
 
-    const taskController = new TaskController(5, 5000);
+    const tasks = new TaskQueue(5, 5000);
 
     for (let videoInfo of infoList) {
         let button = getSelectButton(videoInfo.ID)
-        taskController.addTask(async () => {
+        tasks.add(async () => {
             let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID);
             video.State && await pushDownloadTask(video)
             if (!isNullOrUndefined(button)) button.checked = false
@@ -878,6 +878,8 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
             node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
         })
     }
+
+    await tasks.execute()
 
     start.hideToast()
     if (size != 1) {

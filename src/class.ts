@@ -353,33 +353,51 @@ export class VideoInfo {
     }
 }
 
-export class TaskController {
-    private lastTaskStartTime: number = 0;
-    private counter: number = 0;
-    private waiting: Array<() => Promise<void>> = [];
-    private isProcessing: boolean = false;
+export class TaskQueue {
+    private lastTaskStartTime: number = 0; // 上次任务开始的时间戳
+    private counter: number = 0; // 当前活跃任务数
+    private waiting: Array<() => Promise<void>> = []; // 等待执行的任务队列
+    private isProcessing: boolean = false; // 队列是否正在处理任务
+    private onAllTasksCompleted: (() => void) | null = null; // 所有任务完成后的回调
 
-    constructor(private maxConcurrent: number, private minInterval: number) { }
+    constructor(private maxConcurrent: number, private minInterval: number) {}
 
-    addTask(task: () => Promise<void>) {
+    /**
+     * 添加任务到队列
+     * @param task - 要添加的任务，返回 Promise 的函数
+     */
+    add(task: () => Promise<void>) {
         this.waiting.push(task);
         GM_getValue('isDebug') && console.debug(`TaskController: Task added to queue. Queue length: ${this.waiting.length}`);
-        this.processQueue();
     }
 
-    private async processQueue() {
-        if (this.isProcessing) return;
+    /**
+     * 执行任务队列
+     * @returns 一个 Promise，当所有任务完成时 resolve
+     */
+    async execute(): Promise<void> {
+        this.executeTaskQueue();
+        if (this.isProcessing || this.counter > 0 || this.waiting.length > 0) {
+            return new Promise((resolve) => {
+                this.onAllTasksCompleted = resolve;
+            });
+        } else {
+            return Promise.resolve(); // 队列为空时直接返回
+        }
+    }
+
+    /**
+     * 内部方法：处理任务队列
+     */
+    private async executeTaskQueue(): Promise<void> {
+        if (this.isProcessing) return; // 如果队列正在处理任务，直接返回
         this.isProcessing = true;
 
-        while (this.waiting.length > 0) {
-            if (this.counter >= this.maxConcurrent) {
-                GM_getValue('isDebug') && console.debug(`TaskController: Max concurrent tasks (${this.maxConcurrent}) reached. Pausing queue processing.`);
-                this.isProcessing = false;
-                return;
-            }
-
+        while (this.waiting.length > 0 && this.counter < this.maxConcurrent) {
             const now = Date.now();
             const timeSinceLastTask = now - this.lastTaskStartTime;
+
+            // 如果任务间隔不足，等待
             if (timeSinceLastTask < this.minInterval) {
                 GM_getValue('isDebug') && console.debug(`TaskController: Waiting ${this.minInterval - timeSinceLastTask}ms to maintain minimum interval`);
                 await delay(this.minInterval - timeSinceLastTask);
@@ -390,13 +408,30 @@ export class TaskController {
                 this.counter++;
                 this.lastTaskStartTime = Date.now();
                 GM_getValue('isDebug') && console.debug(`TaskController: Starting task. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
+
+                // 执行任务，并在完成后处理后续逻辑
                 task().finally(() => {
                     this.counter--;
                     GM_getValue('isDebug') && console.debug(`TaskController: Task completed. Active tasks: ${this.counter}, Remaining in queue: ${this.waiting.length}`);
-                    this.processQueue();
+
+                    this.executeTaskQueue(); // 重新检查队列，继续处理任务
+
+                    // 如果所有任务完成，触发回调
+                    if (this.counter === 0 && this.waiting.length === 0 && !isNullOrUndefined(this.onAllTasksCompleted)) {
+                        this.onAllTasksCompleted();
+                        this.onAllTasksCompleted = null;
+                    }
                 });
             }
         }
-        this.isProcessing = false;
+
+        // 所有任务完成后，释放处理标志并触发回调
+        if (this.counter === 0 && this.waiting.length === 0) {
+            this.isProcessing = false; // 确保队列完全处理完毕后再释放标志
+            if (!isNullOrUndefined(this.onAllTasksCompleted)) {
+                this.onAllTasksCompleted();
+                this.onAllTasksCompleted = null;
+            }
+        }
     }
 }
