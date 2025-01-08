@@ -63,7 +63,7 @@
         {
             "nodeType": "br"
         },
-        "为了减轻IwaraAPI服务器的压力，脚本强制在解析中加入延迟。"
+        "修复解析时队列进度不能正常显示的问题。"
     ],
     "useHelpForBase": "请认真阅读使用指南！",
     "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
