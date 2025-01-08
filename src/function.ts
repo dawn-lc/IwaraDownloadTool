@@ -554,26 +554,29 @@ export async function aria2TaskCheckAndRestart() {
             }
         )
         .prune();
-
-    let downloadUncompleted: Array<{ id: string, data: Aria2.Status }> = stoped
+    let downloadNormalTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
-            (task: { id: string, data: Aria2.Status }) => task.data.status !== 'complete' || task.data.errorCode !== '13'
+            (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) >= 1024
         )
         .unique('id');
-
     let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
         .filter(
             (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
         )
         .unique('id');
-
+    let downloadUncompleted: Array<{ id: string, data: Aria2.Status }> = stoped
+        .filter(
+            (task: { id: string, data: Aria2.Status }) => task.data.status !== 'complete' || task.data.errorCode !== '13'
+        )
+        .unique('id')
+        .difference(downloadCompleted, 'id')
+        .difference(downloadNormalTasks, 'id');
     let downloadToSlowTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
             (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 1024
         )
         .unique('id');
-
-    let needRestart = [...downloadToSlowTasks, ...downloadUncompleted.difference(downloadCompleted, 'id')].unique('id');
+    let needRestart = downloadToSlowTasks.complement(downloadUncompleted, 'id');
 
     let toast = newToast(
         ToastType.Warn,

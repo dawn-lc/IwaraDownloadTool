@@ -7,6 +7,8 @@ const DEFAULT_CONFIG = {
     autoFollow: false,
     autoLike: false,
     autoCopySaveFileName: false,
+    enableUnsafeMode: false,
+    experimentalFeatures: false,
     autoInjectCheckbox: true,
     checkDownloadLink: true,
     checkPriority: true,
@@ -35,6 +37,8 @@ export class Config {
     autoFollow: boolean
     autoLike: boolean
     addUnlistedAndPrivate: boolean
+    enableUnsafeMode: boolean
+    experimentalFeatures: boolean
     autoInjectCheckbox: boolean
     autoCopySaveFileName: boolean
     checkDownloadLink: boolean
@@ -57,6 +61,8 @@ export class Config {
         this.autoFollow = DEFAULT_CONFIG.autoFollow
         this.autoLike = DEFAULT_CONFIG.autoLike
         this.autoCopySaveFileName = DEFAULT_CONFIG.autoCopySaveFileName
+        this.experimentalFeatures = DEFAULT_CONFIG.experimentalFeatures
+        this.enableUnsafeMode = DEFAULT_CONFIG.enableUnsafeMode
         this.autoInjectCheckbox = DEFAULT_CONFIG.autoInjectCheckbox
         this.checkDownloadLink = DEFAULT_CONFIG.checkDownloadLink
         this.checkPriority = DEFAULT_CONFIG.checkPriority
