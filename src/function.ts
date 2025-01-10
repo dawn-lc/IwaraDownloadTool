@@ -576,7 +576,7 @@ export async function aria2TaskCheckAndRestart() {
             (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 1024
         )
         .unique('id');
-    let needRestart = downloadToSlowTasks.complement(downloadUncompleted, 'id');
+    let needRestart = downloadUncompleted.union(downloadToSlowTasks, 'id');
 
     let toast = newToast(
         ToastType.Warn,
