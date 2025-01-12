@@ -576,7 +576,7 @@ export async function aria2TaskCheckAndRestart() {
             (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 1024
         )
         .unique('id');
-    let needRestart = downloadToSlowTasks.complement(downloadUncompleted, 'id');
+    let needRestart = downloadUncompleted.union(downloadToSlowTasks, 'id');
 
     let toast = newToast(
         ToastType.Warn,
@@ -625,7 +625,7 @@ export async function check() {
 }
 async function getXVersion(urlString: string): Promise<string> {
     let url = urlString.toURL()
-    const data = new TextEncoder().encode(`${url.pathname.split("/").pop()}_${url.searchParams.get('expires')}_5nFp9kmbNnHdAFhaqMvt`)
+    const data = new TextEncoder().encode([url.pathname.split("/").pop(),url.searchParams.get('expires'),'5nFp9kmbNnHdAFhaqMvt'].join('_'))
     const hashBuffer = await crypto.subtle.digest('SHA-1', data)
     return Array.from(new Uint8Array(hashBuffer))
         .map(b => b.toString(16).padStart(2, '0'))

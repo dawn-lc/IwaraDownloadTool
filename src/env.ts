@@ -33,41 +33,6 @@ export const isNotEmpty = (obj: unknown): boolean => {
     return true
 }
 
-
-/*
-Object.defineProperty(Object.prototype, 'prune', {
-    set: function () {
-        return new Proxy(this, {
-            get: function (target, property) {
-                return () => {
-                    if (Array.isArray(target)) {
-                        return target.filter(isNotEmpty).map(i => i.prune());
-                    }
-                    if (isElement(target) || isNode(target)) {
-                        return target
-                    }
-                    if (isObject(target)) {
-                        return Object.fromEntries(
-                            Object.entries(target)
-                                .filter(([k, v]) => isNotEmpty(v))
-                                .map(([k, v]: [string, any]) => [k, v.prune()])
-                        )
-                    }
-                    return isNotEmpty(target) ? target : undefined
-                }
-            },
-            set: function (target, property, value) {
-                console.log('set', target, property, value)
-                return true
-            }
-        });
-    },
-    writable: true,
-    configurable: false,
-    enumerable: false,
-});
-*/
-
 Object.defineProperty(Object.prototype, 'prune',{
     value: function() {
         if (Array.isArray(this)) {
