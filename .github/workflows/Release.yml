@@ -42,8 +42,8 @@ jobs:
         echo "current_version=${PACKAGE_VERSION}" >> $GITHUB_ENV
     - name: 获取当前正式版的sha
       run: |
-        echo "::debug::$(git tag -l)"
-        echo "latest_sha=$(git rev-list -n 1 latest)" >> $GITHUB_ENV
+        LATEST_SHA=$(git rev-list -n 1 latest)
+        echo "latest_sha=${LATEST_SHA}" >> $GITHUB_ENV
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       continue-on-error: true
