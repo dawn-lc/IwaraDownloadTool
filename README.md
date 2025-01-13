@@ -43,26 +43,6 @@
 
 * [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
 
-#### 路径可用变量
-
-| 变量名 | 说明 | 使用示例 | 输出 |
-|---|---|---|---|
-| %#NowTime#% | 当前时间 | %#NowTime:yyyy-MM-dd#% | 2022-02-22 |
-| %#UploadTime#% | 发布时间 | %#UploadTime:yyyy-MM-dd+HH.mm.ss#% | 2022-02-22+22.22.22 | 
-| %#TITLE#% | 视频标题 | %#TITLE#% | 【Quin】黑暗之魂3 一周目攻略 Part22 双王子 薪王化身【机核网】 |
-| %#ID#% | 视频ID | %#ID#% | MrQuinWo22Ne22 |
-| %#AUTHOR#% | 视频作者 | %#AUTHOR#% | Mr.Quin |
-| %#ALIAS#% | 作者昵称 | %#ALIAS#% | 摸鱼奎恩 |
-| %#QUALITY#% | 视频画质 | %#QUALITY#% | Source |
-
-完整示例：
-
-`/Iwara/%#AUTHOR#%/%#NowTime:yyyy-MM-dd#%/(%#ALIAS#%)%#UploadTime:yyyy-MM-dd+HH.mmss#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4`
-
-输出
-
-`/Iwara/Mr.Quin/2022-02-22/(摸鱼奎恩)2022-02-22+22.22.22_【Quin】黑暗之魂3 一周目攻略 Part22 双王子 薪王化身【机核网】_Source[MrQuinWo22Ne22].MP4`
-
 ## 依赖库
 - [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
 - [moment.js](https://github.com/moment/moment/) - [MIT License](https://opensource.org/licenses/MIT)

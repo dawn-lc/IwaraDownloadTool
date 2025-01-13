@@ -45,4 +45,4 @@ jobs:
         gh release create ${{ env.release_tag }} ${{ env.file_list }} \
           --latest \
           --title "正式版/Release ${{ env.current_version }}" \
-          --notes "Full Changelog [${{ env.release_tag }}](https://github.com/dawn-lc/IwaraDownloadTool/commits/${{ env.release_tag }})"
+          --generate-notes

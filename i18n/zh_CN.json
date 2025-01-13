@@ -37,7 +37,7 @@
     "browserDownloadNotSucceeded": "下载未开始或失败！",
     "browserDownloadUnknownError": "未知错误，有可能是下载时提供的参数存在问题，请检查文件名是否合法！",
     "browserDownloadTimeout": "下载超时，请检查网络环境是否正常！",
-    "variable": "查看可用变量",
+    "variable": "→ 查看可用变量 ←",
     "downloadTime": "下载时间 ",
     "uploadTime": "发布时间 ",
     "example": "示例: ",
@@ -83,7 +83,7 @@
         {
             "nodeType": "br"
         },
-        "{ key: string, value: { Title?: string, Alias?: string, Author?: string } }",
+        "[ ID: string, { Title?: string, Alias?: string, Author?: string } ] ",
         {
             "nodeType": "br"
         },
@@ -91,7 +91,7 @@
         {
             "nodeType": "br"
         },
-        "[{ key: \"AeGUIRO2D5vQ6F\", value: { Title: \"237知更鸟\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" } },{ key: \"qQsUMJa19LcK3L\", value: { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation’s_Symphony\", Author: \"temptations_symphony\" } }]"
+        "[[\"AeGUIRO2D5vQ6F\", { Title: \"237知更鸟\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" }],[\"qQsUMJa19LcK3L\", { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation’s_Symphony\", Author: \"temptations_symphony\" }]]"
     ],
     "useHelpForBugreport": [
         "反馈遇到的BUG、使用问题等请前往: ",

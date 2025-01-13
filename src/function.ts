@@ -589,13 +589,19 @@ export async function aria2TaskCheckAndRestart() {
                 ], '%#aria2TaskCheck#%'),
             async onClick() {
                 toast.hideToast()
-                for (let index = 0; index < needRestart.length; index++) {
-                    const task = needRestart[index]
+                for (let i = 0; i < needRestart.length; i++) {
+                    const task = needRestart[i]
                     let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
                     let videoInfo = await (new VideoInfo(cache)).init(task.id)
                     if (videoInfo.State){
                         await pushDownloadTask(videoInfo, true)
-                        await aria2API('aria2.forceRemove', [task.data.gid]) 
+                        let activeTasks = active.filter(
+                            (activeTask: { id: string, data: Aria2.Status }) => activeTask.id === task.id
+                        )
+                        for (let t = 0; t < activeTasks.length; t++) {
+                            const element = activeTasks[t];
+                            await aria2API('aria2.forceRemove', [element.data.gid])
+                        }
                     }
                 }
             }
