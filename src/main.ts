@@ -546,7 +546,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 ToastType.Warn,
                 {
                     node: toastNode([
-                        `${videoInfo.Title}[${videoInfo.ID}] %#downloadQualityError#%`,
+                        `${videoInfo.Title.truncate(64)}[${videoInfo.ID}] %#downloadQualityError#%`,
                         { nodeType: 'br' },
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
