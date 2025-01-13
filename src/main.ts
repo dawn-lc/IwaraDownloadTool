@@ -748,7 +748,7 @@ async function addDownloadTask() {
                         body.remove()
                     }
                 },
-                childs: "确认"
+                childs: i18n[config.language].ok
             }
         ]
     })
