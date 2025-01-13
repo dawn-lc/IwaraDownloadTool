@@ -37,12 +37,16 @@ jobs:
       run: |
         PACKAGE_VERSION=$(cat package.json | jq '.version' | tr -d '"')
         echo "current_version=${PACKAGE_VERSION}" >> $GITHUB_ENV
+    - name: 获取当前正式版的sha
+      run: echo "latest_sha=$(git rev-list -n 1 latest)" >> $GITHUB_ENV
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       continue-on-error: true
     - name: 发布新版本
       run: |
         gh release create ${{ env.release_tag }} ${{ env.file_list }} \
+          --target master \
+          --notes-start-tag ${{ env.latest_sha }} \
           --latest \
           --title "正式版/Release ${{ env.current_version }}" \
           --generate-notes
