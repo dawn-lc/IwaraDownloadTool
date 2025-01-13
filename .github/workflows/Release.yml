@@ -46,7 +46,7 @@ jobs:
       run: |
         gh release create v${{ env.current_version }} ${{ env.file_list }} \
           --target master \
-          --title "${{ env.current_version }}"
+          --title "${{ env.current_version }}" \
           --notes "v${{ env.current_version }} ${{ github.sha }}"
     - run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       continue-on-error: true
