@@ -38,15 +38,16 @@ jobs:
       run: |
         PACKAGE_VERSION=$(cat package.json | jq '.version' | tr -d '"')
         echo "current_version=${PACKAGE_VERSION}" >> $GITHUB_ENV
+    - run: gh release delete ${{ env.current_version }} --cleanup-tag --yes
+      continue-on-error: true
     - name: 发布版本
       run: |
         gh release create v${{ env.current_version }} ${{ env.file_list }} \
           --target dev \
           --prerelease \
           --title "${{ env.current_version }}" \
-          --notes "${{ env.current_version }} ${{ github.sha}}"
-    - name: 删除旧版本
-      run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
+          --notes "${{ env.current_version }} ${{ github.sha }}"
+    - run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       continue-on-error: true
     - name: 发布预览版本
       run: |
