@@ -9,6 +9,7 @@ on:
       - 'src/*'
       - 'build/*'
       - 'utils/*'
+      - '.github/workflows/Preview.yml'
 env:
   release_tag: preview 
   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
