@@ -41,9 +41,9 @@ jobs:
       run: |
         gh release create v${{ env.current_version }} ${{ env.file_list }} \
           --target dev \
-          --title "${{ env.current_version }}" \
           --prerelease \
-          --generate-notes
+          --title "${{ env.current_version }}" \
+          --notes "${{ env.current_version }} ${{ github.sha}}"
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       continue-on-error: true
@@ -53,3 +53,4 @@ jobs:
           --target dev \
           --prerelease \
           --title "预览版/Release ${{ env.current_version }}" \
+          --generate-notes

@@ -1,13 +1,3 @@
-
-/*
-.rainbow-text {
-    background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-size: 600% 100%;
-    animation: rainbow 0.7s infinite linear;
-}
-*/
 @keyframes rainbow {
     0% {
         background-position: 0% 0%;
