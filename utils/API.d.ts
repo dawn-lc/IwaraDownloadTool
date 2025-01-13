@@ -1,6 +1,28 @@
 type GMDownloadErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';
 type ElementTypeFromNodeType<T extends keyof HTMLElementTagNameMap> = HTMLElementTagNameMap[T];
-
+type InputType =
+    | "button"
+    | "checkbox"
+    | "color"
+    | "date"
+    | "datetime-local"
+    | "email"
+    | "file"
+    | "hidden"
+    | "image"
+    | "month"
+    | "number"
+    | "password"
+    | "radio"
+    | "range"
+    | "reset"
+    | "search"
+    | "submit"
+    | "tel"
+    | "text"
+    | "time"
+    | "url"
+    | "week";
 declare module '../i18n/*.json' {
     const content: { [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[] };
     export default content;
@@ -102,7 +124,7 @@ interface RenderCode<T extends keyof HTMLElementTagNameMap> {
     attributes?: Record<string, any>;
     events?: Record<string, EventListenerOrEventListenerObject>;
     className?: string | string[];
-    childs?: RenderCode<any> | string | (RenderCode<any> | string)[];
+    childs?: RenderCode<any> | string | undefined | (RenderCode<any> | string | undefined)[];
 }
 
 interface PieceInfo {

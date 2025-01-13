@@ -1,11 +1,13 @@
+
+/*
 .rainbow-text {
     background-image: linear-gradient(to right, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
     background-clip: text;
     -webkit-text-fill-color: transparent;
     background-size: 600% 100%;
-    animation: rainbow 0.5s infinite linear;
+    animation: rainbow 0.7s infinite linear;
 }
-
+*/
 @keyframes rainbow {
     0% {
         background-position: 0% 0%;
@@ -15,6 +17,16 @@
         background-position: 100% 0%;
     }
 }
+
+.rainbow-text {
+    background-image: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);
+    background-size: 300% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: rainbow 0.8s infinite linear;
+}
+
 
 #pluginMenu {
     z-index: 2147483644;

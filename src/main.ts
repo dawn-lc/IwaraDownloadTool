@@ -146,11 +146,17 @@ class configEdit {
             ]
         })
     }
-    private inputComponent(name: string, type?: string, get?: (name: string) => void, set?: (name: string, e: Event) => void) {
+    private inputComponent(name: string, type?: InputType, help?: HTMLElement, get?: (name: string) => void, set?: (name: string, e: Event) => void) {
         return renderNode({
             nodeType: 'label',
             childs: [
-                `%#${name}#% `,
+                {
+                    nodeType: 'span',
+                    childs: [
+                        `%#${name}#%`,
+                        help
+                    ],
+                },
                 {
                     nodeType: 'input',
                     attributes: {
@@ -232,16 +238,16 @@ class configEdit {
         while (this.interfacePage.hasChildNodes()) {
             this.interfacePage.removeChild(this.interfacePage.firstChild!)
         }
-        let variableInfo = renderNode({
-            nodeType: 'a',
-            childs: '%#variable#%',
-            attributes: {
-                href: 'https://github.com/dawn-lc/IwaraDownloadTool#路径可用变量'
-            }
-        })
         let downloadConfigInput = [
-            variableInfo,
-            this.inputComponent('downloadPath')
+            this.inputComponent('downloadPath', 'text', renderNode({
+                nodeType: 'a',
+                childs: '%#variable#%',
+                className: 'rainbow-text',
+                attributes: {
+                    style: 'float: inline-end;',
+                    href: 'https://github.com/dawn-lc/IwaraDownloadTool/wiki/路径可用变量'
+                }
+            }))
         ]
         let proxyConfigInput = [
             this.inputComponent('downloadProxy'),
@@ -258,10 +264,6 @@ class configEdit {
             this.inputComponent('iwaraDownloaderToken', 'password'),
             ...proxyConfigInput
         ]
-        let BrowserConfigInput = [
-            variableInfo,
-            this.inputComponent('downloadPath')
-        ]
         switch (this.target.downloadType) {
             case DownloadType.Aria2:
                 downloadConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
@@ -272,7 +274,7 @@ class configEdit {
                 iwaraDownloaderConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                 break
             default:
-                BrowserConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
+                downloadConfigInput.map(i => originalNodeAppendChild.call(this.interfacePage, i))
                 break
         }
         if (this.target.checkPriority) {
