@@ -42,8 +42,12 @@ jobs:
         echo "current_version=${PACKAGE_VERSION}" >> $GITHUB_ENV
     - name: 获取当前正式版的sha
       run: |
-        LATEST_SHA=$(git rev-list -n 1 latest)
-        echo "latest_sha=${LATEST_SHA}" >> $GITHUB_ENV
+        if git rev-parse --verify latest >/dev/null 2>&1; then
+          echo "latest_sha=$(git rev-list -n 1 latest)" >> $GITHUB_ENV
+        else
+          echo "::error Tag 'latest' does not exist"
+          exit 1
+        fi
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
       continue-on-error: true
