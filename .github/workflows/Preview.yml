@@ -54,5 +54,5 @@ jobs:
         gh release create ${{ env.release_tag }} ${{ env.file_list }} \
           --target dev \
           --prerelease \
-          --title "预览版/Release ${{ env.current_version }}" \
+          --title "预览版/Prerelease ${{ env.current_version }}" \
           --generate-notes
