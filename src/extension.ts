@@ -8,29 +8,7 @@ export const delay = (time: number) => new Promise(resolve => setTimeout(resolve
 export const hasFunction = (obj: any, method: string): boolean => {
     return !method.isEmpty() && !isNullOrUndefined(obj) ? method in obj && typeof obj[method] === 'function' : false
 }
-/*
-export const getString = (obj: any): string => {
-    obj = obj instanceof Error ? String(obj) : obj
-    obj = obj instanceof Date ? obj.toISOString() : obj
-    return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
-}
-export const prune = (obj: any): any => {
-    if (Array.isArray(obj)) {
-        return obj.filter(isNotEmpty).map(prune);
-    }
-    if (isElement(obj) || isNode(obj)) {
-        return obj
-    }
-    if (isObject(obj)) {
-        return Object.fromEntries(
-            Object.entries(obj)
-                .filter(([key, value]) => isNotEmpty(value))
-                .map(([key, value]) => [key, prune(value)])
-        )
-    }
-    return isNotEmpty(obj) ? obj : undefined;
-}
-*/
+
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
     if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")

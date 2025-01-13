@@ -1,5 +1,5 @@
 import "./env";
-import { isNotEmpty, isNullOrUndefined } from "./env"
+import { isNullOrUndefined } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
