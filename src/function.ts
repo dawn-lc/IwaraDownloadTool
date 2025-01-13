@@ -1,5 +1,5 @@
 import "./env";
-import { isNullOrUndefined } from "./env"
+import { isConvertibleToNumber, isNullOrUndefined } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
@@ -556,7 +556,7 @@ export async function aria2TaskCheckAndRestart() {
         .prune();
     let downloadNormalTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
-            (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) >= 1024
+            (task: { id: string, data: Aria2.Status }) => isConvertibleToNumber(task.data.downloadSpeed) && Number(task.data.downloadSpeed) >= 512
         )
         .unique('id');
     let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
@@ -573,7 +573,7 @@ export async function aria2TaskCheckAndRestart() {
         .difference(downloadNormalTasks, 'id');
     let downloadToSlowTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
-            (task: { id: string, data: Aria2.Status }) => !Number.isNaN(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 1024
+            (task: { id: string, data: Aria2.Status }) => isConvertibleToNumber(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 512
         )
         .unique('id');
     let needRestart = downloadUncompleted.union(downloadToSlowTasks, 'id');
