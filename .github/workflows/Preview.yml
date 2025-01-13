@@ -42,6 +42,7 @@ jobs:
         gh release create v${{ env.current_version }} ${{ env.file_list }} \
           --target dev \
           --title "${{ env.current_version }}" \
+          --prerelease \
           --generate-notes
     - name: 删除旧版本
       run: gh release delete ${{ env.release_tag }} --cleanup-tag --yes
