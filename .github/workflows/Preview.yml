@@ -8,7 +8,7 @@ on:
       - 'package-lock.json'
       - 'src/*'
       - 'build/*'
-      - 'utils/*'
+      - 'lib/*'
       - '.github/workflows/Preview.yml'
 env:
   release_tag: preview 

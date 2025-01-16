@@ -10,8 +10,8 @@
     "allowSyntheticDefaultImports": true
   },
   "include": [
-    "i18n/*.json",
-    "utils/*.d.ts",
+    "locale/*.json",
+    "lib/*.d.ts",
     "src/*.ts"
   ]
 }
