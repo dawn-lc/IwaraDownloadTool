@@ -32,6 +32,15 @@ export const isNotEmpty = (obj: unknown): boolean => {
     }
     return true
 }
+export const isConvertibleToNumber = (value: unknown) => {
+    return isNotEmpty(value) ? (
+        isString(value) ? (
+            value.trim() !== "" && !isNaN(Number(value)) && !isFinite(Number(value)) === false
+        ) : (
+            isNumber(value) ? !isNaN(value) && isFinite(value) : false
+        )
+    ) : false;
+}
 
 Object.defineProperty(Object.prototype, 'prune',{
     value: function() {
@@ -68,11 +77,6 @@ Object.defineProperty(Object.prototype, 'stringify',{
 Array.prototype.any = function () {
     return this.filter(i => !isNullOrUndefined(i)).length > 0
 }
-/*
-Array.prototype.prune = function () {
-    return this.filter(i => i !== null && typeof i !== 'undefined')
-}
-*/
 Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {
     return this.filter((item, index, self) =>
         index === self.findIndex((t) => (
