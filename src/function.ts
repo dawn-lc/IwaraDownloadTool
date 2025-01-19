@@ -294,12 +294,12 @@ export function aria2Download(videoInfo: VideoInfo) {
         ).trim())
         downloadUrl.searchParams.set('videoid', id)
         downloadUrl.searchParams.set('download', localPath.filename)
-        let res = await aria2API('aria2.addUri', [
+        let params = [
             [downloadUrl.href],
             {
                 'all-proxy': config.downloadProxy,
-                'all-proxy-passwd': config.downloadProxyPassword,
-                'all-proxy-user': config.downloadProxyUsername,
+                'all-proxy-passwd': !config.downloadProxy.isEmpty() ? config.downloadProxyPassword : undefined,
+                'all-proxy-user': !config.downloadProxy.isEmpty() ? config.downloadProxyUsername: undefined,
                 'out': localPath.filename,
                 'dir': localPath.fullPath.replace(localPath.filename, ''),
                 'referer': window.location.hostname,
@@ -307,7 +307,8 @@ export function aria2Download(videoInfo: VideoInfo) {
                     'Cookie:' + unsafeWindow.document.cookie
                 ]
             }.prune()
-        ])
+        ]
+        let res = await aria2API('aria2.addUri', params)
         console.log(`Aria2 ${title} ${JSON.stringify(res)}`)
         newToast(
             ToastType.Info,
