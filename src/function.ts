@@ -10,21 +10,23 @@ import { VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 
 export async function refreshToken(): Promise<string> {
-    let refresh = config.authorization
-    let res = await unlimitedFetch(`https://api.iwara.tv/user/token`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-    })
-    if (!res.ok) throw new Error(`Refresh token error: ${res.status}`)
-    let body = await res.text()
+    const { authorization } = config
     try {
-        refresh = JSON.parse(body)['accessToken']
-    } catch (error: any) {
-        console.warn(`Refresh token error: ${error.stringify()} body: ${body}`)
+        const res = await unlimitedFetch('https://api.iwara.tv/user/token', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`
+            }
+        })
+        if (!res.ok) {
+            throw new Error(`Refresh token failed with status: ${res.status}`);
+        }
+        const { accessToken } = await res.json()
+        return accessToken || authorization
+    } catch (error) {
+        console.warn('Failed to refresh token:', error)
     }
-    return refresh
+    return authorization
 }
 export async function getAuth(url?: string) {
     return Object.assign(
