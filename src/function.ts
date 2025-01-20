@@ -11,15 +11,18 @@ import { pushDownloadTask } from "./main"
 
 export async function refreshToken(): Promise<string> {
     let refresh = config.authorization
+    let res = await unlimitedFetch(`https://api.iwara.tv/user/token`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    if (!res.ok) throw new Error(`Refresh token error: ${res.status}`)
+    let body = await res.text()
     try {
-        refresh = (await (await unlimitedFetch(`https://api.iwara.tv/user/token`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-        })).json())['accessToken']
+        refresh = JSON.parse(body)['accessToken']
     } catch (error: any) {
-        console.warn(`Refresh token error: ${error.stringify()}`)
+        console.warn(`Refresh token error: ${error.stringify()} body: ${body}`)
     }
     return refresh
 }
