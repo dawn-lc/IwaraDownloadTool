@@ -31,14 +31,61 @@ interface Date {
     format(format?: string): string;
 }
 interface String {
-    replaceEmojis(replace?: string | null): string
     replaceVariable(replacements: Record<string, any>, count?: number): string;
+    /**
+     * 替换字符串中的所有表情符号
+     * @param {string | null} [replace] - 可选参数，替换为的字符串（默认替换为空字符串）
+     * @returns {string} 返回替换后的字符串
+     */
+    replaceEmojis(replace?: string | null): string
+    /**
+     * 判断字符串是否为空
+     * @returns {boolean} 如果字符串为空或只包含空格，返回 true，否则返回 false
+     */
     isEmpty(): boolean;
+    /**
+     * 将字符串转换为 URL 对象
+     * @returns {URL} 返回解析后的 URL 对象
+     */
     toURL(): URL;
-    among(start: string, end: string, greedy?: boolean): string;
+    /**
+     * 反转字符串中的字符（考虑到Unicode字符）
+     * @returns {string} 返回反转后的字符串
+     */
+    reversed(): string;
+    /**
+     * 获取字符串中两个指定字符串之间的内容
+     * @param {string} start - 开始标记
+     * @param {string} end - 结束标记
+     * @param {boolean} [greedy=false] - 是否贪婪匹配，默认不贪婪
+     * @param {boolean} [reverse=false] - 是否反向查找，默认从左到右查找
+     * @returns {string} 返回两个标记之间的子串
+     */
+    among(start: string, end: string, greedy?: boolean, reverse?: boolean): string;
+    /**
+     * 根据分隔符分割字符串，并限制返回的部分数
+     * @param {string} separator - 分隔符
+     * @param {number} [limit] - 可选参数，限制分割的部分数
+     * @returns {string[]} 返回分割后的数组
+     */
     splitLimit(separator: string, limit?: number): string[];
+    /**
+     * 截断字符串至指定长度
+     * @param {number} maxLength - 最大长度
+     * @returns {string} 返回截断后的字符串
+     */
     truncate(maxLength: number): string
+    /**
+     * 删除字符串开头的指定前缀
+     * @param {string} prefix - 要去除的前缀
+     * @returns {string} 返回去除前缀后的字符串
+     */
     trimHead(prefix: string): string;
+    /**
+     * 删除字符串结尾的指定后缀
+     * @param {string} suffix - 要去除的后缀
+     * @returns {string} 返回去除后缀后的字符串
+     */
     trimTail(suffix: string): string;
 }
 
@@ -66,9 +113,12 @@ interface Object{
     stringify(): string;
 }
 interface Array<T> {
+    /**
+     * 判断数组是否包含至少一个非空值
+     * @returns {boolean} 如果数组中至少有一个非 null 或 undefined 元素，返回 true，否则返回 false
+     */
     any(): boolean;
     //prune(): Array<T>;
-    unique(): Array<T>;
     /**
      * @name unique
      * @description 根据元素值或特定属性移除数组中的重复元素。

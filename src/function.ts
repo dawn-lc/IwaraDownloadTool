@@ -488,7 +488,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
         let path = analyzeLocalPath(file.path)
         if (isNullOrUndefined(path.filename) || path.filename.isEmpty()) return 
-        videoID = path.filename.among('[', ']')
+        videoID = path.filename.among('[', ']', false, true)
         if (videoID.isEmpty()) return 
         return videoID
     } catch (error) {
