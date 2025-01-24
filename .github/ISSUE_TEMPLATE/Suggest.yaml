@@ -1,7 +1,7 @@
 name: 提出建议
 description: 提出对脚本的建议。
-title: "[Suggest]: "
-labels: ["增强"]
+title: "[建议]: "
+labels: ["建议"]
 assignees:
   - dawn-lc
 body:
