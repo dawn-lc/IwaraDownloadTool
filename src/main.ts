@@ -87,6 +87,7 @@ class configEdit {
                         this.downloadTypeSelect(),
                         this.interfacePage,
                         this.switchButton('checkPriority'),
+                        this.switchButton('autoDownloadMetadata'), 
                         this.switchButton('checkDownloadLink'),
                         this.switchButton('autoFollow'),
                         this.switchButton('autoLike'),
@@ -574,8 +575,123 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             othersDownload(videoInfo)
             break
     }
+    
+    if (config.autoDownloadMetadata) {
+        
+        downloadMetadata(videoInfo);
+        GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
+    }
 }
+function getDownloadPath(videoInfo: VideoInfo): string {
+    const downloadPath = config.downloadPath.replaceVariable({
+        NowTime: new Date(),
+        UploadTime: videoInfo.UploadTime,
+        AUTHOR: videoInfo.Author,
+        ID: videoInfo.ID,
+        TITLE: videoInfo.Title,
+        ALIAS: videoInfo.Alias,
+        QUALITY: videoInfo.DownloadQuality
+    }).trim();
+    const analy_result = analyzeLocalPath(downloadPath).fullPath;
+    if (analy_result.length > 1024) {
+        throw new Error('Filename too long: ' + analy_result);
+    } else if (analy_result.length === 0) {
+        throw new Error('Filename is empty: ' + analy_result);
+    }
+    return analy_result;
+    
+}
+function downloadMetadata(videoInfo: VideoInfo): void {
+    const downloadPath = getDownloadPath(videoInfo);
 
+
+    switch (config.downloadType) {
+        case DownloadType.Browser:
+            browserDownloadMetadata(videoInfo, downloadPath);
+            break;
+        default:
+            // For other download types, we'll use browser download for metadata
+            browserDownloadMetadata(videoInfo, downloadPath);
+            break;
+    }
+}
+function browserDownloadMetadata(videoInfo: VideoInfo, downloadPath: string): void {
+
+    const metadataContent = generateMetadataContent(videoInfo, downloadPath);
+  
+    const blob = new Blob([metadataContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+  
+    // Generate filename
+    const videoFilename = analyzeLocalPath(
+      config.downloadPath.replaceVariable({
+        NowTime: new Date(),
+        UploadTime: videoInfo.UploadTime,
+        AUTHOR: videoInfo.Author,
+        ID: videoInfo.ID,
+        TITLE: videoInfo.Title,
+        ALIAS: videoInfo.Alias,
+        QUALITY: videoInfo.DownloadQuality,
+      })
+    ).filename;
+  
+    const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
+  
+    // Use default browser download mechanism instead of GM_download
+
+    // const a = document.createElement('a');
+    // a.href = url;
+    // a.download = MetadataFilename;
+    // document.body.appendChild(a);
+    // a.click();
+    // document.body.removeChild(a);
+    // URL.revokeObjectURL(url);
+
+
+    function renderNode(params: { 
+        nodeType: string; 
+        attributes: Record<string, string> 
+    }): HTMLElement {
+        const element = document.createElement(params.nodeType);
+        Object.entries(params.attributes).forEach(([key, value]) => {
+            element.setAttribute(key, value);
+        });
+        document.body.appendChild(element);
+        return element;
+    }
+    
+    // Usage
+    const a = renderNode({
+        nodeType: 'a',
+        attributes: {
+            href: url,
+            download: MetadataFilename
+        }
+    }) as HTMLAnchorElement; // Ensure TypeScript knows it's an <a> element
+    
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+  
+    
+  }
+function generateMetadataContent(videoInfo: VideoInfo, DownloadPath: string): string {
+
+    const metadata = {
+        ...videoInfo,
+        DownloadPath: DownloadPath,
+        MetaDataVersion: GM_info.script.version,
+    };
+
+    return JSON.stringify(metadata, (key, value) => {
+        // Convert Date objects to ISO strings.
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        return value;
+    }, 2);
+}
 function firstRun() {
     console.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))

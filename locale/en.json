@@ -104,6 +104,7 @@
     "connectionTest": "Connection Test",
     "settingsCheck": "Settings Check",
     "createTask": "Create Task",
+    "autoDownloadMetadata": "Auto-download metadata",
     "downloadPathError": "Download path error!",
     "browserDownloadModeError": "Please enable the browser API download mode in the script manager!",
     "downloadQualityError": "Specified quality download URL not found!",
