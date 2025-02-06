@@ -575,13 +575,11 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             othersDownload(videoInfo)
             break
     }
-    // TODO: Add metadata download control by button 
-    // if (config.autoDownloadMetadata) {
-    //     downloadMetadata(videoInfo);
-    // }
-    console.log('Download task pushed:', videoInfo);
+    
     if (config.autoDownloadMetadata) {
+        
         downloadMetadata(videoInfo);
+        GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
     }
 }
 function getDownloadPath(videoInfo: VideoInfo): string {
@@ -638,11 +636,11 @@ function browserDownloadMetadata(videoInfo: VideoInfo ,downloadPath: string): vo
         }
     )).filename;
 
-    const metadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json'; // Change extension as needed
+    const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json'; // Change extension as needed
 
     GM_download({
         url: url,
-        name: metadataFilename,
+        name: MetadataFilename,
         onload: () => {
             URL.revokeObjectURL(url);
         },
@@ -651,12 +649,12 @@ function browserDownloadMetadata(videoInfo: VideoInfo ,downloadPath: string): vo
         }
     });
 }
-function generateMetadataContent(videoInfo: VideoInfo, downloadPath: string): string {
+function generateMetadataContent(videoInfo: VideoInfo, DownloadPath: string): string {
 
     const metadata = {
         ...videoInfo,
-        DownloadPath: downloadPath ,
-        meta_data_version: "0.0.0",
+        DownloadPath: DownloadPath,
+        MetaDataVersion: GM_info.script.version,
     };
 
     return JSON.stringify(metadata, (key, value) => {
