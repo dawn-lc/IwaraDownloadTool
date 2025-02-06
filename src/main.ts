@@ -605,7 +605,7 @@ function getDownloadPath(videoInfo: VideoInfo): string {
 function downloadMetadata(videoInfo: VideoInfo): void {
     const downloadPath = getDownloadPath(videoInfo);
 
-    console.log('Downloading metadata for video:', videoInfo, 'to:', downloadPath);
+
     switch (config.downloadType) {
         case DownloadType.Browser:
             browserDownloadMetadata(videoInfo, downloadPath);
@@ -617,7 +617,7 @@ function downloadMetadata(videoInfo: VideoInfo): void {
     }
 }
 function browserDownloadMetadata(videoInfo: VideoInfo, downloadPath: string): void {
-    console.log('Downloading metadata for video:', videoInfo);
+
     const metadataContent = generateMetadataContent(videoInfo, downloadPath);
   
     const blob = new Blob([metadataContent], { type: 'text/plain' });
@@ -639,7 +639,7 @@ function browserDownloadMetadata(videoInfo: VideoInfo, downloadPath: string): vo
     const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
   
     // Use default browser download mechanism instead of GM_download
-    console.log('Downloading metadata to:', MetadataFilename,"by browser download");
+
     const a = document.createElement('a');
     a.href = url;
     a.download = MetadataFilename;
