@@ -616,39 +616,38 @@ function downloadMetadata(videoInfo: VideoInfo): void {
             break;
     }
 }
-function browserDownloadMetadata(videoInfo: VideoInfo ,downloadPath: string): void {
+function browserDownloadMetadata(videoInfo: VideoInfo, downloadPath: string): void {
     console.log('Downloading metadata for video:', videoInfo);
     const metadataContent = generateMetadataContent(videoInfo, downloadPath);
-
+  
     const blob = new Blob([metadataContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-
+  
     // Generate filename
-    const videoFilename = analyzeLocalPath(config.downloadPath.replaceVariable(
-        {
-            NowTime: new Date(),
-            UploadTime: videoInfo.UploadTime,
-            AUTHOR: videoInfo.Author,
-            ID: videoInfo.ID,
-            TITLE: videoInfo.Title,
-            ALIAS: videoInfo.Alias,
-            QUALITY: videoInfo.DownloadQuality
-        }
-    )).filename;
-
-    const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json'; // Change extension as needed
-
-    GM_download({
-        url: url,
-        name: MetadataFilename,
-        onload: () => {
-            URL.revokeObjectURL(url);
-        },
-        onerror: () => {
-            URL.revokeObjectURL(url);
-        }
-    });
-}
+    const videoFilename = analyzeLocalPath(
+      config.downloadPath.replaceVariable({
+        NowTime: new Date(),
+        UploadTime: videoInfo.UploadTime,
+        AUTHOR: videoInfo.Author,
+        ID: videoInfo.ID,
+        TITLE: videoInfo.Title,
+        ALIAS: videoInfo.Alias,
+        QUALITY: videoInfo.DownloadQuality,
+      })
+    ).filename;
+  
+    const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
+  
+    // Use default browser download mechanism instead of GM_download
+    console.log('Downloading metadata to:', MetadataFilename,"by browser download");
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = MetadataFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 function generateMetadataContent(videoInfo: VideoInfo, DownloadPath: string): string {
 
     const metadata = {
