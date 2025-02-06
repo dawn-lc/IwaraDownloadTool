@@ -103,14 +103,31 @@ Array.prototype.complement = function <T>(this: T[], that: T[], prop?: keyof T):
 String.prototype.isEmpty = function () {
     return !isNullOrUndefined(this) && this.length === 0
 }
-String.prototype.among = function (start: string, end: string, greedy: boolean = false) {
+String.prototype.reversed = function() {
+    const segmenter = new Intl.Segmenter(navigator.language, { granularity: 'grapheme' });
+    return [...segmenter.segment(this.toString())].reverse().join('');
+}
+String.prototype.among = function (start: string, end: string, greedy: boolean = false, reverse: boolean = false) {
     if (this.isEmpty() || start.isEmpty() || end.isEmpty()) return ''
-    const startIndex = this.indexOf(start)
-    if (startIndex === -1) return ''
-    const adjustedStartIndex = startIndex + start.length
-    const endIndex = greedy ? this.lastIndexOf(end) : this.indexOf(end, adjustedStartIndex)
-    if (endIndex === -1 || endIndex < adjustedStartIndex) return ''
-    return this.slice(adjustedStartIndex, endIndex)
+    if (!reverse) {
+        const startIndex = this.indexOf(start);
+        if (startIndex === -1) return '';
+        const adjustedStartIndex = startIndex + start.length;
+        const endIndex = greedy
+            ? this.lastIndexOf(end)
+            : this.indexOf(end, adjustedStartIndex);
+        if (endIndex === -1 || endIndex < adjustedStartIndex) return '';
+        return this.slice(adjustedStartIndex, endIndex);
+    } else {
+        const endIndex = this.lastIndexOf(end);
+        if (endIndex === -1) return '';
+        const adjustedEndIndex = endIndex - end.length;
+        const startIndex = greedy
+            ? this.indexOf(start)
+            : this.lastIndexOf(start, adjustedEndIndex);
+        if (startIndex === -1 || startIndex + start.length > adjustedEndIndex) return '';
+        return this.slice(startIndex + start.length, endIndex);
+    }
 }
 String.prototype.splitLimit = function (separator: string, limit?: number) {
     if (this.isEmpty() || isNullOrUndefined(separator)) {

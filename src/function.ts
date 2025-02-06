@@ -10,18 +10,23 @@ import { VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 
 export async function refreshToken(): Promise<string> {
-    let refresh = config.authorization
+    const { authorization } = config
     try {
-        refresh = (await (await unlimitedFetch(`https://api.iwara.tv/user/token`, {
+        const res = await unlimitedFetch('https://api.iwara.tv/user/token', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                Authorization: `Bearer ${localStorage.getItem('token')}`
             }
-        })).json())['accessToken']
-    } catch (error: any) {
-        console.warn(`Refresh token error: ${error.stringify()}`)
+        })
+        if (!res.ok) {
+            throw new Error(`Refresh token failed with status: ${res.status}`);
+        }
+        const { accessToken } = await res.json()
+        return accessToken || authorization
+    } catch (error) {
+        console.warn('Failed to refresh token:', error)
     }
-    return refresh
+    return authorization
 }
 export async function getAuth(url?: string) {
     return Object.assign(
@@ -483,7 +488,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
         let path = analyzeLocalPath(file.path)
         if (isNullOrUndefined(path.filename) || path.filename.isEmpty()) return 
-        videoID = path.filename.among('[', ']')
+        videoID = path.filename.among('[', ']', false, true)
         if (videoID.isEmpty()) return 
         return videoID
     } catch (error) {

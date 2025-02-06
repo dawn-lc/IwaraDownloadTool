@@ -7,6 +7,7 @@ const DEFAULT_CONFIG = {
     autoFollow: false,
     autoLike: false,
     autoCopySaveFileName: false,
+    autoDownloadMetadata: false,
     enableUnsafeMode: false,
     experimentalFeatures: false,
     autoInjectCheckbox: true,
@@ -36,6 +37,7 @@ export class Config {
     language: string
     autoFollow: boolean
     autoLike: boolean
+    autoDownloadMetadata: boolean 
     addUnlistedAndPrivate: boolean
     enableUnsafeMode: boolean
     experimentalFeatures: boolean
@@ -78,6 +80,7 @@ export class Config {
         this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath
         this.iwaraDownloaderToken = DEFAULT_CONFIG.iwaraDownloaderToken
         this.priority = DEFAULT_CONFIG.priority
+        this.autoDownloadMetadata = DEFAULT_CONFIG.autoDownloadMetadata;
         let body = new Proxy(this, {
             get: function (target, property: string) {
                 if (property === 'configChange') {

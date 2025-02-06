@@ -2,7 +2,7 @@ name: "Mark stale issues"
 
 on:
   schedule:
-    - cron: "0 1 * * *"  # 每天的 UTC 时间 00:00 运行
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
