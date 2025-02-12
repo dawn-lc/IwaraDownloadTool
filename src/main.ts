@@ -491,6 +491,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
         return
     }
     if (!bypass) {
+        // Following 不可靠，始终为false https://www.iwara.tv/forum/support/92534c25-f4c6-4f2c-8172-480611fa051d
         if (config.autoFollow && !videoInfo.Following) {
             if ((await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                 method: 'POST',
@@ -681,6 +682,22 @@ async function injectCheckbox(element: Element) {
             }
         }
     })
+
+    // Following 不可靠，始终为false https://www.iwara.tv/forum/support/92534c25-f4c6-4f2c-8172-480611fa051d
+    /*
+    let follow = renderNode(
+        {
+            nodeType: 'div',
+            className: 'follow',
+            childs: {
+                nodeType: 'div',
+                className: ['text', 'text--white' ,'text--tiny' ,'text--bold'],
+                childs: '%#following#%'
+            }
+        }
+    )
+    videoInfo?.Following && originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), follow)
+    */
     pageSelectButtons.set(ID, button)
     originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
 }
