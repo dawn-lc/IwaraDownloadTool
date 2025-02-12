@@ -441,6 +441,8 @@ class menu {
                     headers: await getAuth()
                 });
                 const data = (await response.json() as Iwara.Page).results as Iwara.Video[];
+                // 来自该api的视频皆为已关注用户发布
+                data.forEach(info => info.user.following = true);
                 data.forEach(info => new VideoInfo().init(info.id, info));
                 await delay(3000)
             }
@@ -1010,7 +1012,11 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         let cloneResponse = response.clone()
                         if (!cloneResponse.ok) break;
                         let cloneBody = await cloneResponse.json() as Iwara.Page
-                        let list = cloneBody.results as Iwara.Video[]
+                        let list = (cloneBody.results as Iwara.Video[]).map(i => {
+                            i.user.following = undefined
+                            i.user.friend =  undefined
+                            return i
+                        });
                         [...list].forEach(info => new VideoInfo().init(info.id, info))
                         if (!config.addUnlistedAndPrivate) break
                         GM_getValue('isDebug') && console.debug(url.searchParams)
