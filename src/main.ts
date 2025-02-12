@@ -685,8 +685,6 @@ async function injectCheckbox(element: Element) {
         }
     })
 
-    // Following 不可靠，始终为false https://www.iwara.tv/forum/support/92534c25-f4c6-4f2c-8172-480611fa051d
-    /*
     let follow = renderNode(
         {
             nodeType: 'div',
@@ -699,9 +697,38 @@ async function injectCheckbox(element: Element) {
         }
     )
     videoInfo?.Following && originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), follow)
-    */
     pageSelectButtons.set(ID, button)
-    originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
+
+    let item = element.querySelector('.videoTeaser__thumbnail')?.parentElement
+    item?.style.setProperty('position', 'relative')
+    originalNodeAppendChild.call(item, button)
+
+    if (pluginMenu.pageType === PageType.Playlist) {
+        let deletePlaylistItme = renderNode({
+            nodeType: 'button',
+            attributes: {
+                videoID: ID
+            },
+            childs: '%#delete#%',
+            className: 'deleteButton',
+            events: {
+                click: async (event: Event) => {
+                    if ((await unlimitedFetch(`https://api.iwara.tv/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
+                        method: 'DELETE',
+                        headers: await getAuth()
+                    })).ok) {
+                        newToast(ToastType.Info,{ text: `${Name} %#deleteSucceed#%`, close: true }).showToast()
+                        deletePlaylistItme.remove()
+                    }
+                    event.preventDefault()
+                    event.stopPropagation()
+                    event.stopImmediatePropagation()
+                    return false
+                }
+            }
+        })
+        originalNodeAppendChild.call(item,  deletePlaylistItme)
+    }
 }
 
 function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {

@@ -18,6 +18,8 @@
     "ok": "确定",
     "on": "开启",
     "off": "关闭",
+    "delete": "删除",
+    "deleteSucceed": "删除成功！",
     "isDebug": "调试模式",
     "downloadType": "下载方式",
     "browserDownload": "浏览器下载",
