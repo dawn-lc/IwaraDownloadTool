@@ -279,9 +279,9 @@ namespace Iwara {
         username: string
         status: string
         role: string
-        followedBy: boolean
-        following: boolean
-        friend: boolean
+        followedBy: boolean | undefined
+        following: boolean | undefined
+        friend: boolean | undefined
         premium: boolean
         locale: null
         seenAt: string

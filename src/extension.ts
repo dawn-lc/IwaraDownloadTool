@@ -11,13 +11,12 @@ export const hasFunction = (obj: any, method: string): boolean => {
 
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
-    if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
     return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
-            method: (init && init.method) as "GET" | "HEAD" | "POST" || 'GET',
+            method: (init && init.method) as Tampermonkey.Request['method'],
             url: typeof input === 'string' ? input : input.url,
             headers: (init && init.headers) as Tampermonkey.RequestHeaders || {},
-            data: ((init && init.body) || null) as string,
+            data: ((init && init.body) || null) as Tampermonkey.Request['data'],
             onload: function (response: Tampermonkey.ResponseBase) {
                 resolve(new Response(response.responseText, {
                     status: response.status,

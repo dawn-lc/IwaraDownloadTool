@@ -1,7 +1,7 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.2.187",
+  "version": "3.2.190",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,9 +14,8 @@
     "toastify-js": "^1.12.0"
   },
   "devDependencies": {
-    "@types/greasemonkey": "^4.0.4",
     "@types/moment": "^2.11.29",
-    "@types/tampermonkey": "^4.0.10",
+    "@types/tampermonkey": "^5.0.4",
     "@types/toastify-js": "^1.12.3",
     "esbuild": "^0.24.0",
     "ts-node": "^10.9.2",

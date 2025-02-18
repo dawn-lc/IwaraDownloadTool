@@ -263,18 +263,25 @@ export class VideoInfo {
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
             this.External = !isNullOrUndefined(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
-            this.AuthorID = VideoInfoSource.user.id
-            this.Following = VideoInfoSource.user.following
+            
             this.Liked = VideoInfoSource.liked
-            this.Friend = VideoInfoSource.user.friend
             this.Private = VideoInfoSource.private
             this.Unlisted = VideoInfoSource.unlisted
-            this.Alias = VideoInfoSource.user.name
-            this.Author = VideoInfoSource.user.username
             this.UploadTime = new Date(VideoInfoSource.createdAt)
             this.Tags = VideoInfoSource.tags
             this.Description = VideoInfoSource.body
             this.ExternalUrl = VideoInfoSource.embedUrl
+
+            if (!isNullOrUndefined(VideoInfoSource.user.following)) {
+                this.Following = VideoInfoSource.user.following
+            }
+            if (!isNullOrUndefined(VideoInfoSource.user.friend)) {
+                this.Friend = VideoInfoSource.user.friend
+            }
+
+            this.AuthorID = VideoInfoSource.user.id
+            this.Alias = VideoInfoSource.user.name
+            this.Author = VideoInfoSource.user.username
             await db.videos.put(this)
             if (!isNullOrUndefined(InfoSource)) {
                 return this

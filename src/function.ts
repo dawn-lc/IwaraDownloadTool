@@ -79,8 +79,7 @@ export function toastNode(body: RenderCode<any>["childs"], title?: string): Elem
             } : {
                 nodeType: 'h3',
                 childs: '%#appName#%'
-            }
-            ,
+            },
             {
                 nodeType: 'p',
                 childs: body

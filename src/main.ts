@@ -442,6 +442,8 @@ class menu {
                     headers: await getAuth()
                 });
                 const data = (await response.json() as Iwara.Page).results as Iwara.Video[];
+                // 来自该api的视频皆为已关注用户发布
+                data.forEach(info => info.user.following = true);
                 data.forEach(info => new VideoInfo().init(info.id, info));
                 await delay(3000)
             }
@@ -492,6 +494,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
         return
     }
     if (!bypass) {
+        // Following 不可靠，始终为false https://www.iwara.tv/forum/support/92534c25-f4c6-4f2c-8172-480611fa051d
         if (config.autoFollow && !videoInfo.Following) {
             if ((await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                 method: 'POST',
@@ -797,8 +800,51 @@ async function injectCheckbox(element: Element) {
             }
         }
     })
+
+    let follow = renderNode(
+        {
+            nodeType: 'div',
+            className: 'follow',
+            childs: {
+                nodeType: 'div',
+                className: ['text', 'text--white' ,'text--tiny' ,'text--bold'],
+                childs: '%#following#%'
+            }
+        }
+    )
+    videoInfo?.Following && originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), follow)
     pageSelectButtons.set(ID, button)
-    originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), button)
+
+    let item = element.querySelector('.videoTeaser__thumbnail')?.parentElement
+    item?.style.setProperty('position', 'relative')
+    originalNodeAppendChild.call(item, button)
+
+    if (pluginMenu.pageType === PageType.Playlist) {
+        let deletePlaylistItme = renderNode({
+            nodeType: 'button',
+            attributes: {
+                videoID: ID
+            },
+            childs: '%#delete#%',
+            className: 'deleteButton',
+            events: {
+                click: async (event: Event) => {
+                    if ((await unlimitedFetch(`https://api.iwara.tv/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
+                        method: 'DELETE',
+                        headers: await getAuth()
+                    })).ok) {
+                        newToast(ToastType.Info,{ text: `${Name} %#deleteSucceed#%`, close: true }).showToast()
+                        deletePlaylistItme.remove()
+                    }
+                    event.preventDefault()
+                    event.stopPropagation()
+                    event.stopImmediatePropagation()
+                    return false
+                }
+            }
+        })
+        originalNodeAppendChild.call(item,  deletePlaylistItme)
+    }
 }
 
 function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
@@ -1109,7 +1155,11 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         let cloneResponse = response.clone()
                         if (!cloneResponse.ok) break;
                         let cloneBody = await cloneResponse.json() as Iwara.Page
-                        let list = cloneBody.results as Iwara.Video[]
+                        let list = (cloneBody.results as Iwara.Video[]).map(i => {
+                            i.user.following = undefined
+                            i.user.friend =  undefined
+                            return i
+                        });
                         [...list].forEach(info => new VideoInfo().init(info.id, info))
                         if (!config.addUnlistedAndPrivate) break
                         GM_getValue('isDebug') && console.debug(url.searchParams)
