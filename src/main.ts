@@ -573,9 +573,19 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             break
         case DownloadType.Browser:
             browserDownload(videoInfo)
+            if (config.autoDownloadMetadata) {
+        
+                downloadMetadata(videoInfo);
+                GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
+            }
             break
         default:
             othersDownload(videoInfo)
+            if (config.autoDownloadMetadata) {
+        
+                downloadMetadata(videoInfo);
+                GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
+            }
             break
     }
     
@@ -606,17 +616,9 @@ function getDownloadPath(videoInfo: VideoInfo): string {
 }
 function downloadMetadata(videoInfo: VideoInfo): void {
     const downloadPath = getDownloadPath(videoInfo);
+    browserDownloadMetadata(videoInfo, downloadPath);
 
 
-    switch (config.downloadType) {
-        case DownloadType.Browser:
-            browserDownloadMetadata(videoInfo, downloadPath);
-            break;
-        default:
-            // For other download types, we'll use browser download for metadata
-            browserDownloadMetadata(videoInfo, downloadPath);
-            break;
-    }
 }
 function browserDownloadMetadata(videoInfo: VideoInfo, downloadPath: string): void {
 
@@ -642,35 +644,14 @@ function browserDownloadMetadata(videoInfo: VideoInfo, downloadPath: string): vo
   
     // Use default browser download mechanism instead of GM_download
 
-    // const a = document.createElement('a');
-    // a.href = url;
-    // a.download = MetadataFilename;
-    // document.body.appendChild(a);
-    // a.click();
-    // document.body.removeChild(a);
-    // URL.revokeObjectURL(url);
 
-
-    function renderNode(params: { 
-        nodeType: string; 
-        attributes: Record<string, string> 
-    }): HTMLElement {
-        const element = document.createElement(params.nodeType);
-        Object.entries(params.attributes).forEach(([key, value]) => {
-            element.setAttribute(key, value);
-        });
-        document.body.appendChild(element);
-        return element;
-    }
-    
-    // Usage
     const a = renderNode({
         nodeType: 'a',
         attributes: {
             href: url,
             download: MetadataFilename
         }
-    }) as HTMLAnchorElement; // Ensure TypeScript knows it's an <a> element
+    }) ;
     
     a.click();
     document.body.removeChild(a);
