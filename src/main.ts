@@ -604,8 +604,8 @@ function getMatadataPath(videoInfo: VideoInfo): string {
             UploadTime: videoInfo.UploadTime,
             AUTHOR: videoInfo.Author,
             ID: videoInfo.ID,
-            TITLE: Name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-            ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
+            TITLE:  videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+            ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
             QUALITY: videoInfo.DownloadQuality,
         })
     ).fullpath;
@@ -613,6 +613,7 @@ function getMatadataPath(videoInfo: VideoInfo): string {
 }
 function browserDownloadMetadata(videoInfo: VideoInfo): void {
     const url = generateMatadataURL(videoInfo);
+    
     GM_download({
         url: url,
         saveAs: false,
