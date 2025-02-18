@@ -592,28 +592,9 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
         GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
     }
 }
-function getDownloadPath(videoInfo: VideoInfo): string {
-    const downloadPath = config.downloadPath.replaceVariable({
-        NowTime: new Date(),
-        UploadTime: videoInfo.UploadTime,
-        AUTHOR: videoInfo.Author,
-        ID: videoInfo.ID,
-        TITLE: videoInfo.Title,
-        ALIAS: videoInfo.Alias,
-        QUALITY: videoInfo.DownloadQuality
-    }).trim();
-    const analy_result = analyzeLocalPath(downloadPath).fullPath;
-    if (analy_result.length > 1024) {
-        throw new Error('Filename too long: ' + analy_result);
-    } else if (analy_result.length === 0) {
-        throw new Error('Filename is empty: ' + analy_result);
-    }
-    return analy_result;
-}
 function browserDownloadMetadata(videoInfo: VideoInfo): void {
     const metadataContent = generateMetadataContent(videoInfo);
     const blob = new Blob([metadataContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
     const videoFilename = analyzeLocalPath(
         config.downloadPath.replaceVariable({
             NowTime: new Date(),
@@ -626,23 +607,14 @@ function browserDownloadMetadata(videoInfo: VideoInfo): void {
         })
     ).filename;
     const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
+    const url = URL.createObjectURL(blob);
     GM_download({
-            url: url,
-            saveAs: false,
-            name: config.downloadPath.replaceVariable(
-                {
-                    NowTime: new Date(),
-                    UploadTime: UploadTime,
-                    AUTHOR: Author,
-                    ID: ID,
-                    TITLE: Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                    ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
-                    QUALITY: DownloadQuality
-                }
-            ).trim(),
-            onerror: (err) => browserDownloadError(err),
-            ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
-        })
+        url: url,
+        saveAs: false,
+        name: MetadataFilename,
+        onerror: (err) => browserDownloadError(err),
+        ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
+    });
     URL.revokeObjectURL(url);
 }
 function othersDownloadMetadata(videoInfo: VideoInfo): void {
@@ -661,6 +633,7 @@ function othersDownloadMetadata(videoInfo: VideoInfo): void {
         })
     ).filename;
     const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
+    url.searchParams.set('download', MetadataFilename);
     const downloadHandle = renderNode({
         nodeType: 'a',
         attributes: {
