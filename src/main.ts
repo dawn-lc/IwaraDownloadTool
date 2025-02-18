@@ -592,53 +592,43 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
         GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
     }
 }
-function browserDownloadMetadata(videoInfo: VideoInfo): void {
+function generateMatadataURL(videoInfo: VideoInfo): URL {
     const metadataContent = generateMetadataContent(videoInfo);
     const blob = new Blob([metadataContent], { type: 'text/plain' });
-    const videoFilename = analyzeLocalPath(
+    return URL.createObjectURL(blob);
+}
+function getMatadataPath(videoInfo: VideoInfo): string {
+    const videoPath = analyzeLocalPath(
         config.downloadPath.replaceVariable({
             NowTime: new Date(),
             UploadTime: videoInfo.UploadTime,
             AUTHOR: videoInfo.Author,
             ID: videoInfo.ID,
-            TITLE: videoInfo.Title,
-            ALIAS: videoInfo.Alias,
+            TITLE: Name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+            ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
             QUALITY: videoInfo.DownloadQuality,
         })
-    ).filename;
-    const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
-    const url = URL.createObjectURL(blob);
+    ).fullpath;
+    return `${videoPath}.json`;
+}
+function browserDownloadMetadata(videoInfo: VideoInfo): void {
+    const url = generateMatadataURL(videoInfo);
     GM_download({
         url: url,
         saveAs: false,
-        name: MetadataFilename,
+        name: getMatadataPath(videoInfo),
         onerror: (err) => browserDownloadError(err),
         ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
     });
     URL.revokeObjectURL(url);
 }
 function othersDownloadMetadata(videoInfo: VideoInfo): void {
-    const metadataContent = generateMetadataContent(videoInfo);
-    const blob = new Blob([metadataContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const videoFilename = analyzeLocalPath(
-        config.downloadPath.replaceVariable({
-            NowTime: new Date(),
-            UploadTime: videoInfo.UploadTime,
-            AUTHOR: videoInfo.Author,
-            ID: videoInfo.ID,
-            TITLE: videoInfo.Title,
-            ALIAS: videoInfo.Alias,
-            QUALITY: videoInfo.DownloadQuality,
-        })
-    ).filename;
-    const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
-    url.searchParams.set('download', MetadataFilename);
+    const url = generateMatadataURL(videoInfo);
     const downloadHandle = renderNode({
         nodeType: 'a',
         attributes: {
             href: url,
-            download: MetadataFilename
+            download: getMatadataPath(videoInfo)
         }
     });
     downloadHandle.click();
