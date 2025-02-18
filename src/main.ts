@@ -578,23 +578,17 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             othersDownload(videoInfo)
             break
     }
-    switch (config.downloadType) {
-        case DownloadType.Others:
-            
-            break
-        case DownloadType.IwaraDownloader:
-            iwaraDownloaderDownload(videoInfo)
-            break
-        case DownloadType.Browser:
-            browserDownload(videoInfo)
-            break
-        default:
-            othersDownload(videoInfo)
-            break
-    }
     if (config.autoDownloadMetadata) {
-        
-        
+        switch (config.downloadType) {
+            case DownloadType.Others:
+                othersDownloadMetadata(videoInfo)
+                break
+            case DownloadType.Browser:
+                browserDownloadMetadata(videoInfo)
+                break
+            default:
+                break
+        }
         GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
     }
 }
