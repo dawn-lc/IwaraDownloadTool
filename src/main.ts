@@ -573,25 +573,28 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             break
         case DownloadType.Browser:
             browserDownload(videoInfo)
-            if (config.autoDownloadMetadata) {
-        
-                downloadMetadata(videoInfo);
-                GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
-            }
             break
         default:
             othersDownload(videoInfo)
-            if (config.autoDownloadMetadata) {
-        
-                downloadMetadata(videoInfo);
-                GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
-            }
             break
     }
-    
+    switch (config.downloadType) {
+        case DownloadType.Others:
+            
+            break
+        case DownloadType.IwaraDownloader:
+            iwaraDownloaderDownload(videoInfo)
+            break
+        case DownloadType.Browser:
+            browserDownload(videoInfo)
+            break
+        default:
+            othersDownload(videoInfo)
+            break
+    }
     if (config.autoDownloadMetadata) {
         
-        downloadMetadata(videoInfo);
+        
         GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
     }
 }
@@ -612,64 +615,85 @@ function getDownloadPath(videoInfo: VideoInfo): string {
         throw new Error('Filename is empty: ' + analy_result);
     }
     return analy_result;
-    
 }
-function downloadMetadata(videoInfo: VideoInfo): void {
-    const downloadPath = getDownloadPath(videoInfo);
-    browserDownloadMetadata(videoInfo, downloadPath);
-
-
-}
-function browserDownloadMetadata(videoInfo: VideoInfo, downloadPath: string): void {
-
-    const metadataContent = generateMetadataContent(videoInfo, downloadPath);
-  
+function browserDownloadMetadata(videoInfo: VideoInfo): void {
+    const metadataContent = generateMetadataContent(videoInfo);
     const blob = new Blob([metadataContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-  
-    // Generate filename
     const videoFilename = analyzeLocalPath(
-      config.downloadPath.replaceVariable({
-        NowTime: new Date(),
-        UploadTime: videoInfo.UploadTime,
-        AUTHOR: videoInfo.Author,
-        ID: videoInfo.ID,
-        TITLE: videoInfo.Title,
-        ALIAS: videoInfo.Alias,
-        QUALITY: videoInfo.DownloadQuality,
-      })
+        config.downloadPath.replaceVariable({
+            NowTime: new Date(),
+            UploadTime: videoInfo.UploadTime,
+            AUTHOR: videoInfo.Author,
+            ID: videoInfo.ID,
+            TITLE: videoInfo.Title,
+            ALIAS: videoInfo.Alias,
+            QUALITY: videoInfo.DownloadQuality,
+        })
     ).filename;
-  
     const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
-  
-    // Use default browser download mechanism instead of GM_download
-
-
-    const a = renderNode({
+    GM_download({
+            url: url,
+            saveAs: false,
+            name: config.downloadPath.replaceVariable(
+                {
+                    NowTime: new Date(),
+                    UploadTime: UploadTime,
+                    AUTHOR: Author,
+                    ID: ID,
+                    TITLE: Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+                    ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
+                    QUALITY: DownloadQuality
+                }
+            ).trim(),
+            onerror: (err) => browserDownloadError(err),
+            ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
+        })
+    URL.revokeObjectURL(url);
+}
+function othersDownloadMetadata(videoInfo: VideoInfo): void {
+    const metadataContent = generateMetadataContent(videoInfo);
+    const blob = new Blob([metadataContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const videoFilename = analyzeLocalPath(
+        config.downloadPath.replaceVariable({
+            NowTime: new Date(),
+            UploadTime: videoInfo.UploadTime,
+            AUTHOR: videoInfo.Author,
+            ID: videoInfo.ID,
+            TITLE: videoInfo.Title,
+            ALIAS: videoInfo.Alias,
+            QUALITY: videoInfo.DownloadQuality,
+        })
+    ).filename;
+    const MetadataFilename = videoFilename.replace(/\.[^/.]+$/, '') + '.json';
+    const downloadHandle = renderNode({
         nodeType: 'a',
         attributes: {
             href: url,
             download: MetadataFilename
         }
-    }) ;
-    
-    a.click();
-    document.body.removeChild(a);
+    });
+    downloadHandle.click();
+    downloadHandle.remove();
     URL.revokeObjectURL(url);
-    
-  
-    
-  }
-function generateMetadataContent(videoInfo: VideoInfo, DownloadPath: string): string {
-
-    const metadata = {
-        ...videoInfo,
-        DownloadPath: DownloadPath,
+}
+function generateMetadataContent(videoInfo: VideoInfo): string {
+    const metadata = Object.assign(videoInfo, {
+        DownloadPath: analyzeLocalPath(
+            config.downloadPath.replaceVariable({
+                NowTime: new Date(),
+                UploadTime: videoInfo.UploadTime,
+                AUTHOR: videoInfo.Author,
+                ID: videoInfo.ID,
+                TITLE: videoInfo.Title,
+                ALIAS: videoInfo.Alias,
+                QUALITY: videoInfo.DownloadQuality,
+            }).trim()
+        ).fullpath,
         MetaDataVersion: GM_info.script.version,
-    };
-
+    });
     return JSON.stringify(metadata, (key, value) => {
-        // Convert Date objects to ISO strings.
         if (value instanceof Date) {
             return value.toISOString();
         }
