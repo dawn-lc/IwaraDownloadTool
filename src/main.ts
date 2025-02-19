@@ -607,9 +607,31 @@ function getMatadataPath(videoInfo: VideoInfo): string {
             TITLE:  videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
             ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
             QUALITY: videoInfo.DownloadQuality,
-        })
+        }).trim()
     ).fullpath;
     return `${videoPath}.json`;
+}
+function generateMetadataContent(videoInfo: VideoInfo): string {
+    const metadata = Object.assign(videoInfo, {
+        DownloadPath: analyzeLocalPath(
+            config.downloadPath.replaceVariable({
+                NowTime: new Date(),
+                UploadTime: videoInfo.UploadTime,
+                AUTHOR: videoInfo.Author,
+                ID: videoInfo.ID,
+                TITLE:  videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+                ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
+                QUALITY: videoInfo.DownloadQuality,
+            }).trim()
+        ).fullpath,
+        MetaDataVersion: GM_info.script.version,
+    });
+    return JSON.stringify(metadata, (key, value) => {
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        return value;
+    }, 2);
 }
 function browserDownloadMetadata(videoInfo: VideoInfo): void {
     const url = generateMatadataURL(videoInfo);
@@ -636,28 +658,7 @@ function othersDownloadMetadata(videoInfo: VideoInfo): void {
     downloadHandle.remove();
     URL.revokeObjectURL(url);
 }
-function generateMetadataContent(videoInfo: VideoInfo): string {
-    const metadata = Object.assign(videoInfo, {
-        DownloadPath: analyzeLocalPath(
-            config.downloadPath.replaceVariable({
-                NowTime: new Date(),
-                UploadTime: videoInfo.UploadTime,
-                AUTHOR: videoInfo.Author,
-                ID: videoInfo.ID,
-                TITLE: videoInfo.Title,
-                ALIAS: videoInfo.Alias,
-                QUALITY: videoInfo.DownloadQuality,
-            }).trim()
-        ).fullpath,
-        MetaDataVersion: GM_info.script.version,
-    });
-    return JSON.stringify(metadata, (key, value) => {
-        if (value instanceof Date) {
-            return value.toISOString();
-        }
-        return value;
-    }, 2);
-}
+
 function firstRun() {
     console.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
