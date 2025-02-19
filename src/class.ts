@@ -1,5 +1,5 @@
 import "./env";
-import { isNullOrUndefined } from "./env";
+import { isNullOrUndefined, stringify } from "./env";
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
@@ -95,7 +95,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
         this.channel.onmessage = (event: MessageEvent) => {
             const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
             const { type, data: { timestamp, value } } = message
-            GM_getValue('isDebug') && console.debug(`Channel message: ${message.stringify()}`)
+            GM_getValue('isDebug') && console.debug(`Channel message: ${stringify(message)}`)
             if (timestamp <= this.changeTime) return;
             switch (type) {
                 case MessageType.Set:
@@ -119,7 +119,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
             this.changeCallback?.(event)
         }
         this.channel.onmessageerror = (event) => {
-            GM_getValue('isDebug') && console.debug(`Channel message error: ${event.stringify()}`)
+            GM_getValue('isDebug') && console.debug(`Channel message error: ${stringify(event)}`)
         }
         GM_getTabs((tabs) => {
             const tabIds = Object.keys(tabs);
@@ -336,7 +336,7 @@ export class VideoInfo {
                     node: toastNode([
                         `${this.Title}[${this.ID}] %#parsingFailed#%`,
                         { nodeType: 'br' },
-                        error.stringify(),
+                        stringify(error),
                         { nodeType: 'br' },
                         this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
                     ], '%#createTask#%'),

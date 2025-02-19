@@ -27,11 +27,9 @@ declare module '../i18n/*.json' {
     const content: { [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[] };
     export default content;
 }
-interface Date {
-    format(format?: string): string;
-}
+
 interface String {
-    replaceVariable(replacements: Record<string, any>, count?: number): string;
+    replaceVariable(replacements: Record<string, unknown>, count?: number): string;
     /**
      * 替换字符串中的所有表情符号
      * @param {string | null} [replace] - 可选参数，替换为的字符串（默认替换为空字符串）
@@ -40,7 +38,7 @@ interface String {
     replaceEmojis(replace?: string | null): string
     /**
      * 判断字符串是否为空
-     * @returns {boolean} 如果字符串为空或只包含空格，返回 true，否则返回 false
+     * @returns {boolean} 如果字符串为空，返回 true，否则返回 false
      */
     isEmpty(): boolean;
     /**
@@ -87,6 +85,12 @@ interface String {
      * @returns {string} 返回去除后缀后的字符串
      */
     trimTail(suffix: string): string;
+    /**
+     * 判断字符串是否可被转换为数字
+     * @param {boolean} [includeInfinity=false] - 可选参数，是否包含无穷大，默认不包含
+     * @returns {boolean} 如果字符串可被转换为数字，返回 true，否则返回 false
+     */
+    isConvertibleToNumber(includeInfinity?: boolean): boolean;
 }
 
 interface IVersion {
@@ -112,6 +116,11 @@ interface Object{
     prune(): T;
     stringify(): string;
 }
+
+interface Date {
+    format(format?: string): string;
+}
+
 interface Array<T> {
     /**
      * 判断数组是否包含至少一个非空值

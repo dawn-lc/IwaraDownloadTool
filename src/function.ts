@@ -1,5 +1,5 @@
 import "./env";
-import { isConvertibleToNumber, isNullOrUndefined } from "./env"
+import { isConvertibleToNumber, isNullOrUndefined, stringify } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
@@ -162,7 +162,7 @@ export async function EnvCheck(): Promise<boolean> {
                 node: toastNode([
                     `%#configError#%`,
                     { nodeType: 'br' },
-                    error.stringify()
+                    stringify(error)
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -190,7 +190,7 @@ export async function localPathCheck(): Promise<boolean> {
                 node: toastNode([
                     `%#downloadPathError#%`,
                     { nodeType: 'br' },
-                    error.stringify()
+                    stringify(error)
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -228,7 +228,7 @@ export async function aria2Check(): Promise<boolean> {
                 node: toastNode([
                     `Aria2 RPC %#connectionTest#%`,
                     { nodeType: 'br' },
-                    error.stringify()
+                    stringify(error)
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -267,7 +267,7 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
                 node: toastNode([
                     `IwaraDownloader RPC %#connectionTest#%`,
                     { nodeType: 'br' },
-                    error.stringify()
+                    stringify(error)
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
@@ -412,7 +412,7 @@ export function browserDownload(videoInfo: VideoInfo) {
         type: string
     }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
         function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
-            let errorInfo = error.stringify()
+            let errorInfo = stringify(error)
             if (!(error instanceof Error)) {
                 errorInfo = {
                     'not_enabled': `%#browserDownloadNotEnabled#%`,
@@ -491,7 +491,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         if (videoID.isEmpty()) return 
         return videoID
     } catch (error) {
-        GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${task.stringify()}`)
+        GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${stringify(task)}`)
         return
     }
 }
