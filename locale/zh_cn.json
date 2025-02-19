@@ -1,82 +1,82 @@
 {
-    "appName": "Iwara 批量下载工具"，
-    "language": "语言: "，
-    "downloadPriority": "下载画质: "，
-    "downloadPath": "下载到: "，
-    "downloadProxy": "下载代理: "，
-    "downloadProxyUsername": "下载代理用户名: "，
-    "downloadProxyPassword": "下载代理密码: "，
-    "aria2Path": "Aria2 RPC: "，
-    "aria2Token": "Aria2 密钥: "，
-    "iwaraDownloaderPath": "IwaraDownloader RPC: "，
-    "iwaraDownloaderToken": "IwaraDownloader 密钥: "，
-    "experimentalFeatures": "实验性功能"，
-    "enableUnsafeMode" : "激进模式（风险自行承担）"，
-    "rename": "重命名"，
-    "save": "保存"，
-    "reset": "重置"，
-    "ok": "确定"，
-    "on": "开启"，
-    "off": "关闭"，
-    "delete": "删除"，
-    "deleteSucceed": "删除成功！"，
-    "isDebug": "调试模式"，
-    "downloadType": "下载方式"，
-    "browserDownload": "浏览器下载"，
-    "iwaraDownloaderDownload": "IwaraDownloader下载"，
-    "autoFollow": "自动关注选中的视频作者"，
-    "autoLike": "自动点赞选中的视频"，
-    "addUnlistedAndPrivate": "不公开和私有视频强制显示(需关注作者)"，
-    "checkDownloadLink": "第三方网盘下载地址检查"，
-    "checkPriority": "下载画质检查"，
-    "autoInjectCheckbox": "自动注入选择框"，
-    "autoCopySaveFileName": "自动复制根据规则生成的文件名"，
-    "configurationIncompatible": "初始化或配置文件不兼容，请重新配置！"，
-    "browserDownloadNotEnabled": "未启用下载功能！"，
-    "browserDownloadNotWhitelisted": "请求的文件扩展名未列入白名单！"，
-    "browserDownloadNotPermitted": "下载功能已启用，但未授予下载权限！"，
-    "browserDownloadNotSupported": "目前浏览器/版本不支持下载功能！"，
-    "browserDownloadNotSucceeded": "下载未开始或失败！"，
-    "browserDownloadUnknownError": "未知错误，有可能是下载时提供的参数存在问题，请检查文件名是否合法！"，
-    "browserDownloadTimeout": "下载超时，请检查网络环境是否正常！"，
-    "variable": "→ 查看可用变量 ←"，
-    "downloadTime": "下载时间 "，
-    "uploadTime": "发布时间 "，
-    "example": "示例: "，
-    "result": "结果: "，
-    "loadingCompleted": "加载完成"，
-    "settings": "打开设置"，
-    "downloadThis": "下载当前视频"，
-    "manualDownload": "手动下载指定"，
-    "aria2TaskCheck": "Aria2任务重启"，
-    "reverseSelect": "本页反向选中"，
-    "deselectThis": "取消本页选中"，
-    "deselectAll": "取消所有选中"，
-    "selectThis": "本页全部选中"，
-    "downloadSelected": "下载所选"，
-    "downloadingSelected": "正在下载所选, 请稍后..."，
-    "injectCheckbox": "开关选择框"，
-    "configError": "脚本配置中存在错误，请修改。"，
-    "alreadyKnowHowToUse": "我已知晓如何使用!!!"，
+    "appName": "Iwara 批量下载工具",
+    "language": "语言: ",
+    "downloadPriority": "下载画质: ",
+    "downloadPath": "下载到: ",
+    "downloadProxy": "下载代理: ",
+    "downloadProxyUsername": "下载代理用户名: ",
+    "downloadProxyPassword": "下载代理密码: ",
+    "aria2Path": "Aria2 RPC: ",
+    "aria2Token": "Aria2 密钥: ",
+    "iwaraDownloaderPath": "IwaraDownloader RPC: ",
+    "iwaraDownloaderToken": "IwaraDownloader 密钥: ",
+    "experimentalFeatures": "实验性功能",
+    "enableUnsafeMode" : "激进模式（风险自行承担）",
+    "rename": "重命名",
+    "save": "保存",
+    "reset": "重置",
+    "ok": "确定",
+    "on": "开启",
+    "off": "关闭",
+    "delete": "删除",
+    "deleteSucceed": "删除成功！",
+    "isDebug": "调试模式",
+    "downloadType": "下载方式",
+    "browserDownload": "浏览器下载",
+    "iwaraDownloaderDownload": "IwaraDownloader下载",
+    "autoFollow": "自动关注选中的视频作者",
+    "autoLike": "自动点赞选中的视频",
+    "addUnlistedAndPrivate": "不公开和私有视频强制显示(需关注作者)",
+    "checkDownloadLink": "第三方网盘下载地址检查",
+    "checkPriority": "下载画质检查",
+    "autoInjectCheckbox": "自动注入选择框",
+    "autoCopySaveFileName": "自动复制根据规则生成的文件名",
+    "configurationIncompatible": "初始化或配置文件不兼容，请重新配置！",
+    "browserDownloadNotEnabled": "未启用下载功能！",
+    "browserDownloadNotWhitelisted": "请求的文件扩展名未列入白名单！",
+    "browserDownloadNotPermitted": "下载功能已启用，但未授予下载权限！",
+    "browserDownloadNotSupported": "目前浏览器/版本不支持下载功能！",
+    "browserDownloadNotSucceeded": "下载未开始或失败！",
+    "browserDownloadUnknownError": "未知错误，有可能是下载时提供的参数存在问题，请检查文件名是否合法！",
+    "browserDownloadTimeout": "下载超时，请检查网络环境是否正常！",
+    "variable": "→ 查看可用变量 ←",
+    "downloadTime": "下载时间 ",
+    "uploadTime": "发布时间 ",
+    "example": "示例: ",
+    "result": "结果: ",
+    "loadingCompleted": "加载完成",
+    "settings": "打开设置",
+    "downloadThis": "下载当前视频",
+    "manualDownload": "手动下载指定",
+    "aria2TaskCheck": "Aria2任务重启",
+    "reverseSelect": "本页反向选中",
+    "deselectThis": "取消本页选中",
+    "deselectAll": "取消所有选中",
+    "selectThis": "本页全部选中",
+    "downloadSelected": "下载所选",
+    "downloadingSelected": "正在下载所选，请稍后...",
+    "injectCheckbox": "开关选择框",
+    "configError": "脚本配置中存在错误，请修改。",
+    "alreadyKnowHowToUse": "我已知晓如何使用!!!",
     "notice": [
-        "加载完成"，
+        "加载完成",
         {
             "nodeType": "br"
-        }，
-        "公告: "，
+        },
+        "公告: ",
         {
             "nodeType": "br"
-        }，
-        "修复解析时队列进度不能正常显示的问题。"
-    ]，
-    "useHelpForBase": "请认真阅读使用指南！"，
-    "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框"，
-    "useHelpForCheckDownloadLink": "开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。"，
+        },
+        "修复部分问题。"
+    ],
+    "useHelpForBase": "请认真阅读使用指南！",
+    "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后，点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
+    "useHelpForCheckDownloadLink": "开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。",
     "useHelpForManualDownload": [
-        "使用手动下载功能需要提供视频ID, 如需批量手动下载请提供使用“|”分割的视频ID。"，
+        "使用手动下载功能需要提供视频ID，如需批量手动下载请提供使用“|”分割的视频ID。",
         {
             "nodeType": "br"
-        }，
+        },
         "例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L",
         {
             "nodeType": "br"
