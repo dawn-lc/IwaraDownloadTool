@@ -635,23 +635,23 @@ function generateMetadataContent(videoInfo: VideoInfo): string {
 }
 function browserDownloadMetadata(videoInfo: VideoInfo): void {
     const url = generateMatadataURL(videoInfo);
-    
     GM_download({
         url: url,
         saveAs: false,
         name: getMatadataPath(videoInfo),
         onerror: (err) => browserDownloadError(err),
         ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
-    });
-    URL.revokeObjectURL(url);
+    },
+    onload: () => URL.revokeObjectURL(url));
 }
 function othersDownloadMetadata(videoInfo: VideoInfo): void {
     const url = generateMatadataURL(videoInfo);
+    const metadataFile = analyzeLocalPath(getMatadataPath(videoInfo)).filename
     const downloadHandle = renderNode({
         nodeType: 'a',
         attributes: {
             href: url,
-            download: getMatadataPath(videoInfo)
+            download: metadataFile
         }
     });
     downloadHandle.click();
