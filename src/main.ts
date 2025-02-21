@@ -640,9 +640,9 @@ function browserDownloadMetadata(videoInfo: VideoInfo): void {
         saveAs: false,
         name: getMatadataPath(videoInfo),
         onerror: (err) => browserDownloadError(err),
-        ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
-    },
-    onload: () => URL.revokeObjectURL(url));
+        ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%')),
+        onload: () => URL.revokeObjectURL(url)
+    });
 }
 function othersDownloadMetadata(videoInfo: VideoInfo): void {
     const url = generateMatadataURL(videoInfo);
