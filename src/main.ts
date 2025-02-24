@@ -1073,7 +1073,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                     if (isNullOrUndefined(localStorage.getItem('token'))) localStorage.setItem('token', authorization.split(' ').pop() ?? '')
                 }
                 if (playload['type'] === 'access_token') {
-                    config.authorization = `Bearer ${authorization.split(' ').pop()}`
+                    config.authorization = authorization
                     GM_getValue('isDebug') && console.debug(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
                     GM_getValue('isDebug') && console.debug(`access_token: ${config.authorization.split(' ').pop()}`)
                 }
