@@ -8,7 +8,7 @@ import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
-import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 
 
 class configEdit {
@@ -589,7 +589,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
         GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
     }
 }
-function generateMatadataURL(videoInfo: VideoInfo): URL {
+function generateMatadataURL(videoInfo: VideoInfo): string {
     const metadataContent = generateMetadataContent(videoInfo);
     const blob = new Blob([metadataContent], { type: 'text/plain' });
     return URL.createObjectURL(blob);
@@ -632,12 +632,24 @@ function generateMetadataContent(videoInfo: VideoInfo): string {
 }
 function browserDownloadMetadata(videoInfo: VideoInfo): void {
     const url = generateMatadataURL(videoInfo);
+    function toastError(error: Tampermonkey.DownloadErrorResponse | Error) {
+        newToast(
+            ToastType.Error,
+            {
+                node: toastNode([
+                    `${videoInfo.Title}[${videoInfo.ID}] %#videoMetadata#%%#downloadFailed#%`,
+                    { nodeType: 'br' },
+                    browserDownloadErrorParse(error)
+                ], '%#browserDownload#%')
+            }
+        ).showToast()
+    }
     GM_download({
         url: url,
         saveAs: false,
         name: getMatadataPath(videoInfo),
-        onerror: (err) => browserDownloadError(err),
-        ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%')),
+        onerror: (err) => toastError(err),
+        ontimeout: () => toastError(new Error('%#browserDownloadTimeout#%')),
         onload: () => URL.revokeObjectURL(url)
     });
 }

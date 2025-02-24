@@ -193,8 +193,9 @@ interface PieceInfo {
 }
 interface LocalPath {
     [key: string]: any;
-    fullPath: string;
+    fullpath: string;
     drive: string;
+    filedir: string;
     filename: string;
 }
 

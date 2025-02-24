@@ -137,16 +137,33 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
     return Toastify(params)
 }
 export function analyzeLocalPath(path: string): LocalPath {
-    let matchPath = path.replaceAll('//', '/').replaceAll('\\\\', '/').match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
-    if (isNullOrUndefined(matchPath)) throw new Error(`%#downloadPathError#%["${path}"]`)
     try {
-        return {
-            fullPath: matchPath[0],
-            drive: matchPath[1] || '',
-            filename: matchPath[3]
+        const sep = "/";
+        let normalizedPath = path;
+        let drive = "";
+        let parts = [];
+        if (path.startsWith('\\\\')) {
+            drive = '//';
+            normalizedPath = '//' + path.slice(2).replaceAll('\\', '/');
+            parts = normalizedPath.split(sep).filter(Boolean);
+            parts = ['', ''].concat(parts);
+        } else if (/^[a-zA-Z]:[\\/]/.test(path)) {
+            drive = path.slice(0, 2);
+            normalizedPath = path.replaceAll('\\', '/');
+            parts = normalizedPath.split(sep);
+        } else if (path.startsWith('/')) {
+            drive = '/';
+            normalizedPath = path;
+            parts = normalizedPath.split(sep);
+        } else {
+            throw new Error(`%#downloadPathError#%["${path}"]`);
         }
+        if (parts[parts.length - 1] === '') parts.pop();
+        const name = parts.at(-1) ?? "";
+        const dir = parts.slice(0, parts.length - 1).join(sep);
+        return { fullpath: normalizedPath, filename: name, filedir: dir, drive };
     } catch (error) {
-        throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`)
+        throw new Error(`%#downloadPathError#% ["${path}"]`)
     }
 }
 export async function EnvCheck(): Promise<boolean> {
@@ -406,29 +423,33 @@ export function othersDownload(videoInfo: VideoInfo) {
         GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
+
+export function browserDownloadErrorParse(error: Tampermonkey.DownloadErrorResponse | Error): string{
+    let errorInfo = stringify(error)
+    if (!(error instanceof Error)) {
+        errorInfo = {
+            'not_enabled': `%#browserDownloadNotEnabled#%`,
+            'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
+            'not_permitted': `%#browserDownloadNotPermitted#%`,
+            'not_supported': `%#browserDownloadNotSupported#%`,
+            'not_succeeded': `%#browserDownloadNotSucceeded#% ${ isNullOrUndefined(error.details) ? 'UnknownError' : error.details}`,
+        }[error.error] || `%#browserDownloadUnknownError#%`
+    }
+    return errorInfo
+}
 export function browserDownload(videoInfo: VideoInfo) {
     (async function (ID: string, Author: string, Title: string, UploadTime: Date, Info: string, Tag: Array<{
         id: string
         type: string
     }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
-        function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
-            let errorInfo = stringify(error)
-            if (!(error instanceof Error)) {
-                errorInfo = {
-                    'not_enabled': `%#browserDownloadNotEnabled#%`,
-                    'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
-                    'not_permitted': `%#browserDownloadNotPermitted#%`,
-                    'not_supported': `%#browserDownloadNotSupported#%`,
-                    'not_succeeded': `%#browserDownloadNotSucceeded#% ${ isNullOrUndefined(error.details) ? 'UnknownError' : error.details}`,
-                }[error.error] || `%#browserDownloadUnknownError#%`
-            }
+        function toastError(error: Tampermonkey.DownloadErrorResponse | Error) {
             let toast = newToast(
                 ToastType.Error,
                 {
                     node: toastNode([
                         `${Title}[${ID}] %#downloadFailed#%`,
                         { nodeType: 'br' },
-                        errorInfo,
+                        browserDownloadErrorParse(error),
                         { nodeType: 'br' },
                         `%#tryRestartingDownload#%`
                     ], '%#browserDownload#%'),
@@ -454,8 +475,8 @@ export function browserDownload(videoInfo: VideoInfo) {
                     QUALITY: DownloadQuality
                 }
             ).trim(),
-            onerror: (err) => browserDownloadError(err),
-            ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
+            onerror: (err) => toastError(err),
+            ontimeout: () => toastError(new Error('%#browserDownloadTimeout#%'))
         })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
