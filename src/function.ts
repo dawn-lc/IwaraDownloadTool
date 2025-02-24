@@ -312,7 +312,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 'all-proxy-passwd': !config.downloadProxy.isEmpty() ? config.downloadProxyPassword : undefined,
                 'all-proxy-user': !config.downloadProxy.isEmpty() ? config.downloadProxyUsername: undefined,
                 'out': localPath.fullName,
-                'dir': localPath.fullPath.replace(localPath.fullName, ''),
+                'dir': localPath.directory,
                 'referer': window.location.hostname,
                 'header': [
                     'Cookie:' + unsafeWindow.document.cookie
