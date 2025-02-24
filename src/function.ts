@@ -160,7 +160,7 @@ export function analyzeLocalPath(path: string): Path {
 }
 export async function EnvCheck(): Promise<boolean> {
     try {
-        if (GM_info.downloadMode !== 'browser') {
+        if (GM_info.scriptHandler !== 'ScriptCat' && GM_info.downloadMode !== 'browser') {
             GM_getValue('isDebug') && console.debug(GM_info)
             throw new Error('%#browserDownloadModeError#%')
         }

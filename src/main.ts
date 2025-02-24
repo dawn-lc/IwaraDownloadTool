@@ -609,7 +609,7 @@ function browserDownloadMetadata(videoInfo: VideoInfo): void {
             ToastType.Error,
             {
                 node: toastNode([
-                    `${videoInfo.Title}[${videoInfo.ID}] %#videoMetadata#%%#downloadFailed#%`,
+                    `${videoInfo.Title}[${videoInfo.ID}] %#videoMetadata#% %#downloadFailed#%`,
                     { nodeType: 'br' },
                     browserDownloadErrorParse(error)
                 ], '%#browserDownload#%')
