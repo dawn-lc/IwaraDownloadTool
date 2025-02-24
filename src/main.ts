@@ -4,11 +4,11 @@ import { originalAddEventListener, originalFetch, originalNodeAppendChild, origi
 import { i18n } from "./i18n";
 import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
-import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, Path, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
-import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 
 
 class configEdit {
@@ -486,6 +486,8 @@ export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) 
             break
     }
 });
+
+
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
         return
@@ -518,17 +520,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                         if (config.autoCopySaveFileName) {
-                            GM_setClipboard(analyzeLocalPath(config.downloadPath.replaceVariable(
-                                {
-                                    NowTime: new Date(),
-                                    UploadTime: videoInfo.UploadTime,
-                                    AUTHOR: videoInfo.Author,
-                                    ID: videoInfo.ID,
-                                    TITLE: videoInfo.Title,
-                                    ALIAS: videoInfo.Alias,
-                                    QUALITY: videoInfo.DownloadQuality
-                                }
-                            ).trim()).fullName, "text")
+                            GM_setClipboard(getDownloadPath(videoInfo).fullName, "text")
                             toastBody.appendChild(renderNode({
                                 nodeType: 'p',
                                 childs: '%#copySucceed#%'
@@ -595,32 +587,12 @@ function generateMatadataURL(videoInfo: VideoInfo): string {
     return URL.createObjectURL(blob);
 }
 function getMatadataPath(videoInfo: VideoInfo): string {
-    const videoPath = analyzeLocalPath(
-        config.downloadPath.replaceVariable({
-            NowTime: new Date(),
-            UploadTime: videoInfo.UploadTime,
-            AUTHOR: videoInfo.Author,
-            ID: videoInfo.ID,
-            TITLE:  videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-            ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
-            QUALITY: videoInfo.DownloadQuality,
-        }).trim()
-    ).fullPath;
-    return `${videoPath}.json`;
+    const videoPath = getDownloadPath(videoInfo);
+    return `${videoPath.directory}/${videoPath.baseName}.json`;
 }
 function generateMetadataContent(videoInfo: VideoInfo): string {
     const metadata = Object.assign(videoInfo, {
-        DownloadPath: analyzeLocalPath(
-            config.downloadPath.replaceVariable({
-                NowTime: new Date(),
-                UploadTime: videoInfo.UploadTime,
-                AUTHOR: videoInfo.Author,
-                ID: videoInfo.ID,
-                TITLE:  videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
-                QUALITY: videoInfo.DownloadQuality,
-            }).trim()
-        ).fullPath,
+        DownloadPath: getDownloadPath(videoInfo).fullPath,
         MetaDataVersion: GM_info.script.version,
     });
     return JSON.stringify(metadata, (key, value) => {

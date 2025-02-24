@@ -136,6 +136,21 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
     logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
     return Toastify(params)
 }
+
+export function getDownloadPath(videoInfo: VideoInfo): Path {
+    return analyzeLocalPath(
+        config.downloadPath.trim().replaceVariable({
+            NowTime: new Date(),
+            UploadTime: videoInfo.UploadTime,
+            AUTHOR: videoInfo.Author,
+            ID: videoInfo.ID,
+            TITLE:  videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+            ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
+            QUALITY: videoInfo.DownloadQuality,
+        })
+    )
+}
+
 export function analyzeLocalPath(path: string): Path {
     try {
         return new Path(path)
@@ -383,20 +398,10 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
     }(videoInfo))
 }
 export function othersDownload(videoInfo: VideoInfo) {
-    (async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, Alias: string, DownloadUrl: URL) {
-        DownloadUrl.searchParams.set('download', analyzeLocalPath(config.downloadPath.replaceVariable(
-            {
-                NowTime: new Date(),
-                UploadTime: UploadTime,
-                AUTHOR: Author,
-                ID: ID,
-                TITLE: Name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
-                QUALITY: DownloadQuality
-            }
-        ).trim()).fullName)
+    (async function (DownloadUrl: URL) {
+        DownloadUrl.searchParams.set('download',getDownloadPath(videoInfo).fullName)
         GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
-    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
+    }(videoInfo.DownloadUrl.toURL()))
 }
 
 export function browserDownloadErrorParse(error: Tampermonkey.DownloadErrorResponse | Error): string{
@@ -439,17 +444,7 @@ export function browserDownload(videoInfo: VideoInfo) {
         GM_download({
             url: DownloadUrl,
             saveAs: false,
-            name: config.downloadPath.replaceVariable(
-                {
-                    NowTime: new Date(),
-                    UploadTime: UploadTime,
-                    AUTHOR: Author,
-                    ID: ID,
-                    TITLE: Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                    ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
-                    QUALITY: DownloadQuality
-                }
-            ).trim(),
+            name: getDownloadPath(videoInfo).fullPath,
             onerror: (err) => toastError(err),
             ontimeout: () => toastError(new Error('%#browserDownloadTimeout#%'))
         })
