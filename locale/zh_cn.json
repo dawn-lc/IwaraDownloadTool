@@ -55,7 +55,7 @@
     "deselectAll": "取消所有选中",
     "selectThis": "本页全部选中",
     "downloadSelected": "下载所选",
-    "downloadingSelected": "正在下载所选, 请稍后...",
+    "downloadingSelected": "正在下载所选，请稍后...",
     "injectCheckbox": "开关选择框",
     "configError": "脚本配置中存在错误，请修改。",
     "alreadyKnowHowToUse": "我已知晓如何使用!!!",
@@ -68,13 +68,13 @@
         {
             "nodeType": "br"
         },
-        "修复解析时队列进度不能正常显示的问题。"
+        "修复部分问题。"
     ],
     "useHelpForBase": "请认真阅读使用指南！",
-    "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
+    "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后，点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
     "useHelpForCheckDownloadLink": "开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。",
     "useHelpForManualDownload": [
-        "使用手动下载功能需要提供视频ID, 如需批量手动下载请提供使用“|”分割的视频ID。",
+        "使用手动下载功能需要提供视频ID，如需批量手动下载请提供使用“|”分割的视频ID。",
         {
             "nodeType": "br"
         },

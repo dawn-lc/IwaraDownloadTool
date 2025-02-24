@@ -1,5 +1,5 @@
 import "./env";
-import { isNullOrUndefined, isStringTupleArray } from "./env";
+import { isNullOrUndefined, isStringTupleArray, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18n } from "./i18n";
 import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
@@ -9,6 +9,7 @@ import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
+
 
 class configEdit {
     source!: configEdit;
@@ -289,7 +290,6 @@ class configEdit {
         }
     }
 }
-
 class menu {
     [key: string | symbol]: any
     observer!: MutationObserver;
@@ -457,15 +457,13 @@ class menu {
         }
     }
 }
-
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
-
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
+
 export function getSelectButton(id: string): HTMLInputElement | undefined {
     return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
 }
-
 export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
     const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: PieceInfo]> }>
     const updateButtonState = (videoID: string) => {
@@ -488,7 +486,6 @@ export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) 
             break
     }
 });
-
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
         return
@@ -658,7 +655,6 @@ function othersDownloadMetadata(videoInfo: VideoInfo): void {
     downloadHandle.remove();
     URL.revokeObjectURL(url);
 }
-
 function firstRun() {
     console.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
@@ -810,7 +806,6 @@ async function injectCheckbox(element: Element) {
         originalNodeAppendChild.call(item,  deletePlaylistItme)
     }
 }
-
 function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
     if (unsafeWindow.location.pathname.toLowerCase().endsWith('/search')) {
         return PageType.Search;
@@ -833,13 +828,10 @@ function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
         }
     }
 }
-
-
 function pageChange() {
     pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
     GM_getValue('isDebug') && console.debug(pageSelectButtons)
 }
-
 async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
@@ -880,9 +872,6 @@ async function addDownloadTask() {
     })
     unsafeWindow.document.body.appendChild(body)
 }
-
-
-
 async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
     let size = list.size
     let node = renderNode({
@@ -1022,13 +1011,11 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         completed.showToast()
     }
 }
-
 function hijackAddEventListener() {
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
     }
 }
-
 function hijackNodeAppendChild() {
     Node.prototype.appendChild = function <T extends Node>(node: T): T {
         if (node instanceof HTMLElement && node.classList.contains('videoTeaser')) {
@@ -1056,14 +1043,12 @@ function hijackHistoryPushState() {
         pageChange()
     }
 }
-
 function hijackHistoryReplaceState() {
     unsafeWindow.history.replaceState = function (...args) {
         originalReplaceState.apply(this, args)
         pageChange()
     }
 }
-
 var mouseTarget: Element | null = null
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
@@ -1072,7 +1057,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
     GM_addStyle('@!mainCSS!@');
 
     if (GM_getValue('isDebug')) {
-        console.debug(GM_info.stringify())
+        console.debug(stringify(GM_info))
         // @ts-ignore
         unsafeWindow.unlimitedFetch = unlimitedFetch
         debugger
@@ -1150,6 +1135,11 @@ if (!unsafeWindow.IwaraDownloadTool) {
     }
 
     async function main() {
+        if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.153')) === VersionState.Low) {
+            GM_setValue('isFirstRun', true)
+            alert(i18n[config.language].configurationIncompatible)
+        }
+        
         if (GM_getValue('isFirstRun', true)) {
             firstRun()
             return
@@ -1225,10 +1215,6 @@ if (!unsafeWindow.IwaraDownloadTool) {
             }
         )
         notice.showToast()
-    }
-    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.153')) === VersionState.Low) {
-        GM_setValue('isFirstRun', true)
-        alert(i18n[config.language].configurationIncompatible)
     }
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 }
