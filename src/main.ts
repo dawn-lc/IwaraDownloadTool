@@ -528,7 +528,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                                     ALIAS: videoInfo.Alias,
                                     QUALITY: videoInfo.DownloadQuality
                                 }
-                            ).trim()).filename, "text")
+                            ).trim()).fullName, "text")
                             toastBody.appendChild(renderNode({
                                 nodeType: 'p',
                                 childs: '%#copySucceed#%'
@@ -655,7 +655,7 @@ function browserDownloadMetadata(videoInfo: VideoInfo): void {
 }
 function othersDownloadMetadata(videoInfo: VideoInfo): void {
     const url = generateMatadataURL(videoInfo);
-    const metadataFile = analyzeLocalPath(getMatadataPath(videoInfo)).filename
+    const metadataFile = analyzeLocalPath(getMatadataPath(videoInfo)).fullName
     const downloadHandle = renderNode({
         nodeType: 'a',
         attributes: {
