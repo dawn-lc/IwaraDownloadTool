@@ -605,7 +605,7 @@ function getMatadataPath(videoInfo: VideoInfo): string {
             ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
             QUALITY: videoInfo.DownloadQuality,
         }).trim()
-    ).fullpath;
+    ).fullPath;
     return `${videoPath}.json`;
 }
 function generateMetadataContent(videoInfo: VideoInfo): string {
@@ -620,7 +620,7 @@ function generateMetadataContent(videoInfo: VideoInfo): string {
                 ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
                 QUALITY: videoInfo.DownloadQuality,
             }).trim()
-        ).fullpath,
+        ).fullPath,
         MetaDataVersion: GM_info.script.version,
     });
     return JSON.stringify(metadata, (key, value) => {
