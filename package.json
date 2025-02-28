@@ -17,7 +17,7 @@
     "@types/moment": "^2.11.29",
     "@types/tampermonkey": "^5.0.4",
     "@types/toastify-js": "^1.12.3",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.25.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   }

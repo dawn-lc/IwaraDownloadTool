@@ -6,7 +6,7 @@ import { db } from "./db"
 import { DownloadType, ToastType } from "./type"
 import { Toastify } from "./import"
 import { unlimitedFetch, renderNode, UUID } from "./extension"
-import { VideoInfo } from "./class"
+import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 
 export async function refreshToken(): Promise<string> {
@@ -136,22 +136,31 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
     logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
     return Toastify(params)
 }
-export function analyzeLocalPath(path: string): LocalPath {
-    let matchPath = path.replaceAll('//', '/').replaceAll('\\\\', '/').match(/^([a-zA-Z]:)?[\/\\]?([^\/\\]+[\/\\])*([^\/\\]+\.\w+)$/)
-    if (isNullOrUndefined(matchPath)) throw new Error(`%#downloadPathError#%["${path}"]`)
+
+export function getDownloadPath(videoInfo: VideoInfo): Path {
+    return analyzeLocalPath(
+        config.downloadPath.trim().replaceVariable({
+            NowTime: new Date(),
+            UploadTime: videoInfo.UploadTime,
+            AUTHOR: videoInfo.Author,
+            ID: videoInfo.ID,
+            TITLE:  videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+            ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
+            QUALITY: videoInfo.DownloadQuality,
+        })
+    )
+}
+
+export function analyzeLocalPath(path: string): Path {
     try {
-        return {
-            fullPath: matchPath[0],
-            drive: matchPath[1] || '',
-            filename: matchPath[3]
-        }
+        return new Path(path)
     } catch (error) {
-        throw new Error(`%#downloadPathError#% ["${matchPath.join(',')}"]`)
+        throw new Error(`%#downloadPathError#% ["${path}"]`)
     }
 }
 export async function EnvCheck(): Promise<boolean> {
     try {
-        if (GM_info.downloadMode !== 'browser') {
+        if (GM_info.scriptHandler !== 'ScriptCat' && GM_info.downloadMode !== 'browser') {
             GM_getValue('isDebug') && console.debug(GM_info)
             throw new Error('%#browserDownloadModeError#%')
         }
@@ -179,9 +188,7 @@ export async function localPathCheck(): Promise<boolean> {
     try {
         let pathTest = analyzeLocalPath(config.downloadPath)
         for (const key in pathTest) {
-            if (!Object.prototype.hasOwnProperty.call(pathTest, key) || pathTest[key]) {
-                //todo localPathCheck
-            }
+            // todo check path
         }
     } catch (error: any) {
         let toast = newToast(
@@ -297,15 +304,15 @@ export function aria2Download(videoInfo: VideoInfo) {
             }
         ).trim())
         downloadUrl.searchParams.set('videoid', id)
-        downloadUrl.searchParams.set('download', localPath.filename)
+        downloadUrl.searchParams.set('download', localPath.fullName)
         let params = [
             [downloadUrl.href],
             {
                 'all-proxy': config.downloadProxy,
                 'all-proxy-passwd': !config.downloadProxy.isEmpty() ? config.downloadProxyPassword : undefined,
                 'all-proxy-user': !config.downloadProxy.isEmpty() ? config.downloadProxyUsername: undefined,
-                'out': localPath.filename,
-                'dir': localPath.fullPath.replace(localPath.filename, ''),
+                'out': localPath.fullName,
+                'dir': localPath.directory,
                 'referer': window.location.hostname,
                 'header': [
                     'Cookie:' + unsafeWindow.document.cookie
@@ -391,44 +398,38 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
     }(videoInfo))
 }
 export function othersDownload(videoInfo: VideoInfo) {
-    (async function (ID: string, Author: string, Name: string, UploadTime: Date, DownloadQuality: string, Alias: string, DownloadUrl: URL) {
-        DownloadUrl.searchParams.set('download', analyzeLocalPath(config.downloadPath.replaceVariable(
-            {
-                NowTime: new Date(),
-                UploadTime: UploadTime,
-                AUTHOR: Author,
-                ID: ID,
-                TITLE: Name.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
-                QUALITY: DownloadQuality
-            }
-        ).trim()).filename)
+    (async function (DownloadUrl: URL) {
+        DownloadUrl.searchParams.set('download',getDownloadPath(videoInfo).fullName)
         GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
-    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
+    }(videoInfo.DownloadUrl.toURL()))
+}
+
+export function browserDownloadErrorParse(error: Tampermonkey.DownloadErrorResponse | Error): string{
+    let errorInfo = stringify(error)
+    if (!(error instanceof Error)) {
+        errorInfo = {
+            'not_enabled': `%#browserDownloadNotEnabled#%`,
+            'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
+            'not_permitted': `%#browserDownloadNotPermitted#%`,
+            'not_supported': `%#browserDownloadNotSupported#%`,
+            'not_succeeded': `%#browserDownloadNotSucceeded#% ${ isNullOrUndefined(error.details) ? 'UnknownError' : error.details}`,
+        }[error.error] || `%#browserDownloadUnknownError#%`
+    }
+    return errorInfo
 }
 export function browserDownload(videoInfo: VideoInfo) {
     (async function (ID: string, Author: string, Title: string, UploadTime: Date, Info: string, Tag: Array<{
         id: string
         type: string
     }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
-        function browserDownloadError(error: Tampermonkey.DownloadErrorResponse | Error) {
-            let errorInfo = stringify(error)
-            if (!(error instanceof Error)) {
-                errorInfo = {
-                    'not_enabled': `%#browserDownloadNotEnabled#%`,
-                    'not_whitelisted': `%#browserDownloadNotWhitelisted#%`,
-                    'not_permitted': `%#browserDownloadNotPermitted#%`,
-                    'not_supported': `%#browserDownloadNotSupported#%`,
-                    'not_succeeded': `%#browserDownloadNotSucceeded#% ${ isNullOrUndefined(error.details) ? 'UnknownError' : error.details}`,
-                }[error.error] || `%#browserDownloadUnknownError#%`
-            }
+        function toastError(error: Tampermonkey.DownloadErrorResponse | Error) {
             let toast = newToast(
                 ToastType.Error,
                 {
                     node: toastNode([
                         `${Title}[${ID}] %#downloadFailed#%`,
                         { nodeType: 'br' },
-                        errorInfo,
+                        browserDownloadErrorParse(error),
                         { nodeType: 'br' },
                         `%#tryRestartingDownload#%`
                     ], '%#browserDownload#%'),
@@ -443,19 +444,9 @@ export function browserDownload(videoInfo: VideoInfo) {
         GM_download({
             url: DownloadUrl,
             saveAs: false,
-            name: config.downloadPath.replaceVariable(
-                {
-                    NowTime: new Date(),
-                    UploadTime: UploadTime,
-                    AUTHOR: Author,
-                    ID: ID,
-                    TITLE: Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                    ALIAS: Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
-                    QUALITY: DownloadQuality
-                }
-            ).trim(),
-            onerror: (err) => browserDownloadError(err),
-            ontimeout: () => browserDownloadError(new Error('%#browserDownloadTimeout#%'))
+            name: getDownloadPath(videoInfo).fullPath,
+            onerror: (err) => toastError(err),
+            ontimeout: () => toastError(new Error('%#browserDownloadTimeout#%'))
         })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
@@ -486,8 +477,8 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         if (downloadUrl.searchParams.has('videoid')) videoID = downloadUrl.searchParams.get('videoid')
         if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
         let path = analyzeLocalPath(file.path)
-        if (isNullOrUndefined(path.filename) || path.filename.isEmpty()) return 
-        videoID = path.filename.among('[', ']', false, true)
+        if (isNullOrUndefined(path.fullName) || path.fullName.isEmpty()) return 
+        videoID = path.fullName.among('[', ']', false, true)
         if (videoID.isEmpty()) return 
         return videoID
     } catch (error) {

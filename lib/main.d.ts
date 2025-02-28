@@ -191,11 +191,16 @@ interface PieceInfo {
     Alias?: string | null;
     Author?: string | null;
 }
+
 interface LocalPath {
-    [key: string]: any;
     fullPath: string;
-    drive: string;
-    filename: string;
+    fullName: string;
+    directory: string;
+    type: 'Windows' | 'Unix';
+    absolute: boolean;
+    relative: boolean;
+    extension: string;
+    baseName: string;
 }
 
 interface DownloadTask {

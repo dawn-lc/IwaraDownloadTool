@@ -4,11 +4,11 @@ import { originalAddEventListener, originalFetch, originalNodeAppendChild, origi
 import { i18n } from "./i18n";
 import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
-import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, Path, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
-import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, check, checkIsHaveDownloadLink, getAuth, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 
 
 class configEdit {
@@ -88,6 +88,7 @@ class configEdit {
                         this.downloadTypeSelect(),
                         this.interfacePage,
                         this.switchButton('checkPriority'),
+                        this.switchButton('autoDownloadMetadata'), 
                         this.switchButton('checkDownloadLink'),
                         this.switchButton('autoFollow'),
                         this.switchButton('autoLike'),
@@ -485,6 +486,8 @@ export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) 
             break
     }
 });
+
+
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
         return
@@ -517,17 +520,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                     onClick() {
                         GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                         if (config.autoCopySaveFileName) {
-                            GM_setClipboard(analyzeLocalPath(config.downloadPath.replaceVariable(
-                                {
-                                    NowTime: new Date(),
-                                    UploadTime: videoInfo.UploadTime,
-                                    AUTHOR: videoInfo.Author,
-                                    ID: videoInfo.ID,
-                                    TITLE: videoInfo.Title,
-                                    ALIAS: videoInfo.Alias,
-                                    QUALITY: videoInfo.DownloadQuality
-                                }
-                            ).trim()).filename, "text")
+                            GM_setClipboard(getDownloadPath(videoInfo).fullName, "text")
                             toastBody.appendChild(renderNode({
                                 nodeType: 'p',
                                 childs: '%#copySucceed#%'
@@ -574,6 +567,77 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             othersDownload(videoInfo)
             break
     }
+    if (config.autoDownloadMetadata) {
+        switch (config.downloadType) {
+            case DownloadType.Others:
+                othersDownloadMetadata(videoInfo)
+                break
+            case DownloadType.Browser:
+                browserDownloadMetadata(videoInfo)
+                break
+            default:
+                break
+        }
+        GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
+    }
+}
+function generateMatadataURL(videoInfo: VideoInfo): string {
+    const metadataContent = generateMetadataContent(videoInfo);
+    const blob = new Blob([metadataContent], { type: 'text/plain' });
+    return URL.createObjectURL(blob);
+}
+function getMatadataPath(videoInfo: VideoInfo): string {
+    const videoPath = getDownloadPath(videoInfo);
+    return `${videoPath.directory}/${videoPath.baseName}.json`;
+}
+function generateMetadataContent(videoInfo: VideoInfo): string {
+    const metadata = Object.assign(videoInfo, {
+        DownloadPath: getDownloadPath(videoInfo).fullPath,
+        MetaDataVersion: GM_info.script.version,
+    });
+    return JSON.stringify(metadata, (key, value) => {
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        return value;
+    }, 2);
+}
+function browserDownloadMetadata(videoInfo: VideoInfo): void {
+    const url = generateMatadataURL(videoInfo);
+    function toastError(error: Tampermonkey.DownloadErrorResponse | Error) {
+        newToast(
+            ToastType.Error,
+            {
+                node: toastNode([
+                    `${videoInfo.Title}[${videoInfo.ID}] %#videoMetadata#% %#downloadFailed#%`,
+                    { nodeType: 'br' },
+                    browserDownloadErrorParse(error)
+                ], '%#browserDownload#%')
+            }
+        ).showToast()
+    }
+    GM_download({
+        url: url,
+        saveAs: false,
+        name: getMatadataPath(videoInfo),
+        onerror: (err) => toastError(err),
+        ontimeout: () => toastError(new Error('%#browserDownloadTimeout#%')),
+        onload: () => URL.revokeObjectURL(url)
+    });
+}
+function othersDownloadMetadata(videoInfo: VideoInfo): void {
+    const url = generateMatadataURL(videoInfo);
+    const metadataFile = analyzeLocalPath(getMatadataPath(videoInfo)).fullName
+    const downloadHandle = renderNode({
+        nodeType: 'a',
+        attributes: {
+            href: url,
+            download: metadataFile
+        }
+    });
+    downloadHandle.click();
+    downloadHandle.remove();
+    URL.revokeObjectURL(url);
 }
 function firstRun() {
     console.log('First run config reset!')
@@ -1009,7 +1073,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                     if (isNullOrUndefined(localStorage.getItem('token'))) localStorage.setItem('token', authorization.split(' ').pop() ?? '')
                 }
                 if (playload['type'] === 'access_token') {
-                    config.authorization = `Bearer ${authorization.split(' ').pop()}`
+                    config.authorization = authorization
                     GM_getValue('isDebug') && console.debug(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
                     GM_getValue('isDebug') && console.debug(`access_token: ${config.authorization.split(' ').pop()}`)
                 }

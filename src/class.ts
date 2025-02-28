@@ -9,6 +9,135 @@ import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
 import { MessageType, ToastType, VersionState } from "./type";
 
+export class Path implements LocalPath {
+  fullPath: string;
+  fullName: string;
+  directory: string;
+  type: 'Windows' | 'Unix';
+  absolute: boolean;
+  relative: boolean;
+  extension: string;
+  baseName: string;
+
+  constructor(path: string) {
+    this.type = this.determinePathType(path);
+    this.absolute = this.isAbsolutePath(path, this.type);
+    this.fullPath = this.normalizePath(path, this.type, this.absolute);
+    const { directory, fullName } = this.splitDirectoryAndFile(this.fullPath, this.type);
+    this.directory = directory;
+    this.fullName = fullName;
+    const { baseName, extension } = this.splitExtension(this.fullName);
+    this.baseName = baseName;
+    this.extension = extension;
+    this.relative = !this.absolute;
+  }
+
+  // 判断路径类型
+  private determinePathType(path: string): 'Windows' | 'Unix' {
+    if (/^[a-z]:/i.test(path)) return 'Windows';
+    if (path.includes('\\')) return 'Windows';
+    return 'Unix';
+  }
+
+  // 判断是否为绝对路径
+  private isAbsolutePath(path: string, type: 'Windows' | 'Unix'): boolean {
+    if (type === 'Windows') {
+      return /^[a-z]:[\\/]/i.test(path) || path.startsWith('\\\\');
+    }
+    return path.startsWith('/');
+  }
+
+  // 优化后的规范化路径方法
+  private normalizePath(path: string, type: 'Windows' | 'Unix', isAbsolute: boolean): string {
+    // 统一将反斜杠替换为正斜杠
+    let normalized = path.replaceAll('\\', '/');
+    let drive = '';
+    let isUnc = false;
+
+    if (type === 'Windows') {
+      const driveMatch = normalized.match(/^([a-z]:)(\/|$)/i);
+      if (driveMatch) {
+        drive = driveMatch[1] + '/';
+        normalized = normalized.substring(driveMatch[0].length);
+      } else if (normalized.startsWith('//')) {
+        isUnc = true;
+        normalized = normalized.substring(2);
+      }
+    }
+
+    const parts = normalized.split('/').filter(p => p !== '');
+    const stack: string[] = [];
+    for (const part of parts) {
+      if (part === '.') continue;
+      if (part === '..') {
+        if (stack.length && stack[stack.length - 1] !== '..') {
+          stack.pop();
+        } else if (!isAbsolute) {
+          stack.push(part);
+        }
+      } else {
+        stack.push(part);
+      }
+    }
+
+    let joined = stack.join('/');
+    if (drive) {
+      joined = drive + joined;
+    }
+
+    // 根据路径类型转换分隔符
+    if (type === 'Windows') {
+      // 对于 UNC 路径，直接在转换前添加两个反斜杠
+      if (isUnc) {
+        joined = '\\\\' + joined.replaceAll('\/', '\\');
+      } else {
+        joined = joined.replaceAll('\/', '\\');
+      }
+      if (/^[a-z]:\\$/i.test(joined)) joined += '\\';
+    } else if (isAbsolute && !joined.startsWith('/')) {
+      joined = '/' + joined;
+    }
+
+    if (joined === '' && isAbsolute) joined = type === 'Windows' ? '\\' : '/';
+    return joined;
+  }
+
+  // 分割目录和文件名
+  private splitDirectoryAndFile(fullPath: string, type: 'Windows' | 'Unix'): { directory: string; fullName: string } {
+    const separator = type === 'Windows' ? '\\' : '/';
+    const parts = fullPath.split(separator).filter(p => p !== '');
+
+    if (parts.length === 0) {
+      return { directory: '', fullName: '' };
+    }
+
+    const fullName = parts.pop() || '';
+    let directory = parts.join(separator);
+
+    if (type === 'Windows') {
+      if (/^[a-z]:\\$/i.test(fullPath)) directory = fullPath;
+      else if (directory === '' && fullPath.startsWith('\\\\')) directory = fullPath;
+      else if (parts.length === 0 && directory === '') directory = fullPath.replace(/\\+$/, '');
+    } else if (directory === '' && fullPath.startsWith('/')) {
+      directory = '/';
+    }
+
+    return { directory, fullName };
+  }
+
+  // 分割文件名与扩展名
+  private splitExtension(fullName: string): { baseName: string; extension: string } {
+    if (!fullName.includes('.')) return { baseName: fullName, extension: '' };
+    const lastDot = fullName.lastIndexOf('.');
+    return lastDot === 0 
+      ? { baseName: fullName, extension: '' }
+      : { 
+          baseName: fullName.slice(0, lastDot),
+          extension: fullName.slice(lastDot + 1)
+        };
+  }
+}
+
 
 export class Version implements IVersion {
     major: number;
