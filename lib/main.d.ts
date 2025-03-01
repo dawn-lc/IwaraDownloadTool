@@ -196,9 +196,7 @@ interface LocalPath {
     fullPath: string;
     fullName: string;
     directory: string;
-    type: 'Windows' | 'Unix';
-    absolute: boolean;
-    relative: boolean;
+    type: 'Windows' | 'Unix' | 'Relative';
     extension: string;
     baseName: string;
 }

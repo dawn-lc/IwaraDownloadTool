@@ -10,132 +10,216 @@ import { getSelectButton, pushDownloadTask, selectList } from "./main";
 import { MessageType, ToastType, VersionState } from "./type";
 
 export class Path implements LocalPath {
-  fullPath: string;
-  fullName: string;
-  directory: string;
-  type: 'Windows' | 'Unix';
-  absolute: boolean;
-  relative: boolean;
-  extension: string;
-  baseName: string;
+    public readonly fullPath: string;   // 归一化后的完整路径
+    public readonly directory: string;  // 目录部分
+    public readonly fullName: string;   // 文件名（包含拓展名）
+    public readonly type: 'Windows' | 'Unix' | 'Relative';
+    public readonly extension: string;  // 拓展名（不含点）
+    public readonly baseName: string;   // 文件名（不含拓展名）
 
-  constructor(path: string) {
-    this.type = this.determinePathType(path);
-    this.absolute = this.isAbsolutePath(path, this.type);
-    this.fullPath = this.normalizePath(path, this.type, this.absolute);
-    const { directory, fullName } = this.splitDirectoryAndFile(this.fullPath, this.type);
-    this.directory = directory;
-    this.fullName = fullName;
-    const { baseName, extension } = this.splitExtension(this.fullName);
-    this.baseName = baseName;
-    this.extension = extension;
-    this.relative = !this.absolute;
-  }
-
-  // 判断路径类型
-  private determinePathType(path: string): 'Windows' | 'Unix' {
-    if (/^[a-z]:/i.test(path)) return 'Windows';
-    if (path.includes('\\')) return 'Windows';
-    return 'Unix';
-  }
-
-  // 判断是否为绝对路径
-  private isAbsolutePath(path: string, type: 'Windows' | 'Unix'): boolean {
-    if (type === 'Windows') {
-      return /^[a-z]:[\\/]/i.test(path) || path.startsWith('\\\\');
-    }
-    return path.startsWith('/');
-  }
-
-  // 优化后的规范化路径方法
-  private normalizePath(path: string, type: 'Windows' | 'Unix', isAbsolute: boolean): string {
-    // 统一将反斜杠替换为正斜杠
-    let normalized = path.replaceAll('\\', '/');
-    let drive = '';
-    let isUnc = false;
-
-    if (type === 'Windows') {
-      const driveMatch = normalized.match(/^([a-z]:)(\/|$)/i);
-      if (driveMatch) {
-        drive = driveMatch[1] + '/';
-        normalized = normalized.substring(driveMatch[0].length);
-      } else if (normalized.startsWith('//')) {
-        isUnc = true;
-        normalized = normalized.substring(2);
-      }
-    }
-
-    const parts = normalized.split('/').filter(p => p !== '');
-    const stack: string[] = [];
-    for (const part of parts) {
-      if (part === '.') continue;
-      if (part === '..') {
-        if (stack.length && stack[stack.length - 1] !== '..') {
-          stack.pop();
-        } else if (!isAbsolute) {
-          stack.push(part);
+    constructor(inputPath: string) {
+        // 空路径处理
+        if (inputPath === "") {
+            throw new Error("路径不能为空");
         }
-      } else {
-        stack.push(part);
-      }
+
+        // 不接受UNC路径（以"\\\\"开头）
+        if (this.isUNC(inputPath)) {
+            throw new Error("不接受UNC路径");
+        }
+
+        // 判断路径类型（Windows绝对、Unix绝对或相对路径）
+        const detectedType = this.detectPathType(inputPath);
+
+        // 根据不同平台校验路径基本合法性
+        this.validatePath(inputPath, detectedType);
+
+        // 归一化路径：统一分隔符、合并重复分隔符、处理末尾斜杠，并解析导航路径
+        const normalized = this.normalizePath(inputPath, detectedType);
+
+        // 从归一化后的路径中提取目录、文件名、基础名与拓展名
+        const directory = this.extractDirectory(normalized, detectedType);
+        const fileName = this.extractFileName(normalized, detectedType);
+        const { baseName, extension } = this.extractBaseAndExtension(fileName);
+
+        this.type = detectedType;
+        this.fullPath = normalized;
+        this.directory = directory;
+        this.fullName = fileName;
+        this.baseName = baseName;
+        this.extension = extension;
     }
 
-    let joined = stack.join('/');
-    if (drive) {
-      joined = drive + joined;
+    // 判断是否为UNC路径（以"\\\\"开头）
+    private isUNC(path: string): boolean {
+        return path.startsWith('\\\\');
     }
 
-    // 根据路径类型转换分隔符
-    if (type === 'Windows') {
-      // 对于 UNC 路径，直接在转换前添加两个反斜杠
-      if (isUnc) {
-        joined = '\\\\' + joined.replaceAll('\/', '\\');
-      } else {
-        joined = joined.replaceAll('\/', '\\');
-      }
-      if (/^[a-z]:\\$/i.test(joined)) joined += '\\';
-    } else if (isAbsolute && !joined.startsWith('/')) {
-      joined = '/' + joined;
+    // 判断路径类型：Windows绝对路径、Unix绝对路径或相对路径
+    private detectPathType(path: string): 'Windows' | 'Unix' | 'Relative' {
+        // Windows绝对路径：如 "C:\xxx" 或 "C:/xxx"
+        if (/^[A-Za-z]:[\\/]/.test(path)) {
+            return 'Windows';
+        }
+        // Unix绝对路径：以 "/" 开头
+        if (path.startsWith('/')) {
+            return 'Unix';
+        }
+        // 否则视为相对路径
+        return 'Relative';
     }
 
-    if (joined === '' && isAbsolute) joined = type === 'Windows' ? '\\' : '/';
-    return joined;
-  }
-
-  // 分割目录和文件名
-  private splitDirectoryAndFile(fullPath: string, type: 'Windows' | 'Unix'): { directory: string; fullName: string } {
-    const separator = type === 'Windows' ? '\\' : '/';
-    const parts = fullPath.split(separator).filter(p => p !== '');
-
-    if (parts.length === 0) {
-      return { directory: '', fullName: '' };
+    // 校验路径合法性：Windows路径检查非法字符，Unix/相对路径检查空字符及非法字符（相对路径）
+    private validatePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): void {
+        const invalidChars = /[<>:"|?*]/;
+        if (type === 'Windows') {
+            if (!/^[A-Za-z]:[\\/]/.test(path)) {
+                throw new Error("无效的Windows路径格式");
+            }
+            const segments = path.split(/[\\/]/);
+            // 驱动器部分不检测，从第二段开始
+            for (let i = 1; i < segments.length; i++) {
+                if (invalidChars.test(segments[i])) {
+                    throw new Error(`路径段 "${segments[i]}" 含有非法字符`);
+                }
+            }
+        } else if (type === 'Unix') {
+            if (path.indexOf('\0') !== -1) {
+                throw new Error("路径中包含非法空字符");
+            }
+            // Unix路径不进行非法字符检测
+        } else if (type === 'Relative') {
+            if (path.indexOf('\0') !== -1) {
+                throw new Error("路径中包含非法空字符");
+            }
+            if (invalidChars.test(path)) {
+                throw new Error("路径含有非法字符");
+            }
+        }
     }
 
-    const fullName = parts.pop() || '';
-    let directory = parts.join(separator);
+    // 归一化路径：统一分隔符、合并重复分隔符、处理末尾斜杠，
+    // 并解析路径中的 "." 和 ".." 导航，绝对路径越界直接抛错
+    private normalizePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
+        const sep = type === 'Windows' ? '\\' : '/';
 
-    if (type === 'Windows') {
-      if (/^[a-z]:\\$/i.test(fullPath)) directory = fullPath;
-      else if (directory === '' && fullPath.startsWith('\\\\')) directory = fullPath;
-      else if (parts.length === 0 && directory === '') directory = fullPath.replace(/\\+$/, '');
-    } else if (directory === '' && fullPath.startsWith('/')) {
-      directory = '/';
+        if (type === 'Windows') {
+            // 统一为反斜杠
+            path = path.replace(/\//g, '\\');
+            path = path.replace(/\\+/g, '\\');
+        } else {
+            // 对于Unix及相对路径，将反斜杠替换为正斜杠，然后合并重复的斜杠
+            path = path.replace(/\\/g, '/');
+            path = path.replace(/\/+/g, '/');
+        }
+
+        // 拆分路径为段
+        let segments: string[];
+        if (type === 'Windows') {
+            segments = path.split('\\');
+        } else {
+            segments = path.split('/');
+        }
+
+        let isAbsolute = false;
+        let prefix = '';
+        if (type === 'Windows') {
+            // Windows绝对路径的第一段应为驱动器标识，如 "C:"
+            if (/^[A-Za-z]:$/.test(segments[0])) {
+                isAbsolute = true;
+                prefix = segments[0];
+                segments = segments.slice(1);
+            }
+        } else if (type === 'Unix') {
+            if (path.startsWith('/')) {
+                isAbsolute = true;
+                // 去除第一空段（由于首字符为 "/"）
+                if (segments[0] === '') {
+                    segments = segments.slice(1);
+                }
+            }
+        } else {
+            isAbsolute = false;
+        }
+
+        // 处理相对导航：解析 "." 与 ".."
+        const resolvedSegments = this.resolveSegments(segments, isAbsolute);
+
+        let normalized = '';
+        if (type === 'Windows') {
+            normalized = prefix ? (prefix + sep + resolvedSegments.join(sep)) : resolvedSegments.join(sep);
+            // 保证驱动器路径不为空（如 "C:\"）
+            if (prefix && normalized === prefix) {
+                normalized += sep;
+            }
+        } else if (type === 'Unix') {
+            normalized = (isAbsolute ? sep : '') + resolvedSegments.join(sep);
+            if (isAbsolute && normalized === '') {
+                normalized = sep;
+            }
+        } else {
+            normalized = resolvedSegments.join(sep);
+        }
+        return normalized;
     }
 
-    return { directory, fullName };
-  }
+    // 解析路径段，处理 "." 与 ".." 导航
+    // 对于绝对路径，如果 ".." 导致越界则抛错
+    private resolveSegments(segments: string[], isAbsolute: boolean): string[] {
+        const stack: string[] = [];
+        for (const segment of segments) {
+            if (segment === '' || segment === '.') continue;
+            if (segment === '..') {
+                if (stack.length > 0 && stack[stack.length - 1] !== '..') {
+                    stack.pop();
+                } else {
+                    if (isAbsolute) {
+                        throw new Error("绝对路径不能越界");
+                    } else {
+                        // 对于相对路径，保留多余的 ".."
+                        stack.push('..');
+                    }
+                }
+            } else {
+                stack.push(segment);
+            }
+        }
+        return stack;
+    }
 
-  // 分割文件名与扩展名
-  private splitExtension(fullName: string): { baseName: string; extension: string } {
-    if (!fullName.includes('.')) return { baseName: fullName, extension: '' };
-    const lastDot = fullName.lastIndexOf('.');
-    return lastDot === 0 
-      ? { baseName: fullName, extension: '' }
-      : { 
-          baseName: fullName.slice(0, lastDot),
-          extension: fullName.slice(lastDot + 1)
-        };
-  }
+    // 提取目录部分：返回最后一个分隔符之前的内容
+    private extractDirectory(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
+        const sep = type === 'Windows' ? '\\' : '/';
+
+        // 特殊处理根目录
+        if (type === 'Windows' && /^[A-Za-z]:\\$/.test(path)) {
+            return path;
+        }
+        if (type === 'Unix' && path === '/') {
+            return path;
+        }
+
+        const lastIndex = path.lastIndexOf(sep);
+        return lastIndex === -1 ? '' : path.substring(0, lastIndex);
+    }
+
+    // 提取文件名：返回最后一个分隔符之后的内容
+    private extractFileName(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
+        const sep = type === 'Windows' ? '\\' : '/';
+        const lastIndex = path.lastIndexOf(sep);
+        return lastIndex === -1 ? path : path.substring(lastIndex + 1);
+    }
+
+    // 从文件名中分离基础名称和拓展名
+    private extractBaseAndExtension(fileName: string): { baseName: string; extension: string } {
+        const lastDot = fileName.lastIndexOf('.');
+        if (lastDot <= 0) {
+            return { baseName: fileName, extension: '' };
+        }
+        const baseName = fileName.substring(0, lastDot);
+        const extension = fileName.substring(lastDot + 1);
+        return { baseName, extension };
+    }
 }
 
 
