@@ -492,7 +492,7 @@ export async function aria2TaskCheckAndRestart() {
             'aria2.tellStopped',
             [
                 0,
-                2048,
+                4096,
                 [
                     'gid',
                     'status',
@@ -560,13 +560,8 @@ export async function aria2TaskCheckAndRestart() {
             (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
         )
         .unique('id');
-    let downloadUncompleted: Array<{ id: string, data: Aria2.Status }> = stoped
-        .filter(
-            (task: { id: string, data: Aria2.Status }) => task.data.status !== 'complete' || task.data.errorCode !== '13'
-        )
-        .unique('id')
-        .difference(downloadCompleted, 'id')
-        .difference(downloadNormalTasks, 'id');
+
+    let downloadUncompleted: Array<{ id: string, data: Aria2.Status }> = stoped.difference(downloadCompleted, 'id').difference(downloadNormalTasks, 'id');
     let downloadToSlowTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
             (task: { id: string, data: Aria2.Status }) => isConvertibleToNumber(task.data.downloadSpeed) && Number(task.data.downloadSpeed) <= 512
