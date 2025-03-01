@@ -69,7 +69,7 @@
         {
             "nodeType": "br"
         },
-        "修复部分问题。"
+        "优化下载路径解析逻辑和提示"
     ],
     "useHelpForBase": "请认真阅读使用指南！",
     "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后，点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
