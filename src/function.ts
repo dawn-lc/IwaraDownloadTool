@@ -155,6 +155,21 @@ export function analyzeLocalPath(path: string): Path {
     try {
         return new Path(path)
     } catch (error) {
+        let toast = newToast(
+            ToastType.Error,
+            {
+                node: toastNode([
+                    `%#downloadPathError#%`,
+                    { nodeType: 'br' },
+                    stringify(error)
+                ], '%#settingsCheck#%'),
+                position: 'center',
+                onClick() {
+                    toast.hideToast()
+                }
+            }
+        )
+        toast.showToast()
         throw new Error(`%#downloadPathError#% ["${path}"]`)
     }
 }
