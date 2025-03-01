@@ -744,24 +744,25 @@ async function injectCheckbox(element: Element) {
             }
         }
     })
-
-    let follow = renderNode(
-        {
-            nodeType: 'div',
-            className: 'follow',
-            childs: {
-                nodeType: 'div',
-                className: ['text', 'text--white' ,'text--tiny' ,'text--bold'],
-                childs: '%#following#%'
-            }
-        }
-    )
-    videoInfo?.Following && originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), follow)
-    pageSelectButtons.set(ID, button)
-
     let item = element.querySelector('.videoTeaser__thumbnail')?.parentElement
     item?.style.setProperty('position', 'relative')
+    pageSelectButtons.set(ID, button)
     originalNodeAppendChild.call(item, button)
+
+
+    if(videoInfo?.Following && element.querySelector('.videoTeaser__thumbnail')?.querySelector('.follow') === null) {
+        originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), renderNode(
+            {
+                nodeType: 'div',
+                className: 'follow',
+                childs: {
+                    nodeType: 'div',
+                    className: ['text', 'text--white' ,'text--tiny' ,'text--bold'],
+                    childs: '%#following#%'
+                }
+            }
+        ))
+    }
 
     if (pluginMenu.pageType === PageType.Playlist) {
         let deletePlaylistItme = renderNode({

@@ -262,7 +262,7 @@
     z-index: 102;
 }
 .follow {
-    top: 22px;
+    bottom: 24px;
     right: 2px;
     border-radius: 2px;
     position: absolute;
