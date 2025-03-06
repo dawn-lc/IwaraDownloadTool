@@ -1191,19 +1191,19 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 method: 'GET',
                 headers: await getAuth()
             })).json() as Iwara.LocalUser
-            if (user.user.id !== 'b5f3530d-2ba6-4742-98ea-388db1899582'){
-                let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/b5f3530d-2ba6-4742-98ea-388db1899582', {
-                    method: 'GET',
-                    headers: await getAuth()
-                })).json() as Iwara.Profile
+            let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
+                method: 'GET',
+                headers: await getAuth()
+            })).json() as Iwara.Profile
+            if (user.user.id !== profile.user.id){
                 if (!profile.user.following) {
-                    unlimitedFetch(`https://api.iwara.tv/user/b5f3530d-2ba6-4742-98ea-388db1899582/followers`, {
+                    unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/followers`, {
                         method: 'POST',
                         headers: await getAuth()
                     })
                 }
                 if (!profile.user.friend) {
-                    unlimitedFetch(`https://api.iwara.tv/user/b5f3530d-2ba6-4742-98ea-388db1899582/friends`, {
+                    unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/friends`, {
                         method: 'POST',
                         headers: await getAuth()
                     })
