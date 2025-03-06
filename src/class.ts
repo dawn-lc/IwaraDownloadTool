@@ -503,8 +503,8 @@ export class VideoInfo {
                 throw new Error(i18n[config.language].externalVideo.toString())
             }
 
-            const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.Page> => {
-                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
+            const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.IPage> => {
+                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
             }
             const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
                 let comments: Iwara.Comment[] = []

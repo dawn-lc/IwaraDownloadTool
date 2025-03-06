@@ -320,7 +320,7 @@ namespace Iwara {
         id: string
         type: string
     }
-    interface Page {
+    interface IPage {
         count: number
         limit: number
         page: number
@@ -341,6 +341,29 @@ namespace Iwara {
         parent: null
         videoId: string
     }
+
+    interface TagBlacklist {
+        id: string;
+        type: string;
+        sensitive: boolean;
+    }
+
+    interface Notification {
+        mention: boolean;
+        reply: boolean;
+        comment: boolean;
+    }
+    interface LocalUser {
+        balance: number;
+        user: User;
+        tagBlacklist: TagBlacklist[];
+        profile: Profile;
+        notifications: Notification;
+    }
+    interface Profile extends IResult {
+        user: User
+    }
+    
     interface Video extends IResult {
         slug: string
         title: string

