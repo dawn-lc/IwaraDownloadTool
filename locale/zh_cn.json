@@ -18,6 +18,8 @@
     "ok": "确定",
     "on": "开启",
     "off": "关闭",
+    "delete": "删除",
+    "deleteSucceed": "删除成功！",
     "isDebug": "调试模式",
     "downloadType": "下载方式",
     "browserDownload": "浏览器下载",
@@ -27,6 +29,8 @@
     "addUnlistedAndPrivate": "不公开和私有视频强制显示(需关注作者)",
     "checkDownloadLink": "第三方网盘下载地址检查",
     "checkPriority": "下载画质检查",
+    "autoDownloadMetadata": "自动下载视频元数据",
+    "videoMetadata": "视频元数据",
     "autoInjectCheckbox": "自动注入选择框",
     "autoCopySaveFileName": "自动复制根据规则生成的文件名",
     "configurationIncompatible": "初始化或配置文件不兼容，请重新配置！",
@@ -52,7 +56,7 @@
     "deselectAll": "取消所有选中",
     "selectThis": "本页全部选中",
     "downloadSelected": "下载所选",
-    "downloadingSelected": "正在下载所选, 请稍后...",
+    "downloadingSelected": "正在下载所选，请稍后...",
     "injectCheckbox": "开关选择框",
     "configError": "脚本配置中存在错误，请修改。",
     "alreadyKnowHowToUse": "我已知晓如何使用!!!",
@@ -65,13 +69,13 @@
         {
             "nodeType": "br"
         },
-        "修复解析时队列进度不能正常显示的问题。"
+        "优化下载路径解析逻辑和提示"
     ],
     "useHelpForBase": "请认真阅读使用指南！",
-    "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后, 点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
+    "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后，点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
     "useHelpForCheckDownloadLink": "开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。",
     "useHelpForManualDownload": [
-        "使用手动下载功能需要提供视频ID, 如需批量手动下载请提供使用“|”分割的视频ID。",
+        "使用手动下载功能需要提供视频ID，如需批量手动下载请提供使用“|”分割的视频ID。",
         {
             "nodeType": "br"
         },
@@ -118,6 +122,7 @@
     "findedDownloadLink": "发现疑似第三方网盘下载地址!",
     "allCompleted": "全部解析完成！",
     "parsing": "预解析中...",
+    "following": "已关注",
     "parsingProgress": "解析进度: ",
     "manualDownloadTips": "单独下载请直接在此处输入视频ID, 批量下载请提供使用“|”分割的视频ID, 例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\n或提供符合以下格式对象的数组json字符串\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\n例如: \r\n[{ key: \"AeGUIRO2D5vQ6F\", value: { Title: \"237知更鸟\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" } },{ key: \"qQsUMJa19LcK3L\", value: { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation’s_Symphony\", Author: \"temptations_symphony\" } }]",
     "externalVideo": "非本站视频",

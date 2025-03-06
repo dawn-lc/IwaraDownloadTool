@@ -1,12 +1,13 @@
 import "./env";
-import { isNullOrUndefined } from "./env"
+import { isNullOrUndefined, stringify } from "./env"
 import { i18n } from "./i18n";
 import { DownloadType } from "./type";
 const DEFAULT_CONFIG = {
-    language: 'zh_CN',
+    language: 'zh_cn',
     autoFollow: false,
     autoLike: false,
     autoCopySaveFileName: false,
+    autoDownloadMetadata: false,
     enableUnsafeMode: false,
     experimentalFeatures: false,
     autoInjectCheckbox: true,
@@ -36,6 +37,7 @@ export class Config {
     language: string
     autoFollow: boolean
     autoLike: boolean
+    autoDownloadMetadata: boolean 
     addUnlistedAndPrivate: boolean
     enableUnsafeMode: boolean
     experimentalFeatures: boolean
@@ -78,6 +80,7 @@ export class Config {
         this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath
         this.iwaraDownloaderToken = DEFAULT_CONFIG.iwaraDownloaderToken
         this.priority = DEFAULT_CONFIG.priority
+        this.autoDownloadMetadata = DEFAULT_CONFIG.autoDownloadMetadata;
         let body = new Proxy(this, {
             get: function (target, property: string) {
                 if (property === 'configChange') {
@@ -87,7 +90,7 @@ export class Config {
                 if (property === 'language') {
                     return Config.getLanguage(value)
                 }
-                GM_getValue('isDebug') && console.debug(`get: ${property} ${value.stringify()}`)
+                GM_getValue('isDebug') && console.debug(`get: ${property} ${stringify(value)}`)
                 return value
             },
             set: function (target, property: string, value) {
@@ -96,7 +99,7 @@ export class Config {
                     return true
                 }
                 GM_setValue(property, value)
-                GM_getValue('isDebug') && console.debug(`set: ${property} ${value.stringify()}`)
+                GM_getValue('isDebug') && console.debug(`set: ${property} ${stringify(value)}`)
                 if (!isNullOrUndefined(target.configChange)) target.configChange(property)
                 return true
             }

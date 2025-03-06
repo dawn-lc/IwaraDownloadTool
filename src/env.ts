@@ -32,48 +32,6 @@ export const isNotEmpty = (obj: unknown): boolean => {
     }
     return true
 }
-export const isConvertibleToNumber = (value: unknown) => {
-    return isNotEmpty(value) ? (
-        isString(value) ? (
-            value.trim() !== "" && !isNaN(Number(value)) && !isFinite(Number(value)) === false
-        ) : (
-            isNumber(value) ? !isNaN(value) && isFinite(value) : false
-        )
-    ) : false;
-}
-
-Object.defineProperty(Object.prototype, 'prune',{
-    value: function() {
-        if (Array.isArray(this)) {
-            return this.filter(isNotEmpty).map(i => i.prune());
-        }
-        if (isElement(this) || isNode(this)) {
-            return this
-        }
-        if (isObject(this)) {
-            return Object.fromEntries(
-                Object.entries(this)
-                    .filter(([k, v]) => isNotEmpty(v))
-                    .map(([k, v]: [string, any]) => [k, v.prune()])
-            )
-        }
-        return isNotEmpty(this) ? this : undefined
-    },
-    writable: false,
-    configurable: false,
-    enumerable: false,
-})
-
-Object.defineProperty(Object.prototype, 'stringify',{
-    value: function() {
-        let obj = this instanceof Error ? String(this) : this
-        obj = obj instanceof Date ? obj.toISOString() : obj
-        return typeof obj === 'object' ? JSON.stringify(obj, null, 2) : String(obj)
-    },
-    writable: true,
-    configurable: false,
-    enumerable: false,
-})
 Array.prototype.any = function () {
     return this.filter(i => !isNullOrUndefined(i)).length > 0
 }
@@ -103,14 +61,37 @@ Array.prototype.complement = function <T>(this: T[], that: T[], prop?: keyof T):
 String.prototype.isEmpty = function () {
     return !isNullOrUndefined(this) && this.length === 0
 }
-String.prototype.among = function (start: string, end: string, greedy: boolean = false) {
+String.prototype.isConvertibleToNumber = function (includeInfinity: boolean = false) {
+    const trimmed = this.trim();
+    if (trimmed === "") return false;
+    const num = Number(trimmed);
+    return !isNaN(num) && (includeInfinity || isFinite(num));
+}
+String.prototype.reversed = function() {
+    const segmenter = new Intl.Segmenter(navigator.language, { granularity: 'grapheme' });
+    return [...segmenter.segment(this.toString())].reverse().join('');
+}
+String.prototype.among = function (start: string, end: string, greedy: boolean = false, reverse: boolean = false) {
     if (this.isEmpty() || start.isEmpty() || end.isEmpty()) return ''
-    const startIndex = this.indexOf(start)
-    if (startIndex === -1) return ''
-    const adjustedStartIndex = startIndex + start.length
-    const endIndex = greedy ? this.lastIndexOf(end) : this.indexOf(end, adjustedStartIndex)
-    if (endIndex === -1 || endIndex < adjustedStartIndex) return ''
-    return this.slice(adjustedStartIndex, endIndex)
+    if (!reverse) {
+        const startIndex = this.indexOf(start);
+        if (startIndex === -1) return '';
+        const adjustedStartIndex = startIndex + start.length;
+        const endIndex = greedy
+            ? this.lastIndexOf(end)
+            : this.indexOf(end, adjustedStartIndex);
+        if (endIndex === -1 || endIndex < adjustedStartIndex) return '';
+        return this.slice(adjustedStartIndex, endIndex);
+    } else {
+        const endIndex = this.lastIndexOf(end);
+        if (endIndex === -1) return '';
+        const adjustedEndIndex = endIndex - end.length;
+        const startIndex = greedy
+            ? this.indexOf(start)
+            : this.lastIndexOf(start, adjustedEndIndex);
+        if (startIndex === -1 || startIndex + start.length > adjustedEndIndex) return '';
+        return this.slice(startIndex + start.length, endIndex);
+    }
 }
 String.prototype.splitLimit = function (separator: string, limit?: number) {
     if (this.isEmpty() || isNullOrUndefined(separator)) {
@@ -138,3 +119,65 @@ String.prototype.toURL = function () {
     }
     return new URL(URLString.toString())
 }
+export const isConvertibleToNumber = (obj: unknown, includeInfinity: boolean = false) => {
+    if (isNullOrUndefined(obj)) {
+        return false;
+    }
+    if (isString(obj)) {
+        return obj.isConvertibleToNumber(includeInfinity);
+    }
+    if (isNumber(obj)) {
+        return isNaN(obj) ? false : includeInfinity ? true : isFinite(obj);
+    }
+    return false;
+}
+export const stringify = function(data: unknown) {
+    switch (typeof data) {
+        case 'undefined':
+            return 'undefined'
+        case 'boolean':
+            return data ? 'true' : 'false'
+        case 'number':
+            return String(data)
+        case 'string':
+            return data
+        case 'symbol':
+            return data.toString()
+        case 'function':
+            return data.toString()
+        case 'object':
+            if (isNull(data)) {
+                return 'null'
+            }
+            if (data instanceof Error) {
+                return data.toString()
+            }
+            if (data instanceof Date) {
+                return data.toISOString()
+            }
+            return JSON.stringify(data, null, 2)
+        default:
+            return 'unknown'
+    }
+}
+Object.defineProperty(Object.prototype, 'prune',{
+    value: function() {
+        if (Array.isArray(this)) {
+            return this.filter(isNotEmpty).map(i => i.prune());
+        }
+        if (isElement(this) || isNode(this)) {
+            return this
+        }
+        if (isObject(this)) {
+            return Object.fromEntries(
+                Object.entries(this)
+                    .filter(([, v]) => isNotEmpty(v))
+                    .map(([k, v]: [string, any]) => [k, v.prune()])
+            )
+        }
+        return isNotEmpty(this) ? this : undefined
+    },
+    writable: false,
+    configurable: false,
+    enumerable: false,
+})

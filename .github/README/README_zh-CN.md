@@ -37,8 +37,8 @@
 
 | 变量名 | 说明 | 使用示例 | 输出 |
 |---|---|---|---|
-| %#NowTime#% | 当前时间 | %#NowTime:yyyy-MM-dd#% | 2022-02-22 |
-| %#UploadTime#% | 发布时间 | %#UploadTime:yyyy-MM-dd+HH.mm.ss#% | 2022-02-22+22.22.22 | 
+| %#NowTime#% | 当前时间 | %#NowTime:YYYY-MM-DD#% | 2022-02-22 |
+| %#UploadTime#% | 发布时间 | %#UploadTime:YYYY-MM-DD+HH.mm.ss#% | 2022-02-22+22.22.22 | 
 | %#TITLE#% | 视频标题 | %#TITLE#% | 【Quin】黑暗之魂3 一周目攻略 Part22 双王子 薪王化身【机核网】 |
 | %#ID#% | 视频ID | %#ID#% | MrQuinWo22Ne22 |
 | %#AUTHOR#% | 视频作者 | %#AUTHOR#% | Mr.Quin |
@@ -47,7 +47,7 @@
 
 完整示例：
 
-`/Iwara/%#AUTHOR#%/%#NowTime:yyyy-MM-dd#%/(%#ALIAS#%)%#UploadTime:yyyy-MM-dd+HH.mmss#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4`
+`/Iwara/%#AUTHOR#%/%#NowTime:YYYY-MM-DD#%/(%#ALIAS#%)%#UploadTime:YYYY-MM-DD+HH.mmss#%_%#TITLE#%_%#QUALITY#%[%#ID#%].MP4`
 
 输出
 

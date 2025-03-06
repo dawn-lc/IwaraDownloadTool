@@ -1,5 +1,5 @@
 import "./env";
-import { isNullOrUndefined } from "./env";
+import { isNullOrUndefined, stringify } from "./env";
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
@@ -8,6 +8,219 @@ import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
 import { MessageType, ToastType, VersionState } from "./type";
+
+export class Path implements LocalPath {
+    public readonly fullPath: string;   // 归一化后的完整路径
+    public readonly directory: string;  // 目录部分
+    public readonly fullName: string;   // 文件名（包含拓展名）
+    public readonly type: 'Windows' | 'Unix' | 'Relative';
+    public readonly extension: string;  // 拓展名（不含点）
+    public readonly baseName: string;   // 文件名（不含拓展名）
+
+    constructor(inputPath: string) {
+        // 空路径处理
+        if (inputPath === "") {
+            throw new Error("路径不能为空");
+        }
+
+        // 不接受UNC路径（以"\\\\"开头）
+        if (this.isUNC(inputPath)) {
+            throw new Error("不接受UNC路径");
+        }
+
+        // 判断路径类型（Windows绝对、Unix绝对或相对路径）
+        const detectedType = this.detectPathType(inputPath);
+
+        // 根据不同平台校验路径基本合法性
+        this.validatePath(inputPath, detectedType);
+
+        // 归一化路径：统一分隔符、合并重复分隔符、处理末尾斜杠，并解析导航路径
+        const normalized = this.normalizePath(inputPath, detectedType);
+
+        // 从归一化后的路径中提取目录、文件名、基础名与拓展名
+        const directory = this.extractDirectory(normalized, detectedType);
+        const fileName = this.extractFileName(normalized, detectedType);
+        const { baseName, extension } = this.extractBaseAndExtension(fileName);
+
+        this.type = detectedType;
+        this.fullPath = normalized;
+        this.directory = directory;
+        this.fullName = fileName;
+        this.baseName = baseName;
+        this.extension = extension;
+    }
+
+    // 判断是否为UNC路径（以"\\\\"开头）
+    private isUNC(path: string): boolean {
+        return path.startsWith('\\\\');
+    }
+
+    // 判断路径类型：Windows绝对路径、Unix绝对路径或相对路径
+    private detectPathType(path: string): 'Windows' | 'Unix' | 'Relative' {
+        // Windows绝对路径：如 "C:\xxx" 或 "C:/xxx"
+        if (/^[A-Za-z]:[\\/]/.test(path)) {
+            return 'Windows';
+        }
+        // Unix绝对路径：以 "/" 开头
+        if (path.startsWith('/')) {
+            return 'Unix';
+        }
+        // 否则视为相对路径
+        return 'Relative';
+    }
+
+    // 校验路径合法性：Windows路径检查非法字符，Unix/相对路径检查空字符及非法字符（相对路径）
+    private validatePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): void {
+        const invalidChars = /[<>:"|?*]/;
+        if (type === 'Windows') {
+            if (!/^[A-Za-z]:[\\/]/.test(path)) {
+                throw new Error("无效的Windows路径格式");
+            }
+            const segments = path.split(/[\\/]/);
+            // 驱动器部分不检测，从第二段开始
+            for (let i = 1; i < segments.length; i++) {
+                if (invalidChars.test(segments[i])) {
+                    throw new Error(`路径段 "${segments[i]}" 含有非法字符`);
+                }
+            }
+        } else if (type === 'Unix') {
+            if (path.indexOf('\0') !== -1) {
+                throw new Error("路径中包含非法空字符");
+            }
+            // Unix路径不进行非法字符检测
+        } else if (type === 'Relative') {
+            if (path.indexOf('\0') !== -1) {
+                throw new Error("路径中包含非法空字符");
+            }
+            if (invalidChars.test(path)) {
+                throw new Error("路径含有非法字符");
+            }
+        }
+    }
+
+    // 归一化路径：统一分隔符、合并重复分隔符、处理末尾斜杠，
+    // 并解析路径中的 "." 和 ".." 导航，绝对路径越界直接抛错
+    private normalizePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
+        const sep = type === 'Windows' ? '\\' : '/';
+
+        if (type === 'Windows') {
+            // 统一为反斜杠
+            path = path.replace(/\//g, '\\');
+            path = path.replace(/\\+/g, '\\');
+        } else {
+            // 对于Unix及相对路径，将反斜杠替换为正斜杠，然后合并重复的斜杠
+            path = path.replace(/\\/g, '/');
+            path = path.replace(/\/+/g, '/');
+        }
+
+        // 拆分路径为段
+        let segments: string[];
+        if (type === 'Windows') {
+            segments = path.split('\\');
+        } else {
+            segments = path.split('/');
+        }
+
+        let isAbsolute = false;
+        let prefix = '';
+        if (type === 'Windows') {
+            // Windows绝对路径的第一段应为驱动器标识，如 "C:"
+            if (/^[A-Za-z]:$/.test(segments[0])) {
+                isAbsolute = true;
+                prefix = segments[0];
+                segments = segments.slice(1);
+            }
+        } else if (type === 'Unix') {
+            if (path.startsWith('/')) {
+                isAbsolute = true;
+                // 去除第一空段（由于首字符为 "/"）
+                if (segments[0] === '') {
+                    segments = segments.slice(1);
+                }
+            }
+        } else {
+            isAbsolute = false;
+        }
+
+        // 处理相对导航：解析 "." 与 ".."
+        const resolvedSegments = this.resolveSegments(segments, isAbsolute);
+
+        let normalized = '';
+        if (type === 'Windows') {
+            normalized = prefix ? (prefix + sep + resolvedSegments.join(sep)) : resolvedSegments.join(sep);
+            // 保证驱动器路径不为空（如 "C:\"）
+            if (prefix && normalized === prefix) {
+                normalized += sep;
+            }
+        } else if (type === 'Unix') {
+            normalized = (isAbsolute ? sep : '') + resolvedSegments.join(sep);
+            if (isAbsolute && normalized === '') {
+                normalized = sep;
+            }
+        } else {
+            normalized = resolvedSegments.join(sep);
+        }
+        return normalized;
+    }
+
+    // 解析路径段，处理 "." 与 ".." 导航
+    // 对于绝对路径，如果 ".." 导致越界则抛错
+    private resolveSegments(segments: string[], isAbsolute: boolean): string[] {
+        const stack: string[] = [];
+        for (const segment of segments) {
+            if (segment === '' || segment === '.') continue;
+            if (segment === '..') {
+                if (stack.length > 0 && stack[stack.length - 1] !== '..') {
+                    stack.pop();
+                } else {
+                    if (isAbsolute) {
+                        throw new Error("绝对路径不能越界");
+                    } else {
+                        // 对于相对路径，保留多余的 ".."
+                        stack.push('..');
+                    }
+                }
+            } else {
+                stack.push(segment);
+            }
+        }
+        return stack;
+    }
+
+    // 提取目录部分：返回最后一个分隔符之前的内容
+    private extractDirectory(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
+        const sep = type === 'Windows' ? '\\' : '/';
+
+        // 特殊处理根目录
+        if (type === 'Windows' && /^[A-Za-z]:\\$/.test(path)) {
+            return path;
+        }
+        if (type === 'Unix' && path === '/') {
+            return path;
+        }
+
+        const lastIndex = path.lastIndexOf(sep);
+        return lastIndex === -1 ? '' : path.substring(0, lastIndex);
+    }
+
+    // 提取文件名：返回最后一个分隔符之后的内容
+    private extractFileName(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
+        const sep = type === 'Windows' ? '\\' : '/';
+        const lastIndex = path.lastIndexOf(sep);
+        return lastIndex === -1 ? path : path.substring(lastIndex + 1);
+    }
+
+    // 从文件名中分离基础名称和拓展名
+    private extractBaseAndExtension(fileName: string): { baseName: string; extension: string } {
+        const lastDot = fileName.lastIndexOf('.');
+        if (lastDot <= 0) {
+            return { baseName: fileName, extension: '' };
+        }
+        const baseName = fileName.substring(0, lastDot);
+        const extension = fileName.substring(lastDot + 1);
+        return { baseName, extension };
+    }
+}
 
 
 export class Version implements IVersion {
@@ -95,7 +308,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
         this.channel.onmessage = (event: MessageEvent) => {
             const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
             const { type, data: { timestamp, value } } = message
-            GM_getValue('isDebug') && console.debug(`Channel message: ${message.stringify()}`)
+            GM_getValue('isDebug') && console.debug(`Channel message: ${stringify(message)}`)
             if (timestamp <= this.changeTime) return;
             switch (type) {
                 case MessageType.Set:
@@ -119,7 +332,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
             this.changeCallback?.(event)
         }
         this.channel.onmessageerror = (event) => {
-            GM_getValue('isDebug') && console.debug(`Channel message error: ${event.stringify()}`)
+            GM_getValue('isDebug') && console.debug(`Channel message error: ${stringify(event)}`)
         }
         GM_getTabs((tabs) => {
             const tabIds = Object.keys(tabs);
@@ -263,18 +476,25 @@ export class VideoInfo {
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
             this.External = !isNullOrUndefined(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
-            this.AuthorID = VideoInfoSource.user.id
-            this.Following = VideoInfoSource.user.following
+            
             this.Liked = VideoInfoSource.liked
-            this.Friend = VideoInfoSource.user.friend
             this.Private = VideoInfoSource.private
             this.Unlisted = VideoInfoSource.unlisted
-            this.Alias = VideoInfoSource.user.name
-            this.Author = VideoInfoSource.user.username
             this.UploadTime = new Date(VideoInfoSource.createdAt)
             this.Tags = VideoInfoSource.tags
             this.Description = VideoInfoSource.body
             this.ExternalUrl = VideoInfoSource.embedUrl
+
+            if (!isNullOrUndefined(VideoInfoSource.user.following)) {
+                this.Following = VideoInfoSource.user.following
+            }
+            if (!isNullOrUndefined(VideoInfoSource.user.friend)) {
+                this.Friend = VideoInfoSource.user.friend
+            }
+
+            this.AuthorID = VideoInfoSource.user.id
+            this.Alias = VideoInfoSource.user.name
+            this.Author = VideoInfoSource.user.username
             await db.videos.put(this)
             if (!isNullOrUndefined(InfoSource)) {
                 return this
@@ -283,8 +503,8 @@ export class VideoInfo {
                 throw new Error(i18n[config.language].externalVideo.toString())
             }
 
-            const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.Page> => {
-                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.Page
+            const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.IPage> => {
+                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
             }
             const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
                 let comments: Iwara.Comment[] = []
@@ -329,7 +549,7 @@ export class VideoInfo {
                     node: toastNode([
                         `${this.Title}[${this.ID}] %#parsingFailed#%`,
                         { nodeType: 'br' },
-                        error.stringify(),
+                        stringify(error),
                         { nodeType: 'br' },
                         this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
                     ], '%#createTask#%'),

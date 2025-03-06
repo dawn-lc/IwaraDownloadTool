@@ -261,16 +261,37 @@
     user-select: none;
     z-index: 102;
 }
-
+.follow {
+    bottom: 24px;
+    right: 2px;
+    border-radius: 2px;
+    position: absolute;
+    padding: 3px 5px;
+    background-color: rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+}
 .selectButton {
-    accent-color: rgb(50, 110, 193);
+    accent-color: rgb(50,110,193);
     position: absolute;
     width: 38px;
     height: 38px;
-    bottom: 24px;
     right: 0px;
     cursor: pointer;
+    z-index: 102;
+    top: 22px;
+}
+.deleteButton {
+    accent-color: rgb(226,55,55);
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    left: 0px;
+    cursor: pointer;
     z-index: 101;
+    border: none;
+    padding: 0;
+    margin: 3px;
+    top: 22px;
 }
 
 .toastify h3 {

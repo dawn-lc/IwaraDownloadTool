@@ -2,22 +2,25 @@ import "./env"
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
-import { isArray, isNullOrUndefined, isStringTupleArray } from "./env";
+import { isArray, isNullOrUndefined, isObject, isStringTupleArray, stringify } from "./env";
 
 export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
-export const hasFunction = (obj: any, method: string): boolean => {
-    return !method.isEmpty() && !isNullOrUndefined(obj) ? method in obj && typeof obj[method] === 'function' : false
-}
+export const hasFunction = <T, K extends string>(obj: T, method: K): obj is T & { [P in K]: Function } => {
+    return (
+        isObject(obj) &&
+        method in obj &&
+        typeof (obj as Record<K, unknown>)[method] === 'function'
+    );
+};
 
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
-    if (init && init.method && !(init.method === 'GET' || init.method === 'HEAD' || init.method === 'POST')) throw new Error("init method Error")
     return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
-            method: (init && init.method) as "GET" | "HEAD" | "POST" || 'GET',
+            method: (init && init.method) as Tampermonkey.Request['method'],
             url: typeof input === 'string' ? input : input.url,
             headers: (init && init.headers) as Tampermonkey.RequestHeaders || {},
-            data: ((init && init.body) || null) as string,
+            data: ((init && init.body) || null) as Tampermonkey.Request['data'],
             onload: function (response: Tampermonkey.ResponseBase) {
                 resolve(new Response(response.responseText, {
                     status: response.status,
@@ -72,19 +75,19 @@ String.prototype.replaceVariable = function (replacements, count = 0) {
         replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
             if (str.includes(`%#${key}:`)) {
                 let format = str.among(`%#${key}:`, '#%').toString()
-                return str.replaceAll(`%#${key}:${format}#%`, (hasFunction(value, 'format') ? value.format(format) : value).stringify())
+                return str.replaceAll(`%#${key}:${format}#%`, stringify(hasFunction(value, 'format') ? value.format(format) : value))
             } if (value instanceof Date) {
-                return str.replaceAll(`%#${key}#%`, value.format('yyyy-MM-dd'))
+                return str.replaceAll(`%#${key}#%`, value.format('YYYY-MM-DD'))
             } else {
-                return str.replaceAll(`%#${key}#%`, value.stringify())
+                return str.replaceAll(`%#${key}#%`, stringify(value))
             }
         },
             replaceString
         )
         count++
         return Object.keys(replacements).map((key) => this.includes(`%#${key}`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
-    } catch (error: any) {
-        GM_getValue('isDebug') && console.debug(`replace variable error: ${error.stringify()}`)
+    } catch (error: unknown) {
+        GM_getValue('isDebug') && console.debug(`replace variable error: ${stringify(error)}`)
         return replaceString
     }
 }

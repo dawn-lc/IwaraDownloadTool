@@ -2,7 +2,7 @@ name: "Mark stale issues"
 
 on:
   schedule:
-    - cron: "0 1 * * *"  # 每天的 UTC 时间 00:00 运行
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -52,4 +52,6 @@ jobs:
           exempt-issue-labels: 'pinned,安全,增强,BUG'
           operations-per-run: 30
           remove-stale-when-updated: true
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
           debug-only: false
