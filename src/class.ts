@@ -79,7 +79,21 @@ export class Path implements LocalPath {
             const segments = path.split(/[\\/]/);
             // 驱动器部分不检测，从第二段开始
             for (let i = 1; i < segments.length; i++) {
-                if (invalidChars.test(segments[i])) {
+                let segment = segments[i];
+                let variables = [...segment.matchAll(/%#(.*?)#%/g)].map(match => {
+                    let variable = match[1].split(':')
+                    if (variable.length > 1) {
+                        if (invalidChars.test(variable[1])) {
+                            throw new Error(`路径变量格式化参数 "${variable[1]}" 含有非法字符`);
+                        }
+                    }
+                    return match[1]
+                });
+                for (let index = 0; index < variables.length; index++) {
+                    const variable = variables[index];
+                    segment = segment.replaceAll(variable,'')
+                }
+                if (invalidChars.test(segment)) {
                     throw new Error(`路径段 "${segments[i]}" 含有非法字符`);
                 }
             }
