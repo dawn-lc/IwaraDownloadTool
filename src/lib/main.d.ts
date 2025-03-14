@@ -211,6 +211,9 @@ interface DownloadTask {
     ontimeout: () => void;
 }
 
+interface I18N {
+    [key: string]: { [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[] }
+}
 
 interface LogCode {
     content?: RenderCode;
