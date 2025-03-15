@@ -493,7 +493,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
         let path = analyzeLocalPath(file.path)
         if (isNullOrUndefined(path.fullName) || path.fullName.isEmpty()) return 
-        videoID = path.fullName.among('[', ']', false, true)
+        videoID = path.fullName.toLowerCase().among('[', '].mp4', false, true)
         if (videoID.isEmpty()) return 
         return videoID
     } catch (error) {
@@ -527,7 +527,7 @@ export async function aria2TaskCheckAndRestart() {
                 let ID = aria2TaskExtractVideoID(task)
                 if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
                     return {
-                        id: ID.toLowerCase(),
+                        id: ID,
                         data: task
                     }
                 }
@@ -558,7 +558,7 @@ export async function aria2TaskCheckAndRestart() {
                 let ID = aria2TaskExtractVideoID(task)
                 if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
                     return {
-                        id: ID.toLowerCase(),
+                        id: ID,
                         data: task
                     }
                 }

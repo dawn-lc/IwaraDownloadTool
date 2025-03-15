@@ -874,7 +874,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                 'aria2.tellStopped',
                 [
                     0,
-                    2048,
+                    4096,
                     [
                         'gid',
                         'status',
@@ -932,16 +932,13 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                 }
             )
             .prune();
-
         let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
             .filter(
                 (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
             )
             .unique('id');
-        
-        let startedAndCompleted = [...active, ...downloadCompleted];
-
-        for (let key of list.allKeys().intersect(startedAndCompleted.map(i => i.id))) {
+        let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
+        for (let key of list.allKeys().intersect(startedAndCompleted)) {
             let button = getSelectButton(key)
             if (!isNullOrUndefined(button)) button.checked = false
             list.delete(key)

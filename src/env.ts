@@ -36,23 +36,36 @@ Array.prototype.any = function () {
     return this.filter(i => !isNullOrUndefined(i)).length > 0
 }
 Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {
-    return this.filter((item, index, self) =>
-        index === self.findIndex((t) => (
-            prop ? t[prop] === item[prop] : t === item
-        ))
-    )
-}
+    if (isNullOrUndefined(prop)) {
+        const seen = new Set<T>();
+        return this.filter(item => {
+            if (seen.has(item)) return false;
+            seen.add(item);
+            return true;
+        });
+    } else {
+        const seen = new Map<unknown, boolean>();
+        const nanSymbol = Symbol();
+        return this.filter(item => {
+            const rawKey = item[prop];
+            const key = isNumber(rawKey) && Number.isNaN(rawKey) ? nanSymbol : rawKey;
+            if (seen.has(key)) return false;
+            seen.set(key, true);
+            return true;
+        });
+    }
+};
 Array.prototype.union = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
     return [...this, ...that].unique(prop)
 }
 Array.prototype.intersect = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
     return this.filter((item) =>
-        that.some((t) => prop ? t[prop] === item[prop] : t === item)
+        that.some((t) => isNullOrUndefined(prop) ? t === item : t[prop] === item[prop])
     ).unique(prop)
 }
 Array.prototype.difference = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
     return this.filter((item) =>
-        !that.some((t) => prop ? t[prop] === item[prop] : t === item)
+        !that.some((t) => isNullOrUndefined(prop) ? t === item : t[prop] === item[prop])
     ).unique(prop)
 }
 Array.prototype.complement = function <T>(this: T[], that: T[], prop?: keyof T): T[] {
