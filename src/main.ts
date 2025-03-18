@@ -4,7 +4,7 @@ import { originalAddEventListener, originalFetch, originalNodeAppendChild, origi
 import { i18n } from "./i18n";
 import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
-import { Dictionary, Path, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { delay, findElement, renderNode, unlimitedFetch } from "./extension";

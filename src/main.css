@@ -301,3 +301,144 @@
 .toastify p {
     margin: 0;
 }
+
+/* Toast容器基础样式 */
+.toast-container {
+    position: fixed;
+    z-index: 2147483647;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+/* 顶部位置 */
+.toast-container.toastify-top {
+    top: 0;
+}
+
+/* 底部位置 */
+.toast-container.toastify-bottom {
+    bottom: 0;
+}
+
+/* 水平对齐方式 */
+.toast-container.toastify-left {
+    left: 0;
+    align-items: flex-start;
+}
+.toast-container.toastify-center {
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+}
+.toast-container.toastify-right {
+    right: 0;
+    align-items: flex-end;
+}
+
+/* Toast元素基础样式 */
+.toastify {
+    position: relative;
+    background: rgb(55, 168, 255);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: 4px;
+    font-family: sans-serif;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: default;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    max-width: 350px;
+}
+
+/* 动画效果 */
+.toast-container.toastify-top .toastify.show {
+    animation: toast-in-top 0.4s ease-in-out forwards;
+}
+.toast-container.toastify-bottom .toastify.show {
+    animation: toast-in-bottom 0.4s ease-in-out forwards;
+}
+.toast-container.toastify-top .toastify.hide {
+    animation: toast-out-top 0.25s ease-in-out forwards;
+}
+.toast-container.toastify-bottom .toastify.hide {
+    animation: toast-out-bottom 0.25s ease-in-out forwards;
+}
+
+@keyframes toast-in-top {
+    from {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes toast-in-bottom {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes toast-out-top {
+    from {
+        opacity: 1;
+        z-index: 2147483646;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        z-index: 2147483646;
+        transform: translateY(-100%);
+    }
+}
+
+@keyframes toast-out-bottom {
+    from {
+        opacity: 1;
+        z-index: 2147483646;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        z-index: 2147483646;
+        transform: translateY(100%);
+    }
+}
+
+/* 关闭按钮样式 */
+.toast-close {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    font-size: 16px;
+    line-height: 1;
+}
+.toast-close:hover {
+    opacity: 1;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .toast-container {
+        width: 100%;
+        padding: 0.5rem;
+    }
+    .toastify {
+        max-width: 100%;
+        width: 100%;
+        margin: 0.25rem;
+    }
+}

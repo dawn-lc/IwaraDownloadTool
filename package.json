@@ -10,13 +10,11 @@
   },
   "dependencies": {
     "dexie": "^3.2.7",
-    "moment": "^2.30.1",
-    "toastify-js": "^1.12.0"
+    "moment": "^2.30.1"
   },
   "devDependencies": {
     "@types/moment": "^2.11.29",
     "@types/tampermonkey": "^5.0.4",
-    "@types/toastify-js": "^1.12.3",
     "esbuild": "^0.25.0",
     "typescript": "^5.7.2"
   }

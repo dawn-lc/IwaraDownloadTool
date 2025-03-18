@@ -4,7 +4,7 @@ import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
 import { DownloadType, ToastType } from "./type"
-import { Toastify } from "./import"
+import { Toastify, ToastifyOptions } from "./toastify"
 import { unlimitedFetch, renderNode, UUID } from "./extension"
 import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
@@ -96,7 +96,7 @@ export function getTextNode(node: Node | Element): string {
                 .join('')
             : ''
 }
-export function newToast(type: ToastType, params: Toastify.Options | undefined) {
+export function newToast(type: ToastType, params: ToastifyOptions | undefined) {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
@@ -111,6 +111,13 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
         stopOnFocus: true
     }, params)
     switch (type) {
+        case ToastType.Info:
+            params = Object.assign({
+                duration: -1,
+                style: {
+                    background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
+                }
+            }, params)
         case ToastType.Warn:
             params = Object.assign({
                 duration: -1,
@@ -134,7 +141,7 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
         params.text = params.text.replaceVariable(i18n[config.language]).toString()
     }
     logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
-    return Toastify(params)
+    return new Toastify(params)
 }
 
 export function getDownloadPath(videoInfo: VideoInfo): Path {
