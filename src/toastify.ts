@@ -91,6 +91,7 @@ class ToastBuilder {
             `toastify-${toast.gravity}`,
             `toastify-${toast.position}`
         );
+        if (toast.onClick) toast.element.classList.add('onclick');
         if (toast.options.className) toast.element.classList.add(toast.options.className);
         if (toast.options.style) this.applyCustomStyles(toast.element, toast.options.style);
     }    

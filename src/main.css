@@ -350,7 +350,11 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     cursor: default;
     transition: transform 0.3s ease, opacity 0.3s ease;
-    max-width: 350px;
+    max-width: 480px;
+}
+
+.toastify.onclick {
+    cursor: pointer;
 }
 
 /* 动画效果 */

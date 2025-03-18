@@ -113,16 +113,16 @@ export function newToast(type: ToastType, params: ToastifyOptions | undefined) {
     switch (type) {
         case ToastType.Info:
             params = Object.assign({
-                duration: -1,
+                duration: 2000,
                 style: {
-                    background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
+                    background: 'linear-gradient(-30deg, rgb(0, 108, 215), rgb(0, 180, 255))'
                 }
             }, params)
         case ToastType.Warn:
             params = Object.assign({
                 duration: -1,
                 style: {
-                    background: 'linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))'
+                    background: 'linear-gradient(-30deg, rgb(119, 76, 0), rgb(255, 165, 0))'
                 }
             }, params)
             break;
@@ -131,7 +131,7 @@ export function newToast(type: ToastType, params: ToastifyOptions | undefined) {
             params = Object.assign({
                 duration: -1,
                 style: {
-                    background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
+                    background: 'linear-gradient(-30deg, rgb(108, 0, 0), rgb(215, 0, 0))'
                 }
             }, params)
         default:
