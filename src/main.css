@@ -294,15 +294,14 @@
     top: 22px;
 }
 
-.toastify h3 {
+.toast h3 {
     margin: 0 0 10px 0;
 }
 
-.toastify p {
+.toast p {
     margin: 0;
 }
 
-/* Toast容器基础样式 */
 .toast-container {
     position: fixed;
     z-index: 2147483647;
@@ -312,36 +311,34 @@
     padding: 1rem;
     max-width: 100%;
     box-sizing: border-box;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
-/* 顶部位置 */
-.toast-container.toastify-top {
+
+.toast-container.toast-top {
     top: 0;
 }
 
-/* 底部位置 */
-.toast-container.toastify-bottom {
+.toast-container.toast-bottom {
     bottom: 0;
 }
 
-/* 水平对齐方式 */
-.toast-container.toastify-left {
+.toast-container.toast-left {
     left: 0;
     align-items: flex-start;
 }
-.toast-container.toastify-center {
+.toast-container.toast-center {
     left: 50%;
     transform: translateX(-50%);
     align-items: center;
 }
-.toast-container.toastify-right {
+.toast-container.toast-right {
     right: 0;
     align-items: flex-end;
 }
 
-/* Toast元素基础样式 */
-.toastify {
+.toast {
     position: relative;
-    background: rgb(55, 168, 255);
+    background: rgb(55, 208, 255);
     color: white;
     padding: 1rem 2rem;
     border-radius: 4px;
@@ -349,26 +346,47 @@
     font-size: 14px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     cursor: default;
-    transition: transform 0.3s ease, opacity 0.3s ease;
+    transition: transform 0.5s ease, opacity 0.15s ease;
     max-width: 480px;
 }
 
-.toastify.onclick {
-    cursor: pointer;
+.toast:hover {
+    z-index: 2147483647 !important;
+    transform: scale(1.25) !important;
+    will-change: transform;
 }
 
-/* 动画效果 */
-.toast-container.toastify-top .toastify.show {
-    animation: toast-in-top 0.4s ease-in-out forwards;
+.toast.toast-top.toast-left {
+    transform-origin: left center;
 }
-.toast-container.toastify-bottom .toastify.show {
-    animation: toast-in-bottom 0.4s ease-in-out forwards;
+.toast.toast-top.toast-center {
+    transform-origin: top;
 }
-.toast-container.toastify-top .toastify.hide {
-    animation: toast-out-top 0.25s ease-in-out forwards;
+.toast.toast-top.toast-right {
+    transform-origin: right center;
 }
-.toast-container.toastify-bottom .toastify.hide {
-    animation: toast-out-bottom 0.25s ease-in-out forwards;
+
+.toast.toast-bottom.toast-left {
+    transform-origin: left center;
+}
+.toast.toast-bottom.toast-center {
+    transform-origin: bottom;
+}
+.toast.toast-bottom.toast-right {
+    transform-origin: right center;
+}
+
+.toast-container.toast-top .toast.show {
+    animation: toast-in-top 0.3s ease-in-out forwards;
+}
+.toast-container.toast-bottom .toast.show {
+    animation: toast-in-bottom 0.3s ease-in-out forwards;
+}
+.toast-container.toast-top .toast.hide {
+    animation: toast-out-top 0.15s ease-in-out forwards;
+}
+.toast-container.toast-bottom .toast.hide {
+    animation: toast-out-bottom 0.15s ease-in-out forwards;
 }
 
 @keyframes toast-in-top {
@@ -396,12 +414,10 @@
 @keyframes toast-out-top {
     from {
         opacity: 1;
-        z-index: 2147483646;
         transform: translateY(0);
     }
     to {
         opacity: 0;
-        z-index: 2147483646;
         transform: translateY(-100%);
     }
 }
@@ -409,38 +425,32 @@
 @keyframes toast-out-bottom {
     from {
         opacity: 1;
-        z-index: 2147483646;
         transform: translateY(0);
     }
     to {
         opacity: 0;
-        z-index: 2147483646;
         transform: translateY(100%);
     }
 }
 
-/* 关闭按钮样式 */
 .toast-close {
     position: absolute;
     top: 4px;
-    right: 8px;
+    right: 4px;
     cursor: pointer;
-    opacity: 0.6;
-    transition: opacity 0.2s;
-    font-size: 16px;
+    font-size: 12px;
     line-height: 1;
 }
 .toast-close:hover {
-    opacity: 1;
+    transform: scale(1.5);
 }
 
-/* 响应式设计 */
 @media (max-width: 480px) {
     .toast-container {
         width: 100%;
         padding: 0.5rem;
     }
-    .toastify {
+    .toast {
         max-width: 100%;
         width: 100%;
         margin: 0.25rem;

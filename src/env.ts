@@ -32,6 +32,7 @@ export const isNotEmpty = (obj: unknown): boolean => {
     }
     return true
 }
+
 Array.prototype.any = function () {
     return this.filter(i => !isNullOrUndefined(i)).length > 0
 }
@@ -80,7 +81,7 @@ String.prototype.isConvertibleToNumber = function (includeInfinity: boolean = fa
     const num = Number(trimmed);
     return !isNaN(num) && (includeInfinity || isFinite(num));
 }
-String.prototype.reversed = function() {
+String.prototype.reversed = function () {
     const segmenter = new Intl.Segmenter(navigator.language, { granularity: 'grapheme' });
     return [...segmenter.segment(this.toString())].reverse().join('');
 }
@@ -144,7 +145,21 @@ export const isConvertibleToNumber = (obj: unknown, includeInfinity: boolean = f
     }
     return false;
 }
-export const stringify = function(data: unknown) {
+export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
+export const hasFunction = <T, K extends string>(obj: T, method: K): obj is T & { [P in K]: Function } => {
+    return (
+        isObject(obj) &&
+        method in obj &&
+        typeof (obj as Record<K, unknown>)[method] === 'function'
+    );
+};
+export const UUID = () => {
+    return isNullOrUndefined(crypto) ? Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('') : crypto.randomUUID().replaceAll('-', '')
+}
+export const ceilDiv = (dividend: number, divisor: number): number => {
+    return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0)
+}
+export const stringify = function (data: unknown) {
     switch (typeof data) {
         case 'undefined':
             return 'undefined'
@@ -173,8 +188,47 @@ export const stringify = function(data: unknown) {
             return 'unknown'
     }
 }
-Object.defineProperty(Object.prototype, 'prune',{
-    value: function() {
+export function prune<T>(data: T): T {
+    if (Array.isArray(data)) {
+        return data.filter(isNotEmpty).map(item => prune(item)) as unknown as T;
+    }
+    if (isElement(data) || isNode(data)) {
+        return data;
+    }
+    if (isObject(data)) {
+        const result = Object.fromEntries(
+            Object.entries(data)
+                .filter(([, v]) => isNotEmpty(v))
+                .map(([k, v]) => [k, prune(v)])
+        );
+        return result as T;
+    }
+    return isNotEmpty(data) ? data : undefined as unknown as T;
+}
+String.prototype.replaceVariable = function (replacements, count = 0) {
+    let replaceString = this.toString()
+    try {
+        replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
+            if (str.includes(`%#${key}:`)) {
+                let format = str.among(`%#${key}:`, '#%').toString()
+                return str.replaceAll(`%#${key}:${format}#%`, stringify(hasFunction(value, 'format') ? value.format(format) : value))
+            } if (value instanceof Date) {
+                return str.replaceAll(`%#${key}#%`, value.format('YYYY-MM-DD'))
+            } else {
+                return str.replaceAll(`%#${key}#%`, stringify(value))
+            }
+        },
+            replaceString
+        )
+        count++
+        return Object.keys(replacements).map((key) => this.includes(`%#${key}`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
+    } catch (error: unknown) {
+        GM_getValue('isDebug') && console.debug(`replace variable error: ${stringify(error)}`)
+        return replaceString
+    }
+}
+Object.defineProperty(Object.prototype, 'prune', {
+    value: function () {
         if (Array.isArray(this)) {
             return this.filter(isNotEmpty).map(i => i.prune());
         }

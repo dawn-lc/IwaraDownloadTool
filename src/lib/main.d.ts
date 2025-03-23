@@ -1,33 +1,3 @@
-type GMDownloadErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';
-type ElementTypeFromNodeType<T extends keyof HTMLElementTagNameMap> = HTMLElementTagNameMap[T];
-type InputType =
-    | "button"
-    | "checkbox"
-    | "color"
-    | "date"
-    | "datetime-local"
-    | "email"
-    | "file"
-    | "hidden"
-    | "image"
-    | "month"
-    | "number"
-    | "password"
-    | "radio"
-    | "range"
-    | "reset"
-    | "search"
-    | "submit"
-    | "tel"
-    | "text"
-    | "time"
-    | "url"
-    | "week";
-declare module '../i18n/*.json' {
-    const content: { [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[] };
-    export default content;
-}
-
 interface String {
     replaceVariable(replacements: Record<string, unknown>, count?: number): string;
     /**
@@ -92,21 +62,6 @@ interface String {
      */
     isConvertibleToNumber(includeInfinity?: boolean): boolean;
 }
-
-interface IVersion {
-    major: number;
-    minor: number;
-    patch: number;
-    preRelease: string[];
-    buildMetadata: string;
-    compare(other: IVersion): VersionState;
-}
-
-interface IChannelMessage<T> {
-    type: MessageType;
-    data: T;
-}
-
 interface Window {
     IwaraDownloadTool: boolean;
 }
@@ -114,7 +69,6 @@ declare var unsafeWindow: Window & typeof globalThis;
 
 interface Object{
     prune(): T;
-    stringify(): string;
 }
 
 interface Date {
@@ -168,6 +122,51 @@ interface Array<T> {
      */
     complement(that: T[], prop?: keyof T): T[];
 }
+
+type GMDownloadErrorType = 'not_enabled' | 'not_whitelisted' | 'not_permitted' | 'not_supported' | 'not_succeeded' | 'unknown';
+type ElementTypeFromNodeType<T extends keyof HTMLElementTagNameMap> = HTMLElementTagNameMap[T];
+type InputType =
+    | "button"
+    | "checkbox"
+    | "color"
+    | "date"
+    | "datetime-local"
+    | "email"
+    | "file"
+    | "hidden"
+    | "image"
+    | "month"
+    | "number"
+    | "password"
+    | "radio"
+    | "range"
+    | "reset"
+    | "search"
+    | "submit"
+    | "tel"
+    | "text"
+    | "time"
+    | "url"
+    | "week";
+declare module '../i18n/*.json' {
+    const content: { [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[] };
+    export default content;
+}
+
+interface IVersion {
+    major: number;
+    minor: number;
+    patch: number;
+    preRelease: string[];
+    buildMetadata: string;
+    compare(other: IVersion): VersionState;
+}
+
+interface IChannelMessage<T> {
+    type: MessageType;
+    data: T;
+}
+
 
 interface IDictionary<T> extends Map<string, T> {
     toArray(): Array<[key: string, value: T]>;

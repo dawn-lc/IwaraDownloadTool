@@ -44,7 +44,6 @@
 * [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
 
 ## 依赖库
-- [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
 - [moment.js](https://github.com/moment/moment/) - [MIT License](https://opensource.org/licenses/MIT)
 - [Dexie.js](https://github.com/dexie/Dexie.js) - [Apache-2.0 License](https://opensource.org/license/apache-2-0)
 - [emoji-regex](https://github.com/slevithan/emoji-regex-xs/) - [MIT License](https://opensource.org/licenses/MIT)

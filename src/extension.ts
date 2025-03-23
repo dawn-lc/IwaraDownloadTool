@@ -2,16 +2,7 @@ import "./env"
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
-import { isArray, isNullOrUndefined, isObject, isStringTupleArray, stringify } from "./env";
-
-export const delay = (time: number) => new Promise(resolve => setTimeout(resolve, time))
-export const hasFunction = <T, K extends string>(obj: T, method: K): obj is T & { [P in K]: Function } => {
-    return (
-        isObject(obj) &&
-        method in obj &&
-        typeof (obj as Record<K, unknown>)[method] === 'function'
-    );
-};
+import { hasFunction, isArray, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
 
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
@@ -33,12 +24,7 @@ export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: b
         })
     }) : originalFetch(input, init)
 }
-export const UUID = () => {
-    return isNullOrUndefined(crypto) ? Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('') : crypto.randomUUID().replaceAll('-', '')
-}
-export const ceilDiv = (dividend: number, divisor: number): number => {
-    return Math.floor(dividend / divisor) + (dividend % divisor > 0 ? 1 : 0)
-}
+
 export const findElement = (element: Element, condition: string) => {
     while (!isNullOrUndefined(element) && !element.matches(condition)) {
         if (isNullOrUndefined(element.parentElement)) return undefined
@@ -47,7 +33,7 @@ export const findElement = (element: Element, condition: string) => {
     return element.querySelectorAll(condition).length > 1 ? undefined : element
 }
 export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: RenderCode<T> | string): HTMLElementTagNameMap[T] => {
-    renderCode = renderCode.prune();
+    renderCode = prune(renderCode);
     if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null");
     if (typeof renderCode === 'string') {
         return document.createTextNode(renderCode.replaceVariable(i18n[config.language])) as any;
