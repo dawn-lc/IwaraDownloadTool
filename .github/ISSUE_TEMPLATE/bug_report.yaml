@@ -80,7 +80,7 @@ body:
     id: logs
     attributes:
       label: 相关日志
-      description: 请打开开发者工具复制并粘贴相关的日志到下方的文本框中。
+      description: 请打开开发者工具复制并粘贴相关的日志到下方的文本框中。(不提供日志将无法排除解决问题，您的反馈将会被忽略)
       render: Text
     validations:
       required: true

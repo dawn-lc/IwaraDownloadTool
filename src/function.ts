@@ -1,13 +1,13 @@
 import "./env";
-import { isConvertibleToNumber, isNullOrUndefined, stringify } from "./env"
+import { isConvertibleToNumber, isNullOrUndefined, stringify, UUID } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
 import { DownloadType, ToastType } from "./type"
-import { Toastify } from "./import"
-import { unlimitedFetch, renderNode, UUID } from "./extension"
+import { unlimitedFetch, renderNode } from "./extension"
 import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
+import { Toastify } from "./toastify";
 
 export async function refreshToken(): Promise<string> {
     const { authorization } = config
@@ -111,11 +111,18 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
         stopOnFocus: true
     }, params)
     switch (type) {
+        case ToastType.Info:
+            params = Object.assign({
+                duration: 2000,
+                style: {
+                    background: 'linear-gradient(-30deg, rgb(0, 108, 215), rgb(0, 180, 255))'
+                }
+            }, params)
         case ToastType.Warn:
             params = Object.assign({
                 duration: -1,
                 style: {
-                    background: 'linear-gradient(-30deg, rgb(119 76 0), rgb(255 165 0))'
+                    background: 'linear-gradient(-30deg, rgb(119, 76, 0), rgb(255, 165, 0))'
                 }
             }, params)
             break;
@@ -124,7 +131,7 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
             params = Object.assign({
                 duration: -1,
                 style: {
-                    background: 'linear-gradient(-30deg, rgb(108 0 0), rgb(215 0 0))'
+                    background: 'linear-gradient(-30deg, rgb(108, 0, 0), rgb(215, 0, 0))'
                 }
             }, params)
         default:
@@ -134,7 +141,7 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
         params.text = params.text.replaceVariable(i18n[config.language]).toString()
     }
     logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
-    return Toastify(params)
+    return new Toastify.Toast(params)
 }
 
 export function getDownloadPath(videoInfo: VideoInfo): Path {
@@ -165,11 +172,11 @@ export function analyzeLocalPath(path: string): Path {
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
-                    toast.hideToast()
+                    toast.hide()
                 }
             }
         )
-        toast.showToast()
+        toast.show()
         throw new Error(`%#downloadPathError#% ["${path}"]`)
     }
 }
@@ -190,11 +197,11 @@ export async function EnvCheck(): Promise<boolean> {
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
-                    toast.hideToast()
+                    toast.hide()
                 }
             }
         )
-        toast.showToast()
+        toast.show()
         return false
     }
     return true
@@ -216,11 +223,11 @@ export async function localPathCheck(): Promise<boolean> {
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
-                    toast.hideToast()
+                    toast.hide()
                 }
             }
         )
-        toast.showToast()
+        toast.show()
         return false
     }
     return true
@@ -254,11 +261,11 @@ export async function aria2Check(): Promise<boolean> {
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
-                    toast.hideToast()
+                    toast.hide()
                 }
             }
         )
-        toast.showToast()
+        toast.show()
         return false
     }
     return true
@@ -293,11 +300,11 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
-                    toast.hideToast()
+                    toast.hide()
                 }
             }
         )
-        toast.showToast()
+        toast.show()
         return false
     }
     return true
@@ -341,7 +348,7 @@ export function aria2Download(videoInfo: VideoInfo) {
             {
                 node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
             }
-        ).showToast()
+        ).show()
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
 export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
@@ -393,7 +400,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                 {
                     node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
                 }
-            ).showToast()
+            ).show()
         } else {
             let toast = newToast(
                 ToastType.Error,
@@ -404,11 +411,11 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                         r.msg
                     ], '%#iwaraDownloaderDownload#%'),
                     onClick() {
-                        toast.hideToast()
+                        toast.hide()
                     }
                 }
             )
-            toast.showToast()
+            toast.show()
         }
     }(videoInfo))
 }
@@ -449,12 +456,12 @@ export function browserDownload(videoInfo: VideoInfo) {
                         `%#tryRestartingDownload#%`
                     ], '%#browserDownload#%'),
                     async onClick() {
-                        toast.hideToast()
+                        toast.hide()
                         await pushDownloadTask(videoInfo)
                     }
                 }
             )
-            toast.showToast()
+            toast.show()
         }
         GM_download({
             url: DownloadUrl,
@@ -493,7 +500,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
         let path = analyzeLocalPath(file.path)
         if (isNullOrUndefined(path.fullName) || path.fullName.isEmpty()) return 
-        videoID = path.fullName.among('[', ']', false, true)
+        videoID = path.fullName.toLowerCase().among('[', '].mp4', false, true)
         if (videoID.isEmpty()) return 
         return videoID
     } catch (error) {
@@ -527,7 +534,7 @@ export async function aria2TaskCheckAndRestart() {
                 let ID = aria2TaskExtractVideoID(task)
                 if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
                     return {
-                        id: ID.toLowerCase(),
+                        id: ID,
                         data: task
                     }
                 }
@@ -558,7 +565,7 @@ export async function aria2TaskCheckAndRestart() {
                 let ID = aria2TaskExtractVideoID(task)
                 if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
                     return {
-                        id: ID.toLowerCase(),
+                        id: ID,
                         data: task
                     }
                 }
@@ -594,7 +601,7 @@ export async function aria2TaskCheckAndRestart() {
                     '%#tryRestartingDownload#%'
                 ], '%#aria2TaskCheck#%'),
             async onClick() {
-                toast.hideToast()
+                toast.hide()
                 for (let i = 0; i < needRestart.length; i++) {
                     const task = needRestart[i]
                     let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
@@ -613,7 +620,7 @@ export async function aria2TaskCheckAndRestart() {
             }
         }
     )
-    toast.showToast()
+    toast.show()
 }
 export function getPlayload(authorization: string) {
     return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))

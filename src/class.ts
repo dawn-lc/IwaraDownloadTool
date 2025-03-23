@@ -1,9 +1,9 @@
 import "./env";
-import { isNullOrUndefined, stringify } from "./env";
+import { ceilDiv, isNullOrUndefined, stringify } from "./env";
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
-import { unlimitedFetch, ceilDiv, delay } from "./extension";
+import { unlimitedFetch } from "./extension";
 import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
@@ -474,11 +474,11 @@ export class VideoInfo {
                                 ], '%#createTask#%'),
                             onClick() {
                                 GM_openInTab(cdnCache.pop()!.href, { active: false, insert: true, setParent: true })
-                                toast.hideToast()
+                                toast.hide()
                             },
                         }
                     )
-                    toast.showToast()
+                    toast.show()
                     let button = getSelectButton(this.ID)
                     button && button.checked && button.click()
                     selectList.delete(this.ID)
@@ -568,7 +568,7 @@ export class VideoInfo {
                         this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     async onClick() {
-                        toast.hideToast()
+                        toast.hide()
                         if (data.External) {
                             GM_openInTab(data.ExternalUrl!, { active: false, insert: true, setParent: true })
                         } else {
@@ -577,7 +577,7 @@ export class VideoInfo {
                     },
                 }
             )
-            toast.showToast()
+            toast.show()
             let button = getSelectButton(this.ID)
             button && button.checked && button.click()
             selectList.delete(this.ID)

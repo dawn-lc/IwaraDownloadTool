@@ -24,7 +24,6 @@ export enum PageType {
 }
 export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 
-
 export enum ToastType {
     Log,
     Info,

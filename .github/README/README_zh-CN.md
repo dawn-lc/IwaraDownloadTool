@@ -54,7 +54,6 @@
 `/Iwara/Mr.Quin/2022-02-22/(摸鱼奎恩)2022-02-22+22.22.22_【Quin】黑暗之魂3 一周目攻略 Part22 双王子 薪王化身【机核网】_Source[MrQuinWo22Ne22].MP4`
 
 ## 依赖库
-- [toastify-js](https://github.com/apvarun/toastify-js) - [MIT License](https://opensource.org/licenses/MIT)
 - [moment.js](https://github.com/moment/moment/) - [MIT License](https://opensource.org/licenses/MIT)
 - [Dexie.js](https://github.com/dexie/Dexie.js) - [Apache-2.0 License](https://opensource.org/license/apache-2-0)
 - [emoji-regex](https://github.com/slevithan/emoji-regex-xs/) - [MIT License](https://opensource.org/licenses/MIT)

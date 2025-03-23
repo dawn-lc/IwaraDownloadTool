@@ -1,13 +1,13 @@
 import "./env";
-import { isNullOrUndefined, isStringTupleArray, stringify } from "./env";
+import { delay, isNullOrUndefined, isStringTupleArray, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18n } from "./i18n";
 import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
-import { Dictionary, Path, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
-import { delay, findElement, renderNode, unlimitedFetch } from "./extension";
+import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 
 
@@ -390,7 +390,7 @@ class menu {
             newToast(ToastType.Info, {
                 text: `%#${name}#%`,
                 close: true
-            }).showToast()
+            }).show()
         })
         let selectButtons = [injectCheckboxButton, deselectAllButton, reverseSelectButton, selectThisButton, deselectThisButton, downloadSelectedButton]
 
@@ -498,13 +498,13 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             if ((await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                 method: 'POST',
                 headers: await getAuth()
-            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).showToast()
+            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true }).show()
         }
         if (config.autoLike && !videoInfo.Liked) {
             if ((await unlimitedFetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
                 method: 'POST',
                 headers: await getAuth()
-            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).showToast()
+            })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true }).show()
         }
         if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
             let toastBody = toastNode([
@@ -526,12 +526,12 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                                 childs: '%#copySucceed#%'
                             }))
                         } else {
-                            toast.hideToast()
+                            toast.hide()
                         }
                     }
                 }
             )
-            toast.showToast()
+            toast.show()
             return
         }
         if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
@@ -544,12 +544,12 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     async onClick() {
-                        toast.hideToast()
+                        toast.hide()
                         await pushDownloadTask(await new VideoInfo(videoInfo as PieceInfo).init(videoInfo.ID))
                     }
                 }
             )
-            toast.showToast()
+            toast.show()
             return
         }
     }
@@ -614,7 +614,7 @@ function browserDownloadMetadata(videoInfo: VideoInfo): void {
                     browserDownloadErrorParse(error)
                 ], '%#browserDownload#%')
             }
-        ).showToast()
+        ).show()
     }
     GM_download({
         url: url,
@@ -778,7 +778,7 @@ async function injectCheckbox(element: Element) {
                         method: 'DELETE',
                         headers: await getAuth()
                     })).ok) {
-                        newToast(ToastType.Info,{ text: `${Name} %#deleteSucceed#%`, close: true }).showToast()
+                        newToast(ToastType.Info,{ text: `${Name} %#deleteSucceed#%`, close: true }).show()
                         deletePlaylistItme.remove()
                     }
                     event.preventDefault()
@@ -867,14 +867,14 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         node: node,
         duration: -1
     })
-    start.showToast()
+    start.show()
     if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
         let stoped: Array<{ id: string, data: Aria2.Status }> = (
             await aria2API(
                 'aria2.tellStopped',
                 [
                     0,
-                    2048,
+                    4096,
                     [
                         'gid',
                         'status',
@@ -932,16 +932,13 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                 }
             )
             .prune();
-
         let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
             .filter(
                 (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
             )
             .unique('id');
-        
-        let startedAndCompleted = [...active, ...downloadCompleted];
-
-        for (let key of list.allKeys().intersect(startedAndCompleted.map(i => i.id))) {
+        let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
+        for (let key of list.allKeys().intersect(startedAndCompleted)) {
             let button = getSelectButton(key)
             if (!isNullOrUndefined(button)) button.checked = false
             list.delete(key)
@@ -959,13 +956,13 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                     duration: -1,
                     close: true,
                     onClick() {
-                        parseToast.hideToast()
+                        parseToast.hide()
                     }
                 }
             )
-            parseToast.showToast()
+            parseToast.show()
             cache = await new VideoInfo(list.get(id)).init(id)
-            parseToast.hideToast()
+            parseToast.hide()
         }
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
@@ -980,7 +977,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
     }
 
-    start.hideToast()
+    start.hide()
     if (size != 1) {
         let completed = newToast(
             ToastType.Info,
@@ -989,11 +986,11 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                 duration: -1,
                 close: true,
                 onClick() {
-                    completed.hideToast()
+                    completed.hide()
                 }
             }
         )
-        completed.showToast()
+        completed.show()
     }
 }
 function hijackAddEventListener() {
@@ -1134,7 +1131,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
             newToast(ToastType.Info, {
                 text: `%#configError#%`,
                 duration: 60 * 1000,
-            }).showToast()
+            }).show()
             editConfig.inject()
             return
         }
@@ -1186,7 +1183,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 GM_getValue('isDebug') ? `%#isDebug#%` : ''
             ].prune()
         }))
-        if (!unsafeWindow.localStorage.getItem('token')?.isEmpty()) {
+        if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
             let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
                 method: 'GET',
                 headers: await getAuth()
@@ -1218,11 +1215,11 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 gravity: 'bottom',
                 position: 'center',
                 onClick() {
-                    notice.hideToast()
+                    notice.hide()
                 }
             }
         )
-        notice.showToast()
+        notice.show()
     }
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 }

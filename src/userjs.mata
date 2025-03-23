@@ -38,5 +38,4 @@
 // @grant             GM_getTabs
 // @grant             unsafeWindow
 // @run-at            document-start
-// @resource          toastify-css https://cdn.jsdelivr.net/npm/toastify-js@1.12.0/src/toastify.min.css
 // ==/UserScript==
