@@ -10,6 +10,7 @@ import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 import { Iwara, Aria2 } from "./lib/main";
+import { Toastify } from "./toastify";
 
 class configEdit {
     source!: configEdit;
@@ -1040,6 +1041,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
         console.debug(stringify(GM_info))
         // @ts-ignore
         unsafeWindow.unlimitedFetch = unlimitedFetch
+        // @ts-ignore
+        unsafeWindow.newToast = Toast
         debugger
     }
 
@@ -1209,7 +1212,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
             ToastType.Info,
             {
                 node: toastNode(i18n[config.language].notice),
-                duration: 10000,
+                duration: 1000000,
                 gravity: 'bottom',
                 position: 'center',
                 onClick() {

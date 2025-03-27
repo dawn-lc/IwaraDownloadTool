@@ -107,7 +107,7 @@ export namespace Toastify {
         }
 
         private static bindEvent(toast: Toast) {
-            if (toast.stopOnFocus) {
+            if (toast.stopOnFocus && toast.duration > 0) {
                 toast.element.addEventListener("mouseover", () => {
                     Manager.delTimeout(toast);
                 })
@@ -192,7 +192,6 @@ export namespace Toastify {
                 this.element.classList.add('show')
             }
             if (this.duration && this.duration > 0) {
-                
                 Manager.addTimeout(this, this.options.duration!, () => this.hide());
             }
             return this;
@@ -211,15 +210,17 @@ export namespace Toastify {
         public hide(): void {
             if (!this.element) return;
             Manager.delTimeout(this);
-            const handleAnimationEnd = () => {
-                this.element?.removeEventListener('animationend', handleAnimationEnd);
-                this.element?.remove();
-                this.onClose?.bind(this);
-            };
+            const handleAnimationEnd = (e: AnimationEvent) => {
+                if (e.animationName.startsWith('toast-out')) {
+                    this.element?.removeEventListener('animationend', handleAnimationEnd);
+                    this.element?.remove();
+                }
+            }
             this.element.addEventListener('animationend', handleAnimationEnd);
             if (!this.element.classList.replace('show', 'hide')) {
                 this.element.classList.add('hide')
             }
+            this.onClose?.bind(this);
         }
         /**
          * @deprecated This function is deprecated. Use the hide() instead.
