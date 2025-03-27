@@ -352,7 +352,7 @@
 
 .toast:hover {
     z-index: 2147483647 !important;
-    transform: scale(1.25) !important;
+    transform: scale(1.15) !important;
     will-change: transform;
 }
 

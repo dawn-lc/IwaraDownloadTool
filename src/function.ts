@@ -1,5 +1,5 @@
 import "./env";
-import { isConvertibleToNumber, isNullOrUndefined, stringify, UUID } from "./env"
+import { isConvertibleToNumber, isNullOrUndefined, prune, stringify, UUID } from "./env"
 import { i18n } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
@@ -8,6 +8,7 @@ import { unlimitedFetch, renderNode } from "./extension"
 import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 import { Toastify } from "./toastify";
+import { Aria2, RenderCode } from "./lib/main";
 
 export async function refreshToken(): Promise<string> {
     const { authorization } = config
@@ -96,7 +97,7 @@ export function getTextNode(node: Node | Element): string {
                 .join('')
             : ''
 }
-export function newToast(type: ToastType, params: Toastify.Options | undefined) {
+export function newToast(type: ToastType, params: Toastify.Options | undefined): Toastify.Toast {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
@@ -278,11 +279,11 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify({
+            body: JSON.stringify(prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State',
                 'token': config.iwaraDownloaderToken
-            }.prune())
+            }))
         })).json()
 
         if (res.code !== 0) {
@@ -329,7 +330,7 @@ export function aria2Download(videoInfo: VideoInfo) {
         downloadUrl.searchParams.set('download', localPath.fullName)
         let params = [
             [downloadUrl.href],
-            {
+            prune({
                 'all-proxy': config.downloadProxy,
                 'all-proxy-passwd': !config.downloadProxy.isEmpty() ? config.downloadProxyPassword : undefined,
                 'all-proxy-user': !config.downloadProxy.isEmpty() ? config.downloadProxyUsername: undefined,
@@ -339,7 +340,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 'header': [
                     'Cookie:' + unsafeWindow.document.cookie
                 ]
-            }.prune()
+            })
         ]
         let res = await aria2API('aria2.addUri', params)
         console.log(`Aria2 ${title} ${JSON.stringify(res)}`)
@@ -359,7 +360,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify({
+            body: JSON.stringify(prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
                 'token': config.iwaraDownloaderToken,
@@ -391,7 +392,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                         'cookies': unsafeWindow.document.cookie
                     }
                 }
-            }.prune())
+            }))
         })).json()
         if (r.code === 0) {
             console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
@@ -509,8 +510,8 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
     }
 }
 export async function aria2TaskCheckAndRestart() {
-    let stoped: Array<{ id: string, data: Aria2.Status }> = (
-        await aria2API(
+    let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
             'aria2.tellStopped',
             [
                 0,
@@ -526,8 +527,7 @@ export async function aria2TaskCheckAndRestart() {
         ))
         .result
         .filter(
-            (task: Aria2.Status) =>
-                isNullOrUndefined(task.bittorrent)
+            (task: Aria2.Status) => isNullOrUndefined(task.bittorrent)
         )
         .map(
             (task: Aria2.Status) => {
@@ -540,10 +540,9 @@ export async function aria2TaskCheckAndRestart() {
                 }
             }
         )
-        .prune();
-
-    let active: Array<{ id: string, data: Aria2.Status }> = (
-        await aria2API(
+    );
+    let active: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
             'aria2.tellActive',
             [
                 [
@@ -571,7 +570,7 @@ export async function aria2TaskCheckAndRestart() {
                 }
             }
         )
-        .prune();
+    );
     let downloadNormalTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
             (task: { id: string, data: Aria2.Status }) => isConvertibleToNumber(task.data.downloadSpeed) && Number(task.data.downloadSpeed) >= 512

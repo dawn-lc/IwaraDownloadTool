@@ -3,6 +3,7 @@ import { i18n } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
 import { hasFunction, isArray, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
+import { RenderCode } from "./lib/main";
 
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
@@ -32,25 +33,26 @@ export const findElement = (element: Element, condition: string) => {
     }
     return element.querySelectorAll(condition).length > 1 ? undefined : element
 }
+
 export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: RenderCode<T> | string): HTMLElementTagNameMap[T] => {
-    renderCode = prune(renderCode);
-    if (isNullOrUndefined(renderCode)) throw new Error("RenderCode null");
-    if (typeof renderCode === 'string') {
-        return document.createTextNode(renderCode.replaceVariable(i18n[config.language])) as any;
+    let code = prune(renderCode);
+    if (isNullOrUndefined(code)) throw new Error("RenderCode null");
+    if (typeof code === 'string') {
+        return document.createTextNode(code.replaceVariable(i18n[config.language])) as any;
     }
-    if (renderCode instanceof Node) {
-        return renderCode as any;
+    if (code instanceof Node) {
+        return code as any;
     }
     if (typeof renderCode !== 'object' || !renderCode.nodeType) {
         throw new Error('Invalid arguments');
     }
     const { nodeType, attributes, events, className, childs } = renderCode;
-    const node: ElementTypeFromNodeType<T> = document.createElement(nodeType);
+    const node = document.createElement(nodeType);
 
     (!isNullOrUndefined(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
     (!isNullOrUndefined(className) && className.length > 0) && node.classList.add(...(typeof className === 'string' ? [className] : className));
     !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : [childs]).filter(child => !isNullOrUndefined(child)).map(renderNode));
-    (!isNullOrUndefined(attributes) && Object.keys(attributes).length > 0) && Object.entries(attributes).forEach(([key, value]: [string, string]) => { node[key] = value; node.setAttribute(key, value) });
+    (!isNullOrUndefined(attributes) && Object.keys(attributes).length > 0) && Object.entries(attributes).forEach(([key, value]: [string, string]) => { (node as any)[key] = value; node.setAttribute(key, value) });
 
     return node;
 }

@@ -1,5 +1,5 @@
 import "./env";
-import { ceilDiv, isNullOrUndefined, stringify } from "./env";
+import { isNullOrUndefined, prune, stringify } from "./env";
 import { i18n } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
@@ -8,7 +8,24 @@ import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
 import { MessageType, ToastType, VersionState } from "./type";
+import { Iwara } from "./lib/main";
 
+
+
+export interface PieceInfo {
+    Title?: string | null;
+    Alias?: string | null;
+    Author?: string | null;
+}
+
+export interface LocalPath {
+    fullPath: string;
+    fullName: string;
+    directory: string;
+    type: 'Windows' | 'Unix' | 'Relative';
+    extension: string;
+    baseName: string;
+}
 export class Path implements LocalPath {
     public readonly fullPath: string;   // 归一化后的完整路径
     public readonly directory: string;  // 目录部分
@@ -236,7 +253,14 @@ export class Path implements LocalPath {
     }
 }
 
-
+interface IVersion {
+    major: number;
+    minor: number;
+    patch: number;
+    preRelease: string[];
+    buildMetadata: string;
+    compare(other: IVersion): VersionState;
+}
 export class Version implements IVersion {
     major: number;
     minor: number;
@@ -288,6 +312,7 @@ export class Version implements IVersion {
         return `${version}${preRelease}${buildMetadata}`;
     }
 }
+
 export class Dictionary<T> extends Map<string, T> {
     constructor(data: Array<[key: string, value: T]> = []) {
         super()
@@ -302,6 +327,10 @@ export class Dictionary<T> extends Map<string, T> {
     public allValues(): Array<T> {
         return Array.from(this.values())
     }
+}
+export interface IChannelMessage<T> {
+    type: MessageType;
+    data: T;
 }
 export class SyncDictionary<T> extends Dictionary<T> {
     private channel: BroadcastChannel
@@ -445,10 +474,10 @@ export class VideoInfo {
                 this.State = false
                 let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                 if (!cdnCache.any()) {
-                    let query = {
+                    let query = prune({
                         author: this.Alias ?? this.Author,
                         title: this.Title
-                    }.prune()
+                    }) as {[key: string]: string;}
                     for (const key in query) {
                         let dom = new DOMParser().parseFromString(await (await unlimitedFetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
                         for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
@@ -524,7 +553,7 @@ export class VideoInfo {
                 let comments: Iwara.Comment[] = []
                 let base = await getCommentData(commentID)
                 comments.push(...base.results as Iwara.Comment[])
-                for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
+                for (let page = 1; page < Math.ceil(base.count/base.limit); page++) {
                     comments.push(...(await getCommentData(commentID, page)).results as Iwara.Comment[])
                 }
                 let replies: Iwara.Comment[] = []
@@ -535,7 +564,7 @@ export class VideoInfo {
                     }
                 }
                 comments.push(...replies)
-                return comments.prune()
+                return comments
             }
 
             this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')

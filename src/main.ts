@@ -1,15 +1,15 @@
 import "./env";
-import { delay, isNullOrUndefined, isStringTupleArray, stringify } from "./env";
+import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18n } from "./i18n";
-import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
+import { DownloadType, InputType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
 import { config, Config } from "./config";
-import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, IChannelMessage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-
+import { Iwara, Aria2 } from "./lib/main";
 
 class configEdit {
     source!: configEdit;
@@ -512,7 +512,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 { nodeType: 'br' },
                 `%#openVideoLink#%`
             ], '%#createTask#%')
-            let toast = newToast(
+            newToast(
                 ToastType.Warn,
                 {
                     node: toastBody,
@@ -526,16 +526,15 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                                 childs: '%#copySucceed#%'
                             }))
                         } else {
-                            toast.hide()
+                            this.hide()
                         }
                     }
                 }
-            )
-            toast.show()
+            ).show()
             return
         }
         if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
-            let toast = newToast(
+            newToast(
                 ToastType.Warn,
                 {
                     node: toastNode([
@@ -544,12 +543,11 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     async onClick() {
-                        toast.hide()
+                        this.hide()
                         await pushDownloadTask(await new VideoInfo(videoInfo as PieceInfo).init(videoInfo.ID))
                     }
                 }
-            )
-            toast.show()
+            ).show()
             return
         }
     }
@@ -612,7 +610,8 @@ function browserDownloadMetadata(videoInfo: VideoInfo): void {
                     `${videoInfo.Title}[${videoInfo.ID}] %#videoMetadata#% %#downloadFailed#%`,
                     { nodeType: 'br' },
                     browserDownloadErrorParse(error)
-                ], '%#browserDownload#%')
+                ], '%#browserDownload#%'),
+                close: true
             }
         ).show()
     }
@@ -857,7 +856,7 @@ async function addDownloadTask() {
     })
     unsafeWindow.document.body.appendChild(body)
 }
-async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
+async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
     let size = list.size
     let node = renderNode({
         nodeType: 'p',
@@ -869,8 +868,8 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
     })
     start.show()
     if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
-        let stoped: Array<{ id: string, data: Aria2.Status }> = (
-            await aria2API(
+        let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
+            (await aria2API(
                 'aria2.tellStopped',
                 [
                     0,
@@ -900,10 +899,10 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                     }
                 }
             )
-            .prune();
+        );
 
-        let active: Array<{ id: string, data: Aria2.Status }> = (
-            await aria2API(
+        let active: Array<{ id: string, data: Aria2.Status }> = prune(
+            (await aria2API(
                 'aria2.tellActive',
                 [
                     [
@@ -931,7 +930,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                     }
                 }
             )
-            .prune();
+        );
         let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
             .filter(
                 (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
@@ -956,7 +955,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                     duration: -1,
                     close: true,
                     onClick() {
-                        parseToast.hide()
+                        this.hide()
                     }
                 }
             )
@@ -979,18 +978,17 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
 
     start.hide()
     if (size != 1) {
-        let completed = newToast(
+        newToast(
             ToastType.Info,
             {
                 text: `%#allCompleted#%`,
                 duration: -1,
                 close: true,
                 onClick() {
-                    completed.hide()
+                    this.hide()
                 }
             }
-        )
-        completed.show()
+        ).show()
     }
 }
 function hijackAddEventListener() {
@@ -1178,10 +1176,10 @@ if (!unsafeWindow.IwaraDownloadTool) {
         originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
             nodeType:'p',
             className: 'fixed-bottom-right',
-            childs: [
+            childs: prune([
                 `%#appName#% ${GM_getValue('version')} `,
                 GM_getValue('isDebug') ? `%#isDebug#%` : ''
-            ].prune()
+            ])
         }))
         if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
             let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
@@ -1207,7 +1205,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 }
             }
         }
-        let notice = newToast(
+        newToast(
             ToastType.Info,
             {
                 node: toastNode(i18n[config.language].notice),
@@ -1215,11 +1213,10 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 gravity: 'bottom',
                 position: 'center',
                 onClick() {
-                    notice.hide()
+                    this.hide();
                 }
             }
-        )
-        notice.show()
+        ).show()
     }
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 }
