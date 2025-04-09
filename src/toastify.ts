@@ -1,239 +1,328 @@
-export namespace Toastify {
-    type Gravity = "top" | "bottom";
-    type Position = "left" | "center" | "right";
-    type AriaLive = "off" | "polite" | "assertive";
-    type CSSProperties = Record<keyof CSSStyleDeclaration, string>;
+import { debounce, isNullOrUndefined } from "./env";
+export type Gravity = 'top' | 'bottom';
+export type Position = 'left' | 'center' | 'right';
+export type CloseReason = 'timeout' | 'close-button' | 'other';
+const activeToasts = new Set<Toast>();
+const toastTimeouts = new Map<Toast, number>();
+const toastContainers = new Map<string, HTMLElement>();
+const getContainer = (gravity: Gravity, position: Position): HTMLElement => {
+    const containerId = `toast-container-${gravity}-${position}`;
+    if (!toastContainers.has(containerId)) {
+        const container = document.createElement('div');
+        container.classList.add(
+            'toast-container',
+            containerId,
+            `toast-${gravity}`,
+            `toast-${position}`
+        );
+        document.body.appendChild(container);
+        toastContainers.set(containerId, container);
+    }
+    return toastContainers.get(containerId)!;
+};
+const addTimeout = (toast: Toast, callback: () => void): void => {
+    delTimeout(toast);
+    const timeoutId = window.setTimeout(() => {
+        callback();
+        delTimeout(toast);
+    }, toast.options.duration);
+    toastTimeouts.set(toast, timeoutId);
+};
+const delTimeout = (toast: Toast): void => {
+    const timeoutId = toastTimeouts.get(toast);
+    if (!isNullOrUndefined(timeoutId)) {
+        clearTimeout(timeoutId);
+        toastTimeouts.delete(toast);
+    }
+};
+const offscreenContainer = document.createElement('div');
+offscreenContainer.classList.add('offscreen-container');
+document.body.appendChild(offscreenContainer);
+
+window.addEventListener('resize', debounce(() => {
+    for (const toast of activeToasts) {
+        toast.setToastRect();
+    }
+}, 100));
+export interface ToastOptions {
+    root?: Element;
+    text?: string;
+    node?: Node;
+    duration?: number;
+    close?: boolean;
+    gravity?: Gravity;
+    position?: Position;
+    className?: string | string[];
+    stopOnFocus?: boolean;
+    onClose?: (this: Toast, e: CustomEvent<{reason: CloseReason}>) => void;
+    onClick?: (this: Toast, e: MouseEvent) => void;
+    style?: Partial<CSSStyleDeclaration>;
+    oldestFirst?: boolean;
+}
+interface Options {
+    gravity: Gravity;
+    position: Position;
+    stopOnFocus: boolean;
+    oldestFirst: boolean;
+    text?: string;
+    node?: Node;
+    duration?: number;
+    close?: boolean;
+    className?: string | string[];
+    onClose?: (this: Toast, e: CustomEvent<{reason: CloseReason}>) => void;
+    onClick?: (this: Toast, e: MouseEvent) => void;
+    style?: Partial<CSSStyleDeclaration>;
+}
+/**
+ * Toast
+ * @example
+ * new Toast({ text: 'Hello World' }).show();
+ */
+export class Toast {
+    private static readonly defaults: Options = {
+        gravity: 'top',
+        position: 'right',
+        stopOnFocus: true,
+        oldestFirst: true,
+    };
+    public options: Options;
+    public root: Element;
+    public element: HTMLElement;
+
+    public gravity: Gravity;
+    public position: Position;
+    public oldestFirst: boolean;
+    public stopOnFocus: boolean;
+
+    private mouseOverHandler?: () => void;
+    private mouseLeaveHandler?: () => void;
+    private closeButtonHandler?: () => void;
+    private animationEndHandler?: (e: AnimationEvent) => void;
+    private clickHandler?: (e: MouseEvent) => void;
+
+    private content?: HTMLDivElement;
+    private closeButton?: HTMLSpanElement;
 
     /**
-     * Toastify configuration options interface
-     * @property {HTMLElement} [root] - Root element
-     * @property {string} [text] - Text content to display
-     * @property {Node} [node] - Custom DOM node as a text replacement
-     * @property {number} [duration=-1] - Auto-close delay (milliseconds) -1 = infinite
-     * @property {boolean} [close] - Whether to show a close button
-     * @property {Gravity} [gravity="top"] - Display position (top/bottom)
-     * @property {Position} [position="left"] - Horizontal alignment
-     * @property {AriaLive} [ariaLive="polite"] - Screen reader announcement mode
-     * @property {string} [className] - Custom CSS class name
-     * @property {boolean} [stopOnFocus=true] - Pause auto-close on hover
-     * @property {() => void} [onClose] - Callback function after closing
-     * @property {(e: MouseEvent) => void} [onClick] - Click event callback
-     * @property {CSSProperties} [style] - Inline style configuration
-     * @property {boolean} [oldestFirst=true] - Notification order for new messages
+     * Create a Toastify instance
+     * @param options User configuration options
      */
-    export interface Options {
-        root?: Element;
-        text?: string;
-        node?: Node;
-        duration?: number;
-        close?: boolean;
-        gravity?: Gravity;
-        position?: Position;
-        ariaLive?: AriaLive;
-        className?: string | string[];
-        stopOnFocus?: boolean;
-        onClose?: (this: Toast) => void;
-        onClick?: (this: Toast, e: Event) => void;
-        style?: CSSProperties;
-        oldestFirst?: boolean;
-    }
-
-    class Manager {
-        private static timeoutMap = new Map<Toast, number>();
-        private static containers = new Map<string, HTMLElement>();
-
-        static getContainer(gravity: Gravity, position: Position): HTMLElement {
-            const containerId = `toast-container-${gravity}-${position}`;
-            if (this.containers.has(containerId)) {
-                return this.containers.get(containerId)!;
-            }
-            return this.createContainer(containerId, gravity, position);
-        }
-
-        private static createContainer(id: string, gravity: Gravity, position: Position): HTMLElement {
-            const container = document.createElement("div");
-            container.classList.add('toast-container', id, `toast-${gravity}`, `toast-${position}`);
-            container.setAttribute('role', 'region');
-            container.setAttribute('aria-label', `Toast notifications - ${gravity} ${position}`);
-            document.body.appendChild(container);
-            this.containers.set(id, container);
-            return container;
-        }
-
-        static addTimeout(toast: Toast, duration: number, callback: () => void) {
-            this.delTimeout(toast);
-            const timeoutId = window.setTimeout(() => {
-                callback();
-                this.delTimeout(toast);
-            }, duration);
-            this.timeoutMap.set(toast, timeoutId);
-        }
-
-        static delTimeout(toast: Toast) {
-            if (this.timeoutMap.has(toast)) {
-                clearTimeout(this.timeoutMap.get(toast)!);
-                this.timeoutMap.delete(toast);
-            }
-        }
-    }
-
-    class Builder {
-        static build(toast: Toast) {
-            this.applyBaseStyles(toast);
-            this.addContent(toast);
-            this.addCloseButton(toast);
-            this.bindEvent(toast);
-        }
-
-        private static applyBaseStyles(toast: Toast) {
-            toast.element.setAttribute('aria-live', toast.ariaLive);
-            toast.element.classList.add(
-                'toast',
-                `toast-${toast.gravity}`,
-                `toast-${toast.position}`
-            );
-            if (toast.options.className) Array.isArray(toast.options.className) ? toast.options.className.every(i => toast.element.classList.add(i)) : toast.element.classList.add(toast.options.className);
-            if (toast.options.style) this.applyCustomStyles(toast.element, toast.options.style);
-        }
-        private static applyCustomStyles(element: HTMLElement, styles: CSSProperties) {
-            for (const key in styles) {
-                element.style[key] = styles[key];
-            }
-        }
-
-        private static addContent(toast: Toast) {
-            if (toast.options.text) toast.element.textContent = toast.options.text;
-            if (toast.options.node) toast.element.appendChild(toast.options.node);
-        }
-
-        private static bindEvent(toast: Toast) {
-            if (toast.stopOnFocus && toast.duration > 0) {
-                toast.element.addEventListener("mouseover", () => {
-                    Manager.delTimeout(toast);
-                })
-                toast.element.addEventListener("mouseleave", () => {
-                    Manager.addTimeout(toast, toast.duration, () => toast.hide());
-                })
-            }
-            if (toast.onClick) toast.element.addEventListener("click", (e) => toast.onClick?.bind(toast)(e));
-            if (!toast.close && !toast.onClick && Number.isNegativeInteger(toast.duration)) toast.element.addEventListener("click", () => toast.hide());
-        }
-
-        private static addCloseButton(toast: Toast) {
-            if (!toast.close) return;
-            const closeBtn = document.createElement("span");
-            closeBtn.ariaLabel = "Close";
-            closeBtn.className = "toast-close";
-            closeBtn.textContent = "🗙";
-            closeBtn.addEventListener("click", () => toast.hide());
-            toast.element.appendChild(closeBtn);
-        }
-    }
-
-    /**
-     * Toast
-     * @example
-     * new Toast({ text: "Hello World" }).show();
-     */
-    export class Toast {
-        private readonly defaults: Options = {
-            gravity: "top",
-            position: 'right',
-            ariaLive: "polite",
-            stopOnFocus: true,
-            oldestFirst: true,
+    constructor(options: ToastOptions) {
+        this.options = {
+            ...Toast.defaults,
+            ...options
         };
 
-        public options: Options;
+        this.root = getContainer(this.options.gravity, this.options.position);
+        this.gravity = this.options.gravity;
+        this.position = this.options.position;
+        this.stopOnFocus = this.options.stopOnFocus;
+        this.oldestFirst = this.options.oldestFirst;
 
-        public duration: number;
-        public element: HTMLElement;
-        public root: Element;
-        public gravity: Gravity;
-        public position: Position;
-        public ariaLive: AriaLive;
-        public close: boolean;
-        public oldestFirst: boolean;
-        public stopOnFocus: boolean;
-        public onClick?: (e: Event) => void;
-        public onClose?: (e: Event) => void;
+        this.element = document.createElement('div');
+        this.applyBaseStyles()
+            .addCloseButton()
+            .createContent()
+            .ensureCloseMethod()
+            .bindEvents();
 
-        /**
-         * Create a Toastify instance
-         * @param options User configuration options
-         */
-        constructor(options: Options) {
-            this.options = {
-                ...this.defaults,
-                ...options
-            };
-            this.element = document.createElement("div");
-            this.gravity = this.options.gravity!;
-            this.position = this.options.position!;
-            this.root = this.options.root ?? Manager.getContainer(this.gravity, this.position);
-            this.ariaLive = this.options.ariaLive!;
-            this.oldestFirst = this.options.oldestFirst!;
-            this.stopOnFocus = this.options.stopOnFocus!;
-            this.duration = this.options.duration ?? -1;
-            this.close = this.options.close ?? false;
-            if (this.options.onClick) this.onClick = this.options.onClick;
-            if (this.options.onClose) this.onClose = this.options.onClose;
-            Builder.build(this);
+        activeToasts.add(this);
+    }
+
+    private applyBaseStyles(): this {
+        this.element.classList.add('toast', `toast-${this.gravity}`, `toast-${this.position}`);
+        if (this.options.className) {
+            const classes = Array.isArray(this.options.className)
+                ? this.options.className
+                : [this.options.className];
+            classes.forEach(cls => this.element.classList.add(cls));
+        }
+        return this;
+    }
+
+    private createContent(): this {
+        this.content = document.createElement('div');
+        this.content.classList.add('toast-content');
+
+        if (this.options.text) {
+            this.content.textContent = this.options.text;
+        }
+        if (this.options.node) {
+            this.content.appendChild(this.options.node);
+        }
+        if (this.options.style) {
+            this.applyStyles(this.content, this.options.style);
         }
 
-        /**
-         * Display the Toast notification
-         * @returns this Instance for method chaining
-         */
-        public show(): this {
-            const elementToInsert = this.oldestFirst ? this.root.firstChild : this.root.lastChild;
-            this.root.insertBefore(this.element!, elementToInsert);
-            if (!this.element.classList.replace('hide', 'show')) {
-                this.element.classList.add('show')
-            }
-            if (this.duration && this.duration > 0) {
-                Manager.addTimeout(this, this.options.duration!, () => this.hide());
-            }
-            return this;
-        }
-        /**
-         * @deprecated This function is deprecated. Use the show() instead.
-         */
-        public showToast() {
-            return this.show();
-        }
+        this.element.appendChild(this.content);
+        return this;
+    }
 
-        /**
-         * Immediately hide the current Toast
-         * Triggers a CSS exit animation and removes the element after the animation completes
-         */
-        public hide(): void {
-            if (!this.element) return;
-            Manager.delTimeout(this);
-            const handleAnimationEnd = (e: AnimationEvent) => {
-                if (e.animationName.startsWith('toast-out')) {
-                    this.element?.removeEventListener('animationend', handleAnimationEnd);
-                    this.element?.remove();
-                }
-            }
-            this.element.addEventListener('animationend', handleAnimationEnd);
-            if (!this.element.classList.replace('show', 'hide')) {
-                this.element.classList.add('hide')
-            }
-            this.onClose?.bind(this);
+    private addCloseButton(): this {
+        if (this.options.close) {
+            this.closeButton = document.createElement('span');
+            this.closeButton.className = 'toast-close';
+            this.closeButton.textContent = '🗙';
+            this.closeButtonHandler = () => this.hide('close-button');
+            this.closeButton.addEventListener('click', this.closeButtonHandler);
+            this.element.appendChild(this.closeButton);
         }
-        /**
-         * @deprecated This function is deprecated. Use the hide() instead.
-         */
-        public hideToast(): void {
-            this.hide();
+        return this;
+    }
+
+    public setToastRect(): this {
+        if (!this.element.classList.contains('show')) offscreenContainer.appendChild(this.element);
+        this.element.style.removeProperty('--toast-height');
+        this.element.style.removeProperty('--toast-width');
+        this.element.style.setProperty('max-height', 'none', 'important');
+        const { height, width } = this.element.getBoundingClientRect();
+        this.element.style.setProperty('--toast-height', `${height}px`);
+        this.element.style.setProperty('--toast-width', `${width}px`);
+        this.element.style.removeProperty('max-height');
+        if (!this.element.classList.contains('show')) offscreenContainer.removeChild(this.element);
+        return this;
+    }
+    private ensureCloseMethod(): this {
+        if (isNullOrUndefined(this.options.duration) && isNullOrUndefined(this.options.close) && isNullOrUndefined(this.options.onClick)) {
+            this.options.onClick = () => this.hide('other');
+        }
+        return this;
+    }
+
+    private bindEvents(): this {
+        if (this.stopOnFocus && !isNullOrUndefined(this.options.duration) && this.options.duration > 0) {
+            this.mouseOverHandler = () => delTimeout(this);
+            this.mouseLeaveHandler = () => addTimeout(this, () => this.hide('timeout'));
+            this.element.addEventListener('mouseover', this.mouseOverHandler);
+            this.element.addEventListener('mouseleave', this.mouseLeaveHandler);
+        }
+        if (!isNullOrUndefined(this.options.onClick)) {
+            this.clickHandler = this.options.onClick.bind(this);
+            this.element.addEventListener('click', this.clickHandler);
+        }
+        return this;
+    }
+
+    private applyStyles(element: HTMLElement, styles: Partial<CSSStyleDeclaration>) {
+        function camelToKebab(str: string): string {
+            return str.replace(/([A-Z])/g, '-$1').toLowerCase();
+        }
+        for (const key in styles) {
+            const value = styles[key];
+            const property = camelToKebab(key);
+            if (isNullOrUndefined(value)) {
+                element.style.removeProperty(property);
+                continue;
+            }
+            const important = value.includes('!important');
+            const cleanValue = value.replace(/\s*!important\s*/, '').trim();
+            element.style.setProperty(property, cleanValue, important ? 'important' : '');
         }
     }
+
+    private toggleAnimationState(animation: boolean): this {
+        if (!this.element.classList.replace(animation ? 'hide' : 'show', animation ? 'show' : 'hide')) {
+            this.element.classList.add(animation ? 'show' : 'hide');
+        }
+        return this;
+    }
+
+    private insertToastElement(): this {
+        if (this.oldestFirst) {
+            this.root.insertBefore(this.element, this.root.firstChild);
+        } else {
+            if (this.root.lastChild) {
+                this.root.insertBefore(this.element, this.root.lastChild.nextSibling);
+            } else {
+                this.root.appendChild(this.element);
+            }
+        }
+        return this;
+    }
+
+    private setupAutoHide(): this {
+        if (!isNullOrUndefined(this.options.duration) && this.options.duration > 0) {
+            addTimeout(this, () => this.hide('timeout'));
+        }
+        return this;
+    }
+    /**
+     * Display the Toast notification
+     * @returns this Instance for method chaining
+     */
+    public show(): this {
+        this.setToastRect()
+            .insertToastElement()
+            .toggleAnimationState(true)
+            .setupAutoHide();
+        return this;
+    }
+
+    /**
+     * @deprecated This function is deprecated. Use the show() instead.
+     */
+    public showToast() {
+        return this.show();
+    }
+
+    private removeEventListeners(): this {
+        if (this.mouseOverHandler) {
+            this.element.removeEventListener('mouseover', this.mouseOverHandler);
+        }
+        if (this.mouseLeaveHandler) {
+            this.element.removeEventListener('mouseleave', this.mouseLeaveHandler);
+        }
+        if (this.clickHandler) {
+            this.element.removeEventListener('click', this.clickHandler);
+        }
+        if (this.options.close && this.closeButton && this.closeButtonHandler) {
+            this.closeButton.removeEventListener('click', this.closeButtonHandler);
+        }
+        return this;
+    }
+
+    /**
+     * Hide the current Toast with optional close reason
+     * @param reason The reason for closing (default: 'other')
+     * Triggers a CSS exit animation and removes the element after the animation completes
+     */
+    public hide(reason: CloseReason = 'other'): void {
+        if (!this.element) return;
+        delTimeout(this);
+        activeToasts.delete(this);
+        this.animationEndHandler = (e: AnimationEvent) => {
+            if (e.animationName.startsWith('toast-out')) {
+                this.element.removeEventListener('animationend', this.animationEndHandler!);
+                this.element.remove();
+                this.options.onClose?.call(this, new CustomEvent('toast-close', {
+                    detail: { reason }
+                }));
+            }
+        };
+        this.element.addEventListener('animationend', this.animationEndHandler);
+        this.removeEventListeners()
+            .toggleAnimationState(false);
+    }
+
+    /**
+     * @deprecated This function is deprecated. Use the hide() instead.
+     */
+    public hideToast(): void {
+        this.hide('other');
+    }
 }
+
+export default function createToast(options: ToastOptions): Toast {
+    return new Toast(options);
+}
+
 declare global {
-    function Toast(options: Toastify.Options): Toastify.Toast
+    function Toast(options: ToastOptions): Toast;
+    /**
+     * @deprecated This function is deprecated. Use the Toast() instead.
+     */
+    function Toastify(options: ToastOptions): Toast;
 }
-export default function Toast(options: Toastify.Options): Toastify.Toast {
-    return new Toastify.Toast(options)
-}
-globalThis.Toast = Toast;
+
+globalThis.Toast = createToast;
+globalThis.Toastify = createToast;

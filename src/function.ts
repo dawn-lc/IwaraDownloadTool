@@ -7,7 +7,7 @@ import { DownloadType, ToastType } from "./type"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
-import { Toastify } from "./toastify";
+import { Toast, ToastOptions } from "./toastify";
 import { Aria2, RenderCode } from "./lib/main";
 
 export async function refreshToken(): Promise<string> {
@@ -97,7 +97,7 @@ export function getTextNode(node: Node | Element): string {
                 .join('')
             : ''
 }
-export function newToast(type: ToastType, params: Toastify.Options | undefined): Toastify.Toast {
+export function newToast(type: ToastType, params: ToastOptions | undefined): Toast {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
@@ -142,7 +142,7 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined):
         params.text = params.text.replaceVariable(i18n[config.language]).toString()
     }
     logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
-    return new Toastify.Toast(params)
+    return new Toast(params)
 }
 
 export function getDownloadPath(videoInfo: VideoInfo): Path {

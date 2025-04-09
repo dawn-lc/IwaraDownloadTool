@@ -1,10 +1,10 @@
 type Pruned<T> = T extends null | undefined
-  ? never
-  : T extends Array<infer U>
-  ? Array<Pruned<U>>
-  : T extends object
-  ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
-  : T;
+    ? never
+    : T extends Array<infer U>
+    ? Array<Pruned<U>>
+    : T extends object
+    ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
+    : T;
 const ConvertibleNumber: unique symbol = Symbol("ConvertibleNumber");
 const PositiveInteger: unique symbol = Symbol("PositiveInteger");
 const NegativeInteger: unique symbol = Symbol("NegativeInteger");
@@ -21,17 +21,17 @@ declare global {
         isNegativeInteger(value: unknown): value is NegativeInteger;
         isPositiveFloat(value: unknown): value is PositiveFloat;
         isNegativeFloat(value: unknown): value is NegativeFloat;
-        isConvertibleNumber(value: unknown,includeInfinity: boolean): value is ConvertibleNumber;
+        isConvertibleNumber(value: unknown, includeInfinity: boolean): value is ConvertibleNumber;
         toPositiveInteger(value: number): PositiveInteger;
         toNegativeInteger(value: number): NegativeInteger;
         toPositiveFloat(value: number): PositiveFloat;
         toNegativeFloat(value: number): NegativeFloat;
     }
     interface Array<T> {
-       /**
-         * 判断数组是否包含至少一个非空值
-         * @returns {boolean} 如果数组中至少有一个非 null 或 undefined 元素，返回 true，否则返回 false
-         */
+        /**
+          * 判断数组是否包含至少一个非空值
+          * @returns {boolean} 如果数组中至少有一个非 null 或 undefined 元素，返回 true，否则返回 false
+          */
         any(): boolean;
         //prune(): Array<T>;
         /**
@@ -138,11 +138,11 @@ declare global {
          */
         isConvertibleToNumber(includeInfinity?: boolean): boolean;
     }
-    
+
     interface Date {
         format(format?: string): string;
     }
-    
+
     interface Window {
         IwaraDownloadTool: boolean;
     }
@@ -183,7 +183,7 @@ export const isNotEmpty = (obj: unknown): boolean => {
     return true
 }
 
-export function isConvertibleToNumber(obj: unknown, includeInfinity: boolean = false):boolean {
+export function isConvertibleToNumber(obj: unknown, includeInfinity: boolean = false): boolean {
     if (isNullOrUndefined(obj)) {
         return false;
     }
@@ -208,44 +208,44 @@ Number.isConvertibleNumber = (value: unknown, includeInfinity: boolean = false):
     return false;
 }
 Number.isPositiveInteger = (value: unknown): value is PositiveInteger =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
+    typeof value === "number" && Number.isInteger(value) && value > 0;
 
 Number.isNegativeInteger = (value: unknown): value is NegativeInteger =>
-  typeof value === "number" && Number.isInteger(value) && value < 0;
+    typeof value === "number" && Number.isInteger(value) && value < 0;
 
 Number.isPositiveFloat = (value: unknown): value is PositiveFloat =>
-  typeof value === "number" && !Number.isInteger(value) && value > 0;
+    typeof value === "number" && !Number.isInteger(value) && value > 0;
 
 Number.isNegativeFloat = (value: unknown): value is NegativeFloat =>
-  typeof value === "number" && !Number.isInteger(value) && value < 0;
+    typeof value === "number" && !Number.isInteger(value) && value < 0;
 
 // 实现转换函数
 Number.toPositiveInteger = (value: number): PositiveInteger => {
-  if (!Number.isPositiveInteger(value)) {
-    throw new Error("值必须为正整数");
-  }
-  return value as PositiveInteger;
+    if (!Number.isPositiveInteger(value)) {
+        throw new Error("值必须为正整数");
+    }
+    return value as PositiveInteger;
 };
 
 Number.toNegativeInteger = (value: number): NegativeInteger => {
-  if (!Number.isNegativeInteger(value)) {
-    throw new Error("值必须为负整数");
-  }
-  return value as NegativeInteger;
+    if (!Number.isNegativeInteger(value)) {
+        throw new Error("值必须为负整数");
+    }
+    return value as NegativeInteger;
 };
 
 Number.toPositiveFloat = (value: number): PositiveFloat => {
-  if (!Number.isPositiveFloat(value)) {
-    throw new Error("值必须为正浮点数");
-  }
-  return value as PositiveFloat;
+    if (!Number.isPositiveFloat(value)) {
+        throw new Error("值必须为正浮点数");
+    }
+    return value as PositiveFloat;
 };
 
 Number.toNegativeFloat = (value: number): NegativeFloat => {
-  if (!Number.isNegativeFloat(value)) {
-    throw new Error("值必须为负浮点数");
-  }
-  return value as NegativeFloat;
+    if (!Number.isNegativeFloat(value)) {
+        throw new Error("值必须为负浮点数");
+    }
+    return value as NegativeFloat;
 };
 
 Array.prototype.any = function () {
@@ -294,7 +294,7 @@ String.prototype.isEmpty = function () {
 String.prototype.isConvertibleToNumber = function (includeInfinity: boolean = false) {
     const trimmed = this.trim();
     if (trimmed === "") return false;
-    return Number.isConvertibleNumber(Number(trimmed),includeInfinity);
+    return Number.isConvertibleNumber(Number(trimmed), includeInfinity);
 }
 String.prototype.reversed = function () {
     const segmenter = new Intl.Segmenter(navigator.language, { granularity: 'grapheme' });
@@ -348,10 +348,125 @@ String.prototype.toURL = function () {
     }
     return new URL(URLString.toString())
 }
+type ThrottleOptions = {
+    /** 
+     * 是否在节流开始时立即执行
+     * @default true
+     */
+    leading?: boolean
+    /** 
+     * 是否在节流结束后追加执行
+     * @default true 
+     */
+    trailing?: boolean
+}
 
-export function delay (time: number) {
+/**
+ * 节流函数，限制函数执行频率
+ * @param fn 需要节流的函数
+ * @param delay 节流时间间隔（毫秒）
+ * @param options 配置选项
+ * @returns 带有 cancel 方法的节流后函数
+ */
+export function throttle<T extends (...args: any[]) => any>(
+    fn: T,
+    delay: number,
+    { leading = true, trailing = true }: ThrottleOptions = {}
+) {
+    let lastCall = 0      // 上次执行时间戳
+    let timer: ReturnType<typeof setTimeout> | null = null  // 定时器引用
+
+    // 节流处理函数
+    const throttled = function (this: any, ...args: Parameters<T>) {
+        const now = Date.now()
+
+        // 处理 leading=false 的首次调用
+        if (!lastCall && !leading) {
+            lastCall = now
+        }
+
+        const remaining = delay - (now - lastCall)  // 剩余等待时间
+
+        // 到达可执行时间点
+        if (remaining <= 0) {
+            // 清除已有的 trailing 定时器
+            if (timer) {
+                clearTimeout(timer)
+                timer = null
+            }
+            lastCall = now
+            fn.apply(this, args)
+        } 
+        // 需要设置 trailing 调用
+        else if (trailing && !timer) {
+            timer = setTimeout(() => {
+                // 根据 leading 配置决定下次起始时间
+                lastCall = leading ? Date.now() : 0
+                timer = null
+                fn.apply(this, args)
+            }, remaining)
+        }
+    } as T & { cancel: () => void }
+
+    /** 取消待执行的 trailing 调用 */
+    throttled.cancel = () => {
+        if (timer) {
+            clearTimeout(timer)
+            timer = null
+        }
+        lastCall = 0
+    }
+
+    return throttled
+}
+
+type DebounceOptions = {
+    /** 
+     * 是否立即执行首次调用
+     * @default false 
+     */
+    immediate?: boolean
+}
+
+/**
+ * 防抖函数，延迟执行直到停止调用指定时间
+ * @param fn 需要防抖的函数
+ * @param delay 防抖延迟时间（毫秒）
+ * @param options 配置选项
+ * @returns 带有 cancel 方法的防抖后函数
+ */
+export function debounce<T extends (...args: any[]) => any>(
+    fn: T,
+    delay: number,
+    { immediate = false }: DebounceOptions = {}
+) {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const debounced = function (this: any, ...args: Parameters<T>) {
+        const callNow = immediate && !timer
+        if (timer) {
+            clearTimeout(timer)
+        }
+        timer = setTimeout(() => {
+            timer = null
+            if (!immediate) {
+                fn.apply(this, args)
+            }
+        }, delay)
+        if (callNow) {
+            fn.apply(this, args)
+        }
+    } as T & { cancel: () => void }
+    debounced.cancel = () => {
+        if (timer) {
+            clearTimeout(timer)
+            timer = null
+        }
+    }
+    return debounced
+}
+export function delay(time: number) {
     return new Promise(resolve => setTimeout(resolve, time))
-} 
+}
 export function hasFunction<T, K extends string>(obj: T, method: K): obj is T & { [P in K]: Function } {
     return (
         isObject(obj) &&
@@ -362,7 +477,7 @@ export function hasFunction<T, K extends string>(obj: T, method: K): obj is T & 
 export function UUID() {
     return isNullOrUndefined(crypto) ? Array.from({ length: 8 }, () => (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)).join('') : crypto.randomUUID().replaceAll('-', '')
 }
-export function stringify(data: unknown):string {
+export function stringify(data: unknown): string {
     switch (typeof data) {
         case 'undefined':
             return 'undefined'
@@ -392,7 +507,7 @@ export function stringify(data: unknown):string {
     }
 }
 
-export function prune<T>(data: T): Pruned<T>{
+export function prune<T>(data: T): Pruned<T> {
     if (isElement(data) || isNode(data)) {
         return data as Pruned<T>;
     }
