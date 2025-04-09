@@ -4,14 +4,15 @@ export type Position = 'left' | 'center' | 'right';
 export type CloseReason = 'timeout' | 'close-button' | 'other';
 const activeToasts = new Set<Toast>();
 const toastTimeouts = new Map<Toast, number>();
+const toastIntervals = new Map<Toast, number>();
 const toastContainers = new Map<string, HTMLElement>();
 const getContainer = (gravity: Gravity, position: Position): HTMLElement => {
     const containerId = `toast-container-${gravity}-${position}`;
     if (!toastContainers.has(containerId)) {
         const container = document.createElement('div');
+        container.id = containerId;
         container.classList.add(
             'toast-container',
-            containerId,
             `toast-${gravity}`,
             `toast-${position}`
         );
@@ -22,17 +23,33 @@ const getContainer = (gravity: Gravity, position: Position): HTMLElement => {
 };
 const addTimeout = (toast: Toast, callback: () => void): void => {
     delTimeout(toast);
+    const startTime = Date.now();
+    const duration = toast.options.duration!;
+    const updateRemainingTime = () => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, duration - elapsed);
+        toast.progress!.style.setProperty('--toast-progress', `${remaining / duration}`);
+    };
+    const intervalId = window.setInterval(updateRemainingTime, 20);
     const timeoutId = window.setTimeout(() => {
+        toast.progress!.style.setProperty('--toast-progress', `0`);
         callback();
         delTimeout(toast);
-    }, toast.options.duration);
+    }, duration);
     toastTimeouts.set(toast, timeoutId);
+    toastIntervals.set(toast, intervalId);
 };
 const delTimeout = (toast: Toast): void => {
     const timeoutId = toastTimeouts.get(toast);
+    const intervalId = toastIntervals.get(toast);
+
     if (!isNullOrUndefined(timeoutId)) {
         clearTimeout(timeoutId);
         toastTimeouts.delete(toast);
+    }
+    if (!isNullOrUndefined(intervalId)) {
+        clearInterval(intervalId);
+        toastIntervals.delete(toast);
     }
 };
 const offscreenContainer = document.createElement('div');
@@ -54,7 +71,7 @@ export interface ToastOptions {
     position?: Position;
     className?: string | string[];
     stopOnFocus?: boolean;
-    onClose?: (this: Toast, e: CustomEvent<{reason: CloseReason}>) => void;
+    onClose?: (this: Toast, e: CustomEvent<{ reason: CloseReason }>) => void;
     onClick?: (this: Toast, e: MouseEvent) => void;
     style?: Partial<CSSStyleDeclaration>;
     oldestFirst?: boolean;
@@ -69,7 +86,7 @@ interface Options {
     duration?: number;
     close?: boolean;
     className?: string | string[];
-    onClose?: (this: Toast, e: CustomEvent<{reason: CloseReason}>) => void;
+    onClose?: (this: Toast, e: CustomEvent<{ reason: CloseReason }>) => void;
     onClick?: (this: Toast, e: MouseEvent) => void;
     style?: Partial<CSSStyleDeclaration>;
 }
@@ -93,6 +110,8 @@ export class Toast {
     public position: Position;
     public oldestFirst: boolean;
     public stopOnFocus: boolean;
+    public content?: HTMLDivElement;
+    public progress?: HTMLDivElement;
 
     private mouseOverHandler?: () => void;
     private mouseLeaveHandler?: () => void;
@@ -100,7 +119,6 @@ export class Toast {
     private animationEndHandler?: (e: AnimationEvent) => void;
     private clickHandler?: (e: MouseEvent) => void;
 
-    private content?: HTMLDivElement;
     private closeButton?: HTMLSpanElement;
 
     /**
@@ -130,7 +148,7 @@ export class Toast {
     }
 
     private applyBaseStyles(): this {
-        this.element.classList.add('toast', `toast-${this.gravity}`, `toast-${this.position}`);
+        this.element.classList.add('toast');
         if (this.options.className) {
             const classes = Array.isArray(this.options.className)
                 ? this.options.className
@@ -153,6 +171,12 @@ export class Toast {
         if (this.options.style) {
             this.applyStyles(this.content, this.options.style);
         }
+        if (!isNullOrUndefined(this.options.duration) && this.options.duration > 0) {
+            this.progress = document.createElement('div');
+            this.progress.classList.add('toast-progress');
+            this.content.appendChild(this.progress);
+            console.log(this.content.querySelector('.toast-progress'));
+        }
 
         this.element.appendChild(this.content);
         return this;
@@ -171,14 +195,17 @@ export class Toast {
     }
 
     public setToastRect(): this {
+        // fix max-height cannot be automatically animated
         if (!this.element.classList.contains('show')) offscreenContainer.appendChild(this.element);
         this.element.style.removeProperty('--toast-height');
         this.element.style.removeProperty('--toast-width');
         this.element.style.setProperty('max-height', 'none', 'important');
+        if (this.position == 'center') this.element.style.setProperty('max-width', `${this.root.getBoundingClientRect().width}px`, 'important');
         const { height, width } = this.element.getBoundingClientRect();
         this.element.style.setProperty('--toast-height', `${height}px`);
         this.element.style.setProperty('--toast-width', `${width}px`);
         this.element.style.removeProperty('max-height');
+        this.element.style.removeProperty('max-width');
         if (!this.element.classList.contains('show')) offscreenContainer.removeChild(this.element);
         return this;
     }
@@ -312,7 +339,7 @@ export class Toast {
     }
 }
 
-export default function createToast(options: ToastOptions): Toast {
+function createToast(options: ToastOptions): Toast {
     return new Toast(options);
 }
 

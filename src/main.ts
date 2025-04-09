@@ -1211,7 +1211,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
             ToastType.Info,
             {
                 node: toastNode(i18n[config.language].notice),
-                duration: 1000000,
+                duration: 10000,
                 gravity: 'bottom',
                 position: 'center',
                 onClick() {
