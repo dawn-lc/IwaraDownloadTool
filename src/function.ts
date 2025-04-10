@@ -1,14 +1,13 @@
 import "./env";
 import { isConvertibleToNumber, isNullOrUndefined, prune, stringify, UUID } from "./env"
-import { i18n } from "./i18n"
+import { i18nList } from "./i18n"
 import { config } from "./config"
 import { db } from "./db"
-import { DownloadType, ToastType } from "./type"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 import { Toast, ToastOptions } from "./toastify";
-import { Aria2, RenderCode } from "./lib/main";
+import { Aria2 } from "./types/aria2";
 
 export async function refreshToken(): Promise<string> {
     const { authorization } = config
@@ -139,9 +138,9 @@ export function newToast(type: ToastType, params: ToastOptions | undefined): Toa
             break;
     }
     if (!isNullOrUndefined(params.text)) {
-        params.text = params.text.replaceVariable(i18n[config.language]).toString()
+        params.text = params.text.replaceVariable(i18nList[config.language]).toString()
     }
-    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
+    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18nList[config.language]))
     return new Toast(params)
 }
 

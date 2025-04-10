@@ -161,6 +161,7 @@ export const isArray = (obj: unknown): obj is Array<any> => Array.isArray(obj)
 export const isElement = (obj: unknown): obj is Element => !isNullOrUndefined(obj) && obj instanceof Element
 export const isNode = (obj: unknown): obj is Node => !isNullOrUndefined(obj) && obj instanceof Node
 export const isStringTupleArray = (obj: unknown): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
+export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 export const isNotEmpty = (obj: unknown): boolean => {
     if (isNullOrUndefined(obj)) {
         return false
@@ -248,7 +249,7 @@ Number.toNegativeFloat = (value: number): NegativeFloat => {
     return value as NegativeFloat;
 };
 
-Array.prototype.any = function () {
+Array.prototype.any = function<T>(this: T[]): this is [T, ...T[]] {
     return this.filter(i => !isNullOrUndefined(i)).length > 0
 }
 Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {

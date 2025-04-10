@@ -2,7 +2,7 @@ import "./env";
 import { isNullOrUndefined, isString } from "./env"
 import { VideoInfo } from "./class";
 import { Dexie } from "./import";
-import { Aria2 } from "./lib/main";
+import { Aria2 } from "./types/aria2";
 
 export class Database extends Dexie {
     private static instance: Database;

@@ -1,7 +1,6 @@
 import "./env";
 import { isNullOrUndefined, stringify } from "./env"
-import { i18n } from "./i18n";
-import { DownloadType } from "./type";
+import { i18nList } from "./i18n";
 const DEFAULT_CONFIG = {
     language: 'zh_cn',
     autoFollow: false,
@@ -115,7 +114,7 @@ export class Config {
     private static getLanguage(value?: string): string {
         let env = (navigator.language ?? navigator.languages[0] ?? DEFAULT_CONFIG.language).replace('-', '_')
         let main = env.split('_').shift() ?? DEFAULT_CONFIG.language.split('_').shift()!
-        return isNullOrUndefined(value) ? isNullOrUndefined(i18n[env]) ? (!isNullOrUndefined(i18n[main]) ? main : DEFAULT_CONFIG.language) : env : !isNullOrUndefined(i18n[value]) ? value : Config.getLanguage()
+        return isNullOrUndefined(value) ? isNullOrUndefined(i18nList[env]) ? (!isNullOrUndefined(i18nList[main]) ? main : DEFAULT_CONFIG.language) : env : !isNullOrUndefined(i18nList[value]) ? value : Config.getLanguage()
     }
     public static getInstance(): Config {
         if (isNullOrUndefined(Config.instance)) Config.instance = new Config()

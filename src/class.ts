@@ -1,16 +1,13 @@
 import "./env";
 import { isNullOrUndefined, prune, stringify } from "./env";
-import { i18n } from "./i18n";
+import { i18nList } from "./i18n";
 import { config } from "./config";
 import { db } from "./db";
 import { unlimitedFetch } from "./extension";
 import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
-import { MessageType, ToastType, VersionState } from "./type";
-import { Iwara } from "./lib/main";
-
-
+import { Iwara } from "./types/iwara";
 
 export interface PieceInfo {
     Title?: string | null;
@@ -514,7 +511,7 @@ export class VideoInfo {
                     this.State = false
                     return this
                 }
-                throw new Error(`${i18n[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
+                throw new Error(`${i18nList[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
             }
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
@@ -543,7 +540,7 @@ export class VideoInfo {
                 return this
             }
             if (this.External) {
-                throw new Error(i18n[config.language].externalVideo.toString())
+                throw new Error(i18nList[config.language].externalVideo.toString())
             }
 
             const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.IPage> => {
@@ -572,13 +569,13 @@ export class VideoInfo {
             this.Size = VideoInfoSource.file.size
             let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
             if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
-                throw new Error(i18n[config.language].getVideoSourceFailed.toString())
+                throw new Error(i18nList[config.language].getVideoSourceFailed.toString())
             }
             this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
             let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
-            if (!fileList.any()) throw new Error(i18n[config.language].noAvailableVideoSource.toString())
+            if (!fileList.any()) throw new Error(i18nList[config.language].noAvailableVideoSource.toString())
             let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18n[config.language].videoSourceNotAvailable.toString())
+            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18nList[config.language].videoSourceNotAvailable.toString())
             this.DownloadUrl = decodeURIComponent(`https:${Source}`)
             this.State = true
 

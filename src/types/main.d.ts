@@ -1,4 +1,16 @@
-export type InputType =
+declare var unsafeWindow: Window & typeof globalThis;
+
+declare interface I18N {
+    [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[]
+}
+declare interface RenderCode<T extends keyof HTMLElementTagNameMap> {
+    nodeType: T;
+    attributes?: Record<string, any>;
+    events?: Record<string, EventListenerOrEventListenerObject>;
+    className?: string | string[];
+    childs?: RenderCode<any> | string | undefined | (RenderCode<any> | string | undefined)[];
+}
+declare type InputType =
     | "button"
     | "checkbox"
     | "color"
@@ -23,14 +35,14 @@ export type InputType =
     | "week";
 
 
-export enum DownloadType {
+declare enum DownloadType {
     Aria2,
     IwaraDownloader,
     Browser,
     Others
 }
 
-export enum PageType {
+declare enum PageType {
     Video = 'video',
     Image = 'image',
     VideoList = 'videoList',
@@ -47,16 +59,16 @@ export enum PageType {
     Search = 'search',
     Account = 'account'
 }
-export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 
-export enum ToastType {
+
+declare enum ToastType {
     Log,
     Info,
     Warn,
     Error
 }
 
-export enum MessageType {
+declare enum MessageType {
     Close,
     Request,
     Receive,
@@ -64,7 +76,7 @@ export enum MessageType {
     Del
 }
 
-export enum VersionState {
+declare enum VersionState {
     Low,
     Equal,
     High

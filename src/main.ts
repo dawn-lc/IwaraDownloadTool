@@ -1,15 +1,16 @@
 import "./env";
-import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
+import { delay, isNullOrUndefined, isPageType, isStringTupleArray, prune, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
-import { i18n } from "./i18n";
-import { DownloadType, InputType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
+import { i18nList } from "./i18n";
 import { config, Config } from "./config";
 import { Dictionary, IChannelMessage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-import { Iwara, Aria2 } from "./lib/main";
+import { Iwara } from "./types/iwara";
+import { Aria2 } from "./types/aria2";
+import mainCSS from "./css/main.css"
 
 class configEdit {
     source!: configEdit;
@@ -26,7 +27,7 @@ class configEdit {
             nodeType: 'button',
             childs: '%#save#%',
             attributes: {
-                title: i18n[config.language].save
+                title: i18nList[config.language].save
             },
             events: {
                 click: async () => {
@@ -42,7 +43,7 @@ class configEdit {
             nodeType: 'button',
             childs: '%#reset#%',
             attributes: {
-                title: i18n[config.language].reset
+                title: i18nList[config.language].reset
             },
             events: {
                 click: () => {
@@ -647,7 +648,7 @@ function firstRun() {
         nodeType: 'button',
         attributes: {
             disabled: true,
-            title: i18n[config.language].ok
+            title: i18nList[config.language].ok
         },
         childs: '%#ok#%',
         events: {
@@ -672,8 +673,8 @@ function firstRun() {
                     { nodeType: 'p', childs: '%#useHelpForBase#%' },
                     { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                     { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                    { nodeType: 'p', childs: i18n[config.language].useHelpForManualDownload },
-                    { nodeType: 'p', childs: i18n[config.language].useHelpForBugreport }
+                    { nodeType: 'p', childs: i18nList[config.language].useHelpForManualDownload },
+                    { nodeType: 'p', childs: i18nList[config.language].useHelpForBugreport }
                 ]
             },
             {
@@ -820,7 +821,7 @@ async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
         attributes: {
-            placeholder: i18n[config.language].manualDownloadTips,
+            placeholder: i18nList[config.language].manualDownloadTips,
             style: 'margin-bottom: 10px;',
             rows: "16",
             cols: "96"
@@ -850,7 +851,7 @@ async function addDownloadTask() {
                         body.remove()
                     }
                 },
-                childs: i18n[config.language].ok
+                childs: i18nList[config.language].ok
             }
         ]
     })
@@ -941,7 +942,7 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
             let button = getSelectButton(key)
             if (!isNullOrUndefined(button)) button.checked = false
             list.delete(key)
-            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
+            node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
         }
     }
     let infoList = (await Promise.all(list.allKeys().map(async id => {
@@ -973,7 +974,7 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
         video.State && await pushDownloadTask(video)
         if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
+        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
     }
 
     start.hide()
@@ -1033,8 +1034,7 @@ var mouseTarget: Element | null = null
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
 
-    GM_addStyle(GM_getResourceText('toastify-css'));
-    GM_addStyle('@!mainCSS!@');
+    GM_addStyle(mainCSS);
 
     if (GM_getValue('isDebug')) {
         console.debug(stringify(GM_info))
@@ -1119,7 +1119,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
     async function main() {
         if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.153')) === VersionState.Low) {
             GM_setValue('isFirstRun', true)
-            alert(i18n[config.language].configurationIncompatible)
+            alert(i18nList[config.language].configurationIncompatible)
         }
         
         if (GM_getValue('isFirstRun', true)) {
@@ -1210,7 +1210,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
         newToast(
             ToastType.Info,
             {
-                node: toastNode(i18n[config.language].notice),
+                node: toastNode(i18nList[config.language].notice),
                 duration: 10000,
                 gravity: 'bottom',
                 position: 'center',

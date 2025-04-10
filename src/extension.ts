@@ -1,9 +1,8 @@
 import "./env"
-import { i18n } from "./i18n";
+import { i18nList } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
 import { hasFunction, isArray, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
-import { RenderCode } from "./lib/main";
 
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
     if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
@@ -38,7 +37,7 @@ export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: Re
     let code = prune(renderCode);
     if (isNullOrUndefined(code)) throw new Error("RenderCode null");
     if (typeof code === 'string') {
-        return document.createTextNode(code.replaceVariable(i18n[config.language])) as any;
+        return document.createTextNode(code.replaceVariable(i18nList[config.language])) as any;
     }
     if (code instanceof Node) {
         return code as any;
