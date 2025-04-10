@@ -1,6 +1,8 @@
+
 import "./env";
 import { isNullOrUndefined, stringify } from "./env"
-import { i18nList } from "./i18n";
+import { DownloadType } from "./enum"
+import { i18nList } from "./i18n"
 const DEFAULT_CONFIG = {
     language: 'zh_cn',
     autoFollow: false,

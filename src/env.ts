@@ -1,10 +1,3 @@
-type Pruned<T> = T extends null | undefined
-    ? never
-    : T extends Array<infer U>
-    ? Array<Pruned<U>>
-    : T extends object
-    ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
-    : T;
 const ConvertibleNumber: unique symbol = Symbol("ConvertibleNumber");
 const PositiveInteger: unique symbol = Symbol("PositiveInteger");
 const NegativeInteger: unique symbol = Symbol("NegativeInteger");
@@ -161,7 +154,6 @@ export const isArray = (obj: unknown): obj is Array<any> => Array.isArray(obj)
 export const isElement = (obj: unknown): obj is Element => !isNullOrUndefined(obj) && obj instanceof Element
 export const isNode = (obj: unknown): obj is Node => !isNullOrUndefined(obj) && obj instanceof Node
 export const isStringTupleArray = (obj: unknown): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
-export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 export const isNotEmpty = (obj: unknown): boolean => {
     if (isNullOrUndefined(obj)) {
         return false
@@ -349,19 +341,6 @@ String.prototype.toURL = function () {
     }
     return new URL(URLString.toString())
 }
-type ThrottleOptions = {
-    /** 
-     * 是否在节流开始时立即执行
-     * @default true
-     */
-    leading?: boolean
-    /** 
-     * 是否在节流结束后追加执行
-     * @default true 
-     */
-    trailing?: boolean
-}
-
 /**
  * 节流函数，限制函数执行频率
  * @param fn 需要节流的函数
@@ -420,15 +399,6 @@ export function throttle<T extends (...args: any[]) => any>(
 
     return throttled
 }
-
-type DebounceOptions = {
-    /** 
-     * 是否立即执行首次调用
-     * @default false 
-     */
-    immediate?: boolean
-}
-
 /**
  * 防抖函数，延迟执行直到停止调用指定时间
  * @param fn 需要防抖的函数

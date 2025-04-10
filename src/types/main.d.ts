@@ -1,5 +1,4 @@
 declare var unsafeWindow: Window & typeof globalThis;
-
 declare interface I18N {
     [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[]
 }
@@ -33,51 +32,29 @@ declare type InputType =
     | "time"
     | "url"
     | "week";
-
-
-declare enum DownloadType {
-    Aria2,
-    IwaraDownloader,
-    Browser,
-    Others
+declare type Pruned<T> = T extends null | undefined
+    ? never
+    : T extends Array<infer U>
+    ? Array<Pruned<U>>
+    : T extends object
+    ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
+    : T;
+declare type ThrottleOptions = {
+    /** 
+     * 是否在节流开始时立即执行
+     * @default true
+     */
+    leading?: boolean
+    /** 
+     * 是否在节流结束后追加执行
+     * @default true 
+     */
+    trailing?: boolean
 }
-
-declare enum PageType {
-    Video = 'video',
-    Image = 'image',
-    VideoList = 'videoList',
-    ImageList = 'imageList',
-    Forum = 'forum',
-    ForumSection = 'forumSection',
-    ForumThread = 'forumThread',
-    Page = 'page',
-    Home = 'home',
-    Profile = 'profile',
-    Subscriptions = 'subscriptions',
-    Playlist = 'playlist',
-    Favorites = 'favorites',
-    Search = 'search',
-    Account = 'account'
-}
-
-
-declare enum ToastType {
-    Log,
-    Info,
-    Warn,
-    Error
-}
-
-declare enum MessageType {
-    Close,
-    Request,
-    Receive,
-    Set,
-    Del
-}
-
-declare enum VersionState {
-    Low,
-    Equal,
-    High
+declare type DebounceOptions = {
+    /** 
+     * 是否立即执行首次调用
+     * @default false 
+     */
+    immediate?: boolean
 }

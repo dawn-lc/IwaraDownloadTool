@@ -1,7 +1,8 @@
 import "./env";
-import { delay, isNullOrUndefined, isPageType, isStringTupleArray, prune, stringify } from "./env";
+import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18nList } from "./i18n";
+import { DownloadType, PageType, ToastType, MessageType, VersionState, isPageType } from "./enum";
 import { config, Config } from "./config";
 import { Dictionary, IChannelMessage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
@@ -10,7 +11,7 @@ import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
 import { Iwara } from "./types/iwara";
 import { Aria2 } from "./types/aria2";
-import mainCSS from "./css/main.css"
+import mainCSS from "./css/main.css";
 
 class configEdit {
     source!: configEdit;
