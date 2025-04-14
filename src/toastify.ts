@@ -23,19 +23,20 @@ const getContainer = (gravity: Gravity, position: Position): HTMLElement => {
 };
 const addTimeout = (toast: Toast, callback: () => void): void => {
     delTimeout(toast);
-    const duration = toast.options.duration!;
-    const timeoutId = window.setTimeout(() => {
-        delTimeout(toast);
-        callback();
-    }, duration);
-    toastTimeouts.set(toast, timeoutId);
     const startTime = Date.now();
+    const duration = toast.options.duration!;
     const updateRemainingTime = () => {
         const elapsed = Date.now() - startTime;
         const remaining = Math.max(0, duration - elapsed);
         toast.progress!.style.setProperty('--toast-progress', `${remaining / duration}`);
     };
-    const intervalId = window.setInterval(updateRemainingTime, 20);
+    const intervalId = window.setInterval(updateRemainingTime, 50);
+    const timeoutId = window.setTimeout(() => {
+        toast.progress!.style.setProperty('--toast-progress', `0`);
+        callback();
+        delTimeout(toast);
+    }, duration);
+    toastTimeouts.set(toast, timeoutId);
     toastIntervals.set(toast, intervalId);
 };
 const delTimeout = (toast: Toast): void => {
@@ -48,9 +49,6 @@ const delTimeout = (toast: Toast): void => {
     if (!isNullOrUndefined(intervalId)) {
         clearInterval(intervalId);
         toastIntervals.delete(toast);
-    }
-    if (!isNullOrUndefined(toast.progress)){
-        toast.progress.style.setProperty('--toast-progress', `0`);
     }
 };
 const offscreenContainer = document.createElement('div');
@@ -176,7 +174,6 @@ export class Toast {
             this.progress = document.createElement('div');
             this.progress.classList.add('toast-progress');
             this.content.appendChild(this.progress);
-            console.log(this.content.querySelector('.toast-progress'));
         }
 
         this.element.appendChild(this.content);
@@ -201,6 +198,7 @@ export class Toast {
         this.element.style.removeProperty('--toast-height');
         this.element.style.removeProperty('--toast-width');
         this.element.style.setProperty('max-height', 'none', 'important');
+        this.element.style.setProperty('max-width', 'none', 'important');
         if (this.position == 'center') this.element.style.setProperty('max-width', `${this.root.getBoundingClientRect().width}px`, 'important');
         const { height, width } = this.element.getBoundingClientRect();
         this.element.style.setProperty('--toast-height', `${height}px`);

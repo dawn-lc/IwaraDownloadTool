@@ -1,7 +1,21 @@
+/**
+ * 用户脚本环境
+ */
 declare var unsafeWindow: Window & typeof globalThis;
+/**
+ * 国际化字符串接口
+ * 键值对结构，值可以是:
+ * - 渲染代码对象
+ * - 字符串
+ * - 上述类型的数组
+ */
 declare interface I18N {
     [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[]
 }
+/**
+ * 渲染代码接口，用于描述DOM元素结构
+ * @template T HTML元素标签名
+ */
 declare interface RenderCode<T extends keyof HTMLElementTagNameMap> {
     nodeType: T;
     attributes?: Record<string, any>;
@@ -9,6 +23,9 @@ declare interface RenderCode<T extends keyof HTMLElementTagNameMap> {
     className?: string | string[];
     childs?: RenderCode<any> | string | undefined | (RenderCode<any> | string | undefined)[];
 }
+/**
+ * HTML input元素的type属性所有可能值
+ */
 declare type InputType =
     | "button"
     | "checkbox"
@@ -32,6 +49,10 @@ declare type InputType =
     | "time"
     | "url"
     | "week";
+/**
+ * 递归修剪类型，移除所有null/undefined属性
+ * @template T 原始类型
+ */
 declare type Pruned<T> = T extends null | undefined
     ? never
     : T extends Array<infer U>

@@ -10,12 +10,20 @@ import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
 import { Iwara } from "./types/iwara";
 
+/**
+ * 视频片段基本信息接口
+ * 用于存储视频的标题、别名和作者信息
+ */
 export interface PieceInfo {
     Title?: string | null;
     Alias?: string | null;
     Author?: string | null;
 }
 
+/**
+ * 本地路径信息接口
+ * 描述文件路径的各个组成部分
+ */
 export interface LocalPath {
     fullPath: string;
     fullName: string;
@@ -24,6 +32,11 @@ export interface LocalPath {
     extension: string;
     baseName: string;
 }
+/**
+ * 路径处理类
+ * 实现LocalPath接口，提供路径解析和规范化功能
+ * 支持Windows、Unix和相对路径
+ */
 export class Path implements LocalPath {
     public readonly fullPath: string;   // 归一化后的完整路径
     public readonly directory: string;  // 目录部分
@@ -32,6 +45,11 @@ export class Path implements LocalPath {
     public readonly extension: string;  // 拓展名（不含点）
     public readonly baseName: string;   // 文件名（不含拓展名）
 
+    /**
+     * 构造函数
+     * @param inputPath 输入路径字符串
+     * @throws 如果路径为空或无效
+     */
     constructor(inputPath: string) {
         // 空路径处理
         if (inputPath === "") {
@@ -66,11 +84,21 @@ export class Path implements LocalPath {
     }
 
     // 判断是否为UNC路径（以"\\\\"开头）
+    /**
+     * 判断是否为UNC路径
+     * @param path 路径字符串
+     * @returns 如果是UNC路径返回true
+     */
     private isUNC(path: string): boolean {
         return path.startsWith('\\\\');
     }
 
     // 判断路径类型：Windows绝对路径、Unix绝对路径或相对路径
+    /**
+     * 检测路径类型
+     * @param path 路径字符串
+     * @returns 路径类型: Windows、Unix或Relative
+     */
     private detectPathType(path: string): 'Windows' | 'Unix' | 'Relative' {
         // Windows绝对路径：如 "C:\xxx" 或 "C:/xxx"
         if (/^[A-Za-z]:[\\/]/.test(path)) {
@@ -85,6 +113,12 @@ export class Path implements LocalPath {
     }
 
     // 校验路径合法性：Windows路径检查非法字符，Unix/相对路径检查空字符及非法字符（相对路径）
+    /**
+     * 验证路径合法性
+     * @param path 路径字符串 
+     * @param type 路径类型
+     * @throws 如果路径包含非法字符或格式不正确
+     */
     private validatePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): void {
         const invalidChars = /[<>:"|?*]/;
         if (type === 'Windows') {
@@ -127,8 +161,16 @@ export class Path implements LocalPath {
         }
     }
 
-    // 归一化路径：统一分隔符、合并重复分隔符、处理末尾斜杠，
-    // 并解析路径中的 "." 和 ".." 导航，绝对路径越界直接抛错
+    // 
+    // 
+    /**
+     * 规范化路径
+     * @param path 原始路径
+     * @param type 路径类型
+     * @returns 规范化后的路径
+     * 
+     * 统一分隔符、合并重复分隔符、处理末尾斜杠，并解析路径中的 "." 和 ".." 导航，绝对路径越界直接抛错。
+     */
     private normalizePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
         const sep = type === 'Windows' ? '\\' : '/';
 
@@ -192,8 +234,17 @@ export class Path implements LocalPath {
         return normalized;
     }
 
-    // 解析路径段，处理 "." 与 ".." 导航
-    // 对于绝对路径，如果 ".." 导致越界则抛错
+    // 
+    // 
+    /**
+     * 解析路径段，处理"."和".."导航
+     * @param segments 路径段数组
+     * @param isAbsolute 是否为绝对路径
+     * @returns 处理后的路径段数组
+     * @throws 如果是绝对路径且导航越界
+     * 
+     * 解析路径段，处理 "." 与 ".." 导航，对于绝对路径，如果 ".." 导致越界则抛错
+     */
     private resolveSegments(segments: string[], isAbsolute: boolean): string[] {
         const stack: string[] = [];
         for (const segment of segments) {
@@ -216,7 +267,14 @@ export class Path implements LocalPath {
         return stack;
     }
 
-    // 提取目录部分：返回最后一个分隔符之前的内容
+    /**
+     * 提取目录部分
+     * @param path 完整路径
+     * @param type 路径类型
+     * @returns 目录部分字符串
+     * 
+     * 返回最后一个分隔符之前的内容
+     */
     private extractDirectory(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
         const sep = type === 'Windows' ? '\\' : '/';
 
@@ -232,14 +290,27 @@ export class Path implements LocalPath {
         return lastIndex === -1 ? '' : path.substring(0, lastIndex);
     }
 
-    // 提取文件名：返回最后一个分隔符之后的内容
+    /**
+     * 提取文件名部分
+     * @param path 完整路径
+     * @param type 路径类型
+     * @returns 文件名部分字符串
+     * 
+     * 返回最后一个分隔符之后的内容
+     */
     private extractFileName(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
         const sep = type === 'Windows' ? '\\' : '/';
         const lastIndex = path.lastIndexOf(sep);
         return lastIndex === -1 ? path : path.substring(lastIndex + 1);
     }
 
-    // 从文件名中分离基础名称和拓展名
+    /**
+     * 分离文件名和扩展名
+     * @param fileName 完整文件名
+     * @returns 包含baseName和extension的对象
+     * 
+     * 从文件名中分离基础名称和拓展名
+     */
     private extractBaseAndExtension(fileName: string): { baseName: string; extension: string } {
         const lastDot = fileName.lastIndexOf('.');
         if (lastDot <= 0) {
@@ -251,6 +322,10 @@ export class Path implements LocalPath {
     }
 }
 
+/**
+ * 版本号接口
+ * 遵循语义化版本规范(SemVer)
+ */
 interface IVersion {
     major: number;
     minor: number;
@@ -259,12 +334,21 @@ interface IVersion {
     buildMetadata: string;
     compare(other: IVersion): VersionState;
 }
+/**
+ * 版本号实现类
+ * 支持语义化版本比较和解析
+ */
 export class Version implements IVersion {
     major: number;
     minor: number;
     patch: number;
     preRelease: string[];
     buildMetadata: string;
+    /**
+     * 构造函数
+     * @param versionString 版本号字符串
+     * @throws 如果版本号格式无效
+     */
     constructor(versionString: string) {
         if (!versionString || typeof versionString !== 'string') {
             throw new Error("Invalid version string");
@@ -285,6 +369,11 @@ export class Version implements IVersion {
         if (a > b) return VersionState.High;
         return VersionState.Equal;
     }
+    /**
+     * 比较版本号
+     * @param other 要比较的版本号
+     * @returns 比较结果状态
+     */
     public compare(other: IVersion): VersionState {
         let state = Version.compareValues(this.major, other.major);
         if (state !== VersionState.Equal) return state;
@@ -303,6 +392,10 @@ export class Version implements IVersion {
         }
         return VersionState.Equal;
     }
+    /**
+     * 转换为字符串
+     * @returns 语义化版本字符串
+     */
     public toString(): string {
         const version = `${this.major}.${this.minor}.${this.patch}`;
         const preRelease = this.preRelease.length ? `-${this.preRelease.join('.')}` : '';
@@ -311,6 +404,11 @@ export class Version implements IVersion {
     }
 }
 
+/**
+ * 字典类
+ * 扩展原生Map，提供更方便的转换方法
+ * @template T 值类型
+ */
 export class Dictionary<T> extends Map<string, T> {
     constructor(data: Array<[key: string, value: T]> = []) {
         super()
@@ -326,10 +424,20 @@ export class Dictionary<T> extends Map<string, T> {
         return Array.from(this.values())
     }
 }
+/**
+ * 通道消息接口
+ * 用于跨标签页通信
+ * @template T 消息数据类型
+ */
 export interface IChannelMessage<T> {
     type: MessageType;
     data: T;
 }
+/**
+ * 同步字典类
+ * 支持跨标签页数据同步
+ * @template T 值类型
+ */
 export class SyncDictionary<T> extends Dictionary<T> {
     private channel: BroadcastChannel
     private changeTime: number
@@ -422,6 +530,10 @@ export class SyncDictionary<T> extends Dictionary<T> {
         return isDeleted
     }
 }
+/**
+ * 视频信息类
+ * 封装Iwara视频的元数据和操作
+ */
 export class VideoInfo {
     ID!: string;
     UploadTime!: Date;
@@ -445,6 +557,10 @@ export class VideoInfo {
     Comments!: string;
     DownloadUrl!: string;
     RAW!: Iwara.Video;
+    /**
+     * 构造函数
+     * @param info 可选的视频基本信息
+     */
     constructor(info?: PieceInfo) {
         if (!isNullOrUndefined(info)) {
             if (!isNullOrUndefined(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
@@ -453,6 +569,13 @@ export class VideoInfo {
         }
         return this
     }
+    /**
+     * 初始化视频信息
+     * @param ID 视频ID
+     * @param InfoSource 可选的视频源数据
+     * @returns 当前VideoInfo实例
+     * @throws 如果初始化失败
+     */
     async init(ID: string, InfoSource?: Iwara.Video) {
         try {
             this.ID = ID
