@@ -1,10 +1,10 @@
 const root = process.cwd();
-import { promises } from 'fs';
-import { join } from 'path';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import esbuild from 'esbuild';
+import { promises,existsSync, mkdirSync, readFileSync, writeFileSync  } from 'fs';
+import { join } from 'path';
 import { isNullOrUndefined, UUID } from "../src/env.ts";
 import inlineCSS from './inlineCSS.ts';
+import removeComments from './removeComments.ts';
 
 function parseMetadata(content: string): any {
     const lines = content
@@ -57,6 +57,9 @@ const sourcePath = join(root, 'src');
 const packagePath = join(root, 'package.json');
 let packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
 
+const tsconfigPath = join(root, 'tsconfig.json');
+let tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'));
+
 const mataTemplatePath = join(sourcePath, 'mata', 'userjs.mata');
 
 const mataTempPath = join(distPath, `${packageInfo.displayName}.mata.js`);
@@ -97,14 +100,15 @@ esbuild.build({
         js: matadata
     },
     platform: 'browser',
-    loader: { '.json': 'json' },
+    loader: { '.json': 'json'},
     target: ['es2022'],
     plugins: [inlineCSS],
-    legalComments: 'none',
-    charset: 'utf8'
+    charset: 'utf8',
+    tsconfigRaw: tsconfig
 }).catch(() => process.exit(1));
 
-let result = await esbuild.build({
+
+esbuild.build({
     entryPoints: [mainPath],
     format: 'iife',
     bundle: true,
@@ -117,19 +121,19 @@ let result = await esbuild.build({
     },
     platform: 'browser',
     target: ['es2022'],
-    loader: { '.json': 'json' },
-    plugins: [inlineCSS],
-    legalComments: 'none',
-    charset: 'utf8'
-});
-
-if (result.outputFiles.any()) {
-    let output = result.outputFiles[0].text
-        .replace(/\r?\n/gm, '\r\n')
-        .replaceAll('/* @__PURE__ */', '')
-        .replace(/.*\/\/ (?![=@]).*$/gm,'')
-        .replace(/^\s*$/gm,'');
-    await promises.writeFile(distUncompressPath, output);
-} else {
-    process.exit(1);
-}
+    loader: { '.json': 'json'},
+    plugins: [inlineCSS, removeComments],
+    charset: 'utf8',
+    tsconfigRaw: tsconfig
+}).then(async (result)=>{
+    if (result.outputFiles.any()) {
+        let output = result.outputFiles[0].text
+            .replace(/\r?\n/gm, '\r\n')
+            .replaceAll('/* @__PURE__ */', '')
+            .replace(/.*\/\/ (?![=@]).*$/gm,'')
+            .replace(/^\s*$/gm,'');
+        await promises.writeFile(distUncompressPath, output);
+    } else {
+        process.exit(1);
+    }
+}).catch(() => process.exit(1));
