@@ -1,10 +1,10 @@
 import "./env";
-import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
+import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify, UUID } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, MessageType, VersionState, isPageType } from "./enum";
 import { config, Config } from "./config";
-import { Dictionary, IChannelMessage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, IChannelMessage, PageLifeManager, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
@@ -459,8 +459,11 @@ class menu {
         }
     }
 }
+
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
+var pageStatus = new PageLifeManager()
+
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 
 export function getSelectButton(id: string): HTMLInputElement | undefined {
@@ -488,8 +491,6 @@ export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) 
             break
     }
 });
-
-
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
         return
@@ -1034,9 +1035,8 @@ function hijackHistoryReplaceState() {
 var mouseTarget: Element | null = null
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
-
+    GM_saveTab({pageID:pageStatus.getPageId()});
     GM_addStyle(mainCSS);
-
     if (GM_getValue('isDebug')) {
         console.debug(stringify(GM_info))
         // @ts-ignore

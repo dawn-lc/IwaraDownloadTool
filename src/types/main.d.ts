@@ -12,6 +12,25 @@ declare var unsafeWindow: Window & typeof globalThis;
 declare interface I18N {
     [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[]
 }
+
+declare type PageStatus = {
+    pageId: string;
+    lastHeartbeat: number;
+};
+
+declare type PageEventCallback = (pageId: string) => void;
+
+declare type BroadcastMessage =
+    | { type: 'heartbeat'; pageId: string; timestamp: number }
+    | { type: 'goodbye'; pageId: string };
+
+    declare interface PageLifeManagerOptions {
+    heartbeatInterval?: number;
+    timeout?: number;
+    silent?: boolean;
+}
+
+
 /**
  * 渲染代码接口，用于描述DOM元素结构
  * @template T HTML元素标签名

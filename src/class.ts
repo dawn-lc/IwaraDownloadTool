@@ -1,5 +1,5 @@
 import "./env";
-import { isNullOrUndefined, prune, stringify } from "./env";
+import { isNullOrUndefined, prune, stringify, UUID } from "./env";
 import { i18nList } from "./i18n";
 import { VersionState, MessageType, ToastType } from "./enum";
 import { config } from "./config";
@@ -140,7 +140,7 @@ export class Path implements LocalPath {
                 });
                 for (let index = 0; index < variables.length; index++) {
                     const variable = variables[index];
-                    segment = segment.replaceAll(variable,'')
+                    segment = segment.replaceAll(variable, '')
                 }
                 if (invalidChars.test(segment)) {
                     throw new Error(`路径段 "${segments[i]}" 含有非法字符`);
@@ -598,7 +598,7 @@ export class VideoInfo {
                     let query = prune({
                         author: this.Alias ?? this.Author,
                         title: this.Title
-                    }) as {[key: string]: string;}
+                    }) as { [key: string]: string; }
                     for (const key in query) {
                         let dom = new DOMParser().parseFromString(await (await unlimitedFetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
                         for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
@@ -640,7 +640,7 @@ export class VideoInfo {
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
             this.External = !isNullOrUndefined(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
-            
+
             this.Liked = VideoInfoSource.liked
             this.Private = VideoInfoSource.private
             this.Unlisted = VideoInfoSource.unlisted
@@ -674,7 +674,7 @@ export class VideoInfo {
                 let comments: Iwara.Comment[] = []
                 let base = await getCommentData(commentID)
                 comments.push(...base.results as Iwara.Comment[])
-                for (let page = 1; page < Math.ceil(base.count/base.limit); page++) {
+                for (let page = 1; page < Math.ceil(base.count / base.limit); page++) {
                     comments.push(...(await getCommentData(commentID, page)).results as Iwara.Comment[])
                 }
                 let replies: Iwara.Comment[] = []
@@ -705,7 +705,7 @@ export class VideoInfo {
 
             await db.videos.put(this)
             return this
-        } catch (error:any) {
+        } catch (error: any) {
             let data = this
             let toast = newToast(
                 ToastType.Error,
@@ -734,5 +734,165 @@ export class VideoInfo {
             this.State = false
             return this
         }
+    }
+}
+
+
+
+export class PageLifeManager {
+    private readonly pageId: string;
+    private readonly activePages = new Map<string, PageStatus>();
+    private readonly channel: BroadcastChannel;
+
+    private heartbeatIntervalId?: number;
+    private checkIntervalId?: number;
+    private readonly beforeUnloadHandler: () => void;
+
+    constructor(options: PageLifeManagerOptions = {}) {
+        this.pageId = UUID();
+        this.channel = new BroadcastChannel('page-status-channel');
+
+        // 配置参数处理
+        this.heartbeatInterval = options.heartbeatInterval ?? 2000;
+        this.timeout = options.timeout ?? 5000;
+
+        // 绑定事件处理器以便后续移除
+        this.beforeUnloadHandler = () => this.cleanup();
+        this.init();
+    }
+
+    private heartbeatInterval: number;
+    private timeout: number;
+
+    public onPageJoin?: PageEventCallback;
+    public onPageLeave?: PageEventCallback;
+
+    private init() {
+        this.setupMessageListener();
+        this.startHeartbeat();
+        this.startTimeoutChecker();
+        this.setupUnloadHandler();
+
+        console.log(`[PageLifeManager] 页面 ${this.pageId} 启动`);
+    }
+
+    private setupMessageListener() {
+        const handler = (event: MessageEvent<BroadcastMessage>) => this.handleMessage(event.data);
+        this.channel.addEventListener('message', handler);
+    }
+
+    private startHeartbeat() {
+        this.sendHeartbeat(); // 立即发送初始心跳
+        this.heartbeatIntervalId = window.setInterval(
+            () => this.sendHeartbeat(),
+            this.heartbeatInterval
+        );
+    }
+
+    private startTimeoutChecker() {
+        this.checkIntervalId = window.setInterval(
+            () => this.checkTimeouts(),
+            Math.min(this.heartbeatInterval, this.timeout / 2)
+        );
+    }
+
+    private setupUnloadHandler() {
+        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+    }
+
+    private sendHeartbeat() {
+        const message: BroadcastMessage = {
+            type: 'heartbeat',
+            pageId: this.pageId,
+            timestamp: Date.now(),
+        };
+        this.channel.postMessage(message);
+        this.updatePageStatus(message); // 更新自身状态
+    }
+
+    private sendGoodbye() {
+        try {
+            const message: BroadcastMessage = { type: 'goodbye', pageId: this.pageId };
+            this.channel.postMessage(message);
+        } catch (e) {
+            console.error('[PageLifeManager] 发送关闭消息失败:', e);
+        }
+    }
+
+    private handleMessage(message: BroadcastMessage) {
+        switch (message.type) {
+            case 'heartbeat':
+                this.handleHeartbeat(message);
+                break;
+            case 'goodbye':
+                this.handleGoodbye(message);
+                break;
+        }
+    }
+
+    private handleHeartbeat(message: Extract<BroadcastMessage, { type: 'heartbeat' }>) {
+        const isNewPage = !this.activePages.has(message.pageId);
+        const currentTime = Date.now();
+
+        this.activePages.set(message.pageId, {
+            pageId: message.pageId,
+            lastHeartbeat: message.timestamp,
+        });
+
+        if (isNewPage && message.pageId !== this.pageId) {
+            console.log(`[PageLifeManager] 发现新页面: ${message.pageId}`);
+            this.onPageJoin?.(message.pageId);
+        }
+    }
+
+    private handleGoodbye(message: Extract<BroadcastMessage, { type: 'goodbye' }>) {
+        if (this.activePages.delete(message.pageId)) {
+            console.log(`[PageLifeManager] 页面离开: ${message.pageId}`);
+            this.onPageLeave?.(message.pageId);
+        }
+    }
+
+    private checkTimeouts() {
+        const currentTime = Date.now();
+        const timeoutThreshold = currentTime - this.timeout;
+
+        Array.from(this.activePages.entries()).forEach(([pageId, status]) => {
+            if (status.lastHeartbeat < timeoutThreshold) {
+                this.activePages.delete(pageId);
+                console.log(`[PageLifeManager] 页面超时移除: ${pageId}`);
+                this.onPageLeave?.(pageId);
+            }
+        });
+    }
+
+    private updatePageStatus(message: { pageId: string; timestamp: number }) {
+        this.activePages.set(message.pageId, {
+            pageId: message.pageId,
+            lastHeartbeat: message.timestamp,
+        });
+    }
+
+    public getActivePageIds(): Set<string> {
+        return new Set(this.activePages.keys());
+    }
+
+    public getPageId(): string {
+        return this.pageId;
+    }
+
+    public destroy() {
+        this.cleanup();
+        this.channel.close();
+        window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+    }
+
+    private cleanup() {
+        this.sendGoodbye();
+        this.clearIntervals();
+    }
+
+    private clearIntervals() {
+        if (this.heartbeatIntervalId) clearInterval(this.heartbeatIntervalId);
+        if (this.checkIntervalId) clearInterval(this.checkIntervalId);
     }
 }
