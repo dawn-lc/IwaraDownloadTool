@@ -424,110 +424,81 @@ export class Dictionary<T> extends Map<string, T> {
         return Array.from(this.values())
     }
 }
-/**
- * 通道消息接口
- * 用于跨标签页通信
- * @template T 消息数据类型
- */
-export interface IChannelMessage<T> {
-    type: MessageType;
-    data: T;
-}
-/**
- * 同步字典类
- * 支持跨标签页数据同步
- * @template T 值类型
- */
 export class SyncDictionary<T> extends Dictionary<T> {
-    private channel: BroadcastChannel
-    private changeTime: number
-    private id: string
-    private changeCallback: ((event: MessageEvent) => void) | null
-    constructor(id: string, data: Array<[key: string, value: T]> = [], changeCallback: ((event: MessageEvent) => void) | null) {
-        super(data)
-        this.channel = new BroadcastChannel(`${GM_info.script.name}.${id}`)
-        this.changeCallback = changeCallback
-        this.changeTime = 0
-        this.id = id
-        if (isNullOrUndefined(GM_getValue(id, { timestamp: 0, value: [] }).timestamp))
-            GM_deleteValue(id)
-        originalAddEventListener.call(unsafeWindow, 'beforeunload', this.saveData.bind(this))
-        originalAddEventListener.call(unsafeWindow, 'pagehide', this.saveData.bind(this))
-        originalAddEventListener.call(unsafeWindow, 'unload', this.saveData.bind(this))
-        this.channel.onmessage = (event: MessageEvent) => {
-            const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
-            const { type, data: { timestamp, value } } = message
-            GM_getValue('isDebug') && console.debug(`Channel message: ${stringify(message)}`)
-            if (timestamp <= this.changeTime) return;
-            switch (type) {
-                case MessageType.Set:
-                    value.forEach(item => super.set(item[0], item[1]))
-                    break
-                case MessageType.Del:
-                    value.forEach(item => super.delete(item[0]))
-                    break
-                case MessageType.Request:
-                    if (this.changeTime === timestamp) return
-                    if (this.changeTime > timestamp) return this.channel.postMessage({ type: MessageType.Receive, data: { timestamp: this.changeTime, value: super.toArray() } })
-                    this.reinitialize(value)
-                    break
-                case MessageType.Close:
-                case MessageType.Receive:
-                    if (this.changeTime >= timestamp) return
-                    this.reinitialize(value)
-                    break
-            }
-            this.changeTime = timestamp
-            this.changeCallback?.(event)
+    /** 当通过 set 或接收消息设置时触发 */
+    public onSet?: (key: string, value: T) => void;
+    /** 当删除时触发 */
+    public onDel?: (key: string) => void;
+    /** 完成初次或增量同步后触发 */
+    public onSync?: () => void;
+
+    public timestamp = 0;
+    private id = UUID();
+    private bc: BroadcastChannel;
+
+    /**
+     * @param channelName 通信通道，同一名称标签页间同步
+     * @param initial 初始纯值列表，会附加当前时戳
+     */
+    constructor(channelName: string, initial: Array<[string, T]> = []) {
+        super(initial);
+        this.bc = new BroadcastChannel(channelName);
+        this.bc.onmessage = ({ data: msg }: { data: Message<T> }) => this.handleMessage(msg);
+        this.bc.postMessage({ type: 'sync', id: this.id, timestamp: this.timestamp });
+    }
+    /**
+     * 重写：设置值并广播，同时记录时间戳
+     */
+    public override set(key: string, value: T): this {
+        this.timestamp = Date.now();
+        super.set(key, value);
+        this.bc.postMessage({ type: 'set', key, value, timestamp: this.timestamp, id: this.id });
+        this.onSet?.(key, value);
+        return this;
+    }
+    /**
+     * 重写：删除并广播，同时记录时间戳
+     */
+    public override delete(key: string): boolean {
+        this.timestamp = Date.now();
+        const existed = super.delete(key);
+        this.bc.postMessage({ type: 'delete', key, timestamp: this.timestamp, id: this.id });
+        if (existed) this.onDel?.(key);
+        return existed;
+    }
+    /**
+     * 处理同步消息
+     */
+    private handleMessage(msg: Message<T>) {
+        if (msg.id === this.id) return;
+        if (msg.type === 'sync'){
+            this.bc.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+            return;
         }
-        this.channel.onmessageerror = (event) => {
-            GM_getValue('isDebug') && console.debug(`Channel message error: ${stringify(event)}`)
-        }
-        GM_getTabs((tabs) => {
-            const tabIds = Object.keys(tabs);
-            const isLastTab = tabIds.length <= 1;
-            if (isLastTab) {
-                let save = GM_getValue(id, { timestamp: 0, value: [] })
-                if (save.timestamp > this.changeTime) {
-                    this.changeTime = save.timestamp
-                    this.reinitialize(save.value)
+        if (msg.timestamp < this.timestamp) return;
+        this.timestamp = Date.now();
+        switch (msg.type) {
+            case 'state': {
+                debugger
+                for (let index = 0; index < msg.state.length; index++) {
+                    const [key, value] = msg.state[index];
+                    super.set(key, value);
                 }
-            } else {
-                this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: super.toArray() } })
+                this.onSync?.();
+                break;
             }
-        })
-    }
-    private saveData() {
-        const savedData = GM_getValue(this.id, { timestamp: 0, value: [] });
-        if (this.changeTime > savedData.timestamp) {
-            GM_getTabs((tabs) => {
-                const tabIds = Object.keys(tabs);
-                const isLastTab = tabIds.length <= 1;
-                if (isLastTab) {
-                    GM_setValue(this.id, { timestamp: this.changeTime, value: super.toArray() });
-                } else {
-                    this.channel.postMessage({ type: MessageType.Close, data: { timestamp: this.changeTime, value: super.toArray() } })
-                }
-            })
+            case 'set': {
+                const { key, value } = msg;
+                super.set(key, value);
+                this.onSet?.(key, value);
+                break;
+            }
+            case 'delete': {
+                const { key } = msg;
+                if (super.delete(key)) this.onDel?.(key);
+                break;
+            }
         }
-    }
-    private reinitialize(data: Array<[key: string, value: T]>) {
-        super.clear()
-        data.forEach(([key, value]) => super.set(key, value))
-    }
-    override set(key: string, value: T) {
-        super.set(key, value)
-        this.changeTime = Date.now()
-        this.channel.postMessage({ type: MessageType.Set, data: { timestamp: this.changeTime, value: [[key, value]] } })
-        return this
-    }
-    override delete(key: string) {
-        let isDeleted = super.delete(key)
-        if (isDeleted) {
-            this.changeTime = Date.now()
-            this.channel.postMessage({ type: MessageType.Del, data: { timestamp: this.changeTime, value: [[key]] } })
-        }
-        return isDeleted
     }
 }
 /**
@@ -832,7 +803,6 @@ export class PageLifeManager {
 
     private handleHeartbeat(message: Extract<BroadcastMessage, { type: 'heartbeat' }>) {
         const isNewPage = !this.activePages.has(message.pageId);
-        const currentTime = Date.now();
 
         this.activePages.set(message.pageId, {
             pageId: message.pageId,

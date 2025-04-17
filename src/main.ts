@@ -4,7 +4,7 @@ import { originalAddEventListener, originalFetch, originalNodeAppendChild, origi
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, MessageType, VersionState, isPageType } from "./enum";
 import { config, Config } from "./config";
-import { Dictionary, IChannelMessage, PageLifeManager, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, PageLifeManager, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
@@ -94,7 +94,7 @@ class configEdit {
                         this.switchButton('autoFollow'),
                         this.switchButton('autoLike'),
                         this.switchButton('autoInjectCheckbox'),
-                        this.switchButton('autoDownloadMetadata'), 
+                        this.switchButton('autoDownloadMetadata'),
                         this.switchButton('autoCopySaveFileName'),
                         this.switchButton('addUnlistedAndPrivate'),
                         this.switchButton('experimentalFeatures'),
@@ -306,7 +306,7 @@ class menu {
                     target[prop] = value
                     this.pageChange()
                     GM_getValue('isDebug') && console.debug(`Page change to ${this.pageType}`)
-                    return true 
+                    return true
                 }
                 return target[prop] = value;
             }
@@ -462,35 +462,42 @@ class menu {
 
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
-var pageStatus = new PageLifeManager()
-
+export var pageStatus = new PageLifeManager()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
-
 export function getSelectButton(id: string): HTMLInputElement | undefined {
     return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
 }
-export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
-    const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: PieceInfo]> }>
-    const updateButtonState = (videoID: string) => {
-        const selectButton = getSelectButton(videoID)
-        if (selectButton) selectButton.checked = selectList.has(videoID)
+function saveSelectList(): void {
+    if (pageStatus.getActivePageIds().size <= 1) {
+        GM_setValue('selectList', {
+            timestamp: selectList.timestamp,
+            selectList: selectList.toArray()
+        });
     }
-    switch (message.type) {
-        case MessageType.Set:
-        case MessageType.Del:
-            updateButtonState(message.data.value[0][0])
-            break;
-        case MessageType.Request:
-        case MessageType.Receive:
-            (document.querySelectorAll('input.selectButton') as NodeListOf<HTMLInputElement>).forEach(button => {
-                const videoid = button.getAttribute('videoid')
-                if (videoid) button.checked = selectList.has(videoid)
-            })
-            break
-        default:
-            break
-    }
-});
+}
+export var selectList = new SyncDictionary<PieceInfo>('selectList');
+pageStatus.onPageLeave = () => {
+    saveSelectList()
+}
+const updateButtonState = (videoID: string) => {
+    const selectButton = getSelectButton(videoID)
+    if (selectButton) selectButton.checked = selectList.has(videoID)
+}
+selectList.onSet = (key) => {
+    updateButtonState(key);
+    saveSelectList();
+};
+
+selectList.onDel = (key) => {
+    updateButtonState(key);
+    saveSelectList();
+};
+
+selectList.onSync = () => {
+    selectList.allKeys().forEach(id => updateButtonState(id));
+    saveSelectList();
+};
+
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
         return
@@ -752,14 +759,14 @@ async function injectCheckbox(element: Element) {
     originalNodeAppendChild.call(item, button)
 
 
-    if(videoInfo?.Following && element.querySelector('.videoTeaser__thumbnail')?.querySelector('.follow') === null) {
+    if (videoInfo?.Following && element.querySelector('.videoTeaser__thumbnail')?.querySelector('.follow') === null) {
         originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), renderNode(
             {
                 nodeType: 'div',
                 className: 'follow',
                 childs: {
                     nodeType: 'div',
-                    className: ['text', 'text--white' ,'text--tiny' ,'text--bold'],
+                    className: ['text', 'text--white', 'text--tiny', 'text--bold'],
                     childs: '%#following#%'
                 }
             }
@@ -780,7 +787,7 @@ async function injectCheckbox(element: Element) {
                         method: 'DELETE',
                         headers: await getAuth()
                     })).ok) {
-                        newToast(ToastType.Info,{ text: `${Name} %#deleteSucceed#%`, close: true }).show()
+                        newToast(ToastType.Info, { text: `${Name} %#deleteSucceed#%`, close: true }).show()
                         deletePlaylistItme.remove()
                     }
                     event.preventDefault()
@@ -790,7 +797,7 @@ async function injectCheckbox(element: Element) {
                 }
             }
         })
-        originalNodeAppendChild.call(item,  deletePlaylistItme)
+        originalNodeAppendChild.call(item, deletePlaylistItme)
     }
 }
 function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
@@ -811,7 +818,7 @@ function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
 
     for (const mutation of mutationsList) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            return extractPageType(Array.from(mutation.addedNodes).find((node):node is Element => node instanceof Element && node.classList.contains('page')))
+            return extractPageType(Array.from(mutation.addedNodes).find((node): node is Element => node instanceof Element && node.classList.contains('page')))
         }
     }
 }
@@ -886,22 +893,22 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
                     ]
                 ]
             ))
-            .result
-            .filter(
-                (task: Aria2.Status) =>
-                    isNullOrUndefined(task.bittorrent)
-            )
-            .map(
-                (task: Aria2.Status) => {
-                    let ID = aria2TaskExtractVideoID(task)
-                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
-                        return {
-                            id: ID,
-                            data: task
+                .result
+                .filter(
+                    (task: Aria2.Status) =>
+                        isNullOrUndefined(task.bittorrent)
+                )
+                .map(
+                    (task: Aria2.Status) => {
+                        let ID = aria2TaskExtractVideoID(task)
+                        if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                            return {
+                                id: ID,
+                                data: task
+                            }
                         }
                     }
-                }
-            )
+                )
         );
 
         let active: Array<{ id: string, data: Aria2.Status }> = prune(
@@ -917,22 +924,22 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
                     ]
                 ]
             ))
-            .result
-            .filter(
-                (task: Aria2.Status) =>
-                    isNullOrUndefined(task.bittorrent)
-            )
-            .map(
-                (task: Aria2.Status) => {
-                    let ID = aria2TaskExtractVideoID(task)
-                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
-                        return {
-                            id: ID,
-                            data: task
+                .result
+                .filter(
+                    (task: Aria2.Status) =>
+                        isNullOrUndefined(task.bittorrent)
+                )
+                .map(
+                    (task: Aria2.Status) => {
+                        let ID = aria2TaskExtractVideoID(task)
+                        if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                            return {
+                                id: ID,
+                                data: task
+                            }
                         }
                     }
-                }
-            )
+                )
         );
         let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
             .filter(
@@ -1035,7 +1042,18 @@ function hijackHistoryReplaceState() {
 var mouseTarget: Element | null = null
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
-    GM_saveTab({pageID:pageStatus.getPageId()});
+    if (pageStatus.getActivePageIds().size === 1) {
+        try {
+            let selectListStorage = GM_getValue('selectList', { timestamp: selectList.timestamp, selectList: selectList.toArray()})
+            if (selectListStorage.timestamp > selectList.timestamp){
+                selectListStorage.selectList.forEach(([key,value])=>{
+                    selectList.set(key,value)
+                })
+            }
+        } catch (error) {
+            GM_deleteValue('selectList')
+        }
+    }
     GM_addStyle(mainCSS);
     if (GM_getValue('isDebug')) {
         console.debug(stringify(GM_info))
@@ -1089,7 +1107,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         let cloneBody = await cloneResponse.json() as Iwara.IPage
                         let list = (cloneBody.results as Iwara.Video[]).map(i => {
                             i.user.following = undefined
-                            i.user.friend =  undefined
+                            i.user.friend = undefined
                             return i
                         });
                         [...list].forEach(info => new VideoInfo().init(info.id, info))
@@ -1122,7 +1140,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
             GM_setValue('isFirstRun', true)
             alert(i18nList[config.language].configurationIncompatible)
         }
-        
+
         if (GM_getValue('isFirstRun', true)) {
             firstRun()
             return
@@ -1177,7 +1195,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
         }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
 
         originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
-            nodeType:'p',
+            nodeType: 'p',
             className: 'fixed-bottom-right',
             childs: prune([
                 `%#appName#% ${GM_getValue('version')} `,
@@ -1193,7 +1211,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 method: 'GET',
                 headers: await getAuth()
             })).json() as Iwara.Profile
-            if (user.user.id !== profile.user.id){
+            if (user.user.id !== profile.user.id) {
                 if (!profile.user.following) {
                     unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/followers`, {
                         method: 'POST',

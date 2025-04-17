@@ -30,6 +30,14 @@ declare type BroadcastMessage =
     silent?: boolean;
 }
 
+/** 内部使用的消息条目类型 */
+declare interface MessageEntry<T> { value: T; timestamp: number }
+
+declare type Message<T> =
+  | { type: 'sync';  id: string, timestamp: number }
+  | { type: 'state'; id: string, timestamp: number; state: Array<[key: string, value: T]>; }
+  | { type: 'set';   id: string, timestamp: number; key: string; value: T; }
+  | { type: 'delete';id: string, timestamp: number; key: string; };
 
 /**
  * 渲染代码接口，用于描述DOM元素结构
