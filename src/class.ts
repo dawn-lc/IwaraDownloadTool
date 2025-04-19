@@ -1,11 +1,10 @@
 import "./env";
 import { isNullOrUndefined, prune, stringify, UUID } from "./env";
 import { i18nList } from "./i18n";
-import { VersionState, MessageType, ToastType } from "./enum";
+import { VersionState, ToastType } from "./enum";
 import { config } from "./config";
 import { db } from "./db";
 import { unlimitedFetch } from "./extension";
-import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
 import { Iwara } from "./types/iwara";
@@ -479,7 +478,6 @@ export class SyncDictionary<T> extends Dictionary<T> {
         this.timestamp = Date.now();
         switch (msg.type) {
             case 'state': {
-                debugger
                 for (let index = 0; index < msg.state.length; index++) {
                     const [key, value] = msg.state[index];
                     super.set(key, value);

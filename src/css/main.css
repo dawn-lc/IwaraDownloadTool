@@ -421,7 +421,7 @@
     height: 4px;
     background: rgba(255, 255, 255, 0.8);
     transform: scaleX(var(--toast-progress, 0));
-    transition: transform calc(0.1s * var(--toast-rate)) linear;
+    transition: transform calc(0.05s * var(--toast-rate)) linear;
     will-change: transform;
     backface-visibility: hidden;
 }

@@ -76,34 +76,3 @@ export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: Re
 
     return node;
 }
-
-/**
- * 字符串变量替换方法
- * @param {Record<string, unknown>} replacements - 替换键值对对象
- * @param {number} [count=0] - 递归计数(内部使用)
- * @returns {string} 返回替换后的字符串
- * @example 
- * 'Hello %#name#%'.replaceVariable({name: 'World'}) // 'Hello World'
- */
-String.prototype.replaceVariable = function (replacements: Record<string, unknown>, count: number = 0): string {
-    let replaceString = this.toString()
-    try {
-        replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
-            if (str.includes(`%#${key}:`)) {
-                let format = str.among(`%#${key}:`, '#%').toString()
-                return str.replaceAll(`%#${key}:${format}#%`, stringify(hasFunction(value, 'format') ? value.format(format) : value))
-            } if (value instanceof Date) {
-                return str.replaceAll(`%#${key}#%`, value.format('YYYY-MM-DD'))
-            } else {
-                return str.replaceAll(`%#${key}#%`, stringify(value))
-            }
-        },
-            replaceString
-        )
-        count++
-        return Object.keys(replacements).map((key) => this.includes(`%#${key}`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
-    } catch (error: unknown) {
-        GM_getValue('isDebug') && console.debug(`replace variable error: ${stringify(error)}`)
-        return replaceString
-    }
-}

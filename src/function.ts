@@ -601,6 +601,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         let videoID: string | undefined | null
         if (downloadUrl.searchParams.has('videoid')) videoID = downloadUrl.searchParams.get('videoid')
         if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
+        if (isNullOrUndefined(file.path) || file.path.isEmpty()) return
         let path = analyzeLocalPath(file.path)
         if (isNullOrUndefined(path.fullName) || path.fullName.isEmpty()) return 
         videoID = path.fullName.toLowerCase().among('[', '].mp4', false, true)

@@ -68,6 +68,14 @@ declare global {
         complement(that: T[], prop?: keyof T): T[];
     }
     interface String {
+        /**
+         * 字符串变量替换方法
+         * @param {Record<string, unknown>} replacements - 替换键值对对象
+         * @param {number} [count=0] - 递归计数(内部使用)
+         * @returns {string} 返回替换后的字符串
+         * @example 
+         * 'Hello %#name#%'.replaceVariable({name: 'World'}) // 'Hello World'
+         */
         replaceVariable(replacements: Record<string, unknown>, count?: number): string;
         /**
          * 替换字符串中的所有表情符号
@@ -241,7 +249,7 @@ Number.toNegativeFloat = (value: number): NegativeFloat => {
     return value as NegativeFloat;
 };
 
-Array.prototype.any = function<T>(this: T[]): this is [T, ...T[]] {
+Array.prototype.any = function <T>(this: T[]): this is [T, ...T[]] {
     return this.filter(i => !isNullOrUndefined(i)).length > 0
 }
 Array.prototype.unique = function <T>(this: T[], prop?: keyof T): T[] {
@@ -376,7 +384,7 @@ export function throttle<T extends (...args: any[]) => any>(
             }
             lastCall = now
             fn.apply(this, args)
-        } 
+        }
         // 需要设置 trailing 调用
         else if (trailing && !timer) {
             timer = setTimeout(() => {
@@ -496,25 +504,59 @@ export function prune<T>(data: T): Pruned<T> {
     }
     return data as Pruned<T>;
 }
-String.prototype.replaceVariable = function (replacements, count = 0) {
-    let replaceString = this.toString()
-    try {
-        replaceString = Object.entries(replacements).reduce((str, [key, value]) => {
-            if (str.includes(`%#${key}:`)) {
-                let format = str.among(`%#${key}:`, '#%').toString()
-                return str.replaceAll(`%#${key}:${format}#%`, stringify(hasFunction(value, 'format') ? value.format(format) : value))
-            } if (value instanceof Date) {
-                return str.replaceAll(`%#${key}#%`, value.format('YYYY-MM-DD'))
-            } else {
-                return str.replaceAll(`%#${key}#%`, stringify(value))
+String.prototype.replaceVariable = function (replacements: Record<string, unknown>): string {
+    let current = this.toString();
+    const seen = new Set<string>();
+    const keys = Object.keys(replacements).sort((a, b) => b.length - a.length);
+    const patterns = keys.map(key => ({
+        key,
+        formatPrefix: `%#${key}:`,
+        plainPattern: `%#${key}#%`
+    }));
+    while (true) {
+        if (seen.has(current)) {
+            console.warn('检测到循环替换，终止于:', current);
+            return current;
+        }
+        seen.add(current);
+        let modified = false;
+        let next = current;
+        for (const { key, formatPrefix, plainPattern } of patterns) {
+            const value = replacements[key];
+            let localModified = false;
+            let tempStr = next;
+            let guard = 32;
+            do {
+                const start = tempStr.indexOf(formatPrefix);
+                if (start === -1) break;
+                const end = tempStr.indexOf('#%', start + formatPrefix.length);
+                if (end === -1) break;
+                const format = tempStr.slice(start + formatPrefix.length, end);
+                const fullPattern = `${formatPrefix}${format}#%`;
+                const replacement = hasFunction(value, 'format') 
+                    ? value.format(format)
+                    : value;
+                const newStr = tempStr.replaceAll(fullPattern, stringify(replacement));
+                if (newStr !== tempStr) {
+                    tempStr = newStr;
+                    localModified = true;
+                    guard--;
+                } else {
+                    break;
+                }
+            } while (guard > 0);
+            const plainValue = value instanceof Date
+                ? value.format('YYYY-MM-DD')
+                : stringify(value);
+            const finalStr = tempStr.replaceAll(plainPattern, plainValue); 
+            if (finalStr !== tempStr) {
+                next = finalStr;
+                localModified = true;
             }
-        },
-            replaceString
-        )
-        count++
-        return Object.keys(replacements).map((key) => this.includes(`%#${key}`)).includes(true) && count < 128 ? replaceString.replaceVariable(replacements, count) : replaceString
-    } catch (error: unknown) {
-        GM_getValue('isDebug') && console.debug(`replace variable error: ${stringify(error)}`)
-        return replaceString
+            modified ||= localModified;
+        }
+        if (!modified) break;
+        current = next;
     }
-}
+    return current;
+};

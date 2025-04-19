@@ -1039,35 +1039,121 @@ function hijackHistoryReplaceState() {
         pageChange()
     }
 }
+async function main() {
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.153')) === VersionState.Low) {
+        GM_setValue('isFirstRun', true)
+        alert(i18nList[config.language].configurationIncompatible)
+    }
+    if (GM_getValue('isFirstRun', true)) {
+        firstRun()
+        return
+    }
+    if (!await check()) {
+        newToast(ToastType.Info, {
+            text: `%#configError#%`,
+            duration: 60 * 1000,
+        }).show()
+        editConfig.inject()
+        return
+    }
+    GM_setValue('version', GM_info.script.version)
+    hijackAddEventListener()
+    if (config.autoInjectCheckbox) hijackNodeAppendChild()
+    hijackNodeRemoveChild()
+    hijackElementRemove()
+    originalAddEventListener('mouseover', (event: Event) => {
+        mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
+    })
+    hijackHistoryPushState()
+    hijackHistoryReplaceState()
+    originalAddEventListener('mouseover', (event: Event) => {
+        mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
+    })
+    originalAddEventListener('keydown', (event: Event) => {
+        const keyboardEvent = event as KeyboardEvent;
+        if (keyboardEvent.code === 'Space' && !isNullOrUndefined(mouseTarget)) {
+            let element = findElement(mouseTarget, '.videoTeaser')
+            let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
+            button && (button as HTMLInputElement).click()
+            button && keyboardEvent.preventDefault()
+        }
+    })
+    new MutationObserver(async (m, o) => {
+        if (m.some(m => m.type === 'childList' && unsafeWindow.document.getElementById('app'))) {
+            pluginMenu.inject()
+            o.disconnect()
+        }
+    }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
+    originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
+        nodeType: 'p',
+        className: 'fixed-bottom-right',
+        childs: prune([
+            `%#appName#% ${GM_getValue('version')} `,
+            GM_getValue('isDebug') ? `%#isDebug#%` : ''
+        ])
+    }))
+    if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
+        let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
+            method: 'GET',
+            headers: await getAuth()
+        })).json() as Iwara.LocalUser
+        let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
+            method: 'GET',
+            headers: await getAuth()
+        })).json() as Iwara.Profile
+        if (user.user.id !== profile.user.id) {
+            if (!profile.user.following) {
+                unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/followers`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })
+            }
+            if (!profile.user.friend) {
+                unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/friends`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })
+            }
+        }
+    }
+    newToast(
+        ToastType.Info,
+        {
+            node: toastNode(i18nList[config.language].notice),
+            duration: 10000,
+            gravity: 'bottom',
+            position: 'center',
+            onClick() {
+                this.hide();
+            }
+        }
+    ).show()
+}
 var mouseTarget: Element | null = null
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
+    if (GM_getValue('isDebug')) {
+        debugger
+        //@ts-ignore
+        unsafeWindow.Toast = Toast
+        console.debug(stringify(GM_info))
+    }
     if (pageStatus.getActivePageIds().size === 1) {
         try {
-            let selectListStorage = GM_getValue('selectList', { timestamp: selectList.timestamp, selectList: selectList.toArray()})
-            if (selectListStorage.timestamp > selectList.timestamp){
-                selectListStorage.selectList.forEach(([key,value])=>{
-                    selectList.set(key,value)
+            let selectListStorage = GM_getValue('selectList', { timestamp: selectList.timestamp, selectList: selectList.toArray() })
+            if (selectListStorage.timestamp > selectList.timestamp) {
+                selectListStorage.selectList.forEach(([key, value]) => {
+                    selectList.set(key, value)
                 })
             }
         } catch (error) {
             GM_deleteValue('selectList')
         }
     }
-    GM_addStyle(mainCSS);
-    if (GM_getValue('isDebug')) {
-        console.debug(stringify(GM_info))
-        // @ts-ignore
-        unsafeWindow.unlimitedFetch = unlimitedFetch
-        // @ts-ignore
-        unsafeWindow.newToast = Toast
-        debugger
-    }
-
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.76')) === VersionState.Low) {
         GM_deleteValue('selectList')
     }
-
+    GM_addStyle(mainCSS);
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
@@ -1133,111 +1219,6 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 return resolve(response)
             })
             .catch((err) => reject(err))) as Promise<Response>
-    }
-
-    async function main() {
-        if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.153')) === VersionState.Low) {
-            GM_setValue('isFirstRun', true)
-            alert(i18nList[config.language].configurationIncompatible)
-        }
-
-        if (GM_getValue('isFirstRun', true)) {
-            firstRun()
-            return
-        }
-
-        if (!await check()) {
-            newToast(ToastType.Info, {
-                text: `%#configError#%`,
-                duration: 60 * 1000,
-            }).show()
-            editConfig.inject()
-            return
-        }
-
-        GM_setValue('version', GM_info.script.version)
-
-        hijackAddEventListener()
-
-        if (config.autoInjectCheckbox) hijackNodeAppendChild()
-
-        hijackNodeRemoveChild()
-
-        hijackElementRemove()
-
-        originalAddEventListener('mouseover', (event: Event) => {
-            mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
-        })
-
-        hijackHistoryPushState()
-
-        hijackHistoryReplaceState()
-
-        originalAddEventListener('mouseover', (event: Event) => {
-            mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
-        })
-
-        originalAddEventListener('keydown', (event: Event) => {
-            const keyboardEvent = event as KeyboardEvent;
-            if (keyboardEvent.code === 'Space' && !isNullOrUndefined(mouseTarget)) {
-                let element = findElement(mouseTarget, '.videoTeaser')
-                let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
-                button && (button as HTMLInputElement).click()
-                button && keyboardEvent.preventDefault()
-            }
-        })
-
-        new MutationObserver(async (m, o) => {
-            if (m.some(m => m.type === 'childList' && unsafeWindow.document.getElementById('app'))) {
-                pluginMenu.inject()
-                o.disconnect()
-            }
-        }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
-
-        originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
-            nodeType: 'p',
-            className: 'fixed-bottom-right',
-            childs: prune([
-                `%#appName#% ${GM_getValue('version')} `,
-                GM_getValue('isDebug') ? `%#isDebug#%` : ''
-            ])
-        }))
-        if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
-            let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
-                method: 'GET',
-                headers: await getAuth()
-            })).json() as Iwara.LocalUser
-            let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
-                method: 'GET',
-                headers: await getAuth()
-            })).json() as Iwara.Profile
-            if (user.user.id !== profile.user.id) {
-                if (!profile.user.following) {
-                    unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/followers`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    })
-                }
-                if (!profile.user.friend) {
-                    unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/friends`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    })
-                }
-            }
-        }
-        newToast(
-            ToastType.Info,
-            {
-                node: toastNode(i18nList[config.language].notice),
-                duration: 10000,
-                gravity: 'bottom',
-                position: 'center',
-                onClick() {
-                    this.hide();
-                }
-            }
-        ).show()
     }
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 }
