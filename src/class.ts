@@ -409,11 +409,11 @@ export class Version implements IVersion {
  * @template T 值类型
  */
 export class Dictionary<T> extends Map<string, T> {
-    constructor(data: Array<[key: string, value: T]> = []) {
+    constructor(data: Array<[string, T]> = []) {
         super()
-        data.forEach(i => this.set(i[0], i[1]))
+        data.forEach(([key, value]) => this.set(key, value))
     }
-    public toArray(): Array<[key: string, value: T]> {
+    public toArray(): Array<[string, T]> {
         return Array.from(this)
     }
     public allKeys(): Array<string> {
@@ -466,18 +466,27 @@ export class SyncDictionary<T> extends Dictionary<T> {
         return existed;
     }
     /**
+     * 重写：清空并广播，同时记录时间戳
+     */
+    public override clear(): void {
+        this.timestamp = Date.now();
+        super.clear();
+        this.bc.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+        this.onSync?.();
+    }
+    /**
      * 处理同步消息
      */
     private handleMessage(msg: Message<T>) {
         if (msg.id === this.id) return;
-        if (msg.type === 'sync'){
+        if (msg.type === 'sync') {
             this.bc.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
             return;
         }
         if (msg.timestamp < this.timestamp) return;
-        this.timestamp = Date.now();
         switch (msg.type) {
             case 'state': {
+                super.clear();
                 for (let index = 0; index < msg.state.length; index++) {
                     const [key, value] = msg.state[index];
                     super.set(key, value);
@@ -497,6 +506,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
                 break;
             }
         }
+        this.timestamp = Date.now();
     }
 }
 /**
@@ -708,159 +718,39 @@ export class VideoInfo {
 
 
 
-export class PageLifeManager {
-    private readonly pageId: string;
-    private readonly activePages = new Map<string, PageStatus>();
+export class MultiPage {
     private readonly channel: BroadcastChannel;
+    public readonly pageId: string;
+    public onPageJoin?: (pageId: string) => void;;
+    public onPageLeave?: (pageId: string) => void;;
+    public onLastPage?: () => void;;
 
-    private heartbeatIntervalId?: number;
-    private checkIntervalId?: number;
-    private readonly beforeUnloadHandler: () => void;
+    private beforeUnloadHandler;
 
-    constructor(options: PageLifeManagerOptions = {}) {
+    constructor() {
         this.pageId = UUID();
         this.channel = new BroadcastChannel('page-status-channel');
-
-        // 配置参数处理
-        this.heartbeatInterval = options.heartbeatInterval ?? 2000;
-        this.timeout = options.timeout ?? 5000;
-
-        // 绑定事件处理器以便后续移除
-        this.beforeUnloadHandler = () => this.cleanup();
-        this.init();
-    }
-
-    private heartbeatInterval: number;
-    private timeout: number;
-
-    public onPageJoin?: PageEventCallback;
-    public onPageLeave?: PageEventCallback;
-
-    private init() {
-        this.setupMessageListener();
-        this.startHeartbeat();
-        this.startTimeoutChecker();
-        this.setupUnloadHandler();
-
-        console.log(`[PageLifeManager] 页面 ${this.pageId} 启动`);
-    }
-
-    private setupMessageListener() {
-        const handler = (event: MessageEvent<BroadcastMessage>) => this.handleMessage(event.data);
-        this.channel.addEventListener('message', handler);
-    }
-
-    private startHeartbeat() {
-        this.sendHeartbeat(); // 立即发送初始心跳
-        this.heartbeatIntervalId = window.setInterval(
-            () => this.sendHeartbeat(),
-            this.heartbeatInterval
-        );
-    }
-
-    private startTimeoutChecker() {
-        this.checkIntervalId = window.setInterval(
-            () => this.checkTimeouts(),
-            Math.min(this.heartbeatInterval, this.timeout / 2)
-        );
-    }
-
-    private setupUnloadHandler() {
-        window.addEventListener('beforeunload', this.beforeUnloadHandler);
-    }
-
-    private sendHeartbeat() {
-        const message: BroadcastMessage = {
-            type: 'heartbeat',
-            pageId: this.pageId,
-            timestamp: Date.now(),
+        this.channel.onmessage = (event: MessageEvent<PageEvent>) => this.handleMessage(event.data)
+        this.beforeUnloadHandler = () => {
+            this.channel.postMessage({ type: 'leave', id: this.pageId });
+            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
         };
-        this.channel.postMessage(message);
-        this.updatePageStatus(message); // 更新自身状态
+        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+        GM_saveTab({ id: this.pageId });
+        this.channel.postMessage({ type: 'join', id: this.pageId });
     }
-
-    private sendGoodbye() {
-        try {
-            const message: BroadcastMessage = { type: 'goodbye', pageId: this.pageId };
-            this.channel.postMessage(message);
-        } catch (e) {
-            console.error('[PageLifeManager] 发送关闭消息失败:', e);
-        }
-    }
-
-    private handleMessage(message: BroadcastMessage) {
+    private handleMessage(message: PageEvent) {
         switch (message.type) {
-            case 'heartbeat':
-                this.handleHeartbeat(message);
+            case 'join':
+                this.onPageJoin?.(message.id);
                 break;
-            case 'goodbye':
-                this.handleGoodbye(message);
+            case 'leave':
+                this.onPageLeave?.(message.id);
+                GM_getTabs((tabs) => {
+                    if (Object.keys(tabs).length > 1) return;
+                    this.onLastPage?.();
+                });
                 break;
         }
-    }
-
-    private handleHeartbeat(message: Extract<BroadcastMessage, { type: 'heartbeat' }>) {
-        const isNewPage = !this.activePages.has(message.pageId);
-
-        this.activePages.set(message.pageId, {
-            pageId: message.pageId,
-            lastHeartbeat: message.timestamp,
-        });
-
-        if (isNewPage && message.pageId !== this.pageId) {
-            console.log(`[PageLifeManager] 发现新页面: ${message.pageId}`);
-            this.onPageJoin?.(message.pageId);
-        }
-    }
-
-    private handleGoodbye(message: Extract<BroadcastMessage, { type: 'goodbye' }>) {
-        if (this.activePages.delete(message.pageId)) {
-            console.log(`[PageLifeManager] 页面离开: ${message.pageId}`);
-            this.onPageLeave?.(message.pageId);
-        }
-    }
-
-    private checkTimeouts() {
-        const currentTime = Date.now();
-        const timeoutThreshold = currentTime - this.timeout;
-
-        Array.from(this.activePages.entries()).forEach(([pageId, status]) => {
-            if (status.lastHeartbeat < timeoutThreshold) {
-                this.activePages.delete(pageId);
-                console.log(`[PageLifeManager] 页面超时移除: ${pageId}`);
-                this.onPageLeave?.(pageId);
-            }
-        });
-    }
-
-    private updatePageStatus(message: { pageId: string; timestamp: number }) {
-        this.activePages.set(message.pageId, {
-            pageId: message.pageId,
-            lastHeartbeat: message.timestamp,
-        });
-    }
-
-    public getActivePageIds(): Set<string> {
-        return new Set(this.activePages.keys());
-    }
-
-    public getPageId(): string {
-        return this.pageId;
-    }
-
-    public destroy() {
-        this.cleanup();
-        this.channel.close();
-        window.removeEventListener('beforeunload', this.beforeUnloadHandler);
-    }
-
-    private cleanup() {
-        this.sendGoodbye();
-        this.clearIntervals();
-    }
-
-    private clearIntervals() {
-        if (this.heartbeatIntervalId) clearInterval(this.heartbeatIntervalId);
-        if (this.checkIntervalId) clearInterval(this.checkIntervalId);
     }
 }

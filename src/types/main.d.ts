@@ -13,32 +13,42 @@ declare interface I18N {
     [key: string]: RenderCode<any> | string | (RenderCode<any> | string)[]
 }
 
-declare type PageStatus = {
-    pageId: string;
-    lastHeartbeat: number;
-};
-
-declare type PageEventCallback = (pageId: string) => void;
-
-declare type BroadcastMessage =
-    | { type: 'heartbeat'; pageId: string; timestamp: number }
-    | { type: 'goodbye'; pageId: string };
-
-    declare interface PageLifeManagerOptions {
-    heartbeatInterval?: number;
-    timeout?: number;
-    silent?: boolean;
+declare interface PageEvent {
+    type: 'join' | 'leave'
+    id: string
 }
 
 /** 内部使用的消息条目类型 */
-declare interface MessageEntry<T> { value: T; timestamp: number }
+declare type MessageType = 'sync' | 'state' | 'set' | 'delete'
 
-declare type Message<T> =
-  | { type: 'sync';  id: string, timestamp: number }
-  | { type: 'state'; id: string, timestamp: number; state: Array<[key: string, value: T]>; }
-  | { type: 'set';   id: string, timestamp: number; key: string; value: T; }
-  | { type: 'delete';id: string, timestamp: number; key: string; };
+declare interface MessageBase {
+    type: MessageType
+    id: string
+    timestamp: number
+}
 
+declare type Message<T> = 
+    | SyncMessage
+    | StateMessage<T>
+    | SetMessage<T>
+    | DeleteMessage
+
+interface SyncMessage extends MessageBase {
+    type: 'sync'
+}
+interface StateMessage<T> extends MessageBase {
+    type: 'state'
+    state: Array<[string, T]>
+}
+interface SetMessage<T> extends MessageBase {
+    type: 'set'
+    key: string
+    value: T
+}
+interface DeleteMessage extends MessageBase {
+    type: 'delete'
+    key: string
+}
 /**
  * 渲染代码接口，用于描述DOM元素结构
  * @template T HTML元素标签名
@@ -80,13 +90,16 @@ declare type InputType =
  * 递归修剪类型，移除所有null/undefined属性
  * @template T 原始类型
  */
-declare type Pruned<T> = T extends null | undefined
-    ? never
-    : T extends Array<infer U>
-    ? Array<Pruned<U>>
-    : T extends object
-    ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
-    : T;
+declare type Pruned<T> =
+T extends null | undefined
+  ? never
+: T extends readonly any[]
+  ? number extends T['length']
+    ? Array<Pruned<T[number]>>
+    : { [K in keyof T]: Pruned<T[K]> }
+: T extends object
+  ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
+: T;
 declare type ThrottleOptions = {
     /** 
      * 是否在节流开始时立即执行

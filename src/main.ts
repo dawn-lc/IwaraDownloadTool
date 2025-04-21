@@ -4,7 +4,7 @@ import { originalAddEventListener, originalFetch, originalNodeAppendChild, origi
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, MessageType, VersionState, isPageType } from "./enum";
 import { config, Config } from "./config";
-import { Dictionary, PageLifeManager, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, MultiPage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
@@ -459,42 +459,42 @@ class menu {
         }
     }
 }
-
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
-export var pageStatus = new PageLifeManager()
+export var pageStatus = new MultiPage()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 export function getSelectButton(id: string): HTMLInputElement | undefined {
     return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
 }
+function updateButtonState(videoID: string) {
+    const selectButton = getSelectButton(videoID)
+    if (selectButton) selectButton.checked = selectList.has(videoID)
+}
 function saveSelectList(): void {
-    if (pageStatus.getActivePageIds().size <= 1) {
+    GM_getTabs((tabs)=>{
+        if (Object.keys(tabs).length > 1) return;
         GM_setValue('selectList', {
             timestamp: selectList.timestamp,
             selectList: selectList.toArray()
         });
-    }
+    });
 }
 export var selectList = new SyncDictionary<PieceInfo>('selectList');
 pageStatus.onPageLeave = () => {
     saveSelectList()
 }
-const updateButtonState = (videoID: string) => {
-    const selectButton = getSelectButton(videoID)
-    if (selectButton) selectButton.checked = selectList.has(videoID)
-}
 selectList.onSet = (key) => {
     updateButtonState(key);
     saveSelectList();
 };
-
 selectList.onDel = (key) => {
     updateButtonState(key);
     saveSelectList();
 };
-
 selectList.onSync = () => {
-    selectList.allKeys().forEach(id => updateButtonState(id));
+    pageSelectButtons.forEach((value,key)=>{
+        updateButtonState(key);
+    })
     saveSelectList();
 };
 
@@ -848,14 +848,13 @@ async function addDownloadTask() {
                 events: {
                     click: (e: Event) => {
                         if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
+                            let list: Array<[string, PieceInfo]> = []
                             try {
-                                let list = JSON.parse(textArea.value) as Array<[key: string, value: PieceInfo]>
-                                analyzeDownloadTask(new Dictionary<PieceInfo>(list))
+                                list = prune(JSON.parse(textArea.value))
                             } catch (error) {
-                                let IDList = new Dictionary<PieceInfo>()
-                                textArea.value.split('|').map(ID => IDList.set(ID, {}))
-                                analyzeDownloadTask(IDList)
+                                list = prune(textArea.value.split('|').map(ID => [ID, {}]))
                             }
+                            if (list.any()) analyzeDownloadTask(new Dictionary<PieceInfo>(list))
                         }
                         body.remove()
                     }
@@ -866,93 +865,95 @@ async function addDownloadTask() {
     })
     unsafeWindow.document.body.appendChild(body)
 }
+async function downloadTaskUnique(taskList: Dictionary<PieceInfo>) {
+    let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
+            'aria2.tellStopped',
+            [
+                0,
+                4096,
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'errorCode',
+                    'bittorrent'
+                ]
+            ]
+        ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+    );
+    let active: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
+            'aria2.tellActive',
+            [
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'downloadSpeed',
+                    'bittorrent'
+                ]
+            ]
+        ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+    );
+    let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped.filter(
+        (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
+    ).unique('id');
+    let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
+    for (let key of taskList.allKeys().intersect(startedAndCompleted)) {
+        taskList.delete(key)
+        updateButtonState(key)
+    }
+}
 async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
     let size = list.size
     let node = renderNode({
         nodeType: 'p',
-        childs: `%#parsingProgress#%[${list.size}/${size}]`
+        childs: `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
     })
-    let start = newToast(ToastType.Info, {
+    let parsingProgressToast = newToast(ToastType.Info, {
         node: node,
         duration: -1
     })
-    start.show()
+    function updateParsingProgress() {
+        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
+    }
+    parsingProgressToast.show()
     if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
-        let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
-            (await aria2API(
-                'aria2.tellStopped',
-                [
-                    0,
-                    4096,
-                    [
-                        'gid',
-                        'status',
-                        'files',
-                        'errorCode',
-                        'bittorrent'
-                    ]
-                ]
-            ))
-                .result
-                .filter(
-                    (task: Aria2.Status) =>
-                        isNullOrUndefined(task.bittorrent)
-                )
-                .map(
-                    (task: Aria2.Status) => {
-                        let ID = aria2TaskExtractVideoID(task)
-                        if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
-                            return {
-                                id: ID,
-                                data: task
-                            }
-                        }
-                    }
-                )
-        );
-
-        let active: Array<{ id: string, data: Aria2.Status }> = prune(
-            (await aria2API(
-                'aria2.tellActive',
-                [
-                    [
-                        'gid',
-                        'status',
-                        'files',
-                        'downloadSpeed',
-                        'bittorrent'
-                    ]
-                ]
-            ))
-                .result
-                .filter(
-                    (task: Aria2.Status) =>
-                        isNullOrUndefined(task.bittorrent)
-                )
-                .map(
-                    (task: Aria2.Status) => {
-                        let ID = aria2TaskExtractVideoID(task)
-                        if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
-                            return {
-                                id: ID,
-                                data: task
-                            }
-                        }
-                    }
-                )
-        );
-        let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
-            .filter(
-                (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
-            )
-            .unique('id');
-        let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
-        for (let key of list.allKeys().intersect(startedAndCompleted)) {
-            let button = getSelectButton(key)
-            if (!isNullOrUndefined(button)) button.checked = false
-            list.delete(key)
-            node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
-        }
+        downloadTaskUnique(list)
+        updateParsingProgress()
     }
     let infoList = (await Promise.all(list.allKeys().map(async id => {
         let caches = db.videos.where('ID').equals(id)
@@ -975,31 +976,26 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
         }
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
-
     for (let videoInfo of infoList) {
-        let button = getSelectButton(videoInfo.ID)
         let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID)
         !config.enableUnsafeMode && await delay(3000)
         video.State && await pushDownloadTask(video)
-        if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
+        updateButtonState(videoInfo.ID)
+        updateParsingProgress()
     }
-
-    start.hide()
-    if (size != 1) {
-        newToast(
-            ToastType.Info,
-            {
-                text: `%#allCompleted#%`,
-                duration: -1,
-                close: true,
-                onClick() {
-                    this.hide()
-                }
+    parsingProgressToast.hide()
+    newToast(
+        ToastType.Info,
+        {
+            text: `%#allCompleted#%`,
+            duration: -1,
+            close: true,
+            onClick() {
+                this.hide()
             }
-        ).show()
-    }
+        }
+    ).show()
 }
 function hijackAddEventListener() {
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
@@ -1138,7 +1134,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
         unsafeWindow.Toast = Toast
         console.debug(stringify(GM_info))
     }
-    if (pageStatus.getActivePageIds().size === 1) {
+    GM_getTabs((tabs)=>{
+        if (Object.keys(tabs).length != 1) return;
         try {
             let selectListStorage = GM_getValue('selectList', { timestamp: selectList.timestamp, selectList: selectList.toArray() })
             if (selectListStorage.timestamp > selectList.timestamp) {
@@ -1147,10 +1144,12 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 })
             }
         } catch (error) {
+            selectList.clear()
             GM_deleteValue('selectList')
         }
-    }
+    });
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.76')) === VersionState.Low) {
+        selectList.clear()
         GM_deleteValue('selectList')
     }
     GM_addStyle(mainCSS);

@@ -25,7 +25,7 @@ declare global {
           * 判断数组是否包含至少一个非空值
           * @returns {boolean} 如果数组中至少有一个非 null 或 undefined 元素，返回 true，否则返回 false
           */
-        any(): boolean;
+        any(): this is [T, ...T[]];
         //prune(): Array<T>;
         /**
          * @name unique
