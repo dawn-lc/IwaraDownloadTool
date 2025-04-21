@@ -515,7 +515,7 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
     }));
     while (true) {
         if (seen.has(current)) {
-            console.warn('检测到循环替换，终止于:', current);
+            console.warn('检测到循环替换，终止于:', current.slice(0, 50));
             return current;
         }
         seen.add(current);
@@ -523,37 +523,35 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
         let next = current;
         for (const { key, formatPrefix, plainPattern } of patterns) {
             const value = replacements[key];
-            let localModified = false;
             let tempStr = next;
             let guard = 32;
-            do {
+            while (guard-- > 0) {
                 const start = tempStr.indexOf(formatPrefix);
                 if (start === -1) break;
                 const end = tempStr.indexOf('#%', start + formatPrefix.length);
                 if (end === -1) break;
+
                 const format = tempStr.slice(start + formatPrefix.length, end);
                 const fullPattern = `${formatPrefix}${format}#%`;
-                const replacement = hasFunction(value, 'format') 
-                    ? value.format(format)
-                    : value;
-                const newStr = tempStr.replaceAll(fullPattern, stringify(replacement));
-                if (newStr !== tempStr) {
-                    tempStr = newStr;
-                    localModified = true;
-                    guard--;
-                } else {
-                    break;
-                }
-            } while (guard > 0);
+                const rawReplacement = hasFunction(value, 'format') ? value.format(format) : value;
+                const replaced = stringify(rawReplacement);
+                const newStr = tempStr.replaceAll(fullPattern, replaced);
+
+                if (newStr === tempStr) break;
+                tempStr = newStr;
+                modified = true;
+            }
+            if (tempStr !== next) {
+                next = tempStr;
+            }
             const plainValue = value instanceof Date
                 ? value.format('YYYY-MM-DD')
                 : stringify(value);
-            const finalStr = tempStr.replaceAll(plainPattern, plainValue); 
-            if (finalStr !== tempStr) {
+            const finalStr = next.replaceAll(plainPattern, plainValue);
+            if (finalStr !== next) {
                 next = finalStr;
-                localModified = true;
+                modified = true;
             }
-            modified ||= localModified;
         }
         if (!modified) break;
         current = next;
