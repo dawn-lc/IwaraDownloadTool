@@ -23,12 +23,13 @@ function testReplaceVariable() {
   console.log('✓ 日期格式化测试通过');
 
   // 测试递归替换
-  const template3 = 'First: %#first#%, Second: %#second#%';
+  const template3 = 'First: %#first#%, Second: %#second#%, Last: %#last#%';
   const result3 = template3.replaceVariable({
     first: '1st',
-    second: '2nd'
+    second: '2nd',
+    last: 'first is %#first#%'
   });
-  assert.strictEqual(result3, 'First: 1st, Second: 2nd');
+  assert.strictEqual(result3, 'First: 1st, Second: 2nd, Last: first is 1st');
   console.log('✓ 递归替换测试通过');
 
   // 测试循环引用检测
