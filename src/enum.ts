@@ -4,7 +4,6 @@ export enum DownloadType {
     Browser,
     Others
 }
-
 export enum PageType {
     Video = 'video',
     Image = 'image',
@@ -23,14 +22,12 @@ export enum PageType {
     Account = 'account'
 }
 export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
-
 export enum ToastType {
     Log,
     Info,
     Warn,
     Error
 }
-
 export enum MessageType {
     Close,
     Request,
@@ -38,7 +35,6 @@ export enum MessageType {
     Set,
     Del
 }
-
 export enum VersionState {
     Low,
     Equal,

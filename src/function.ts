@@ -1,14 +1,20 @@
 import "./env";
-import { isConvertibleToNumber, isNullOrUndefined, stringify, UUID } from "./env"
-import { i18n } from "./i18n"
+import { isConvertibleToNumber, isNullOrUndefined, prune, stringify, UUID } from "./env"
+import { i18nList } from "./i18n"
+import { ToastType, DownloadType } from "./enum"
 import { config } from "./config"
 import { db } from "./db"
-import { DownloadType, ToastType } from "./type"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
-import { Toastify } from "./toastify";
+import { Toast, ToastOptions } from "./toastify";
+import { Aria2 } from "./types/aria2";
 
+/**
+ * 刷新Iwara.tv的访问令牌
+ * @async
+ * @returns {Promise<string>} 返回新的访问令牌或回退到配置中的授权令牌
+ */
 export async function refreshToken(): Promise<string> {
     const { authorization } = config
     try {
@@ -28,7 +34,18 @@ export async function refreshToken(): Promise<string> {
     }
     return authorization
 }
-export async function getAuth(url?: string) {
+/**
+ * 获取请求认证头信息
+ * @async
+ * @param {string} [url] - 可选URL参数，用于生成X-Version头
+ * @returns 包含Cookie和Authorization的请求头对象
+ */
+export async function getAuth(url?: string): Promise<{
+    Cooike: string;
+    Authorization: string;
+} & {
+    'X-Version': string;
+}>{
     return Object.assign(
         {
             'Cooike': unsafeWindow.document.cookie,
@@ -37,6 +54,11 @@ export async function getAuth(url?: string) {
         !isNullOrUndefined(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : { 'X-Version': '' }
     )
 }
+/**
+ * 检查评论中是否包含下载链接
+ * @param {string} comment - 要检查的评论内容
+ * @returns {boolean} 如果包含下载链接返回true，否则返回false
+ */
 export function checkIsHaveDownloadLink(comment: string): boolean {
     if (!config.checkDownloadLink || isNullOrUndefined(comment) || comment.isEmpty()) {
         return false
@@ -69,6 +91,12 @@ export function checkIsHaveDownloadLink(comment: string): boolean {
         'gigafile.nu'
     ].filter(i => comment.toLowerCase().includes(i)).any()
 }
+/**
+ * 创建Toast通知的DOM节点
+ * @param {RenderCode<any>["childs"]} body - 通知主体内容
+ * @param {string} [title] - 可选的通知标题
+ * @returns {Element|Node} 返回创建的DOM节点
+ */
 export function toastNode(body: RenderCode<any>["childs"], title?: string): Element | Node {
     return renderNode({
         nodeType: 'div',
@@ -87,6 +115,11 @@ export function toastNode(body: RenderCode<any>["childs"], title?: string): Elem
         ]
     })
 }
+/**
+ * 从DOM节点中提取文本内容
+ * @param {Node|Element} node - 要提取文本的DOM节点
+ * @returns {string} 返回提取的文本内容
+ */
 export function getTextNode(node: Node | Element): string {
     return node.nodeType === Node.TEXT_NODE
         ? node.textContent || ''
@@ -96,7 +129,13 @@ export function getTextNode(node: Node | Element): string {
                 .join('')
             : ''
 }
-export function newToast(type: ToastType, params: Toastify.Options | undefined) {
+/**
+ * 创建新的Toast通知
+ * @param {ToastType} type - Toast类型(Info/Warn/Error/Log)
+ * @param {ToastOptions|undefined} params - Toast配置选项
+ * @returns {Toast} 返回创建的Toast实例
+ */
+export function newToast(type: ToastType, params: ToastOptions | undefined): Toast {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
@@ -138,12 +177,17 @@ export function newToast(type: ToastType, params: Toastify.Options | undefined) 
             break;
     }
     if (!isNullOrUndefined(params.text)) {
-        params.text = params.text.replaceVariable(i18n[config.language]).toString()
+        params.text = params.text.replaceVariable(i18nList[config.language]).toString()
     }
-    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18n[config.language]))
-    return new Toastify.Toast(params)
+    logFunc((!isNullOrUndefined(params.text) ? params.text : !isNullOrUndefined(params.node) ? getTextNode(params.node) : 'undefined').replaceVariable(i18nList[config.language]))
+    return new Toast(params)
 }
 
+/**
+ * 根据视频信息生成下载路径
+ * @param {VideoInfo} videoInfo - 视频信息对象
+ * @returns {Path} 返回生成的路径对象
+ */
 export function getDownloadPath(videoInfo: VideoInfo): Path {
     return analyzeLocalPath(
         config.downloadPath.trim().replaceVariable({
@@ -158,6 +202,12 @@ export function getDownloadPath(videoInfo: VideoInfo): Path {
     )
 }
 
+/**
+ * 分析本地路径并返回Path对象
+ * @param {string} path - 要分析的路径字符串
+ * @returns {Path} 返回Path对象
+ * @throws {Error} 如果路径无效会抛出错误并显示Toast通知
+ */
 export function analyzeLocalPath(path: string): Path {
     try {
         return new Path(path)
@@ -180,6 +230,11 @@ export function analyzeLocalPath(path: string): Path {
         throw new Error(`%#downloadPathError#% ["${path}"]`)
     }
 }
+/**
+ * 检查浏览器环境是否支持下载
+ * @async
+ * @returns {Promise<boolean>} 如果环境检查通过返回true，否则返回false
+ */
 export async function EnvCheck(): Promise<boolean> {
     try {
         if (GM_info.scriptHandler !== 'ScriptCat' && GM_info.downloadMode !== 'browser') {
@@ -206,6 +261,11 @@ export async function EnvCheck(): Promise<boolean> {
     }
     return true
 }
+/**
+ * 检查本地下载路径是否有效
+ * @async
+ * @returns {Promise<boolean>} 如果路径有效返回true，否则返回false
+ */
 export async function localPathCheck(): Promise<boolean> {
     try {
         let pathTest = analyzeLocalPath(config.downloadPath)
@@ -232,6 +292,11 @@ export async function localPathCheck(): Promise<boolean> {
     }
     return true
 }
+/**
+ * 检查Aria2 RPC连接是否正常
+ * @async
+ * @returns {Promise<boolean>} 如果连接正常返回true，否则返回false
+ */
 export async function aria2Check(): Promise<boolean> {
     try {
         let res = await (await unlimitedFetch(config.aria2Path, {
@@ -270,6 +335,11 @@ export async function aria2Check(): Promise<boolean> {
     }
     return true
 }
+/**
+ * 检查IwaraDownloader RPC连接是否正常
+ * @async
+ * @returns {Promise<boolean>} 如果连接正常返回true，否则返回false
+ */
 export async function iwaraDownloaderCheck(): Promise<boolean> {
     try {
         let res = await (await unlimitedFetch(config.iwaraDownloaderPath, {
@@ -278,11 +348,11 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify({
+            body: JSON.stringify(prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State',
                 'token': config.iwaraDownloaderToken
-            }.prune())
+            }))
         })).json()
 
         if (res.code !== 0) {
@@ -309,6 +379,10 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
     }
     return true
 }
+/**
+ * 通过Aria2下载视频
+ * @param {VideoInfo} videoInfo - 视频信息对象
+ */
 export function aria2Download(videoInfo: VideoInfo) {
     (async function (id: string, author: string, title: string, uploadTime: Date, info: string, tag: Array<{
         id: string
@@ -329,7 +403,7 @@ export function aria2Download(videoInfo: VideoInfo) {
         downloadUrl.searchParams.set('download', localPath.fullName)
         let params = [
             [downloadUrl.href],
-            {
+            prune({
                 'all-proxy': config.downloadProxy,
                 'all-proxy-passwd': !config.downloadProxy.isEmpty() ? config.downloadProxyPassword : undefined,
                 'all-proxy-user': !config.downloadProxy.isEmpty() ? config.downloadProxyUsername: undefined,
@@ -339,7 +413,7 @@ export function aria2Download(videoInfo: VideoInfo) {
                 'header': [
                     'Cookie:' + unsafeWindow.document.cookie
                 ]
-            }.prune()
+            })
         ]
         let res = await aria2API('aria2.addUri', params)
         console.log(`Aria2 ${title} ${JSON.stringify(res)}`)
@@ -351,6 +425,10 @@ export function aria2Download(videoInfo: VideoInfo) {
         ).show()
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
+/**
+ * 通过IwaraDownloader下载视频
+ * @param {VideoInfo} videoInfo - 视频信息对象
+ */
 export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
     (async function (videoInfo: VideoInfo) {
         let r = await (await unlimitedFetch(config.iwaraDownloaderPath, {
@@ -359,7 +437,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                 'accept': 'application/json',
                 'content-type': 'application/json'
             },
-            body: JSON.stringify({
+            body: JSON.stringify(prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
                 'token': config.iwaraDownloaderToken,
@@ -391,7 +469,7 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
                         'cookies': unsafeWindow.document.cookie
                     }
                 }
-            }.prune())
+            }))
         })).json()
         if (r.code === 0) {
             console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
@@ -419,6 +497,10 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
         }
     }(videoInfo))
 }
+/**
+ * 通过浏览器直接下载视频
+ * @param {VideoInfo} videoInfo - 视频信息对象
+ */
 export function othersDownload(videoInfo: VideoInfo) {
     (async function (DownloadUrl: URL) {
         DownloadUrl.searchParams.set('download',getDownloadPath(videoInfo).fullName)
@@ -426,6 +508,11 @@ export function othersDownload(videoInfo: VideoInfo) {
     }(videoInfo.DownloadUrl.toURL()))
 }
 
+/**
+ * 解析浏览器下载错误信息
+ * @param {Tampermonkey.DownloadErrorResponse|Error} error - 错误对象
+ * @returns {string} 返回解析后的错误信息
+ */
 export function browserDownloadErrorParse(error: Tampermonkey.DownloadErrorResponse | Error): string{
     let errorInfo = stringify(error)
     if (!(error instanceof Error)) {
@@ -439,6 +526,10 @@ export function browserDownloadErrorParse(error: Tampermonkey.DownloadErrorRespo
     }
     return errorInfo
 }
+/**
+ * 通过浏览器下载视频
+ * @param {VideoInfo} videoInfo - 视频信息对象
+ */
 export function browserDownload(videoInfo: VideoInfo) {
     (async function (ID: string, Author: string, Title: string, UploadTime: Date, Info: string, Tag: Array<{
         id: string
@@ -472,6 +563,13 @@ export function browserDownload(videoInfo: VideoInfo) {
         })
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
 }
+/**
+ * 调用Aria2 RPC API
+ * @async
+ * @param {string} method - API方法名
+ * @param {any} params - API参数
+ * @returns {Promise<Aria2.Result>} 返回API调用结果
+ */
 export async function aria2API(method: string, params: any): Promise<Aria2.Result> {
     return await (await unlimitedFetch(config.aria2Path, {
         headers: {
@@ -487,6 +585,11 @@ export async function aria2API(method: string, params: any): Promise<Aria2.Resul
         method: 'POST'
     })).json()
 }
+/**
+ * 从Aria2任务中提取视频ID
+ * @param {Aria2.Status} task - Aria2任务状态
+ * @returns {string|undefined} 返回提取的视频ID，如果提取失败返回undefined
+ */
 export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined {
     try {
         if (isNullOrUndefined(task.files) || task.files.length !== 1) return
@@ -498,6 +601,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         let videoID: string | undefined | null
         if (downloadUrl.searchParams.has('videoid')) videoID = downloadUrl.searchParams.get('videoid')
         if (!isNullOrUndefined(videoID) && !videoID.isEmpty()) return videoID
+        if (isNullOrUndefined(file.path) || file.path.isEmpty()) return
         let path = analyzeLocalPath(file.path)
         if (isNullOrUndefined(path.fullName) || path.fullName.isEmpty()) return 
         videoID = path.fullName.toLowerCase().among('[', '].mp4', false, true)
@@ -508,9 +612,13 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         return
     }
 }
+/**
+ * 检查并重启异常的Aria2下载任务
+ * @async
+ */
 export async function aria2TaskCheckAndRestart() {
-    let stoped: Array<{ id: string, data: Aria2.Status }> = (
-        await aria2API(
+    let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
             'aria2.tellStopped',
             [
                 0,
@@ -526,8 +634,7 @@ export async function aria2TaskCheckAndRestart() {
         ))
         .result
         .filter(
-            (task: Aria2.Status) =>
-                isNullOrUndefined(task.bittorrent)
+            (task: Aria2.Status) => isNullOrUndefined(task.bittorrent)
         )
         .map(
             (task: Aria2.Status) => {
@@ -540,10 +647,9 @@ export async function aria2TaskCheckAndRestart() {
                 }
             }
         )
-        .prune();
-
-    let active: Array<{ id: string, data: Aria2.Status }> = (
-        await aria2API(
+    );
+    let active: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
             'aria2.tellActive',
             [
                 [
@@ -571,7 +677,7 @@ export async function aria2TaskCheckAndRestart() {
                 }
             }
         )
-        .prune();
+    );
     let downloadNormalTasks: Array<{ id: string, data: Aria2.Status }> = active
         .filter(
             (task: { id: string, data: Aria2.Status }) => isConvertibleToNumber(task.data.downloadSpeed) && Number(task.data.downloadSpeed) >= 512
@@ -622,10 +728,20 @@ export async function aria2TaskCheckAndRestart() {
     )
     toast.show()
 }
-export function getPlayload(authorization: string) {
+/**
+ * 解析JWT令牌的payload部分
+ * @param {string} authorization - 授权令牌字符串
+ * @returns {Object} 返回解析后的payload对象
+ */
+export function getPlayload(authorization: string): {[key:string]:any} {
     return JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(authorization.split(' ').pop()!.split('.')[1]))))
 }
-export async function check() {
+/**
+ * 根据配置的下载类型执行相应的环境检查
+ * @async
+ * @returns {Promise<boolean>} 如果检查通过返回true，否则返回false
+ */
+export async function check(): Promise<boolean> {
     if (await localPathCheck()) {
         switch (config.downloadType) {
             case DownloadType.Aria2:
@@ -642,6 +758,13 @@ export async function check() {
         return false
     }
 }
+/**
+ * 根据URL生成X-Version头值
+ * @async
+ * @private
+ * @param {string} urlString - 请求URL
+ * @returns {Promise<string>} 返回生成的X-Version值
+ */
 async function getXVersion(urlString: string): Promise<string> {
     let url = urlString.toURL()
     const data = new TextEncoder().encode([url.pathname.split("/").pop(),url.searchParams.get('expires'),'5nFp9kmbNnHdAFhaqMvt'].join('_'))

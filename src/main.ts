@@ -1,15 +1,17 @@
 import "./env";
-import { delay, isNullOrUndefined, isStringTupleArray, stringify } from "./env";
+import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify, UUID } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
-import { i18n } from "./i18n";
-import { DownloadType, isPageType, MessageType, PageType, ToastType, VersionState } from "./type";
+import { i18nList } from "./i18n";
+import { DownloadType, PageType, ToastType, MessageType, VersionState, isPageType } from "./enum";
 import { config, Config } from "./config";
-import { Dictionary, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, MultiPage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-
+import { Iwara } from "./types/iwara";
+import { Aria2 } from "./types/aria2";
+import mainCSS from "./css/main.css";
 
 class configEdit {
     source!: configEdit;
@@ -26,7 +28,7 @@ class configEdit {
             nodeType: 'button',
             childs: '%#save#%',
             attributes: {
-                title: i18n[config.language].save
+                title: i18nList[config.language].save
             },
             events: {
                 click: async () => {
@@ -42,7 +44,7 @@ class configEdit {
             nodeType: 'button',
             childs: '%#reset#%',
             attributes: {
-                title: i18n[config.language].reset
+                title: i18nList[config.language].reset
             },
             events: {
                 click: () => {
@@ -92,7 +94,7 @@ class configEdit {
                         this.switchButton('autoFollow'),
                         this.switchButton('autoLike'),
                         this.switchButton('autoInjectCheckbox'),
-                        this.switchButton('autoDownloadMetadata'), 
+                        this.switchButton('autoDownloadMetadata'),
                         this.switchButton('autoCopySaveFileName'),
                         this.switchButton('addUnlistedAndPrivate'),
                         this.switchButton('experimentalFeatures'),
@@ -304,7 +306,7 @@ class menu {
                     target[prop] = value
                     this.pageChange()
                     GM_getValue('isDebug') && console.debug(`Page change to ${this.pageType}`)
-                    return true 
+                    return true
                 }
                 return target[prop] = value;
             }
@@ -459,34 +461,42 @@ class menu {
 }
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
+export var pageStatus = new MultiPage()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
-
 export function getSelectButton(id: string): HTMLInputElement | undefined {
     return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
 }
-export var selectList = new SyncDictionary<PieceInfo>('selectList', [], (event) => {
-    const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: PieceInfo]> }>
-    const updateButtonState = (videoID: string) => {
-        const selectButton = getSelectButton(videoID)
-        if (selectButton) selectButton.checked = selectList.has(videoID)
-    }
-    switch (message.type) {
-        case MessageType.Set:
-        case MessageType.Del:
-            updateButtonState(message.data.value[0][0])
-            break;
-        case MessageType.Request:
-        case MessageType.Receive:
-            (document.querySelectorAll('input.selectButton') as NodeListOf<HTMLInputElement>).forEach(button => {
-                const videoid = button.getAttribute('videoid')
-                if (videoid) button.checked = selectList.has(videoid)
-            })
-            break
-        default:
-            break
-    }
-});
-
+function updateButtonState(videoID: string) {
+    const selectButton = getSelectButton(videoID)
+    if (selectButton) selectButton.checked = selectList.has(videoID)
+}
+function saveSelectList(): void {
+    GM_getTabs((tabs)=>{
+        if (Object.keys(tabs).length > 1) return;
+        GM_setValue('selectList', {
+            timestamp: selectList.timestamp,
+            selectList: selectList.toArray()
+        });
+    });
+}
+export var selectList = new SyncDictionary<PieceInfo>('selectList');
+pageStatus.onPageLeave = () => {
+    saveSelectList()
+}
+selectList.onSet = (key) => {
+    updateButtonState(key);
+    saveSelectList();
+};
+selectList.onDel = (key) => {
+    updateButtonState(key);
+    saveSelectList();
+};
+selectList.onSync = () => {
+    pageSelectButtons.forEach((value,key)=>{
+        updateButtonState(key);
+    })
+    saveSelectList();
+};
 
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
     if (!videoInfo.State) {
@@ -512,7 +522,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 { nodeType: 'br' },
                 `%#openVideoLink#%`
             ], '%#createTask#%')
-            let toast = newToast(
+            newToast(
                 ToastType.Warn,
                 {
                     node: toastBody,
@@ -526,16 +536,15 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                                 childs: '%#copySucceed#%'
                             }))
                         } else {
-                            toast.hide()
+                            this.hide()
                         }
                     }
                 }
-            )
-            toast.show()
+            ).show()
             return
         }
         if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
-            let toast = newToast(
+            newToast(
                 ToastType.Warn,
                 {
                     node: toastNode([
@@ -544,12 +553,11 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                         `%#tryReparseDownload#%`
                     ], '%#createTask#%'),
                     async onClick() {
-                        toast.hide()
+                        this.hide()
                         await pushDownloadTask(await new VideoInfo(videoInfo as PieceInfo).init(videoInfo.ID))
                     }
                 }
-            )
-            toast.show()
+            ).show()
             return
         }
     }
@@ -612,7 +620,8 @@ function browserDownloadMetadata(videoInfo: VideoInfo): void {
                     `${videoInfo.Title}[${videoInfo.ID}] %#videoMetadata#% %#downloadFailed#%`,
                     { nodeType: 'br' },
                     browserDownloadErrorParse(error)
-                ], '%#browserDownload#%')
+                ], '%#browserDownload#%'),
+                close: true
             }
         ).show()
     }
@@ -648,7 +657,7 @@ function firstRun() {
         nodeType: 'button',
         attributes: {
             disabled: true,
-            title: i18n[config.language].ok
+            title: i18nList[config.language].ok
         },
         childs: '%#ok#%',
         events: {
@@ -673,8 +682,8 @@ function firstRun() {
                     { nodeType: 'p', childs: '%#useHelpForBase#%' },
                     { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                     { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                    { nodeType: 'p', childs: i18n[config.language].useHelpForManualDownload },
-                    { nodeType: 'p', childs: i18n[config.language].useHelpForBugreport }
+                    { nodeType: 'p', childs: i18nList[config.language].useHelpForManualDownload },
+                    { nodeType: 'p', childs: i18nList[config.language].useHelpForBugreport }
                 ]
             },
             {
@@ -750,14 +759,14 @@ async function injectCheckbox(element: Element) {
     originalNodeAppendChild.call(item, button)
 
 
-    if(videoInfo?.Following && element.querySelector('.videoTeaser__thumbnail')?.querySelector('.follow') === null) {
+    if (videoInfo?.Following && element.querySelector('.videoTeaser__thumbnail')?.querySelector('.follow') === null) {
         originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), renderNode(
             {
                 nodeType: 'div',
                 className: 'follow',
                 childs: {
                     nodeType: 'div',
-                    className: ['text', 'text--white' ,'text--tiny' ,'text--bold'],
+                    className: ['text', 'text--white', 'text--tiny', 'text--bold'],
                     childs: '%#following#%'
                 }
             }
@@ -778,7 +787,7 @@ async function injectCheckbox(element: Element) {
                         method: 'DELETE',
                         headers: await getAuth()
                     })).ok) {
-                        newToast(ToastType.Info,{ text: `${Name} %#deleteSucceed#%`, close: true }).show()
+                        newToast(ToastType.Info, { text: `${Name} %#deleteSucceed#%`, close: true }).show()
                         deletePlaylistItme.remove()
                     }
                     event.preventDefault()
@@ -788,7 +797,7 @@ async function injectCheckbox(element: Element) {
                 }
             }
         })
-        originalNodeAppendChild.call(item,  deletePlaylistItme)
+        originalNodeAppendChild.call(item, deletePlaylistItme)
     }
 }
 function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
@@ -809,7 +818,7 @@ function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
 
     for (const mutation of mutationsList) {
         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            return extractPageType(Array.from(mutation.addedNodes).find((node):node is Element => node instanceof Element && node.classList.contains('page')))
+            return extractPageType(Array.from(mutation.addedNodes).find((node): node is Element => node instanceof Element && node.classList.contains('page')))
         }
     }
 }
@@ -821,7 +830,7 @@ async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
         attributes: {
-            placeholder: i18n[config.language].manualDownloadTips,
+            placeholder: i18nList[config.language].manualDownloadTips,
             style: 'margin-bottom: 10px;',
             rows: "16",
             cols: "96"
@@ -839,113 +848,114 @@ async function addDownloadTask() {
                 events: {
                     click: (e: Event) => {
                         if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
+                            let list: Array<[string, PieceInfo]> = []
                             try {
-                                let list = JSON.parse(textArea.value) as Array<[key: string, value: PieceInfo]>
-                                analyzeDownloadTask(new Dictionary<PieceInfo>(list))
+                                list = prune(JSON.parse(textArea.value))
                             } catch (error) {
-                                let IDList = new Dictionary<PieceInfo>()
-                                textArea.value.split('|').map(ID => IDList.set(ID, {}))
-                                analyzeDownloadTask(IDList)
+                                list = prune(textArea.value.split('|').map(ID => [ID, {}]))
                             }
+                            if (list.any()) analyzeDownloadTask(new Dictionary<PieceInfo>(list))
                         }
                         body.remove()
                     }
                 },
-                childs: i18n[config.language].ok
+                childs: i18nList[config.language].ok
             }
         ]
     })
     unsafeWindow.document.body.appendChild(body)
 }
-async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
+async function downloadTaskUnique(taskList: Dictionary<PieceInfo>) {
+    let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
+            'aria2.tellStopped',
+            [
+                0,
+                4096,
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'errorCode',
+                    'bittorrent'
+                ]
+            ]
+        ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+    );
+    let active: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
+            'aria2.tellActive',
+            [
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'downloadSpeed',
+                    'bittorrent'
+                ]
+            ]
+        ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+    );
+    let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped.filter(
+        (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
+    ).unique('id');
+    let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
+    for (let key of taskList.keysArray().intersect(startedAndCompleted)) {
+        taskList.delete(key)
+        updateButtonState(key)
+    }
+}
+async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
     let size = list.size
     let node = renderNode({
         nodeType: 'p',
-        childs: `%#parsingProgress#%[${list.size}/${size}]`
+        childs: `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
     })
-    let start = newToast(ToastType.Info, {
+    let parsingProgressToast = newToast(ToastType.Info, {
         node: node,
         duration: -1
     })
-    start.show()
-    if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
-        let stoped: Array<{ id: string, data: Aria2.Status }> = (
-            await aria2API(
-                'aria2.tellStopped',
-                [
-                    0,
-                    4096,
-                    [
-                        'gid',
-                        'status',
-                        'files',
-                        'errorCode',
-                        'bittorrent'
-                    ]
-                ]
-            ))
-            .result
-            .filter(
-                (task: Aria2.Status) =>
-                    isNullOrUndefined(task.bittorrent)
-            )
-            .map(
-                (task: Aria2.Status) => {
-                    let ID = aria2TaskExtractVideoID(task)
-                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
-                        return {
-                            id: ID,
-                            data: task
-                        }
-                    }
-                }
-            )
-            .prune();
-
-        let active: Array<{ id: string, data: Aria2.Status }> = (
-            await aria2API(
-                'aria2.tellActive',
-                [
-                    [
-                        'gid',
-                        'status',
-                        'files',
-                        'downloadSpeed',
-                        'bittorrent'
-                    ]
-                ]
-            ))
-            .result
-            .filter(
-                (task: Aria2.Status) =>
-                    isNullOrUndefined(task.bittorrent)
-            )
-            .map(
-                (task: Aria2.Status) => {
-                    let ID = aria2TaskExtractVideoID(task)
-                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
-                        return {
-                            id: ID,
-                            data: task
-                        }
-                    }
-                }
-            )
-            .prune();
-        let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
-            .filter(
-                (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
-            )
-            .unique('id');
-        let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
-        for (let key of list.allKeys().intersect(startedAndCompleted)) {
-            let button = getSelectButton(key)
-            if (!isNullOrUndefined(button)) button.checked = false
-            list.delete(key)
-            node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
-        }
+    function updateParsingProgress() {
+        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
     }
-    let infoList = (await Promise.all(list.allKeys().map(async id => {
+    parsingProgressToast.show()
+    if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
+        downloadTaskUnique(list)
+        updateParsingProgress()
+    }
+    let infoList = (await Promise.all(list.keysArray().map(async id => {
         let caches = db.videos.where('ID').equals(id)
         let cache = await caches.first()
         if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
@@ -956,7 +966,7 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
                     duration: -1,
                     close: true,
                     onClick() {
-                        parseToast.hide()
+                        this.hide()
                     }
                 }
             )
@@ -966,32 +976,26 @@ async function analyzeDownloadTask(list: IDictionary<PieceInfo> = selectList) {
         }
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
-
     for (let videoInfo of infoList) {
-        let button = getSelectButton(videoInfo.ID)
         let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID)
         !config.enableUnsafeMode && await delay(3000)
         video.State && await pushDownloadTask(video)
-        if (!isNullOrUndefined(button)) button.checked = false
         list.delete(videoInfo.ID)
-        node.firstChild!.textContent = `${i18n[config.language].parsingProgress}[${list.size}/${size}]`
+        updateButtonState(videoInfo.ID)
+        updateParsingProgress()
     }
-
-    start.hide()
-    if (size != 1) {
-        let completed = newToast(
-            ToastType.Info,
-            {
-                text: `%#allCompleted#%`,
-                duration: -1,
-                close: true,
-                onClick() {
-                    completed.hide()
-                }
+    parsingProgressToast.hide()
+    newToast(
+        ToastType.Info,
+        {
+            text: `%#allCompleted#%`,
+            duration: -1,
+            close: true,
+            onClick() {
+                this.hide()
             }
-        )
-        completed.show()
-    }
+        }
+    ).show()
 }
 function hijackAddEventListener() {
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
@@ -1031,24 +1035,124 @@ function hijackHistoryReplaceState() {
         pageChange()
     }
 }
+async function main() {
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.153')) === VersionState.Low) {
+        GM_setValue('isFirstRun', true)
+        alert(i18nList[config.language].configurationIncompatible)
+    }
+    if (GM_getValue('isFirstRun', true)) {
+        firstRun()
+        return
+    }
+    if (!await check()) {
+        newToast(ToastType.Info, {
+            text: `%#configError#%`,
+            duration: 60 * 1000,
+        }).show()
+        editConfig.inject()
+        return
+    }
+    GM_setValue('version', GM_info.script.version)
+    hijackAddEventListener()
+    if (config.autoInjectCheckbox) hijackNodeAppendChild()
+    hijackNodeRemoveChild()
+    hijackElementRemove()
+    originalAddEventListener('mouseover', (event: Event) => {
+        mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
+    })
+    hijackHistoryPushState()
+    hijackHistoryReplaceState()
+    originalAddEventListener('mouseover', (event: Event) => {
+        mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
+    })
+    originalAddEventListener('keydown', (event: Event) => {
+        const keyboardEvent = event as KeyboardEvent;
+        if (keyboardEvent.code === 'Space' && !isNullOrUndefined(mouseTarget)) {
+            let element = findElement(mouseTarget, '.videoTeaser')
+            let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
+            button && (button as HTMLInputElement).click()
+            button && keyboardEvent.preventDefault()
+        }
+    })
+    new MutationObserver(async (m, o) => {
+        if (m.some(m => m.type === 'childList' && unsafeWindow.document.getElementById('app'))) {
+            pluginMenu.inject()
+            o.disconnect()
+        }
+    }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
+    originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
+        nodeType: 'p',
+        className: 'fixed-bottom-right',
+        childs: prune([
+            `%#appName#% ${GM_getValue('version')} `,
+            GM_getValue('isDebug') ? `%#isDebug#%` : ''
+        ])
+    }))
+    if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
+        let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
+            method: 'GET',
+            headers: await getAuth()
+        })).json() as Iwara.LocalUser
+        let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
+            method: 'GET',
+            headers: await getAuth()
+        })).json() as Iwara.Profile
+        if (user.user.id !== profile.user.id) {
+            if (!profile.user.following) {
+                unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/followers`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })
+            }
+            if (!profile.user.friend) {
+                unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/friends`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })
+            }
+        }
+    }
+    newToast(
+        ToastType.Info,
+        {
+            node: toastNode(i18nList[config.language].notice),
+            duration: 10000,
+            gravity: 'bottom',
+            position: 'center',
+            onClick() {
+                this.hide();
+            }
+        }
+    ).show()
+}
 var mouseTarget: Element | null = null
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
-
-    GM_addStyle(GM_getResourceText('toastify-css'));
-    GM_addStyle('@!mainCSS!@');
-
     if (GM_getValue('isDebug')) {
-        console.debug(stringify(GM_info))
-        // @ts-ignore
-        unsafeWindow.unlimitedFetch = unlimitedFetch
         debugger
+        //@ts-ignore
+        unsafeWindow.Toast = Toast
+        console.debug(stringify(GM_info))
     }
-
+    GM_getTabs((tabs)=>{
+        if (Object.keys(tabs).length != 1) return;
+        try {
+            let selectListStorage = GM_getValue('selectList', { timestamp: selectList.timestamp, selectList: selectList.toArray() })
+            if (selectListStorage.timestamp > selectList.timestamp) {
+                selectListStorage.selectList.forEach(([key, value]) => {
+                    selectList.set(key, value)
+                })
+            }
+        } catch (error) {
+            selectList.clear()
+            GM_deleteValue('selectList')
+        }
+    });
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.76')) === VersionState.Low) {
+        selectList.clear()
         GM_deleteValue('selectList')
     }
-
+    GM_addStyle(mainCSS);
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
@@ -1088,7 +1192,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         let cloneBody = await cloneResponse.json() as Iwara.IPage
                         let list = (cloneBody.results as Iwara.Video[]).map(i => {
                             i.user.following = undefined
-                            i.user.friend =  undefined
+                            i.user.friend = undefined
                             return i
                         });
                         [...list].forEach(info => new VideoInfo().init(info.id, info))
@@ -1114,112 +1218,6 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 return resolve(response)
             })
             .catch((err) => reject(err))) as Promise<Response>
-    }
-
-    async function main() {
-        if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.153')) === VersionState.Low) {
-            GM_setValue('isFirstRun', true)
-            alert(i18n[config.language].configurationIncompatible)
-        }
-        
-        if (GM_getValue('isFirstRun', true)) {
-            firstRun()
-            return
-        }
-
-        if (!await check()) {
-            newToast(ToastType.Info, {
-                text: `%#configError#%`,
-                duration: 60 * 1000,
-            }).show()
-            editConfig.inject()
-            return
-        }
-
-        GM_setValue('version', GM_info.script.version)
-
-        hijackAddEventListener()
-
-        if (config.autoInjectCheckbox) hijackNodeAppendChild()
-
-        hijackNodeRemoveChild()
-
-        hijackElementRemove()
-
-        originalAddEventListener('mouseover', (event: Event) => {
-            mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
-        })
-
-        hijackHistoryPushState()
-
-        hijackHistoryReplaceState()
-
-        originalAddEventListener('mouseover', (event: Event) => {
-            mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
-        })
-
-        originalAddEventListener('keydown', (event: Event) => {
-            const keyboardEvent = event as KeyboardEvent;
-            if (keyboardEvent.code === 'Space' && !isNullOrUndefined(mouseTarget)) {
-                let element = findElement(mouseTarget, '.videoTeaser')
-                let button = element && (element.matches('.selectButton') ? element : element.querySelector('.selectButton'))
-                button && (button as HTMLInputElement).click()
-                button && keyboardEvent.preventDefault()
-            }
-        })
-
-        new MutationObserver(async (m, o) => {
-            if (m.some(m => m.type === 'childList' && unsafeWindow.document.getElementById('app'))) {
-                pluginMenu.inject()
-                o.disconnect()
-            }
-        }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
-
-        originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
-            nodeType:'p',
-            className: 'fixed-bottom-right',
-            childs: [
-                `%#appName#% ${GM_getValue('version')} `,
-                GM_getValue('isDebug') ? `%#isDebug#%` : ''
-            ].prune()
-        }))
-        if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
-            let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
-                method: 'GET',
-                headers: await getAuth()
-            })).json() as Iwara.LocalUser
-            let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
-                method: 'GET',
-                headers: await getAuth()
-            })).json() as Iwara.Profile
-            if (user.user.id !== profile.user.id){
-                if (!profile.user.following) {
-                    unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/followers`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    })
-                }
-                if (!profile.user.friend) {
-                    unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/friends`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    })
-                }
-            }
-        }
-        let notice = newToast(
-            ToastType.Info,
-            {
-                node: toastNode(i18n[config.language].notice),
-                duration: 10000,
-                gravity: 'bottom',
-                position: 'center',
-                onClick() {
-                    notice.hide()
-                }
-            }
-        )
-        notice.show()
     }
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 }

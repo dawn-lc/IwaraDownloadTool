@@ -3,15 +3,16 @@
     "target": "ES2022",
     "module": "ESNext",
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
     "moduleResolution": "node",
+    "esModuleInterop": true,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "typeRoots": ["./node_modules/@types", "./src/types"]
   },
   "include": [
-    "src/locale/*.json",
-    "src/lib/*.d.ts",
+    "src/types/*.d.ts",
+    "src/css/*.css",
+    "src/i18n/*.json",
     "src/*.ts"
   ]
 }

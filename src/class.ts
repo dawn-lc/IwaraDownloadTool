@@ -1,14 +1,41 @@
 import "./env";
-import { ceilDiv, isNullOrUndefined, stringify } from "./env";
-import { i18n } from "./i18n";
+import { isNullOrUndefined, prune, stringify, UUID } from "./env";
+import { i18nList } from "./i18n";
+import { VersionState, ToastType } from "./enum";
 import { config } from "./config";
 import { db } from "./db";
 import { unlimitedFetch } from "./extension";
-import { originalAddEventListener } from "./hijack";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
-import { MessageType, ToastType, VersionState } from "./type";
+import { Iwara } from "./types/iwara";
 
+/**
+ * 视频片段基本信息接口
+ * 用于存储视频的标题、别名和作者信息
+ */
+export interface PieceInfo {
+    Title?: string | null;
+    Alias?: string | null;
+    Author?: string | null;
+}
+
+/**
+ * 本地路径信息接口
+ * 描述文件路径的各个组成部分
+ */
+export interface LocalPath {
+    fullPath: string;
+    fullName: string;
+    directory: string;
+    type: 'Windows' | 'Unix' | 'Relative';
+    extension: string;
+    baseName: string;
+}
+/**
+ * 路径处理类
+ * 实现LocalPath接口，提供路径解析和规范化功能
+ * 支持Windows、Unix和相对路径
+ */
 export class Path implements LocalPath {
     public readonly fullPath: string;   // 归一化后的完整路径
     public readonly directory: string;  // 目录部分
@@ -17,6 +44,11 @@ export class Path implements LocalPath {
     public readonly extension: string;  // 拓展名（不含点）
     public readonly baseName: string;   // 文件名（不含拓展名）
 
+    /**
+     * 构造函数
+     * @param inputPath 输入路径字符串
+     * @throws 如果路径为空或无效
+     */
     constructor(inputPath: string) {
         // 空路径处理
         if (inputPath === "") {
@@ -51,11 +83,21 @@ export class Path implements LocalPath {
     }
 
     // 判断是否为UNC路径（以"\\\\"开头）
+    /**
+     * 判断是否为UNC路径
+     * @param path 路径字符串
+     * @returns 如果是UNC路径返回true
+     */
     private isUNC(path: string): boolean {
         return path.startsWith('\\\\');
     }
 
     // 判断路径类型：Windows绝对路径、Unix绝对路径或相对路径
+    /**
+     * 检测路径类型
+     * @param path 路径字符串
+     * @returns 路径类型: Windows、Unix或Relative
+     */
     private detectPathType(path: string): 'Windows' | 'Unix' | 'Relative' {
         // Windows绝对路径：如 "C:\xxx" 或 "C:/xxx"
         if (/^[A-Za-z]:[\\/]/.test(path)) {
@@ -70,6 +112,12 @@ export class Path implements LocalPath {
     }
 
     // 校验路径合法性：Windows路径检查非法字符，Unix/相对路径检查空字符及非法字符（相对路径）
+    /**
+     * 验证路径合法性
+     * @param path 路径字符串 
+     * @param type 路径类型
+     * @throws 如果路径包含非法字符或格式不正确
+     */
     private validatePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): void {
         const invalidChars = /[<>:"|?*]/;
         if (type === 'Windows') {
@@ -91,7 +139,7 @@ export class Path implements LocalPath {
                 });
                 for (let index = 0; index < variables.length; index++) {
                     const variable = variables[index];
-                    segment = segment.replaceAll(variable,'')
+                    segment = segment.replaceAll(variable, '')
                 }
                 if (invalidChars.test(segment)) {
                     throw new Error(`路径段 "${segments[i]}" 含有非法字符`);
@@ -112,8 +160,16 @@ export class Path implements LocalPath {
         }
     }
 
-    // 归一化路径：统一分隔符、合并重复分隔符、处理末尾斜杠，
-    // 并解析路径中的 "." 和 ".." 导航，绝对路径越界直接抛错
+    // 
+    // 
+    /**
+     * 规范化路径
+     * @param path 原始路径
+     * @param type 路径类型
+     * @returns 规范化后的路径
+     * 
+     * 统一分隔符、合并重复分隔符、处理末尾斜杠，并解析路径中的 "." 和 ".." 导航，绝对路径越界直接抛错。
+     */
     private normalizePath(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
         const sep = type === 'Windows' ? '\\' : '/';
 
@@ -177,8 +233,17 @@ export class Path implements LocalPath {
         return normalized;
     }
 
-    // 解析路径段，处理 "." 与 ".." 导航
-    // 对于绝对路径，如果 ".." 导致越界则抛错
+    // 
+    // 
+    /**
+     * 解析路径段，处理"."和".."导航
+     * @param segments 路径段数组
+     * @param isAbsolute 是否为绝对路径
+     * @returns 处理后的路径段数组
+     * @throws 如果是绝对路径且导航越界
+     * 
+     * 解析路径段，处理 "." 与 ".." 导航，对于绝对路径，如果 ".." 导致越界则抛错
+     */
     private resolveSegments(segments: string[], isAbsolute: boolean): string[] {
         const stack: string[] = [];
         for (const segment of segments) {
@@ -201,7 +266,14 @@ export class Path implements LocalPath {
         return stack;
     }
 
-    // 提取目录部分：返回最后一个分隔符之前的内容
+    /**
+     * 提取目录部分
+     * @param path 完整路径
+     * @param type 路径类型
+     * @returns 目录部分字符串
+     * 
+     * 返回最后一个分隔符之前的内容
+     */
     private extractDirectory(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
         const sep = type === 'Windows' ? '\\' : '/';
 
@@ -217,14 +289,27 @@ export class Path implements LocalPath {
         return lastIndex === -1 ? '' : path.substring(0, lastIndex);
     }
 
-    // 提取文件名：返回最后一个分隔符之后的内容
+    /**
+     * 提取文件名部分
+     * @param path 完整路径
+     * @param type 路径类型
+     * @returns 文件名部分字符串
+     * 
+     * 返回最后一个分隔符之后的内容
+     */
     private extractFileName(path: string, type: 'Windows' | 'Unix' | 'Relative'): string {
         const sep = type === 'Windows' ? '\\' : '/';
         const lastIndex = path.lastIndexOf(sep);
         return lastIndex === -1 ? path : path.substring(lastIndex + 1);
     }
 
-    // 从文件名中分离基础名称和拓展名
+    /**
+     * 分离文件名和扩展名
+     * @param fileName 完整文件名
+     * @returns 包含baseName和extension的对象
+     * 
+     * 从文件名中分离基础名称和拓展名
+     */
     private extractBaseAndExtension(fileName: string): { baseName: string; extension: string } {
         const lastDot = fileName.lastIndexOf('.');
         if (lastDot <= 0) {
@@ -236,13 +321,33 @@ export class Path implements LocalPath {
     }
 }
 
-
+/**
+ * 版本号接口
+ * 遵循语义化版本规范(SemVer)
+ */
+interface IVersion {
+    major: number;
+    minor: number;
+    patch: number;
+    preRelease: string[];
+    buildMetadata: string;
+    compare(other: IVersion): VersionState;
+}
+/**
+ * 版本号实现类
+ * 支持语义化版本比较和解析
+ */
 export class Version implements IVersion {
     major: number;
     minor: number;
     patch: number;
     preRelease: string[];
     buildMetadata: string;
+    /**
+     * 构造函数
+     * @param versionString 版本号字符串
+     * @throws 如果版本号格式无效
+     */
     constructor(versionString: string) {
         if (!versionString || typeof versionString !== 'string') {
             throw new Error("Invalid version string");
@@ -263,6 +368,11 @@ export class Version implements IVersion {
         if (a > b) return VersionState.High;
         return VersionState.Equal;
     }
+    /**
+     * 比较版本号
+     * @param other 要比较的版本号
+     * @returns 比较结果状态
+     */
     public compare(other: IVersion): VersionState {
         let state = Version.compareValues(this.major, other.major);
         if (state !== VersionState.Equal) return state;
@@ -281,6 +391,10 @@ export class Version implements IVersion {
         }
         return VersionState.Equal;
     }
+    /**
+     * 转换为字符串
+     * @returns 语义化版本字符串
+     */
     public toString(): string {
         const version = `${this.major}.${this.minor}.${this.patch}`;
         const preRelease = this.preRelease.length ? `-${this.preRelease.join('.')}` : '';
@@ -288,113 +402,119 @@ export class Version implements IVersion {
         return `${version}${preRelease}${buildMetadata}`;
     }
 }
+
+/**
+ * 字典类
+ * 扩展原生Map，提供更方便的转换方法
+ * @template T 值类型
+ */
 export class Dictionary<T> extends Map<string, T> {
-    constructor(data: Array<[key: string, value: T]> = []) {
-        super()
-        data.forEach(i => this.set(i[0], i[1]))
+    constructor(data: Array<[string, T]> = []) {
+        super(data)
     }
-    public toArray(): Array<[key: string, value: T]> {
+    public toArray(): Array<[string, T]> {
         return Array.from(this)
     }
-    public allKeys(): Array<string> {
+    public keysArray(): Array<string> {
         return Array.from(this.keys())
     }
-    public allValues(): Array<T> {
+    public valuesArray(): Array<T> {
         return Array.from(this.values())
     }
 }
 export class SyncDictionary<T> extends Dictionary<T> {
-    private channel: BroadcastChannel
-    private changeTime: number
-    private id: string
-    private changeCallback: ((event: MessageEvent) => void) | null
-    constructor(id: string, data: Array<[key: string, value: T]> = [], changeCallback: ((event: MessageEvent) => void) | null) {
-        super(data)
-        this.channel = new BroadcastChannel(`${GM_info.script.name}.${id}`)
-        this.changeCallback = changeCallback
-        this.changeTime = 0
-        this.id = id
-        if (isNullOrUndefined(GM_getValue(id, { timestamp: 0, value: [] }).timestamp))
-            GM_deleteValue(id)
-        originalAddEventListener.call(unsafeWindow, 'beforeunload', this.saveData.bind(this))
-        originalAddEventListener.call(unsafeWindow, 'pagehide', this.saveData.bind(this))
-        originalAddEventListener.call(unsafeWindow, 'unload', this.saveData.bind(this))
-        this.channel.onmessage = (event: MessageEvent) => {
-            const message = event.data as IChannelMessage<{ timestamp: number, value: Array<[key: string, value: T]> }>
-            const { type, data: { timestamp, value } } = message
-            GM_getValue('isDebug') && console.debug(`Channel message: ${stringify(message)}`)
-            if (timestamp <= this.changeTime) return;
-            switch (type) {
-                case MessageType.Set:
-                    value.forEach(item => super.set(item[0], item[1]))
-                    break
-                case MessageType.Del:
-                    value.forEach(item => super.delete(item[0]))
-                    break
-                case MessageType.Request:
-                    if (this.changeTime === timestamp) return
-                    if (this.changeTime > timestamp) return this.channel.postMessage({ type: MessageType.Receive, data: { timestamp: this.changeTime, value: super.toArray() } })
-                    this.reinitialize(value)
-                    break
-                case MessageType.Close:
-                case MessageType.Receive:
-                    if (this.changeTime >= timestamp) return
-                    this.reinitialize(value)
-                    break
-            }
-            this.changeTime = timestamp
-            this.changeCallback?.(event)
+    /** 当通过 set 或接收消息设置时触发 */
+    public onSet?: (key: string, value: T) => void;
+    /** 当删除时触发 */
+    public onDel?: (key: string) => void;
+    /** 完成初次或增量同步后触发 */
+    public onSync?: () => void;
+
+    public timestamp: number;
+    private id: string;
+    private channel: BroadcastChannel;
+
+    /**
+     * @param channelName 通信通道，同一名称标签页间同步
+     * @param initial 初始纯值列表，会附加当前时戳
+     */
+    constructor(channelName: string, initial: Array<[string, T]> = []) {
+        const hasInitial = prune(initial).any();
+        super(hasInitial ? initial : undefined);
+        this.timestamp = hasInitial ? Date.now() : 0;
+        this.id = UUID();
+        this.channel = new BroadcastChannel(channelName);
+        this.channel.onmessage = ({ data: msg }: { data: Message<T> }) => this.handleMessage(msg);
+        this.channel.postMessage({ type: 'sync', id: this.id, timestamp: this.timestamp });
+    }
+    /**
+     * 重写：设置值并广播，同时记录时间戳
+     */
+    public override set(key: string, value: T): this {
+        this.timestamp = Date.now();
+        super.set(key, value);
+        this.channel.postMessage({ type: 'set', key, value, timestamp: this.timestamp, id: this.id });
+        this.onSet?.(key, value);
+        return this;
+    }
+    /**
+     * 重写：删除并广播，同时记录时间戳
+     */
+    public override delete(key: string): boolean {
+        this.timestamp = Date.now();
+        const existed = super.delete(key);
+        this.channel.postMessage({ type: 'delete', key, timestamp: this.timestamp, id: this.id });
+        if (existed) this.onDel?.(key);
+        return existed;
+    }
+    /**
+     * 重写：清空并广播，同时记录时间戳
+     */
+    public override clear(): void {
+        this.timestamp = Date.now();
+        super.clear();
+        this.channel.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+        this.onSync?.();
+    }
+    /**
+     * 处理同步消息
+     */
+    private handleMessage(msg: Message<T>) {
+        if (msg.id === this.id) return;
+        if (msg.type === 'sync') {
+            this.channel.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+            return;
         }
-        this.channel.onmessageerror = (event) => {
-            GM_getValue('isDebug') && console.debug(`Channel message error: ${stringify(event)}`)
-        }
-        GM_getTabs((tabs) => {
-            const tabIds = Object.keys(tabs);
-            const isLastTab = tabIds.length <= 1;
-            if (isLastTab) {
-                let save = GM_getValue(id, { timestamp: 0, value: [] })
-                if (save.timestamp > this.changeTime) {
-                    this.changeTime = save.timestamp
-                    this.reinitialize(save.value)
+        if (msg.timestamp < this.timestamp) return;
+        switch (msg.type) {
+            case 'state': {
+                super.clear();
+                for (let index = 0; index < msg.state.length; index++) {
+                    const [key, value] = msg.state[index];
+                    super.set(key, value);
                 }
-            } else {
-                this.channel.postMessage({ type: MessageType.Request, data: { timestamp: this.changeTime, value: super.toArray() } })
+                this.onSync?.();
+                break;
             }
-        })
-    }
-    private saveData() {
-        const savedData = GM_getValue(this.id, { timestamp: 0, value: [] });
-        if (this.changeTime > savedData.timestamp) {
-            GM_getTabs((tabs) => {
-                const tabIds = Object.keys(tabs);
-                const isLastTab = tabIds.length <= 1;
-                if (isLastTab) {
-                    GM_setValue(this.id, { timestamp: this.changeTime, value: super.toArray() });
-                } else {
-                    this.channel.postMessage({ type: MessageType.Close, data: { timestamp: this.changeTime, value: super.toArray() } })
-                }
-            })
+            case 'set': {
+                const { key, value } = msg;
+                super.set(key, value);
+                this.onSet?.(key, value);
+                break;
+            }
+            case 'delete': {
+                const { key } = msg;
+                if (super.delete(key)) this.onDel?.(key);
+                break;
+            }
         }
-    }
-    private reinitialize(data: Array<[key: string, value: T]>) {
-        super.clear()
-        data.forEach(([key, value]) => super.set(key, value))
-    }
-    override set(key: string, value: T) {
-        super.set(key, value)
-        this.changeTime = Date.now()
-        this.channel.postMessage({ type: MessageType.Set, data: { timestamp: this.changeTime, value: [[key, value]] } })
-        return this
-    }
-    override delete(key: string) {
-        let isDeleted = super.delete(key)
-        if (isDeleted) {
-            this.changeTime = Date.now()
-            this.channel.postMessage({ type: MessageType.Del, data: { timestamp: this.changeTime, value: [[key]] } })
-        }
-        return isDeleted
+        this.timestamp = Date.now();
     }
 }
+/**
+ * 视频信息类
+ * 封装Iwara视频的元数据和操作
+ */
 export class VideoInfo {
     ID!: string;
     UploadTime!: Date;
@@ -418,6 +538,10 @@ export class VideoInfo {
     Comments!: string;
     DownloadUrl!: string;
     RAW!: Iwara.Video;
+    /**
+     * 构造函数
+     * @param info 可选的视频基本信息
+     */
     constructor(info?: PieceInfo) {
         if (!isNullOrUndefined(info)) {
             if (!isNullOrUndefined(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
@@ -426,6 +550,13 @@ export class VideoInfo {
         }
         return this
     }
+    /**
+     * 初始化视频信息
+     * @param ID 视频ID
+     * @param InfoSource 可选的视频源数据
+     * @returns 当前VideoInfo实例
+     * @throws 如果初始化失败
+     */
     async init(ID: string, InfoSource?: Iwara.Video) {
         try {
             this.ID = ID
@@ -445,10 +576,10 @@ export class VideoInfo {
                 this.State = false
                 let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
                 if (!cdnCache.any()) {
-                    let query = {
+                    let query = prune({
                         author: this.Alias ?? this.Author,
                         title: this.Title
-                    }.prune()
+                    }) as { [key: string]: string; }
                     for (const key in query) {
                         let dom = new DOMParser().parseFromString(await (await unlimitedFetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
                         for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
@@ -485,12 +616,12 @@ export class VideoInfo {
                     this.State = false
                     return this
                 }
-                throw new Error(`${i18n[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
+                throw new Error(`${i18nList[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
             }
             this.ID = VideoInfoSource.id
             this.Title = VideoInfoSource.title ?? this.Title
             this.External = !isNullOrUndefined(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
-            
+
             this.Liked = VideoInfoSource.liked
             this.Private = VideoInfoSource.private
             this.Unlisted = VideoInfoSource.unlisted
@@ -514,7 +645,7 @@ export class VideoInfo {
                 return this
             }
             if (this.External) {
-                throw new Error(i18n[config.language].externalVideo.toString())
+                throw new Error(i18nList[config.language].externalVideo.toString())
             }
 
             const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.IPage> => {
@@ -524,7 +655,7 @@ export class VideoInfo {
                 let comments: Iwara.Comment[] = []
                 let base = await getCommentData(commentID)
                 comments.push(...base.results as Iwara.Comment[])
-                for (let page = 1; page < ceilDiv(base.count, base.limit); page++) {
+                for (let page = 1; page < Math.ceil(base.count / base.limit); page++) {
                     comments.push(...(await getCommentData(commentID, page)).results as Iwara.Comment[])
                 }
                 let replies: Iwara.Comment[] = []
@@ -535,7 +666,7 @@ export class VideoInfo {
                     }
                 }
                 comments.push(...replies)
-                return comments.prune()
+                return comments
             }
 
             this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
@@ -543,19 +674,19 @@ export class VideoInfo {
             this.Size = VideoInfoSource.file.size
             let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
             if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
-                throw new Error(i18n[config.language].getVideoSourceFailed.toString())
+                throw new Error(i18nList[config.language].getVideoSourceFailed.toString())
             }
             this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
             let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
-            if (!fileList.any()) throw new Error(i18n[config.language].noAvailableVideoSource.toString())
+            if (!fileList.any()) throw new Error(i18nList[config.language].noAvailableVideoSource.toString())
             let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
-            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18n[config.language].videoSourceNotAvailable.toString())
+            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18nList[config.language].videoSourceNotAvailable.toString())
             this.DownloadUrl = decodeURIComponent(`https:${Source}`)
             this.State = true
 
             await db.videos.put(this)
             return this
-        } catch (error:any) {
+        } catch (error: any) {
             let data = this
             let toast = newToast(
                 ToastType.Error,
@@ -583,6 +714,45 @@ export class VideoInfo {
             selectList.delete(this.ID)
             this.State = false
             return this
+        }
+    }
+}
+
+
+
+export class MultiPage {
+    public readonly pageId: string;
+    public onPageJoin?: (pageId: string) => void;;
+    public onPageLeave?: (pageId: string) => void;;
+    public onLastPage?: () => void;;
+
+    private readonly channel: BroadcastChannel;
+    private beforeUnloadHandler: () => void;
+
+    constructor() {
+        this.pageId = UUID();        
+        GM_saveTab({ id: this.pageId });
+        this.channel = new BroadcastChannel('page-status-channel');
+        this.channel.onmessage = (event: MessageEvent<PageEvent>) => this.handleMessage(event.data)
+        this.channel.postMessage({ type: 'join', id: this.pageId });
+        this.beforeUnloadHandler = () => {
+            this.channel.postMessage({ type: 'leave', id: this.pageId });
+            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+        };
+        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+    }
+    private handleMessage(message: PageEvent) {
+        switch (message.type) {
+            case 'join':
+                this.onPageJoin?.(message.id);
+                break;
+            case 'leave':
+                this.onPageLeave?.(message.id);
+                GM_getTabs((tabs) => {
+                    if (Object.keys(tabs).length > 1) return;
+                    this.onLastPage?.();
+                });
+                break;
         }
     }
 }
