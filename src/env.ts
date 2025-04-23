@@ -504,52 +504,47 @@ export function prune<T>(data: T): Pruned<T> {
     }
     return data as Pruned<T>;
 }
+/**
+ * 对任意字符串做正则安全转义
+ */
+export function escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+/**
+ * 字符串变量替换方法
+ * @param {Record<string, unknown>} replacements - 替换键值对对象
+ * @returns {string} 返回替换后的字符串
+ * @example 
+ * 'Hello %#name#%'.replaceVariable({name: 'World'}) // 'Hello World'
+ */
 String.prototype.replaceVariable = function (replacements: Record<string, unknown>): string {
     let current = this.toString();
     const seen = new Set<string>();
     const keys = Object.keys(replacements).sort((a, b) => b.length - a.length);
-    const patterns = keys.map(key => ({
-        key,
-        formatPrefix: `%#${key}:`,
-        plainPattern: `%#${key}#%`
-    }));
+    const patterns = keys.map(key => {
+        const escKey = escapeRegex(key);
+        return {
+            value: replacements[key],
+            placeholderRegex: new RegExp(`%#${escKey}(?::.*?)?#%`, 'gs'),
+            placeholderFormatRegex: new RegExp(`(?<=%#${escKey}:).*?(?=#%)`, 'gs')
+        };
+    });
     while (true) {
         if (seen.has(current)) {
-            console.warn('检测到循环替换，终止于:', current.slice(0, 50));
-            return current;
+            console.warn('检测到循环替换，终止于: ', current.slice(0, 50));
+            break;
         }
         seen.add(current);
         let modified = false;
         let next = current;
-        for (const { key, formatPrefix, plainPattern } of patterns) {
-            const value = replacements[key];
-            let tempStr = next;
-            let guard = 32;
-            while (guard-- > 0) {
-                const start = tempStr.indexOf(formatPrefix);
-                if (start === -1) break;
-                const end = tempStr.indexOf('#%', start + formatPrefix.length);
-                if (end === -1) break;
-
-                const format = tempStr.slice(start + formatPrefix.length, end);
-                const fullPattern = `${formatPrefix}${format}#%`;
-                const rawReplacement = hasFunction(value, 'format') ? value.format(format) : value;
-                const replaced = stringify(rawReplacement);
-                const newStr = tempStr.replaceAll(fullPattern, replaced);
-
-                if (newStr === tempStr) break;
-                tempStr = newStr;
-                modified = true;
-            }
-            if (tempStr !== next) {
-                next = tempStr;
-            }
-            const plainValue = value instanceof Date
-                ? value.format('YYYY-MM-DD')
-                : stringify(value);
-            const finalStr = next.replaceAll(plainPattern, plainValue);
-            if (finalStr !== next) {
-                next = finalStr;
+        for (const { value, placeholderRegex, placeholderFormatRegex } of patterns) {
+            if (placeholderRegex.test(next)) {
+                let format = next.match(placeholderFormatRegex)
+                if (format?.any() && hasFunction(value, 'format')){
+                    next = next.replace(placeholderRegex, stringify(value.format(format[0])));
+                } else {
+                    next = next.replace(placeholderRegex, stringify(value instanceof Date ? value.format('YYYY-MM-DD') : value));
+                }
                 modified = true;
             }
         }

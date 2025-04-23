@@ -932,7 +932,7 @@ async function downloadTaskUnique(taskList: Dictionary<PieceInfo>) {
         (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
     ).unique('id');
     let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
-    for (let key of taskList.allKeys().intersect(startedAndCompleted)) {
+    for (let key of taskList.keysArray().intersect(startedAndCompleted)) {
         taskList.delete(key)
         updateButtonState(key)
     }
@@ -955,7 +955,7 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
         downloadTaskUnique(list)
         updateParsingProgress()
     }
-    let infoList = (await Promise.all(list.allKeys().map(async id => {
+    let infoList = (await Promise.all(list.keysArray().map(async id => {
         let caches = db.videos.where('ID').equals(id)
         let cache = await caches.first()
         if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import '../src/env.ts';
 import Moment from "moment";
 Date.prototype.format = function (format) {
-    return Moment(this).format(format)
+  return Moment(this).format(format)
 }
 
 function testReplaceVariable() {
@@ -32,20 +32,26 @@ function testReplaceVariable() {
   assert.strictEqual(result3, 'First: 1st, Second: 2nd, Last: first is 1st');
   console.log('✓ 递归替换测试通过');
 
+  // 测试日期默认格式化
+  const template4 = 'Today is %#date#%';
+  const result4 = template4.replaceVariable({ date });
+  assert.strictEqual(result4, 'Today is 2023-01-01');
+  console.log('✓ 日期默认格式化测试通过');
+
   // 测试循环引用检测
-  const template4 = 'Circular: %#a#%';
+  const template999 = 'Circular: %#a#%';
   const consoleWarn = console.warn;
   let warned = false;
   console.warn = () => { warned = true; };
-  
-  const result4 = template4.replaceVariable({
+
+  const result999 = template999.replaceVariable({
     a: '%#b#%',
     b: '%#a#%'
   });
-  
+
   console.warn = consoleWarn;
   assert(warned, '应检测到循环引用');
-  assert(result4.includes('Circular:'), '应包含部分替换结果');
+  assert(result999.includes('Circular:'), '应包含部分替换结果');
   console.log('✓ 循环引用检测测试通过');
 
   console.log('所有测试通过');

@@ -410,16 +410,15 @@ export class Version implements IVersion {
  */
 export class Dictionary<T> extends Map<string, T> {
     constructor(data: Array<[string, T]> = []) {
-        super()
-        data.forEach(([key, value]) => this.set(key, value))
+        super(data)
     }
     public toArray(): Array<[string, T]> {
         return Array.from(this)
     }
-    public allKeys(): Array<string> {
+    public keysArray(): Array<string> {
         return Array.from(this.keys())
     }
-    public allValues(): Array<T> {
+    public valuesArray(): Array<T> {
         return Array.from(this.values())
     }
 }
@@ -431,19 +430,22 @@ export class SyncDictionary<T> extends Dictionary<T> {
     /** 完成初次或增量同步后触发 */
     public onSync?: () => void;
 
-    public timestamp = 0;
-    private id = UUID();
-    private bc: BroadcastChannel;
+    public timestamp: number;
+    private id: string;
+    private channel: BroadcastChannel;
 
     /**
      * @param channelName 通信通道，同一名称标签页间同步
      * @param initial 初始纯值列表，会附加当前时戳
      */
     constructor(channelName: string, initial: Array<[string, T]> = []) {
-        super(initial);
-        this.bc = new BroadcastChannel(channelName);
-        this.bc.onmessage = ({ data: msg }: { data: Message<T> }) => this.handleMessage(msg);
-        this.bc.postMessage({ type: 'sync', id: this.id, timestamp: this.timestamp });
+        const hasInitial = prune(initial).any();
+        super(hasInitial ? initial : undefined);
+        this.timestamp = hasInitial ? Date.now() : 0;
+        this.id = UUID();
+        this.channel = new BroadcastChannel(channelName);
+        this.channel.onmessage = ({ data: msg }: { data: Message<T> }) => this.handleMessage(msg);
+        this.channel.postMessage({ type: 'sync', id: this.id, timestamp: this.timestamp });
     }
     /**
      * 重写：设置值并广播，同时记录时间戳
@@ -451,7 +453,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
     public override set(key: string, value: T): this {
         this.timestamp = Date.now();
         super.set(key, value);
-        this.bc.postMessage({ type: 'set', key, value, timestamp: this.timestamp, id: this.id });
+        this.channel.postMessage({ type: 'set', key, value, timestamp: this.timestamp, id: this.id });
         this.onSet?.(key, value);
         return this;
     }
@@ -461,7 +463,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
     public override delete(key: string): boolean {
         this.timestamp = Date.now();
         const existed = super.delete(key);
-        this.bc.postMessage({ type: 'delete', key, timestamp: this.timestamp, id: this.id });
+        this.channel.postMessage({ type: 'delete', key, timestamp: this.timestamp, id: this.id });
         if (existed) this.onDel?.(key);
         return existed;
     }
@@ -471,7 +473,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
     public override clear(): void {
         this.timestamp = Date.now();
         super.clear();
-        this.bc.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+        this.channel.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
         this.onSync?.();
     }
     /**
@@ -480,7 +482,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
     private handleMessage(msg: Message<T>) {
         if (msg.id === this.id) return;
         if (msg.type === 'sync') {
-            this.bc.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+            this.channel.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
             return;
         }
         if (msg.timestamp < this.timestamp) return;
@@ -719,25 +721,25 @@ export class VideoInfo {
 
 
 export class MultiPage {
-    private readonly channel: BroadcastChannel;
     public readonly pageId: string;
     public onPageJoin?: (pageId: string) => void;;
     public onPageLeave?: (pageId: string) => void;;
     public onLastPage?: () => void;;
 
-    private beforeUnloadHandler;
+    private readonly channel: BroadcastChannel;
+    private beforeUnloadHandler: () => void;
 
     constructor() {
-        this.pageId = UUID();
+        this.pageId = UUID();        
+        GM_saveTab({ id: this.pageId });
         this.channel = new BroadcastChannel('page-status-channel');
         this.channel.onmessage = (event: MessageEvent<PageEvent>) => this.handleMessage(event.data)
+        this.channel.postMessage({ type: 'join', id: this.pageId });
         this.beforeUnloadHandler = () => {
             this.channel.postMessage({ type: 'leave', id: this.pageId });
             window.removeEventListener('beforeunload', this.beforeUnloadHandler);
         };
         window.addEventListener('beforeunload', this.beforeUnloadHandler);
-        GM_saveTab({ id: this.pageId });
-        this.channel.postMessage({ type: 'join', id: this.pageId });
     }
     private handleMessage(message: PageEvent) {
         switch (message.type) {
