@@ -1,16 +1,14 @@
 import "./env";
-import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify, UUID } from "./env";
+import { delay, isNullOrUndefined, prune, stringify, UUID } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18nList } from "./i18n";
-import { DownloadType, PageType, ToastType, MessageType, VersionState, isPageType } from "./enum";
+import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
 import { config, Config } from "./config";
-import { Dictionary, MultiPage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
+import { Dictionary, MultiPage, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-import { Iwara } from "./types/iwara";
-import { Aria2 } from "./types/aria2";
 import mainCSS from "./css/main.css";
 
 class configEdit {
@@ -1156,13 +1154,17 @@ if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
-        if (!isNullOrUndefined(init) && !isNullOrUndefined(init.headers) && !isStringTupleArray(init.headers)) {
+        if (!isNullOrUndefined(init) && !isNullOrUndefined(init.headers)) {
             let authorization = null
             if (init.headers instanceof Headers) {
                 authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
             } else {
-                for (const key in init.headers) {
-                    if (key.toLowerCase() === "authorization") {
+                if (Array.isArray(init.headers)) {
+                    let index = init.headers.findIndex(([key, value]) => key.toLowerCase() !== "authorization")
+                    if (!(index < 0)) authorization = init.headers[index][1]
+                } else {
+                    for (const key in init.headers) {
+                        if (key.toLowerCase() !== "authorization") continue
                         authorization = init.headers[key]
                         break
                     }

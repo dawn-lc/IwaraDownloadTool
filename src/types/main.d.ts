@@ -119,3 +119,25 @@ declare type DebounceOptions = {
      */
     immediate?: boolean
 }
+/**
+ * 视频片段基本信息接口
+ * 用于存储视频的标题、别名和作者信息
+ */
+declare interface PieceInfo {
+    Title?: string | null;
+    Alias?: string | null;
+    Author?: string | null;
+}
+
+/**
+ * 本地路径信息接口
+ * 描述文件路径的各个组成部分
+ */
+declare interface LocalPath {
+    fullPath: string;
+    fullName: string;
+    directory: string;
+    type: 'Windows' | 'Unix' | 'Relative';
+    extension: string;
+    baseName: string;
+}

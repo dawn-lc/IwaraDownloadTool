@@ -8,7 +8,6 @@ import { unlimitedFetch, renderNode } from "./extension"
 import { Path, VideoInfo } from "./class"
 import { pushDownloadTask } from "./main"
 import { Toast, ToastOptions } from "./toastify";
-import { Aria2 } from "./types/aria2";
 
 /**
  * 刷新Iwara.tv的访问令牌

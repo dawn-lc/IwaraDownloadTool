@@ -102,7 +102,7 @@ esbuild.build({
     platform: 'browser',
     loader: { '.json': 'json'},
     target: ['es2022'],
-    plugins: [inlineCSS],
+    plugins: [inlineCSS, removeComments],
     charset: 'utf8',
     tsconfigRaw: tsconfig
 }).catch(() => process.exit(1));

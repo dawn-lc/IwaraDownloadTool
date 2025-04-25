@@ -1,4 +1,4 @@
-export namespace Aria2 {
+declare namespace Aria2 {
     interface Result {
         id: string,
         jsonrpc: string,

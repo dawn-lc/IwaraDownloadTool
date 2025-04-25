@@ -161,7 +161,6 @@ export const isNumber = (obj: unknown): obj is number => !isNullOrUndefined(obj)
 export const isArray = (obj: unknown): obj is Array<any> => Array.isArray(obj)
 export const isElement = (obj: unknown): obj is Element => !isNullOrUndefined(obj) && obj instanceof Element
 export const isNode = (obj: unknown): obj is Node => !isNullOrUndefined(obj) && obj instanceof Node
-export const isStringTupleArray = (obj: unknown): obj is [string, string][] => Array.isArray(obj) && obj.every(item => Array.isArray(item) && item.length === 2 && typeof item[0] === 'string' && typeof item[1] === 'string')
 export const isNotEmpty = (obj: unknown): boolean => {
     if (isNullOrUndefined(obj)) {
         return false
@@ -531,7 +530,7 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
     });
     while (true) {
         if (seen.has(current)) {
-            console.warn('检测到循环替换，终止于: ', current.slice(0, 50));
+            console.warn("检测到循环替换！", `终止于: ${current}`);
             break;
         }
         seen.add(current);
@@ -539,8 +538,8 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
         let next = current;
         for (const { value, placeholderRegex, placeholderFormatRegex } of patterns) {
             if (placeholderRegex.test(next)) {
-                let format = next.match(placeholderFormatRegex)
-                if (format?.any() && hasFunction(value, 'format')){
+                let format = next.match(placeholderFormatRegex) || []
+                if (format.any() && hasFunction(value, 'format')) {
                     next = next.replace(placeholderRegex, stringify(value.format(format[0])));
                 } else {
                     next = next.replace(placeholderRegex, stringify(value instanceof Date ? value.format('YYYY-MM-DD') : value));

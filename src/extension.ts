@@ -2,7 +2,7 @@ import "./env"
 import { i18nList } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
-import { hasFunction, isArray, isNullOrUndefined, isStringTupleArray, prune, stringify } from "./env";
+import { isArray, isNullOrUndefined, prune } from "./env";
 
 /**
  * 执行跨域fetch请求，自动处理同源检测
@@ -13,7 +13,7 @@ import { hasFunction, isArray, isNullOrUndefined, isStringTupleArray, prune, str
  * @throws {Error} 当init.headers不是字符串元组数组时抛出错误
  */
 export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
-    if (init && init.headers && isStringTupleArray(init.headers)) throw new Error("init headers Error")
+    if (init && init.headers) throw new Error("init headers Error")
     return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
         GM_xmlhttpRequest({
             method: (init && init.method) as Tampermonkey.Request['method'],

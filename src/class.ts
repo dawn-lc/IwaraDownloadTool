@@ -7,30 +7,7 @@ import { db } from "./db";
 import { unlimitedFetch } from "./extension";
 import { refreshToken, getAuth, newToast, toastNode } from "./function";
 import { getSelectButton, pushDownloadTask, selectList } from "./main";
-import { Iwara } from "./types/iwara";
 
-/**
- * 视频片段基本信息接口
- * 用于存储视频的标题、别名和作者信息
- */
-export interface PieceInfo {
-    Title?: string | null;
-    Alias?: string | null;
-    Author?: string | null;
-}
-
-/**
- * 本地路径信息接口
- * 描述文件路径的各个组成部分
- */
-export interface LocalPath {
-    fullPath: string;
-    fullName: string;
-    directory: string;
-    type: 'Windows' | 'Unix' | 'Relative';
-    extension: string;
-    baseName: string;
-}
 /**
  * 路径处理类
  * 实现LocalPath接口，提供路径解析和规范化功能
@@ -325,7 +302,7 @@ export class Path implements LocalPath {
  * 版本号接口
  * 遵循语义化版本规范(SemVer)
  */
-interface IVersion {
+declare interface IVersion {
     major: number;
     minor: number;
     patch: number;
@@ -717,8 +694,6 @@ export class VideoInfo {
         }
     }
 }
-
-
 
 export class MultiPage {
     public readonly pageId: string;

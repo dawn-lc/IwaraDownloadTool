@@ -1,4 +1,4 @@
-export namespace Iwara {
+declare namespace Iwara {
     interface Avatar {
         id: string
         type: string
