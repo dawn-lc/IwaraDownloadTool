@@ -4,7 +4,7 @@ import { promises,existsSync, mkdirSync, readFileSync, writeFileSync  } from 'fs
 import { join } from 'path';
 import { isNullOrUndefined, UUID } from "../src/env.ts";
 import inlineCSS from './inlineCSS.ts';
-import removeComments from './removeComments.ts';
+import removeComments from './removeComments.ts'
 
 function parseMetadata(content: string): any {
     const lines = content
@@ -101,9 +101,17 @@ esbuild.build({
     },
     platform: 'browser',
     loader: { '.json': 'json'},
-    target: ['es2022'],
-    plugins: [inlineCSS, removeComments],
+    target: [
+        'es2022',
+        'chrome92',
+        'edge92',
+        'firefox90',
+        'safari15.4'
+    ],
+    plugins: [inlineCSS],
     charset: 'utf8',
+    ignoreAnnotations: true,
+    legalComments: 'none',
     tsconfigRaw: tsconfig
 }).catch(() => process.exit(1));
 
@@ -120,10 +128,18 @@ esbuild.build({
         js: matadata
     },
     platform: 'browser',
-    target: ['es2022'],
+    target: [
+        'es2022',
+        'chrome92',
+        'edge92',
+        'firefox90',
+        'safari15.4'
+    ],
     loader: { '.json': 'json'},
-    plugins: [inlineCSS, removeComments],
+    plugins: [inlineCSS,removeComments],
     charset: 'utf8',
+    ignoreAnnotations: true,
+    legalComments: 'none',
     tsconfigRaw: tsconfig
 }).then(async (result)=>{
     if (result.outputFiles.any()) {
