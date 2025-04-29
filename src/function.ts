@@ -5,10 +5,9 @@ import { ToastType, DownloadType } from "./enum"
 import { config } from "./config"
 import { db } from "./db"
 import { unlimitedFetch, renderNode } from "./extension"
-import { Path, VideoInfo } from "./class"
-import { pushDownloadTask } from "./main"
-import { Toast, ToastOptions } from "./toastify";
-import { Aria2 } from "./types/aria2";
+import { Path } from "./class"
+import { pushDownloadTask, VideoInfo } from "./main"
+import { activeToasts, Toast, ToastOptions } from "./toastify";
 
 /**
  * 刷新Iwara.tv的访问令牌
@@ -132,10 +131,10 @@ export function getTextNode(node: Node | Element): string {
 /**
  * 创建新的Toast通知
  * @param {ToastType} type - Toast类型(Info/Warn/Error/Log)
- * @param {ToastOptions|undefined} params - Toast配置选项
+ * @param {ToastOptions} params - Toast配置选项
  * @returns {Toast} 返回创建的Toast实例
  */
-export function newToast(type: ToastType, params: ToastOptions | undefined): Toast {
+export function newToast(type: ToastType, params?: ToastOptions): Toast {
     const logFunc = {
         [ToastType.Warn]: console.warn,
         [ToastType.Error]: console.error,
@@ -143,12 +142,7 @@ export function newToast(type: ToastType, params: ToastOptions | undefined): Toa
         [ToastType.Info]: console.info,
     }[type] || console.log
     if (isNullOrUndefined(params)) params = {}
-    params = Object.assign({
-        newWindow: true,
-        gravity: 'top',
-        position: 'left',
-        stopOnFocus: true
-    }, params)
+    if (!isNullOrUndefined(params.id) && activeToasts.has(params.id)) activeToasts.get(params.id)?.hide()
     switch (type) {
         case ToastType.Info:
             params = Object.assign({
@@ -614,7 +608,6 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
 }
 /**
  * 检查并重启异常的Aria2下载任务
- * @async
  */
 export async function aria2TaskCheckAndRestart() {
     let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
@@ -696,37 +689,46 @@ export async function aria2TaskCheckAndRestart() {
         )
         .unique('id');
     let needRestart = downloadUncompleted.union(downloadToSlowTasks, 'id');
-
-    let toast = newToast(
-        ToastType.Warn,
-        {
-            node: toastNode(
-                [
-                    `发现 ${needRestart.length} 个需要重启的下载任务！`,
-                    { nodeType: 'br' },
-                    '%#tryRestartingDownload#%'
-                ], '%#aria2TaskCheck#%'),
-            async onClick() {
-                toast.hide()
-                for (let i = 0; i < needRestart.length; i++) {
-                    const task = needRestart[i]
-                    let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
-                    let videoInfo = await (new VideoInfo(cache)).init(task.id)
-                    if (videoInfo.State){
-                        await pushDownloadTask(videoInfo, true)
-                        let activeTasks = active.filter(
-                            (activeTask: { id: string, data: Aria2.Status }) => activeTask.id === task.id
-                        )
-                        for (let t = 0; t < activeTasks.length; t++) {
-                            const element = activeTasks[t];
-                            await aria2API('aria2.forceRemove', [element.data.gid])
+    if (needRestart.length !== 0) {
+        newToast(
+            ToastType.Warn,
+            {
+                id: 'aria2TaskCheckAndRestart',
+                node: toastNode(
+                    [
+                        `发现 ${needRestart.length} 个需要重启的下载任务！`,
+                        { nodeType: 'br' },
+                        '%#tryRestartingDownload#%'
+                    ], '%#aria2TaskCheck#%'),
+                async onClick() {
+                    this.hide()
+                    for (let i = 0; i < needRestart.length; i++) {
+                        const task = needRestart[i]
+                        let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
+                        let videoInfo = await (new VideoInfo(cache)).init(task.id)
+                        if (videoInfo.State) {
+                            await pushDownloadTask(videoInfo, true)
+                            let activeTasks = active.filter(
+                                (activeTask: { id: string, data: Aria2.Status }) => activeTask.id === task.id
+                            )
+                            for (let t = 0; t < activeTasks.length; t++) {
+                                const element = activeTasks[t];
+                                await aria2API('aria2.forceRemove', [element.data.gid])
+                            }
                         }
                     }
                 }
             }
-        }
-    )
-    toast.show()
+        ).show()
+    } else {
+        newToast(ToastType.Info, {
+            id: 'aria2TaskCheckAndRestart',
+            duration: 10000,
+            node: toastNode(
+                `未发现需要重启的下载任务！`
+            )
+        }).show()
+    }
 }
 /**
  * 解析JWT令牌的payload部分

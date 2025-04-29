@@ -1,18 +1,222 @@
 import "./env";
-import { delay, isNullOrUndefined, isStringTupleArray, prune, stringify, UUID } from "./env";
+import { delay, isNullOrUndefined, prune, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18nList } from "./i18n";
-import { DownloadType, PageType, ToastType, MessageType, VersionState, isPageType } from "./enum";
+import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
+import { Dictionary, MultiPage, SyncDictionary, Version } from "./class";
 import { config, Config } from "./config";
-import { Dictionary, MultiPage, PieceInfo, SyncDictionary, Version, VideoInfo } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
-import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
-import { Iwara } from "./types/iwara";
-import { Aria2 } from "./types/aria2";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, refreshToken, toastNode } from "./function";
 import mainCSS from "./css/main.css";
 
+/**
+ * 视频信息类
+ * 封装Iwara视频的元数据和操作
+ */
+export class VideoInfo {
+    ID!: string;
+    UploadTime!: Date;
+    Title!: string;
+    FileName!: string;
+    Size!: number;
+    Tags!: Array<Iwara.Tag>;
+    Liked!: boolean;
+    Following!: boolean;
+    Friend!: boolean;
+    Alias!: string;
+    Author!: string;
+    AuthorID!: string;
+    Private!: boolean;
+    Unlisted!: boolean;
+    DownloadQuality!: string;
+    External!: boolean;
+    ExternalUrl: string | null | undefined
+    State!: boolean;
+    Description!: string | null | undefined
+    Comments!: string;
+    DownloadUrl!: string;
+    RAW!: Iwara.Video;
+    /**
+     * 构造函数
+     * @param info 可选的视频基本信息
+     */
+    constructor(info?: PieceInfo) {
+        if (!isNullOrUndefined(info)) {
+            if (!isNullOrUndefined(info.Title) && !info.Title.isEmpty()) this.Title = info.Title
+            if (!isNullOrUndefined(info.Alias) && !info.Alias.isEmpty()) this.Alias = info.Alias
+            if (!isNullOrUndefined(info.Author) && !info.Author.isEmpty()) this.Author = info.Author
+        }
+        return this
+    }
+    /**
+     * 初始化视频信息
+     * @param ID 视频ID
+     * @param InfoSource 可选的视频源数据
+     * @returns 当前VideoInfo实例
+     * @throws 如果初始化失败
+     */
+    async init(ID: string, InfoSource?: Iwara.Video) {
+        try {
+            this.ID = ID
+            if (isNullOrUndefined(InfoSource)) {
+                config.authorization = `Bearer ${await refreshToken()}`
+            } else {
+                this.RAW = InfoSource
+                await db.videos.put(this)
+            }
+            let VideoInfoSource: Iwara.Video = InfoSource ?? await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}`, {
+                headers: await getAuth()
+            })).json()
+
+            if (VideoInfoSource.id === undefined) {
+                let cache = (await db.videos.where('ID').equals(this.ID).toArray()).pop()
+                Object.assign(this, cache ?? {})
+                this.State = false
+                let cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                if (!cdnCache.any()) {
+                    let query = prune({
+                        author: this.Alias ?? this.Author,
+                        title: this.Title
+                    }) as { [key: string]: string; }
+                    for (const key in query) {
+                        let dom = new DOMParser().parseFromString(await (await unlimitedFetch(`https://mmdfans.net/?query=${encodeURIComponent(`${key}:${query[key]}`)}`)).text(), "text/html")
+                        for (let i of [...dom.querySelectorAll('.mdui-col > a')]) {
+                            let imgID = (i.querySelector('.mdui-grid-tile > img') as HTMLImageElement)?.src?.toURL()?.pathname?.split('/')?.pop()?.trimTail('.jpg')
+                            if (isNullOrUndefined(imgID)) continue
+                            await db.caches.put({
+                                ID: imgID,
+                                href: `https://mmdfans.net${(i as HTMLLinkElement).getAttribute('href')}`
+                            })
+                        }
+                    }
+                }
+                cdnCache = await db.caches.where('ID').equals(this.ID).toArray()
+                if (cdnCache.any()) {
+                    let toast = newToast(
+                        ToastType.Warn,
+                        {
+                            node:
+                                toastNode([
+                                    `${this.Title}[${this.ID}] %#parsingFailed#%`,
+                                    { nodeType: 'br' },
+                                    `%#cdnCacheFinded#%`
+                                ], '%#createTask#%'),
+                            onClick() {
+                                GM_openInTab(cdnCache.pop()!.href, { active: false, insert: true, setParent: true })
+                                toast.hide()
+                            },
+                        }
+                    )
+                    toast.show()
+                    let button = getSelectButton(this.ID)
+                    button && button.checked && button.click()
+                    selectList.delete(this.ID)
+                    this.State = false
+                    return this
+                }
+                throw new Error(`${i18nList[config.language].parsingFailed.toString()} ${VideoInfoSource.message}`)
+            }
+            this.ID = VideoInfoSource.id
+            this.Title = VideoInfoSource.title ?? this.Title
+            this.External = !isNullOrUndefined(VideoInfoSource.embedUrl) && !VideoInfoSource.embedUrl.isEmpty()
+
+            this.Liked = VideoInfoSource.liked
+            this.Private = VideoInfoSource.private
+            this.Unlisted = VideoInfoSource.unlisted
+            this.UploadTime = new Date(VideoInfoSource.createdAt)
+            this.Tags = VideoInfoSource.tags
+            this.Description = VideoInfoSource.body
+            this.ExternalUrl = VideoInfoSource.embedUrl
+
+            if (!isNullOrUndefined(VideoInfoSource.user.following)) {
+                this.Following = VideoInfoSource.user.following
+            }
+            if (!isNullOrUndefined(VideoInfoSource.user.friend)) {
+                this.Friend = VideoInfoSource.user.friend
+            }
+
+            this.AuthorID = VideoInfoSource.user.id
+            this.Alias = VideoInfoSource.user.name
+            this.Author = VideoInfoSource.user.username
+            await db.videos.put(this)
+            if (!isNullOrUndefined(InfoSource)) {
+                return this
+            }
+            if (this.External) {
+                throw new Error(i18nList[config.language].externalVideo.toString())
+            }
+
+            const getCommentData = async (commentID: string | null = null, page: number = 0): Promise<Iwara.IPage> => {
+                return await (await unlimitedFetch(`https://api.iwara.tv/video/${this.ID}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
+            }
+            const getCommentDatas = async (commentID: string | null = null): Promise<Iwara.Comment[]> => {
+                let comments: Iwara.Comment[] = []
+                let base = await getCommentData(commentID)
+                comments.push(...base.results as Iwara.Comment[])
+                for (let page = 1; page < Math.ceil(base.count / base.limit); page++) {
+                    comments.push(...(await getCommentData(commentID, page)).results as Iwara.Comment[])
+                }
+                let replies: Iwara.Comment[] = []
+                for (let index = 0; index < comments.length; index++) {
+                    const comment = comments[index]
+                    if (comment.numReplies > 0) {
+                        replies.push(...await getCommentDatas(comment.id))
+                    }
+                }
+                comments.push(...replies)
+                return comments
+            }
+
+            this.Comments += `${(await getCommentDatas()).map(i => i.body).join('\n')}`.normalize('NFKC')
+            this.FileName = VideoInfoSource.file.name
+            this.Size = VideoInfoSource.file.size
+            let VideoFileSource = (await (await unlimitedFetch(VideoInfoSource.fileUrl, { headers: await getAuth(VideoInfoSource.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
+            if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) {
+                throw new Error(i18nList[config.language].getVideoSourceFailed.toString())
+            }
+            this.DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
+            let fileList = VideoFileSource.filter(x => x.name === this.DownloadQuality)
+            if (!fileList.any()) throw new Error(i18nList[config.language].noAvailableVideoSource.toString())
+            let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
+            if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18nList[config.language].videoSourceNotAvailable.toString())
+            this.DownloadUrl = decodeURIComponent(`https:${Source}`)
+            this.State = true
+
+            await db.videos.put(this)
+            return this
+        } catch (error: any) {
+            let data = this
+            let toast = newToast(
+                ToastType.Error,
+                {
+                    node: toastNode([
+                        `${this.Title}[${this.ID}] %#parsingFailed#%`,
+                        { nodeType: 'br' },
+                        stringify(error),
+                        { nodeType: 'br' },
+                        this.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
+                    ], '%#createTask#%'),
+                    async onClick() {
+                        toast.hide()
+                        if (data.External) {
+                            GM_openInTab(data.ExternalUrl!, { active: false, insert: true, setParent: true })
+                        } else {
+                            pushDownloadTask(await new VideoInfo(data as PieceInfo).init(data.ID))
+                        }
+                    },
+                }
+            )
+            toast.show()
+            let button = getSelectButton(this.ID)
+            button && button.checked && button.click()
+            selectList.delete(this.ID)
+            this.State = false
+            return this
+        }
+    }
+}
 class configEdit {
     source!: configEdit;
     target: Config
@@ -459,6 +663,7 @@ class menu {
         }
     }
 }
+
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
 export var pageStatus = new MultiPage()
@@ -937,32 +1142,36 @@ async function downloadTaskUnique(taskList: Dictionary<PieceInfo>) {
         updateButtonState(key)
     }
 }
-async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
-    let size = list.size
+async function analyzeDownloadTask(taskList: Dictionary<PieceInfo> = selectList) {
+    let size = taskList.size
     let node = renderNode({
         nodeType: 'p',
-        childs: `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
+        childs: `${i18nList[config.language].parsingProgress}[${taskList.size}/${size}]`
     })
+
     let parsingProgressToast = newToast(ToastType.Info, {
         node: node,
         duration: -1
     })
+
     function updateParsingProgress() {
-        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
+        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${taskList.size}/${size}]`
     }
+
     parsingProgressToast.show()
     if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
-        downloadTaskUnique(list)
+        await downloadTaskUnique(taskList)
         updateParsingProgress()
     }
-    let infoList = (await Promise.all(list.keysArray().map(async id => {
+
+    let cachedList = (await Promise.all(taskList.keysArray().map(async id => {
         let caches = db.videos.where('ID').equals(id)
-        let cache = await caches.first()
+        let cache = await caches.first() as VideoInfo | undefined
         if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
             let parseToast = newToast(
                 ToastType.Info,
                 {
-                    text: `${list.get(id)?.Title ?? id} %#parsing#%`,
+                    text: `${taskList.get(id)?.Title ?? id} %#parsing#%`,
                     duration: -1,
                     close: true,
                     onClick() {
@@ -971,19 +1180,21 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
                 }
             )
             parseToast.show()
-            cache = await new VideoInfo(list.get(id)).init(id)
+            cache = await new VideoInfo(taskList.get(id)).init(id)
             parseToast.hide()
         }
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
-    for (let videoInfo of infoList) {
-        let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID)
+
+    for (let videoInfo of cachedList) {
+        let video = await new VideoInfo(taskList.get(videoInfo.ID)).init(videoInfo.ID)
         !config.enableUnsafeMode && await delay(3000)
         video.State && await pushDownloadTask(video)
-        list.delete(videoInfo.ID)
+        taskList.delete(videoInfo.ID)
         updateButtonState(videoInfo.ID)
         updateParsingProgress()
     }
+
     parsingProgressToast.hide()
     newToast(
         ToastType.Info,
@@ -1156,13 +1367,17 @@ if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
-        if (!isNullOrUndefined(init) && !isNullOrUndefined(init.headers) && !isStringTupleArray(init.headers)) {
+        if (!isNullOrUndefined(init) && !isNullOrUndefined(init.headers)) {
             let authorization = null
             if (init.headers instanceof Headers) {
                 authorization = init.headers.has('Authorization') ? init.headers.get('Authorization') : null
             } else {
-                for (const key in init.headers) {
-                    if (key.toLowerCase() === "authorization") {
+                if (Array.isArray(init.headers)) {
+                    let index = init.headers.findIndex(([key, value]) => key.toLowerCase() !== "authorization")
+                    if (!(index < 0)) authorization = init.headers[index][1]
+                } else {
+                    for (const key in init.headers) {
+                        if (key.toLowerCase() !== "authorization") continue
                         authorization = init.headers[key]
                         break
                     }
