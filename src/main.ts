@@ -935,32 +935,36 @@ async function downloadTaskUnique(taskList: Dictionary<PieceInfo>) {
         updateButtonState(key)
     }
 }
-async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
-    let size = list.size
+async function analyzeDownloadTask(taskList: Dictionary<PieceInfo> = selectList) {
+    let size = taskList.size
     let node = renderNode({
         nodeType: 'p',
-        childs: `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
+        childs: `${i18nList[config.language].parsingProgress}[${taskList.size}/${size}]`
     })
+
     let parsingProgressToast = newToast(ToastType.Info, {
         node: node,
         duration: -1
     })
+
     function updateParsingProgress() {
-        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${list.size}/${size}]`
+        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${taskList.size}/${size}]`
     }
+
     parsingProgressToast.show()
     if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
-        downloadTaskUnique(list)
+        await downloadTaskUnique(taskList)
         updateParsingProgress()
     }
-    let infoList = (await Promise.all(list.keysArray().map(async id => {
+
+    let cachedList = (await Promise.all(taskList.keysArray().map(async id => {
         let caches = db.videos.where('ID').equals(id)
         let cache = await caches.first()
         if ((await caches.count()) < 1 || isNullOrUndefined(cache)) {
             let parseToast = newToast(
                 ToastType.Info,
                 {
-                    text: `${list.get(id)?.Title ?? id} %#parsing#%`,
+                    text: `${taskList.get(id)?.Title ?? id} %#parsing#%`,
                     duration: -1,
                     close: true,
                     onClick() {
@@ -969,19 +973,21 @@ async function analyzeDownloadTask(list: Dictionary<PieceInfo> = selectList) {
                 }
             )
             parseToast.show()
-            cache = await new VideoInfo(list.get(id)).init(id)
+            cache = await new VideoInfo(taskList.get(id)).init(id)
             parseToast.hide()
         }
         return cache
     }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
-    for (let videoInfo of infoList) {
-        let video = await new VideoInfo(list.get(videoInfo.ID)).init(videoInfo.ID)
+
+    for (let videoInfo of cachedList) {
+        let video = await new VideoInfo(taskList.get(videoInfo.ID)).init(videoInfo.ID)
         !config.enableUnsafeMode && await delay(3000)
         video.State && await pushDownloadTask(video)
-        list.delete(videoInfo.ID)
+        taskList.delete(videoInfo.ID)
         updateButtonState(videoInfo.ID)
         updateParsingProgress()
     }
+
     parsingProgressToast.hide()
     newToast(
         ToastType.Info,
