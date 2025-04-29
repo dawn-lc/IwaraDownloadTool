@@ -1,8 +1,9 @@
-import { debounce, isNullOrUndefined } from "./env";
+import { Dictionary } from "./class";
+import { debounce, isNullOrUndefined, UUID } from "./env";
 export type Gravity = 'top' | 'bottom';
 export type Position = 'left' | 'center' | 'right';
 export type CloseReason = 'timeout' | 'close-button' | 'other';
-const activeToasts = new Set<Toast>();
+export const activeToasts = new Dictionary<Toast>();
 const toastTimeouts = new Map<Toast, number>();
 const toastIntervals = new Map<Toast, number>();
 const toastContainers = new Map<string, HTMLElement>();
@@ -63,6 +64,7 @@ const delTimeout = (toast: Toast): void => {
     }
 }
 export interface ToastOptions {
+    id?: string
     root?: Element
     text?: string
     node?: Node
@@ -79,6 +81,7 @@ export interface ToastOptions {
     oldestFirst?: boolean
 }
 interface Options {
+    id: string
     gravity: Gravity
     position: Position
     stopOnFocus: boolean
@@ -100,12 +103,14 @@ interface Options {
  */
 export class Toast {
     private static readonly defaults: Options = {
+        id: UUID(),
         gravity: 'top',
-        position: 'right',
+        position: 'left',
         stopOnFocus: true,
         oldestFirst: true,
         showProgress: false
     }
+    public id: string
     public options: Options
     public root: Element
     public element: HTMLElement
@@ -131,6 +136,7 @@ export class Toast {
             ...Toast.defaults,
             ...options
         }
+        this.id = this.options.id
         this.root = getContainer(this.options.gravity, this.options.position)
         this.gravity = this.options.gravity
         this.position = this.options.position
@@ -143,7 +149,7 @@ export class Toast {
             .createContent()
             .ensureCloseMethod()
             .bindEvents()
-        activeToasts.add(this)
+        activeToasts.set(this.id, this)
     }
     private applyBaseStyles(): this {
         this.element.classList.add('toast')
@@ -300,7 +306,7 @@ export class Toast {
     public hide(reason: CloseReason = 'other'): void {
         if (!this.element) return
         delTimeout(this)
-        activeToasts.delete(this)
+        activeToasts.delete(this.id)
         this.animationEndHandler = (e: AnimationEvent) => {
             if (e.animationName.startsWith('toast-out')) {
                 this.element.removeEventListener('animationend', this.animationEndHandler!)
@@ -335,7 +341,7 @@ globalThis.Toast = createToast;
 globalThis.Toastify = createToast;
 (document.body ?? document.documentElement).appendChild(offscreenContainer);
 window.addEventListener('resize', debounce(() => {
-    for (const toast of activeToasts) {
+    for (const [_, toast] of activeToasts) {
         toast.setToastRect()
     }
 }, 100));
