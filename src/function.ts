@@ -262,10 +262,17 @@ export async function EnvCheck(): Promise<boolean> {
  */
 export async function localPathCheck(): Promise<boolean> {
     try {
-        let pathTest = analyzeLocalPath(config.downloadPath)
-        for (const key in pathTest) {
-            // todo check path
-        }
+        let pathTest = analyzeLocalPath(config.downloadPath.replaceVariable({
+            NowTime: new Date(),
+            UploadTime: new Date(),
+            AUTHOR: 'test',
+            ID: 'test',
+            TITLE: 'test',
+            ALIAS: 'test',
+            QUALITY: 'test'
+        }))
+        if (isNullOrUndefined(pathTest)) throw 'analyzeLocalPath error'
+        if (pathTest.fullPath.isEmpty()) throw 'analyzeLocalPath isEmpty'
     } catch (error: any) {
         let toast = newToast(
             ToastType.Error,
