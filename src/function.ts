@@ -405,6 +405,8 @@ export function aria2Download(videoInfo: VideoInfo) {
         let params = [
             [downloadUrl.href],
             prune({
+                
+        'allow-overwrite': "true",
                 'all-proxy': config.downloadProxy,
                 'all-proxy-passwd': !config.downloadProxy.isEmpty() ? config.downloadProxyPassword : undefined,
                 'all-proxy-user': !config.downloadProxy.isEmpty() ? config.downloadProxyUsername: undefined,
@@ -685,7 +687,7 @@ export async function aria2TaskCheckAndRestart() {
         .unique('id');
     let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
         .filter(
-            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
+            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete'
         )
         .unique('id');
 

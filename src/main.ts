@@ -387,35 +387,45 @@ class configEdit {
         })
     }
     private downloadTypeSelect() {
-        let select = renderNode({
-            nodeType: 'p',
-            className: 'inputRadioLine',
+        return renderNode({
+            nodeType: 'fieldset',
             childs: [
-                `%#downloadType#%`,
                 {
-                    nodeType: 'select',
-                    childs: Object.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((i: string) => renderNode({
-                        nodeType: 'option',
-                        childs: i
-                    })),
-                    attributes: {
-                        name: 'downloadType',
-                        selectedIndex: Number(this.target.downloadType)
-                    },
-                    events: {
-                        change: (e) => {
-                            this.target.downloadType = (e.target as HTMLSelectElement).selectedIndex
-                        }
-                    }
-                }
+                    nodeType: 'legend',
+                    childs: '%#downloadType#%'
+                },
+                ...Object.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((type: string, index: number) => 
+                    renderNode({
+                        nodeType: 'label',
+                        childs: [
+                            {
+                                nodeType: 'input',
+                                attributes: {
+                                    type: 'radio',
+                                    name: 'downloadType',
+                                    value: index,
+                                    checked: index === Number(this.target.downloadType)
+                                },
+                                events: {
+                                    change: (e) => {
+                                        this.target.downloadType = Number((e.target as HTMLInputElement).value)
+                                    }
+                                }
+                            },
+                            type
+                        ]
+                    })
+                )
             ]
         })
-        return select
     }
     private configChange(item: string) {
         switch (item) {
             case 'downloadType':
-                (this.interface.querySelector(`[name=${item}]`) as HTMLSelectElement).selectedIndex = Number(this.target.downloadType)
+                const radios = this.interface.querySelectorAll(`[name=${item}]`) as NodeListOf<HTMLInputElement>
+                radios.forEach(radio => {
+                    radio.checked = Number(radio.value) === Number(this.target.downloadType)
+                })
                 this.pageChange()
                 break
             case 'checkPriority':
@@ -1134,7 +1144,7 @@ async function downloadTaskUnique(taskList: Dictionary<PieceInfo>) {
             )
     );
     let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped.filter(
-        (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
+        (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete'
     ).unique('id');
     let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
     for (let key of taskList.keysArray().intersect(startedAndCompleted)) {
