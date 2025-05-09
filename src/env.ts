@@ -71,12 +71,13 @@ declare global {
         /**
          * 字符串变量替换方法
          * @param {Record<string, unknown>} replacements - 替换键值对对象
-         * @param {number} [count=0] - 递归计数(内部使用)
+         * @param {string} [prefix=%#] - 键前缀
+         * @param {string} [suffix=%#] - 键后缀
          * @returns {string} 返回替换后的字符串
          * @example 
-         * 'Hello %#name#%'.replaceVariable({name: 'World'}) // 'Hello World'
+         * 'Hello AAAnameBBB'.replaceVariable({name: 'World'},'AAA','BBB') // 'Hello World'
          */
-        replaceVariable(replacements: Record<string, unknown>, count?: number): string;
+        replaceVariable(replacements: Record<string, unknown>, prefix?:string, suffix?:string): string;
         /**
          * 替换字符串中的所有表情符号
          * @param {string | null} [replace] - 可选参数，替换为的字符串（默认替换为空字符串）
@@ -514,18 +515,25 @@ export function escapeRegex(str: string): string {
  * @param {Record<string, unknown>} replacements - 替换键值对对象
  * @returns {string} 返回替换后的字符串
  * @example 
- * 'Hello %#name#%'.replaceVariable({name: 'World'}) // 'Hello World'
+ * 'Hello AAAnameBBB'.replaceVariable({name: 'World'},'AAA','BBB') // 'Hello World'
  */
-String.prototype.replaceVariable = function (replacements: Record<string, unknown>): string {
+String.prototype.replaceVariable = function (replacements: Record<string, unknown>, prefix:string = '%#', suffix:string = '#%'): string {
     let current = this.toString();
+    prefix = escapeRegex(prefix);
+    suffix = escapeRegex(suffix);
     const seen = new Set<string>();
-    const keys = Object.keys(replacements).sort((a, b) => b.length - a.length);
-    const patterns = keys.map(key => {
+    const patterns = Object.keys(replacements).map(key => {
         const escKey = escapeRegex(key);
         return {
             value: replacements[key],
-            placeholderRegex: new RegExp(`%#${escKey}(?::.*?)?#%`, 'gs'),
-            placeholderFormatRegex: new RegExp(`(?<=%#${escKey}:).*?(?=#%)`, 'gs')
+            placeholderRegex: new RegExp(
+                `${prefix}${escKey}(?=(?::.*?${suffix}|${suffix}))(?::.*?)?${suffix}`,
+                "gs"
+            ),
+            placeholderFormatRegex: new RegExp(
+                `(?<=${prefix}${escKey}(?=(?::.*?${suffix}|${suffix})):).*?(?=${suffix})`,
+                "gs"
+            )
         };
     });
     while (true) {
@@ -534,20 +542,18 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
             break;
         }
         seen.add(current);
-        let modified = false;
         let next = current;
         for (const { value, placeholderRegex, placeholderFormatRegex } of patterns) {
             if (placeholderRegex.test(next)) {
-                let format = next.match(placeholderFormatRegex) || []
-                if (format.any() && hasFunction(value, 'format')) {
+                let format = next.match(placeholderFormatRegex)
+                if (!isNullOrUndefined(format) && format.any() && !format[0].isEmpty() && hasFunction(value, 'format')) {
                     next = next.replace(placeholderRegex, stringify(value.format(format[0])));
                 } else {
                     next = next.replace(placeholderRegex, stringify(value instanceof Date ? value.format('YYYY-MM-DD') : value));
                 }
-                modified = true;
             }
         }
-        if (!modified) break;
+        if (current === next) break;
         current = next;
     }
     return current;
