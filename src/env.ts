@@ -504,12 +504,7 @@ export function prune<T>(data: T): Pruned<T> {
     }
     return data as Pruned<T>;
 }
-/**
- * 对任意字符串做正则安全转义
- */
-export function escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+
 /**
  * 字符串变量替换方法
  * @param {Record<string, unknown>} replacements - 替换键值对对象
@@ -518,6 +513,9 @@ export function escapeRegex(str: string): string {
  * 'Hello AAAnameBBB'.replaceVariable({name: 'World'},'AAA','BBB') // 'Hello World'
  */
 String.prototype.replaceVariable = function (replacements: Record<string, unknown>, prefix:string = '%#', suffix:string = '#%'): string {
+    function escapeRegex(str: string): string {
+        return str.replace(/[\.\*\+\?\^\$\{\}\(\)\|\[\]\\]/g, '\\$&');
+    }
     let current = this.toString();
     prefix = escapeRegex(prefix);
     suffix = escapeRegex(suffix);
@@ -526,14 +524,8 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
         const escKey = escapeRegex(key);
         return {
             value: replacements[key],
-            placeholderRegex: new RegExp(
-                `${prefix}${escKey}(?=(?::.*?${suffix}|${suffix}))(?::.*?)?${suffix}`,
-                "gs"
-            ),
-            placeholderFormatRegex: new RegExp(
-                `(?<=${prefix}${escKey}(?=(?::.*?${suffix}|${suffix})):).*?(?=${suffix})`,
-                "gs"
-            )
+            placeholderRegex: new RegExp(`${prefix}${escKey}(?=(?::.*?${suffix}|${suffix}))(?::.*?)?${suffix}`,'gs'),
+            placeholderFormatRegex: new RegExp(`(?<=${prefix}${escKey}(?=(?::.*?${suffix}|${suffix})):).*?(?=${suffix})`,'gs')
         };
     });
     while (true) {
@@ -547,7 +539,7 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
             if (placeholderRegex.test(next)) {
                 let format = next.match(placeholderFormatRegex)
                 if (!isNullOrUndefined(format) && format.any() && !format[0].isEmpty() && hasFunction(value, 'format')) {
-                    next = next.replace(placeholderRegex, stringify(value.format(format[0])));
+                    next = next.replace(placeholderRegex, stringify(value.format(escapeRegex(format[0]))));
                 } else {
                     next = next.replace(placeholderRegex, stringify(value instanceof Date ? value.format('YYYY-MM-DD') : value));
                 }
