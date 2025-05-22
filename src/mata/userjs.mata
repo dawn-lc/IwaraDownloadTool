@@ -19,7 +19,7 @@
 // @connect           mmdfans.net
 // @connect           *.mmdfans.net
 // @connect           localhost
-// @connect           127.0.0.1
+// @connect           127.0.0.1 
 // @connect           *
 // @match             *://*.iwara.tv/*
 // @grant             GM_getValue
@@ -28,8 +28,6 @@
 // @grant             GM_deleteValue
 // @grant             GM_addValueChangeListener
 // @grant             GM_addStyle
-// @grant             GM_addElement
-// @grant             GM_getResourceText
 // @grant             GM_setClipboard
 // @grant             GM_download
 // @grant             GM_xmlhttpRequest

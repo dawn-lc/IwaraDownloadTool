@@ -10,7 +10,7 @@ import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, refreshToken, toastNode } from "./function";
 import mainCSS from "./css/main.css";
-
+import { log } from "console";
 /**
  * 视频信息类
  * 封装Iwara视频的元数据和操作
@@ -394,7 +394,7 @@ class configEdit {
                     nodeType: 'legend',
                     childs: '%#downloadType#%'
                 },
-                ...Object.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((type: string, index: number) => 
+                ...Object.keys(DownloadType).filter((i: any) => isNaN(Number(i))).map((type: string, index: number) =>
                     renderNode({
                         nodeType: 'label',
                         childs: [
@@ -553,6 +553,56 @@ class menu {
         })
     }
 
+    public async parseUnlistedAndPrivate(latestPrivateVideoID?: string) {
+        const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
+        let videos: VideoInfo[];
+        latestPrivateVideoID = isNullOrUndefined(latestPrivateVideoID) ? GM_getValue('latestPrivateVideoID', undefined) : latestPrivateVideoID;
+        if (isNullOrUndefined(latestPrivateVideoID)) {
+            GM_getValue('isDebug') && console.debug('[Debug] Entering addUnlistedAndPrivate block.');
+            videos = await db.videos.orderBy('UploadTime').reverse().toArray();
+            GM_getValue('isDebug') && console.debug(`[Debug] Retrieved ${videos.length} videos from database.`);
+            latestPrivateVideoID = videos.find(video => video.Private === true)?.ID ?? 'None';
+            GM_getValue('isDebug') && console.debug(`[Debug] Latest private video: ${!isNullOrUndefined(latestPrivateVideoID) ? latestPrivateVideoID : 'None'}`);
+            GM_setValue('latestPrivateVideoID', latestPrivateVideoID);
+        }
+        let page = 0;
+        const MAX_PAGES = 128;
+        GM_getValue('isDebug') && console.debug(`[Debug] Starting fetch loop. MAX_PAGES=${MAX_PAGES}`);
+        while (page < MAX_PAGES) {
+            GM_getValue('isDebug') && console.debug(`[Debug] Fetching page ${page}.`);
+            const response = await unlimitedFetch(
+                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${page}`,
+                {
+                    method: 'GET',
+                    headers: await getAuth(),
+                }
+            );
+            GM_getValue('isDebug') && console.debug('[Debug] Received response, parsing JSON.');
+            const data = (await response.json() as Iwara.IPage).results as Iwara.Video[];
+            GM_getValue('isDebug') && console.debug(`[Debug] Page ${page} returned ${data.length} videos.`);
+            data.forEach(info => info.user.following = true);
+            GM_getValue('isDebug') && console.debug('[Debug] Marked all fetched videos as following.');
+            const videoPromises = data.map(info => new VideoInfo().init(info.id, info));
+            GM_getValue('isDebug') && console.debug('[Debug] Initializing VideoInfo promises.');
+            const videoInfos = await Promise.all(videoPromises);
+            GM_getValue('isDebug') && console.debug('[Debug] All VideoInfo objects initialized.');
+            if (videoInfos.some(v => v.ID === latestPrivateVideoID)) {
+                GM_getValue('isDebug') && console.debug(`[Debug] Found latest private video on page ${page}, breaking loop.`);
+                break;
+            }
+            GM_getValue('isDebug') && console.debug(`[Debug] Latest private video not found on page ${page}, continuing.`);
+            page++;
+            GM_getValue('isDebug') && console.debug(`[Debug] Incremented page to ${page}, delaying next fetch.`);
+            await delay(1000);
+        }
+        GM_getValue('isDebug') && console.debug('[Debug] Fetch loop ended.');
+        videos = await db.videos.orderBy('UploadTime').reverse().toArray();
+        GM_getValue('isDebug') && console.debug(`[Debug] Retrieved ${videos.length} videos from database.`);
+        latestPrivateVideoID = videos.find(video => video.Private === true)?.ID ?? 'None';
+        GM_getValue('isDebug') && console.debug(`[Debug] Latest private video: ${!isNullOrUndefined(latestPrivateVideoID) ? latestPrivateVideoID : 'None'}`);
+        GM_setValue('latestPrivateVideoID', latestPrivateVideoID);
+    }
+
     public async pageChange() {
         while (this.interfacePage.hasChildNodes()) {
             this.interfacePage.removeChild(this.interfacePage.firstChild!)
@@ -608,7 +658,10 @@ class menu {
                 close: true
             }).show()
         })
-        let selectButtons = [injectCheckboxButton, deselectAllButton, reverseSelectButton, selectThisButton, deselectThisButton, downloadSelectedButton]
+        let parseUnlistedAndPrivate = this.button('parseUnlistedAndPrivate', (name, event) => {
+            this.parseUnlistedAndPrivate('ALL')
+        })
+        let selectButtons = [injectCheckboxButton, deselectAllButton, reverseSelectButton, selectThisButton, deselectThisButton, downloadSelectedButton, parseUnlistedAndPrivate]
 
         let downloadThisButton = this.button('downloadThis', async (name, event) => {
             let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
@@ -650,19 +703,11 @@ class menu {
                 break;
         }
 
-        const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
+
         if (config.addUnlistedAndPrivate && this.pageType === PageType.VideoList) {
-            for (let page = 0; page < 10; page++) {
-                const response = await unlimitedFetch(`https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${page}`, {
-                    method: 'GET',
-                    headers: await getAuth()
-                });
-                const data = (await response.json() as Iwara.IPage).results as Iwara.Video[];
-                // 来自该api的视频皆为已关注用户发布
-                data.forEach(info => info.user.following = true);
-                data.forEach(info => new VideoInfo().init(info.id, info));
-                await delay(3000)
-            }
+            this.parseUnlistedAndPrivate()
+        } else {
+            GM_getValue('isDebug') && console.debug('[Debug] Conditions not met: addUnlistedAndPrivate or pageType mismatch.');
         }
     }
     public inject() {
@@ -685,8 +730,9 @@ function updateButtonState(videoID: string) {
     const selectButton = getSelectButton(videoID)
     if (selectButton) selectButton.checked = selectList.has(videoID)
 }
+
 function saveSelectList(): void {
-    GM_getTabs((tabs)=>{
+    GM_getTabs((tabs) => {
         if (Object.keys(tabs).length > 1) return;
         GM_setValue('selectList', {
             timestamp: selectList.timestamp,
@@ -695,22 +741,42 @@ function saveSelectList(): void {
     });
 }
 export var selectList = new SyncDictionary<PieceInfo>('selectList');
+originalAddEventListener.call(unsafeWindow.document, "visibilitychange", saveSelectList)
+var selected = renderNode({
+    nodeType: 'span',
+    childs: ` %#selected#% ${selectList.size} `
+})
+function updateSelected() {
+    selected.textContent = ` ${i18nList[config.language].selected} ${selectList.size} `
+}
+var watermark = renderNode({
+    nodeType: 'p',
+    className: 'fixed-bottom-right',
+    childs: [
+        `%#appName#% ${GM_getValue('version')} `,
+        selected,
+        GM_getValue('isDebug') ? `%#isDebug#%` : ''
+    ]
+})
 pageStatus.onPageLeave = () => {
     saveSelectList()
 }
 selectList.onSet = (key) => {
     updateButtonState(key);
     saveSelectList();
+    updateSelected();
 };
 selectList.onDel = (key) => {
     updateButtonState(key);
     saveSelectList();
+    updateSelected();
 };
 selectList.onSync = () => {
-    pageSelectButtons.forEach((value,key)=>{
+    pageSelectButtons.forEach((value, key) => {
         updateButtonState(key);
     })
     saveSelectList();
+    updateSelected();
 };
 
 export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
@@ -1301,14 +1367,7 @@ async function main() {
             o.disconnect()
         }
     }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
-    originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
-        nodeType: 'p',
-        className: 'fixed-bottom-right',
-        childs: prune([
-            `%#appName#% ${GM_getValue('version')} `,
-            GM_getValue('isDebug') ? `%#isDebug#%` : ''
-        ])
-    }))
+    originalNodeAppendChild.call(unsafeWindow.document.body, watermark)
     if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
         let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
             method: 'GET',
@@ -1355,7 +1414,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
         unsafeWindow.Toast = Toast
         console.debug(stringify(GM_info))
     }
-    GM_getTabs((tabs)=>{
+    GM_getTabs((tabs) => {
         if (Object.keys(tabs).length != 1) return;
         try {
             let selectListStorage = GM_getValue('selectList', { timestamp: selectList.timestamp, selectList: selectList.toArray() })
