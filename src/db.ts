@@ -29,6 +29,39 @@ export class Database extends Dexie {
                 }
             })
         })
+        this.version(4).stores({
+            videos: 'ID, UploadTime',
+            caches: 'ID'
+        }).upgrade((trans) => {
+            return trans.table('videos').toCollection().modify(video => {
+                if (isNullOrUndefined(video.UploadTime)) {
+                    video.UploadTime = new Date(0).getTime();
+                } else if (typeof video.UploadTime === 'string') {
+                    video.UploadTime = new Date(video.UploadTime).getTime();
+                }
+                if (isNullOrUndefined(video.RAW)) {
+                    video.RAW = undefined;
+                }
+            })
+        })
+        this.version(5).stores({
+            videos: 'ID, UploadTime',
+            caches: 'ID'
+        }).upgrade((trans) => {
+            return trans.table('videos').toCollection().modify(video => {
+                if (isNullOrUndefined(video.UploadTime)) {
+                    video.UploadTime = new Date(0).getTime();
+                } else if (typeof video.UploadTime === 'string') {
+                    video.UploadTime = new Date(video.UploadTime).getTime();
+                } else if (video.UploadTime instanceof Date) {
+                    video.UploadTime = video.UploadTime.getTime();
+                }
+                if (isNullOrUndefined(video.RAW)) {
+                    video.RAW = undefined;
+                }
+                console.debug(video.ID, "ok")
+            })
+        })
         this.videos = this.table("videos")
         this.caches = this.table("caches")
     }
@@ -45,7 +78,7 @@ export class Database extends Dexie {
         endTime = isString(endTime) ? new Date(endTime) : endTime
         return this.videos
             .where('UploadTime')
-            .between(startTime, endTime, true, true)
+            .between(startTime.getTime(), endTime.getTime(), true, true)
             .and(video => !isNullOrUndefined(video.RAW))
             .and(video => video.Private !== false || video.Unlisted !== false)
             .toArray()

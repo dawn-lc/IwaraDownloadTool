@@ -1,5 +1,5 @@
 import "./env";
-import { delay, isNullOrUndefined, prune, stringify } from "./env";
+import { delay, isNullOrUndefined, isString, prune, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
@@ -10,14 +10,13 @@ import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, refreshToken, toastNode } from "./function";
 import mainCSS from "./css/main.css";
-import { log } from "console";
 /**
  * 视频信息类
  * 封装Iwara视频的元数据和操作
  */
 export class VideoInfo {
     ID!: string;
-    UploadTime!: Date;
+    UploadTime!: number;
     Title!: string;
     FileName!: string;
     Size!: number;
@@ -125,7 +124,7 @@ export class VideoInfo {
             this.Liked = VideoInfoSource.liked
             this.Private = VideoInfoSource.private
             this.Unlisted = VideoInfoSource.unlisted
-            this.UploadTime = new Date(VideoInfoSource.createdAt)
+            this.UploadTime = new Date(VideoInfoSource.createdAt).getTime()
             this.Tags = VideoInfoSource.tags
             this.Description = VideoInfoSource.body
             this.ExternalUrl = VideoInfoSource.embedUrl
@@ -565,13 +564,14 @@ class menu {
             GM_getValue('isDebug') && console.debug(`[Debug] Latest private video: ${!isNullOrUndefined(latestPrivateVideoID) ? latestPrivateVideoID : 'None'}`);
             GM_setValue('latestPrivateVideoID', latestPrivateVideoID);
         }
-        let page = 0;
-        const MAX_PAGES = 128;
-        GM_getValue('isDebug') && console.debug(`[Debug] Starting fetch loop. MAX_PAGES=${MAX_PAGES}`);
-        while (page < MAX_PAGES) {
-            GM_getValue('isDebug') && console.debug(`[Debug] Fetching page ${page}.`);
+
+        let pageCount = 0;
+        const MAX_FIND_PAGES = 16;
+        GM_getValue('isDebug') && console.debug(`[Debug] Starting fetch loop. MAX_PAGES=${MAX_FIND_PAGES}`);
+        while (pageCount < MAX_FIND_PAGES) {
+            GM_getValue('isDebug') && console.debug(`[Debug] Fetching page ${pageCount}.`);
             const response = await unlimitedFetch(
-                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${page}`,
+                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${pageCount}`,
                 {
                     method: 'GET',
                     headers: await getAuth(),
@@ -579,7 +579,7 @@ class menu {
             );
             GM_getValue('isDebug') && console.debug('[Debug] Received response, parsing JSON.');
             const data = (await response.json() as Iwara.IPage).results as Iwara.Video[];
-            GM_getValue('isDebug') && console.debug(`[Debug] Page ${page} returned ${data.length} videos.`);
+            GM_getValue('isDebug') && console.debug(`[Debug] Page ${pageCount} returned ${data.length} videos.`);
             data.forEach(info => info.user.following = true);
             GM_getValue('isDebug') && console.debug('[Debug] Marked all fetched videos as following.');
             const videoPromises = data.map(info => new VideoInfo().init(info.id, info));
@@ -587,18 +587,34 @@ class menu {
             const videoInfos = await Promise.all(videoPromises);
             GM_getValue('isDebug') && console.debug('[Debug] All VideoInfo objects initialized.');
             if (videoInfos.some(v => v.ID === latestPrivateVideoID)) {
-                GM_getValue('isDebug') && console.debug(`[Debug] Found latest private video on page ${page}, breaking loop.`);
                 break;
             }
-            GM_getValue('isDebug') && console.debug(`[Debug] Latest private video not found on page ${page}, continuing.`);
-            page++;
-            GM_getValue('isDebug') && console.debug(`[Debug] Incremented page to ${page}, delaying next fetch.`);
+            GM_getValue('isDebug') && console.debug(`[Debug] Latest private video not found on page ${pageCount}, continuing.`);
+            pageCount++;
+
+            GM_getValue('isDebug') && console.debug(`[Debug] Incremented page to ${pageCount}, delaying next fetch.`);
             await delay(1000);
         }
         GM_getValue('isDebug') && console.debug('[Debug] Fetch loop ended.');
-        videos = await db.videos.orderBy('UploadTime').reverse().toArray();
+        videos = await db.videos.orderBy('UploadTime').reverse().filter(video => video.Private === true).toArray();
         GM_getValue('isDebug') && console.debug(`[Debug] Retrieved ${videos.length} videos from database.`);
-        latestPrivateVideoID = videos.find(video => video.Private === true)?.ID ?? 'None';
+        while (true) {
+            latestPrivateVideoID = videos.find(video => video.Private === true)?.ID ?? 'None';
+            if (latestPrivateVideoID === 'None') {
+                config.addUnlistedAndPrivate = false
+                break
+            }
+            let latestPrivateVideo = await (await unlimitedFetch(`https://api.iwara.tv/video/${latestPrivateVideoID}`, {
+                headers: await getAuth()
+            })).json() as Iwara.Video
+
+            if (isNullOrUndefined(latestPrivateVideo.id)) {
+                videos = videos.filter(video => video.ID !== latestPrivateVideoID)
+                continue
+            } else {
+                break
+            }
+        }
         GM_getValue('isDebug') && console.debug(`[Debug] Latest private video: ${!isNullOrUndefined(latestPrivateVideoID) ? latestPrivateVideoID : 'None'}`);
         GM_setValue('latestPrivateVideoID', latestPrivateVideoID);
     }
@@ -1260,7 +1276,7 @@ async function analyzeDownloadTask(taskList: Dictionary<PieceInfo> = selectList)
             parseToast.hide()
         }
         return cache
-    }))).sort((a, b) => a.UploadTime.getTime() - b.UploadTime.getTime());
+    }))).sort((a, b) => a.UploadTime - b.UploadTime);
 
     for (let videoInfo of cachedList) {
         let video = await new VideoInfo(taskList.get(videoInfo.ID)).init(videoInfo.ID)
@@ -1485,8 +1501,22 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         if (url.searchParams.has('user')) break
                         if (url.searchParams.has('subscribed')) break
                         if (url.searchParams.has('sort') ? url.searchParams.get('sort') !== 'date' : false) break
-                        let sortList = [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-                        let cache = await db.getFilteredVideos(sortList.at(0)?.createdAt, sortList.at(-1)?.createdAt)
+                        let sortList = [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                        let firstItem = sortList.at(0);
+                        let lastItem = sortList.at(-1);
+                        let startTime;
+                        let endTime;
+                        if (firstItem?.createdAt) {
+                            startTime = new Date(firstItem.createdAt).add({ hours: 2 });
+                        }
+                        if (lastItem?.createdAt) {
+                            endTime = new Date(lastItem.createdAt).sub({ hours: 2 });
+                        }
+                        if (!isNullOrUndefined(startTime) && !isNullOrUndefined(endTime)) {
+                            console.debug(startTime.toLocaleString())
+                            console.debug(endTime.toLocaleString())
+                        }
+                        let cache = await db.getFilteredVideos(endTime, startTime);
                         if (!cache.any()) break
                         cloneBody.count = cloneBody.count + cache.length
                         cloneBody.limit = cloneBody.limit + cache.length

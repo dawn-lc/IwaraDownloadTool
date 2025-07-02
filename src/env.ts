@@ -77,7 +77,7 @@ declare global {
          * @example 
          * 'Hello AAAnameBBB'.replaceVariable({name: 'World'},'AAA','BBB') // 'Hello World'
          */
-        replaceVariable(replacements: Record<string, unknown>, prefix?:string, suffix?:string): string;
+        replaceVariable(replacements: Record<string, unknown>, prefix?: string, suffix?: string): string;
         /**
          * 替换字符串中的所有表情符号
          * @param {string | null} [replace] - 可选参数，替换为的字符串（默认替换为空字符串）
@@ -143,6 +143,24 @@ declare global {
 
     interface Date {
         format(format?: string): string;
+        add({ years, months, days, hours, minutes, seconds, ms }?: {
+            years?: number | undefined;
+            months?: number | undefined;
+            days?: number | undefined;
+            hours?: number | undefined;
+            minutes?: number | undefined;
+            seconds?: number | undefined;
+            ms?: number | undefined;
+        }): Date
+        sub({ years, months, days, hours, minutes, seconds, ms }?: {
+            years?: number | undefined;
+            months?: number | undefined;
+            days?: number | undefined;
+            hours?: number | undefined;
+            minutes?: number | undefined;
+            seconds?: number | undefined;
+            ms?: number | undefined;
+        }): Date
     }
 
     interface Window {
@@ -349,6 +367,51 @@ String.prototype.toURL = function () {
     }
     return new URL(URLString.toString())
 }
+
+Date.prototype.add = function ({
+    years = 0,
+    months = 0,
+    days = 0,
+    hours = 0,
+    minutes = 0,
+    seconds = 0,
+    ms = 0
+} = {}) {
+    const newDate = new Date(this.getTime());
+
+    if (years) newDate.setFullYear(newDate.getFullYear() + years);
+    if (months) newDate.setMonth(newDate.getMonth() + months);
+    if (days) newDate.setDate(newDate.getDate() + days);
+    if (hours) newDate.setHours(newDate.getHours() + hours);
+    if (minutes) newDate.setMinutes(newDate.getMinutes() + minutes);
+    if (seconds) newDate.setSeconds(newDate.getSeconds() + seconds);
+    if (ms) newDate.setMilliseconds(newDate.getMilliseconds() + ms);
+
+    return newDate;
+};
+
+Date.prototype.sub = function ({
+    years = 0,
+    months = 0,
+    days = 0,
+    hours = 0,
+    minutes = 0,
+    seconds = 0,
+    ms = 0
+} = {}) {
+    const newDate = new Date(this.getTime());
+
+    if (years) newDate.setFullYear(newDate.getFullYear() - years);
+    if (months) newDate.setMonth(newDate.getMonth() - months);
+    if (days) newDate.setDate(newDate.getDate() - days);
+    if (hours) newDate.setHours(newDate.getHours() - hours);
+    if (minutes) newDate.setMinutes(newDate.getMinutes() - minutes);
+    if (seconds) newDate.setSeconds(newDate.getSeconds() - seconds);
+    if (ms) newDate.setMilliseconds(newDate.getMilliseconds() - ms);
+
+    return newDate;
+};
+
 /**
  * 节流函数，限制函数执行频率
  * @param fn 需要节流的函数
@@ -512,7 +575,7 @@ export function prune<T>(data: T): Pruned<T> {
  * @example 
  * 'Hello AAAnameBBB'.replaceVariable({name: 'World'},'AAA','BBB') // 'Hello World'
  */
-String.prototype.replaceVariable = function (replacements: Record<string, unknown>, prefix:string = '%#', suffix:string = '#%'): string {
+String.prototype.replaceVariable = function (replacements: Record<string, unknown>, prefix: string = '%#', suffix: string = '#%'): string {
     function escapeRegex(str: string): string {
         return str.replace(/[\.\*\+\?\^\$\{\}\(\)\|\[\]\\]/g, '\\$&');
     }
@@ -524,8 +587,8 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
         const escKey = escapeRegex(key);
         return {
             value: replacements[key],
-            placeholderRegex: new RegExp(`${prefix}${escKey}(?=(?::.*?${suffix}|${suffix}))(?::.*?)?${suffix}`,'gs'),
-            placeholderFormatRegex: new RegExp(`(?<=${prefix}${escKey}(?=(?::.*?${suffix}|${suffix})):).*?(?=${suffix})`,'gs')
+            placeholderRegex: new RegExp(`${prefix}${escKey}(?=(?::.*?${suffix}|${suffix}))(?::.*?)?${suffix}`, 'gs'),
+            placeholderFormatRegex: new RegExp(`(?<=${prefix}${escKey}(?=(?::.*?${suffix}|${suffix})):).*?(?=${suffix})`, 'gs')
         };
     });
     while (true) {
