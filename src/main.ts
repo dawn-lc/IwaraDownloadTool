@@ -1,5 +1,5 @@
 import "./env";
-import { delay, isCacheVideoInfo, isFailVideoInfo, isInitVideoInfo, isNullOrUndefined, isVideoInfo, prune, stringify } from "./env";
+import { delay, isCacheVideoInfo, isFailVideoInfo, isInitVideoInfo, isNullOrUndefined, isString, isVideoInfo, prune, stringify } from "./env";
 import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
@@ -1193,15 +1193,24 @@ async function addDownloadTask() {
                             let list: Array<[string, VideoInfo]> = [];
                             try {
                                 const parsed = JSON.parse(textArea.value);
-                                if (Array.isArray(parsed) && parsed.every(item => Array.isArray(item) && typeof item[0] === 'string' && isVideoInfo(item[1]))) {
-                                    list = parsed as Array<[string, VideoInfo]>;
+                                if (Array.isArray(parsed)) {
+                                    list = parsed.map(item => {
+                                        if (Array.isArray(item) && isString(item[0]) && !item[0].isEmpty()) {
+                                            if (!isVideoInfo(item[1])) {
+                                                item[1].Type = 'init'
+                                                item[1].ID = item[1].ID ?? item[0]
+                                                item[1].UpdateTime = item[1].UpdateTime ?? Date.now()
+                                            }
+                                        }
+                                        return [...item]
+                                    }) as Array<[string, VideoInfo]>;
                                 } else {
                                     throw new Error('解析结果不是符合预期的列表');
                                 }
                             } catch (error) {
-                                list = textArea.value.split('|').map(ID => [ID, {
+                                list = textArea.value.split('|').map(ID => [ID.trim(), {
                                     Type: 'init',
-                                    ID,
+                                    ID: ID.trim(),
                                     UpdateTime: Date.now()
                                 }]);
                             }
