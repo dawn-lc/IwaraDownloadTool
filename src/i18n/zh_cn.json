@@ -71,7 +71,11 @@
         {
             "nodeType": "br"
         },
-        "优化提示信息显示模块, 动画更加流畅(重写了Toastify JS)"
+        "重构视频信息解析器，更新本地数据库缓存结构（请手动清理遗留数据）。",
+        {
+            "nodeType": "br"
+        },
+        "添加已关注提示在复选框下方。"
     ],
     "useHelpForBase": "请认真阅读使用指南！",
     "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后，点击侧边栏中[%#injectCheckbox#%]开启下载选择框",

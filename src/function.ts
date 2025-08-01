@@ -3,10 +3,9 @@ import { isConvertibleToNumber, isNullOrUndefined, prune, stringify, UUID } from
 import { i18nList } from "./i18n"
 import { ToastType, DownloadType } from "./enum"
 import { config } from "./config"
-import { db } from "./db"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Path } from "./class"
-import { pushDownloadTask, VideoInfo } from "./main"
+import { parseVideoInfo, pushDownloadTask } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 
 /**
@@ -39,19 +38,12 @@ export async function refreshToken(): Promise<string> {
  * @param {string} [url] - 可选URL参数，用于生成X-Version头
  * @returns 包含Cookie和Authorization的请求头对象
  */
-export async function getAuth(url?: string): Promise<{
-    Cooike: string;
-    Authorization: string;
-} & {
-    'X-Version': string;
-}> {
-    return Object.assign(
-        {
-            'Cooike': unsafeWindow.document.cookie,
-            'Authorization': config.authorization
-        },
-        !isNullOrUndefined(url) && !url.isEmpty() ? { 'X-Version': await getXVersion(url) } : { 'X-Version': '' }
-    )
+export async function getAuth(url?: string): Promise<{ Cooike: string; Authorization: string; } & { 'X-Version': string; }> {
+    return prune({
+        'Cooike': unsafeWindow.document.cookie,
+        'Authorization': config.authorization,
+        'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined
+    })
 }
 /**
  * 检查评论中是否包含下载链接
@@ -179,10 +171,10 @@ export function newToast(type: ToastType, params?: ToastOptions): Toast {
 
 /**
  * 根据视频信息生成下载路径
- * @param {VideoInfo} videoInfo - 视频信息对象
+ * @param {FullVideoInfo} videoInfo - 视频信息对象
  * @returns {Path} 返回生成的路径对象
  */
-export function getDownloadPath(videoInfo: VideoInfo): Path {
+export function getDownloadPath(videoInfo: FullVideoInfo): Path {
     return analyzeLocalPath(
         config.downloadPath.trim().replaceVariable({
             NowTime: new Date(),
@@ -382,9 +374,9 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
 }
 /**
  * 通过Aria2下载视频
- * @param {VideoInfo} videoInfo - 视频信息对象
+ * @param {FullVideoInfo} videoInfo - 视频信息对象
  */
-export function aria2Download(videoInfo: VideoInfo) {
+export function aria2Download(videoInfo: FullVideoInfo) {
     (async function (id: string, author: string, title: string, uploadTime: number, info: string, tag: Array<{
         id: string
         type: string
@@ -430,10 +422,10 @@ export function aria2Download(videoInfo: VideoInfo) {
 }
 /**
  * 通过IwaraDownloader下载视频
- * @param {VideoInfo} videoInfo - 视频信息对象
+ * @param {FullVideoInfo} videoInfo - 视频信息对象
  */
-export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
-    (async function (videoInfo: VideoInfo) {
+export function iwaraDownloaderDownload(videoInfo: FullVideoInfo) {
+    (async function (videoInfo: FullVideoInfo) {
         let r = await (await unlimitedFetch(config.iwaraDownloaderPath, {
             method: 'POST',
             headers: {
@@ -502,9 +494,9 @@ export function iwaraDownloaderDownload(videoInfo: VideoInfo) {
 }
 /**
  * 通过浏览器直接下载视频
- * @param {VideoInfo} videoInfo - 视频信息对象
+ * @param {FullVideoInfo} videoInfo - 视频信息对象
  */
-export function othersDownload(videoInfo: VideoInfo) {
+export function othersDownload(videoInfo: FullVideoInfo) {
     (async function (DownloadUrl: URL) {
         DownloadUrl.searchParams.set('download', getDownloadPath(videoInfo).fullName)
         GM_openInTab(DownloadUrl.href, { active: false, insert: true, setParent: true })
@@ -531,9 +523,9 @@ export function browserDownloadErrorParse(error: Tampermonkey.DownloadErrorRespo
 }
 /**
  * 通过浏览器下载视频
- * @param {VideoInfo} videoInfo - 视频信息对象
+ * @param {FullVideoInfo} videoInfo - 视频信息对象
  */
-export function browserDownload(videoInfo: VideoInfo) {
+export function browserDownload(videoInfo: FullVideoInfo) {
     (async function (ID: string, Author: string, Title: string, UploadTime: number, Info: string, Tag: Array<{
         id: string
         type: string
@@ -713,17 +705,17 @@ export async function aria2TaskCheckAndRestart() {
                     this.hide()
                     for (let i = 0; i < needRestart.length; i++) {
                         const task = needRestart[i]
-                        let cache = (await db.videos.where('ID').equals(task.id).toArray()).pop()
-                        let videoInfo = await (new VideoInfo(cache)).init(task.id)
-                        if (videoInfo.State) {
-                            await pushDownloadTask(videoInfo, true)
-                            let activeTasks = active.filter(
-                                (activeTask: { id: string, data: Aria2.Status }) => activeTask.id === task.id
-                            )
-                            for (let t = 0; t < activeTasks.length; t++) {
-                                const element = activeTasks[t];
-                                await aria2API('aria2.forceRemove', [element.data.gid])
-                            }
+                        await pushDownloadTask(await parseVideoInfo({
+                            Type: "init",
+                            ID: task.id,
+                            UpdateTime: 0
+                        }), true)
+                        let activeTasks = active.filter(
+                            (activeTask: { id: string, data: Aria2.Status }) => activeTask.id === task.id
+                        )
+                        for (let t = 0; t < activeTasks.length; t++) {
+                            const element = activeTasks[t];
+                            await aria2API('aria2.forceRemove', [element.data.gid])
                         }
                     }
                 }

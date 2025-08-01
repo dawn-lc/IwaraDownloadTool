@@ -201,7 +201,89 @@ export const isNotEmpty = (obj: unknown): boolean => {
     }
     return true
 }
+export const isVideoInfo = (obj: unknown): obj is VideoInfo => {
+    if (obj === null || typeof obj !== 'object') return false;
+    const info = obj as VideoInfo;
 
+    return (
+        isInitVideoInfo(info) ||
+        isFullVideoInfo(info) ||
+        isPartialVideoInfo(info) ||
+        isCacheVideoInfo(info) ||
+        isFailVideoInfo(info)
+    );
+};
+const hasValidID = (info: VideoInfo) => isString(info.ID) && isNotEmpty(info.ID);
+
+export const isInitVideoInfo = (info: VideoInfo): info is InitVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'init' &&
+    hasValidID(info) &&
+    isNumber(info.UpdateTime);
+
+export const isFullVideoInfo = (info: VideoInfo): info is FullVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'full' &&
+    hasValidID(info) &&
+    isNumber(info.UploadTime) &&
+    isString(info.Title) && isNotEmpty(info.Title) &&
+    isString(info.FileName) && isNotEmpty(info.FileName) &&
+    isNumber(info.Size) &&
+    isArray(info.Tags) &&
+    typeof info.Liked === 'boolean' &&
+    typeof info.Following === 'boolean' &&
+    typeof info.Friend === 'boolean' &&
+    isString(info.Author) && isNotEmpty(info.Author) &&
+    isString(info.AuthorID) && isNotEmpty(info.AuthorID) &&
+    typeof info.Private === 'boolean' &&
+    typeof info.Unlisted === 'boolean' &&
+    isString(info.DownloadQuality) &&
+    typeof info.External === 'boolean' &&
+    isString(info.DownloadUrl) && isNotEmpty(info.DownloadUrl) &&
+    isObject(info.RAW);
+
+export const isPartialVideoInfo = (info: VideoInfo): info is PartialVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'partial' &&
+    hasValidID(info) &&
+    isNumber(info.UploadTime) &&
+    isString(info.Title) && isNotEmpty(info.Title) &&
+    isArray(info.Tags) &&
+    typeof info.Liked === 'boolean' &&
+    isString(info.Author) && isNotEmpty(info.Author) &&
+    isString(info.AuthorID) && isNotEmpty(info.AuthorID) &&
+    typeof info.Private === 'boolean' &&
+    typeof info.Unlisted === 'boolean' &&
+    typeof info.External === 'boolean' &&
+    isObject(info.RAW);
+
+export const isCacheVideoInfo = (info: VideoInfo): info is CacheVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'cache' &&
+    hasValidID(info) &&
+    isObject(info.RAW);
+
+export const isFailVideoInfo = (info: VideoInfo): info is FailVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'fail' &&
+    hasValidID(info);
+
+export const assertVideoInfoType = (info: VideoInfo) => {
+    switch (info.Type) {
+        case 'init':
+            return info as InitVideoInfo;
+        case 'full':
+            return info as FullVideoInfo;
+        case 'partial':
+            return info as PartialVideoInfo;
+        case 'cache':
+            return info as CacheVideoInfo;
+        case 'fail':
+            return info as FailVideoInfo;
+        default:
+            throw new Error(`未知的 VideoInfo 类型: ${(info as any).Type}`);
+    }
+}
 export function isConvertibleToNumber(obj: unknown, includeInfinity: boolean = false): boolean {
     if (isNullOrUndefined(obj)) {
         return false;
