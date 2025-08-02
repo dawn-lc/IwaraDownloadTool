@@ -20,9 +20,9 @@ declare namespace Iwara {
         username: string
         status: string
         role: string
-        followedBy: boolean | undefined
-        following: boolean | undefined
-        friend: boolean | undefined
+        followedBy: boolean
+        following: boolean
+        friend: boolean
         premium: boolean
         locale: null
         seenAt: string
@@ -57,10 +57,10 @@ declare namespace Iwara {
     }
 
     interface IResult {
-        id: string
-        createdAt: string
-        updatedAt: string
-        user: User,
+        id?: string
+        createdAt?: string
+        updatedAt?: string
+        user?: User,
         message?: string | null
     }
 
@@ -93,20 +93,22 @@ declare namespace Iwara {
     }
 
     interface Video extends IResult {
+        id: string
         slug: string
         title: string
-        body: string | null
+        body: string | undefined
         status: string
         rating: string
         private: boolean
         unlisted: boolean
         thumbnail: number
-        embedUrl: string | null
+        embedUrl: string | undefined
         liked: boolean
         numLikes: number
         numViews: number
         numComments: number
         file: File
+        user: User,
         customThumbnail: any
         tags: Tag[]
         fileUrl: string

@@ -71,12 +71,13 @@ declare global {
         /**
          * 字符串变量替换方法
          * @param {Record<string, unknown>} replacements - 替换键值对对象
-         * @param {number} [count=0] - 递归计数(内部使用)
+         * @param {string} [prefix=%#] - 键前缀
+         * @param {string} [suffix=%#] - 键后缀
          * @returns {string} 返回替换后的字符串
          * @example 
-         * 'Hello %#name#%'.replaceVariable({name: 'World'}) // 'Hello World'
+         * 'Hello AAAnameBBB'.replaceVariable({name: 'World'},'AAA','BBB') // 'Hello World'
          */
-        replaceVariable(replacements: Record<string, unknown>, count?: number): string;
+        replaceVariable(replacements: Record<string, unknown>, prefix?: string, suffix?: string): string;
         /**
          * 替换字符串中的所有表情符号
          * @param {string | null} [replace] - 可选参数，替换为的字符串（默认替换为空字符串）
@@ -142,6 +143,24 @@ declare global {
 
     interface Date {
         format(format?: string): string;
+        add({ years, months, days, hours, minutes, seconds, ms }?: {
+            years?: number | undefined;
+            months?: number | undefined;
+            days?: number | undefined;
+            hours?: number | undefined;
+            minutes?: number | undefined;
+            seconds?: number | undefined;
+            ms?: number | undefined;
+        }): Date
+        sub({ years, months, days, hours, minutes, seconds, ms }?: {
+            years?: number | undefined;
+            months?: number | undefined;
+            days?: number | undefined;
+            hours?: number | undefined;
+            minutes?: number | undefined;
+            seconds?: number | undefined;
+            ms?: number | undefined;
+        }): Date
     }
 
     interface Window {
@@ -182,7 +201,89 @@ export const isNotEmpty = (obj: unknown): boolean => {
     }
     return true
 }
+export const isVideoInfo = (obj: unknown): obj is VideoInfo => {
+    if (obj === null || typeof obj !== 'object') return false;
+    const info = obj as VideoInfo;
 
+    return (
+        isInitVideoInfo(info) ||
+        isFullVideoInfo(info) ||
+        isPartialVideoInfo(info) ||
+        isCacheVideoInfo(info) ||
+        isFailVideoInfo(info)
+    );
+};
+const hasValidID = (info: VideoInfo) => isString(info.ID) && isNotEmpty(info.ID);
+
+export const isInitVideoInfo = (info: VideoInfo): info is InitVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'init' &&
+    hasValidID(info) &&
+    isNumber(info.UpdateTime);
+
+export const isFullVideoInfo = (info: VideoInfo): info is FullVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'full' &&
+    hasValidID(info) &&
+    isNumber(info.UploadTime) &&
+    isString(info.Title) && isNotEmpty(info.Title) &&
+    isString(info.FileName) && isNotEmpty(info.FileName) &&
+    isNumber(info.Size) &&
+    isArray(info.Tags) &&
+    typeof info.Liked === 'boolean' &&
+    typeof info.Following === 'boolean' &&
+    typeof info.Friend === 'boolean' &&
+    isString(info.Author) && isNotEmpty(info.Author) &&
+    isString(info.AuthorID) && isNotEmpty(info.AuthorID) &&
+    typeof info.Private === 'boolean' &&
+    typeof info.Unlisted === 'boolean' &&
+    isString(info.DownloadQuality) &&
+    typeof info.External === 'boolean' &&
+    isString(info.DownloadUrl) && isNotEmpty(info.DownloadUrl) &&
+    isObject(info.RAW);
+
+export const isPartialVideoInfo = (info: VideoInfo): info is PartialVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'partial' &&
+    hasValidID(info) &&
+    isNumber(info.UploadTime) &&
+    isString(info.Title) && isNotEmpty(info.Title) &&
+    isArray(info.Tags) &&
+    typeof info.Liked === 'boolean' &&
+    isString(info.Author) && isNotEmpty(info.Author) &&
+    isString(info.AuthorID) && isNotEmpty(info.AuthorID) &&
+    typeof info.Private === 'boolean' &&
+    typeof info.Unlisted === 'boolean' &&
+    typeof info.External === 'boolean' &&
+    isObject(info.RAW);
+
+export const isCacheVideoInfo = (info: VideoInfo): info is CacheVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'cache' &&
+    hasValidID(info) &&
+    isObject(info.RAW);
+
+export const isFailVideoInfo = (info: VideoInfo): info is FailVideoInfo =>
+    !isNullOrUndefined(info) &&
+    info.Type === 'fail' &&
+    hasValidID(info);
+
+export const assertVideoInfoType = (info: VideoInfo) => {
+    switch (info.Type) {
+        case 'init':
+            return info as InitVideoInfo;
+        case 'full':
+            return info as FullVideoInfo;
+        case 'partial':
+            return info as PartialVideoInfo;
+        case 'cache':
+            return info as CacheVideoInfo;
+        case 'fail':
+            return info as FailVideoInfo;
+        default:
+            throw new Error(`未知的 VideoInfo 类型: ${(info as any).Type}`);
+    }
+}
 export function isConvertibleToNumber(obj: unknown, includeInfinity: boolean = false): boolean {
     if (isNullOrUndefined(obj)) {
         return false;
@@ -348,6 +449,51 @@ String.prototype.toURL = function () {
     }
     return new URL(URLString.toString())
 }
+
+Date.prototype.add = function ({
+    years = 0,
+    months = 0,
+    days = 0,
+    hours = 0,
+    minutes = 0,
+    seconds = 0,
+    ms = 0
+} = {}) {
+    const newDate = new Date(this.getTime());
+
+    if (years) newDate.setFullYear(newDate.getFullYear() + years);
+    if (months) newDate.setMonth(newDate.getMonth() + months);
+    if (days) newDate.setDate(newDate.getDate() + days);
+    if (hours) newDate.setHours(newDate.getHours() + hours);
+    if (minutes) newDate.setMinutes(newDate.getMinutes() + minutes);
+    if (seconds) newDate.setSeconds(newDate.getSeconds() + seconds);
+    if (ms) newDate.setMilliseconds(newDate.getMilliseconds() + ms);
+
+    return newDate;
+};
+
+Date.prototype.sub = function ({
+    years = 0,
+    months = 0,
+    days = 0,
+    hours = 0,
+    minutes = 0,
+    seconds = 0,
+    ms = 0
+} = {}) {
+    const newDate = new Date(this.getTime());
+
+    if (years) newDate.setFullYear(newDate.getFullYear() - years);
+    if (months) newDate.setMonth(newDate.getMonth() - months);
+    if (days) newDate.setDate(newDate.getDate() - days);
+    if (hours) newDate.setHours(newDate.getHours() - hours);
+    if (minutes) newDate.setMinutes(newDate.getMinutes() - minutes);
+    if (seconds) newDate.setSeconds(newDate.getSeconds() - seconds);
+    if (ms) newDate.setMilliseconds(newDate.getMilliseconds() - ms);
+
+    return newDate;
+};
+
 /**
  * 节流函数，限制函数执行频率
  * @param fn 需要节流的函数
@@ -503,29 +649,28 @@ export function prune<T>(data: T): Pruned<T> {
     }
     return data as Pruned<T>;
 }
-/**
- * 对任意字符串做正则安全转义
- */
-export function escapeRegex(str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+
 /**
  * 字符串变量替换方法
  * @param {Record<string, unknown>} replacements - 替换键值对对象
  * @returns {string} 返回替换后的字符串
  * @example 
- * 'Hello %#name#%'.replaceVariable({name: 'World'}) // 'Hello World'
+ * 'Hello AAAnameBBB'.replaceVariable({name: 'World'},'AAA','BBB') // 'Hello World'
  */
-String.prototype.replaceVariable = function (replacements: Record<string, unknown>): string {
+String.prototype.replaceVariable = function (replacements: Record<string, unknown>, prefix: string = '%#', suffix: string = '#%'): string {
+    function escapeRegex(str: string): string {
+        return str.replace(/[\.\*\+\?\^\$\{\}\(\)\|\[\]\\]/g, '\\$&');
+    }
     let current = this.toString();
+    prefix = escapeRegex(prefix);
+    suffix = escapeRegex(suffix);
     const seen = new Set<string>();
-    const keys = Object.keys(replacements).sort((a, b) => b.length - a.length);
-    const patterns = keys.map(key => {
+    const patterns = Object.keys(replacements).map(key => {
         const escKey = escapeRegex(key);
         return {
             value: replacements[key],
-            placeholderRegex: new RegExp(`%#${escKey}(?::.*?)?#%`, 'gs'),
-            placeholderFormatRegex: new RegExp(`(?<=%#${escKey}:).*?(?=#%)`, 'gs')
+            placeholderRegex: new RegExp(`${prefix}${escKey}(?=(?::.*?${suffix}|${suffix}))(?::.*?)?${suffix}`, 'gs'),
+            placeholderFormatRegex: new RegExp(`(?<=${prefix}${escKey}(?=(?::.*?${suffix}|${suffix})):).*?(?=${suffix})`, 'gs')
         };
     });
     while (true) {
@@ -534,20 +679,18 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
             break;
         }
         seen.add(current);
-        let modified = false;
         let next = current;
         for (const { value, placeholderRegex, placeholderFormatRegex } of patterns) {
             if (placeholderRegex.test(next)) {
-                let format = next.match(placeholderFormatRegex) || []
-                if (format.any() && hasFunction(value, 'format')) {
-                    next = next.replace(placeholderRegex, stringify(value.format(format[0])));
+                let format = next.match(placeholderFormatRegex)
+                if (!isNullOrUndefined(format) && format.any() && !format[0].isEmpty() && hasFunction(value, 'format')) {
+                    next = next.replace(placeholderRegex, stringify(value.format(escapeRegex(format[0]))));
                 } else {
                     next = next.replace(placeholderRegex, stringify(value instanceof Date ? value.format('YYYY-MM-DD') : value));
                 }
-                modified = true;
             }
         }
-        if (!modified) break;
+        if (current === next) break;
         current = next;
     }
     return current;

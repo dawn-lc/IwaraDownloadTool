@@ -27,7 +27,7 @@ declare interface MessageBase {
     timestamp: number
 }
 
-declare type Message<T> = 
+declare type Message<T> =
     | SyncMessage
     | StateMessage<T>
     | SetMessage<T>
@@ -91,15 +91,15 @@ declare type InputType =
  * @template T 原始类型
  */
 declare type Pruned<T> =
-T extends null | undefined
-  ? never
-: T extends readonly any[]
-  ? number extends T['length']
+    T extends null | undefined
+    ? never
+    : T extends readonly any[]
+    ? number extends T['length']
     ? Array<Pruned<T[number]>>
     : { [K in keyof T]: Pruned<T[K]> }
-: T extends object
-  ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
-: T;
+    : T extends object
+    ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
+    : T;
 declare type ThrottleOptions = {
     /** 
      * 是否在节流开始时立即执行
@@ -119,15 +119,6 @@ declare type DebounceOptions = {
      */
     immediate?: boolean
 }
-/**
- * 视频片段基本信息接口
- * 用于存储视频的标题、别名和作者信息
- */
-declare interface PieceInfo {
-    Title?: string | null;
-    Alias?: string | null;
-    Author?: string | null;
-}
 
 /**
  * 本地路径信息接口
@@ -140,4 +131,113 @@ declare interface LocalPath {
     type: 'Windows' | 'Unix' | 'Relative';
     extension: string;
     baseName: string;
+}
+
+
+declare type VideoInfoType = 'full' | 'partial' | 'cache' | 'init' | 'fail'
+
+declare interface VideoInfoBase {
+    Type: VideoInfoType;
+    ID: string;
+    UpdateTime: number
+    RAW?: Iwara.Video;
+}
+
+declare type VideoInfo =
+    | FullVideoInfo
+    | PartialVideoInfo
+    | CacheVideoInfo
+    | InitVideoInfo
+    | FailVideoInfo
+
+interface InitVideoInfo extends VideoInfoBase {
+    Type: 'init';
+    UploadTime?: number;
+    Title?: string;
+    FileName?: string;
+    Size?: number;
+    Tags?: Array<Iwara.Tag>;
+    Liked?: boolean;
+    Following?: boolean;
+    Friend?: boolean;
+    Alias?: string;
+    Author?: string;
+    AuthorID?: string;
+    Private?: boolean;
+    Unlisted?: boolean;
+    DownloadQuality?: string;
+    External?: boolean;
+    ExternalUrl?: string;
+    Description?: string;
+    Comments?: string;
+    DownloadUrl?: string;
+    RAW?: Iwara.Video;
+}
+
+interface FullVideoInfo extends VideoInfoBase {
+    Type: 'full';
+    UploadTime: number;
+    Title: string;
+    FileName: string;
+    Size: number;
+    Tags: Array<Iwara.Tag>;
+    Liked: boolean;
+    Following: boolean;
+    Friend: boolean;
+    Alias: string;
+    Author: string;
+    AuthorID: string;
+    Private: boolean;
+    Unlisted: boolean;
+    DownloadQuality: string;
+    External: boolean;
+    ExternalUrl?: string;
+    Description?: string;
+    Comments: string;
+    DownloadUrl: string;
+    RAW: Iwara.Video;
+}
+interface PartialVideoInfo extends VideoInfoBase {
+    Type: 'partial'
+    UploadTime: number;
+    Title: string;
+    Tags: Array<Iwara.Tag>;
+    Liked: boolean;
+    Alias: string;
+    Author: string;
+    AuthorID: string;
+    Private: boolean;
+    Unlisted: boolean;
+    External: boolean;
+    ExternalUrl?: string;
+    RAW: Iwara.Video;
+}
+interface CacheVideoInfo extends VideoInfoBase {
+    Type: 'cache'
+    RAW: Iwara.Video;
+}
+
+interface FailVideoInfo extends VideoInfoBase {
+    Type: 'fail';
+    Msg?: string;
+    UploadTime?: number;
+    Title?: string;
+    FileName?: string;
+    Size?: number;
+    Tags?: Array<Iwara.Tag>;
+    Liked?: boolean;
+    Following?: boolean;
+    Friend?: boolean;
+    Alias?: string;
+    Author?: string;
+    AuthorID?: string;
+    Private?: boolean;
+    Unlisted?: boolean;
+    DownloadQuality?: string;
+    External?: boolean;
+    ExternalUrl?: string;
+    Description?: string;
+    Comments?: string;
+    DownloadUrl?: string;
+    RAW?: Iwara.Video;
 }

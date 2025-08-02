@@ -70,7 +70,7 @@
     padding: 24px;
     margin: 10px;
     overflow-y: auto;
-    width: 400px;
+    width: 480px;
 }
 
 #pluginConfig .buttonList {
@@ -108,12 +108,32 @@
 #pluginConfig p {
     display: flex;
     flex-direction: column;
+    margin-top: 10px;
+    margin-bottom: 0px;
+}
+
+#pluginConfig fieldset {
+    border: none;
+    margin: 10px 0 0 0;
+    padding: 0;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+}
+
+#pluginConfig fieldset > legend {
+    margin: 0 0 5px 0;
+    padding: 0;
+}
+
+#pluginConfig fieldset > label{
+    text-align: center;
 }
 
 #pluginConfig p label {
     display: flex;
     flex-direction: column;
-    margin: 5px 0 5px 0;
+    margin: 5px 0 0 0;
 }
 
 #pluginConfig .inputRadioLine {

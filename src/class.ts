@@ -130,8 +130,6 @@ export class Path implements LocalPath {
         }
     }
 
-    // 
-    // 
     /**
      * 规范化路径
      * @param path 原始路径
@@ -203,8 +201,6 @@ export class Path implements LocalPath {
         return normalized;
     }
 
-    // 
-    // 
     /**
      * 解析路径段，处理"."和".."导航
      * @param segments 路径段数组

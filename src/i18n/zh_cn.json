@@ -11,7 +11,7 @@
     "iwaraDownloaderPath": "IwaraDownloader RPC: ",
     "iwaraDownloaderToken": "IwaraDownloader 密钥: ",
     "experimentalFeatures": "实验性功能",
-    "enableUnsafeMode" : "激进模式（风险自行承担）",
+    "enableUnsafeMode": "激进模式（风险自行承担）",
     "rename": "重命名",
     "save": "保存",
     "reset": "重置",
@@ -55,7 +55,9 @@
     "deselectThis": "取消本页选中",
     "deselectAll": "取消所有选中",
     "selectThis": "本页全部选中",
+    "parseUnlistedAndPrivate": "解析近期隐藏或私有的视频",
     "downloadSelected": "下载所选",
+    "selected": "已选中",
     "downloadingSelected": "正在下载所选，请稍后...",
     "injectCheckbox": "开关选择框",
     "configError": "脚本配置中存在错误，请修改。",
@@ -69,7 +71,11 @@
         {
             "nodeType": "br"
         },
-        "优化提示信息显示模块, 动画更加流畅(重写了Toastify JS)"
+        "重构视频信息解析器，更新本地数据库缓存结构（请手动清理遗留数据）。",
+        {
+            "nodeType": "br"
+        },
+        "添加已关注提示在复选框下方。"
     ],
     "useHelpForBase": "请认真阅读使用指南！",
     "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后，点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
