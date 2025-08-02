@@ -24,12 +24,45 @@
     position: fixed;
     top: 50%;
     right: 0px;
-    padding: 10px;
+    padding: 10px 30px;
     background-color: #565656;
     border: 1px solid #ccc;
     border-radius: 5px;
     box-shadow: 0 0 10px #ccc;
-    transform: translate(2%, -50%);
+    transform: translateX(calc(100% - 30px)) translateY(-50%);
+    transition: transform 0.3s ease-in-out;
+}
+
+#pluginMenu:not(.expanded) {
+    overflow: visible;
+}
+
+#pluginMenu:not(.expanded)::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, red, orange, yellow, green, blue, indigo, violet);
+    background-size: 100% 300%;
+    animation: rainbow-glow 2s linear infinite;
+    filter: blur(4px);
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes rainbow-glow {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: 0% 300%;
+    }
+}
+
+#pluginMenu.expanded {
+    transform: translateX(0) translateY(-50%);
 }
 
 #pluginMenu ul {
@@ -121,12 +154,12 @@
     flex-wrap: nowrap;
 }
 
-#pluginConfig fieldset > legend {
+#pluginConfig fieldset>legend {
     margin: 0 0 5px 0;
     padding: 0;
 }
 
-#pluginConfig fieldset > label{
+#pluginConfig fieldset>label {
     text-align: center;
 }
 
@@ -281,6 +314,7 @@
     user-select: none;
     z-index: 102;
 }
+
 .follow {
     bottom: 24px;
     right: 2px;
@@ -290,8 +324,9 @@
     background-color: rgba(0, 0, 0, 0.8);
     pointer-events: none;
 }
+
 .selectButton {
-    accent-color: rgb(50,110,193);
+    accent-color: rgb(50, 110, 193);
     position: absolute;
     width: 38px;
     height: 38px;
@@ -300,8 +335,9 @@
     z-index: 102;
     top: 22px;
 }
+
 .deleteButton {
-    accent-color: rgb(226,55,55);
+    accent-color: rgb(226, 55, 55);
     position: absolute;
     width: 38px;
     height: 38px;
@@ -317,9 +353,11 @@
 .toast h3 {
     margin: 0 0 10px 0;
 }
+
 .toast p {
     margin: 0;
 }
+
 .offscreen-container {
     position: absolute;
     visibility: hidden;
