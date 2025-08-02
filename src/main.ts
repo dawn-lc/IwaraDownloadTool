@@ -546,12 +546,11 @@ class menu {
             childs: body.interfacePage
         })
 
-        // Add click event for toggle
-        body.interface.addEventListener('click', (event: Event) => {
+        originalAddEventListener.call(body.interface, 'click', (event: Event) => {
             if (event.target === body.interface) {
                 body.interface.classList.toggle('expanded');
             }
-        });
+        })
 
         body.observer = new MutationObserver((mutationsList) => body.pageType = getPageType(mutationsList) ?? body.pageType)
         body.pageType = PageType.Page

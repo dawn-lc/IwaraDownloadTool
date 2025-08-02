@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node ./test/main.ts",
     "build": "node ./build/build.ts",
     "release": "node ./build/release.js"
   },
