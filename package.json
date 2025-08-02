@@ -1,10 +1,11 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.3.20",
+  "version": "3.3.22",
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "node ./test/main.ts",
     "build": "node ./build/build.ts",
     "release": "node ./build/release.js"
   },
