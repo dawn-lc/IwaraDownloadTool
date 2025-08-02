@@ -647,8 +647,6 @@ class menu {
 
         let deselectAllButton = this.button('deselectAll', (name, event) => {
             for (const id of selectList.keys()) {
-                let button = getSelectButton(id)
-                if (button && button.checked) button.checked = false
                 selectList.delete(id)
             }
         })
@@ -1296,7 +1294,6 @@ async function downloadTaskUnique(taskList: Dictionary<VideoInfo>) {
     let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
     for (let key of taskList.keysArray().intersect(startedAndCompleted)) {
         taskList.delete(key)
-        updateButtonState(key)
     }
 }
 async function analyzeDownloadTask(taskList: Dictionary<VideoInfo> = selectList) {
@@ -1320,6 +1317,7 @@ async function analyzeDownloadTask(taskList: Dictionary<VideoInfo> = selectList)
         await downloadTaskUnique(taskList)
         updateParsingProgress()
     }
+
     for (let videoInfo of taskList) {
         !config.enableUnsafeMode && await delay(3000)
         await pushDownloadTask(await parseVideoInfo(videoInfo[1]))
