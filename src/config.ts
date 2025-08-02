@@ -12,9 +12,9 @@ const DEFAULT_CONFIG = {
     enableUnsafeMode: false,
     experimentalFeatures: false,
     autoInjectCheckbox: true,
-    checkDownloadLink: true,
+    checkDownloadLink: false,
     checkPriority: true,
-    addUnlistedAndPrivate: true,
+    addUnlistedAndPrivate: false,
     downloadPriority: 'Source',
     downloadType: DownloadType.Others,
     downloadPath: '/Iwara/%#AUTHOR#%/%#TITLE#%[%#ID#%].mp4',
@@ -38,7 +38,7 @@ export class Config {
     language: string
     autoFollow: boolean
     autoLike: boolean
-    autoDownloadMetadata: boolean 
+    autoDownloadMetadata: boolean
     addUnlistedAndPrivate: boolean
     enableUnsafeMode: boolean
     experimentalFeatures: boolean
