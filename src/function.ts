@@ -178,7 +178,7 @@ export function getDownloadPath(videoInfo: FullVideoInfo): Path {
     return analyzeLocalPath(
         config.downloadPath.trim().replaceVariable({
             NowTime: new Date(),
-            UploadTime: videoInfo.UploadTime,
+            UploadTime: new Date(videoInfo.UploadTime),
             AUTHOR: videoInfo.Author,
             ID: videoInfo.ID,
             TITLE: videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
