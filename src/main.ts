@@ -186,8 +186,19 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
             case "full":
                 Following = RAW.user.following
                 Friend = RAW.user.friend
-                Following && await db.follows.put(RAW.user)
-                Friend && await db.friends.put(RAW.user)
+
+                if (Following) {
+                    db.follows.put(RAW.user, AuthorID)
+                } else {
+                    db.follows.delete(AuthorID)
+                }
+
+                if (Friend) {
+                    db.friends.put(RAW.user, AuthorID)
+                } else {
+                    db.friends.delete(AuthorID)
+                }
+
                 Description = RAW.body
                 FileName = RAW.file.name
                 Size = RAW.file.size
@@ -808,7 +819,8 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
         case "full":
             await db.videos.put(videoInfo, videoInfo.ID)
             if (!bypass) {
-                if (config.autoFollow && !videoInfo.Following) {
+                const authorInfo = await db.follows.get(videoInfo.AuthorID);
+                if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
                     if ((await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                         method: 'POST',
                         headers: await getAuth()
