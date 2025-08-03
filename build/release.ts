@@ -143,6 +143,9 @@ function main() {
         console.log('🏷️ 创建带注释的标签...');
         run(`git tag -a ${newTag} -m "Version ${version}"`);
 
+        console.log('🔄 拉取远程最新分支以确保快进...');
+        run('git pull --rebase');
+
         console.log('🚀 推送代码...');
         run('git push');
 
