@@ -14,28 +14,28 @@ testGroup.beforeEach(() => {
 });
 
 // 简单变量替换测试
-testGroup.add('简单变量替换', new Test('简单变量替换', 'sync', function() {
+testGroup.add('简单变量替换', new Test('简单变量替换', 'sync', function () {
   const template = 'Hello %#name#%, welcome to %#city#%';
   const result = template.replaceVariable({ name: 'John', city: 'New York' });
   this.assertEqual(result, 'Hello John, welcome to New York');
 }));
 
 // 日期格式化测试
-testGroup.add('日期格式化', new Test('日期格式化', 'sync', function() {
+testGroup.add('日期格式化', new Test('日期格式化', 'sync', function () {
   const template = 'Today is %#date:YYYY-MM-DD#%';
   const result = template.replaceVariable({ date });
   this.assertEqual(result, 'Today is 2023-01-01');
 }));
 
 // 特殊字符格式化测试
-testGroup.add('特殊字符格式化', new Test('特殊字符格式化', 'sync', function() {
-  const template = 'Today is %#date:YYYY-MM-DD HH:mm .*+?^${}()|[]#%';
+testGroup.add('特殊字符格式化', new Test('特殊字符格式化', 'sync', function () {
+  const template = 'Today is %#date:YYYY-MM-DD+HH.mm.ss .*+?^${}()|[]#%';
   const result = template.replaceVariable({ date });
-  this.assertEqual(result, 'Today is 2023-01-01 12:34 .*+?^${}()|[]');
+  this.assertEqual(result, 'Today is 2023-01-01+12.34.56 .*+?^${}()|[]');
 }));
 
 // 递归替换测试
-testGroup.add('递归替换', new Test('递归替换', 'sync', function() {
+testGroup.add('递归替换', new Test('递归替换', 'sync', function () {
   const template = 'First: %#first#%, Second: %#second#%, Last: %#last#%';
   const result = template.replaceVariable({
     first: '1st',
@@ -46,14 +46,14 @@ testGroup.add('递归替换', new Test('递归替换', 'sync', function() {
 }));
 
 // 日期默认格式化测试
-testGroup.add('日期默认格式化', new Test('日期默认格式化', 'sync', function() {
+testGroup.add('日期默认格式化', new Test('日期默认格式化', 'sync', function () {
   const template = 'Today is %#date#%';
   const result = template.replaceVariable({ date });
   this.assertEqual(result, 'Today is 2023-01-01');
 }));
 
 // 短键优先级测试
-testGroup.add('短键优先级', new Test('短键优先级', 'sync', function() {
+testGroup.add('短键优先级', new Test('短键优先级', 'sync', function () {
   const template = `User: %#user#%, UserName: %#userName#%\n` +
     `UserName: %#userName#%, User: %#user#%\n` +
     `User: %#user#%, UserName: %#userName#%`;
@@ -65,7 +65,7 @@ testGroup.add('短键优先级', new Test('短键优先级', 'sync', function() 
 }));
 
 // 循环引用检测测试
-testGroup.add('循环引用检测', new Test('循环引用检测', 'sync', function() {
+testGroup.add('循环引用检测', new Test('循环引用检测', 'sync', function () {
   let warned = false;
   const originalWarn = console.warn;
   console.warn = () => { warned = true; };
@@ -86,13 +86,13 @@ const performanceGroup = new TestGroup('String.replaceVariable性能测试');
 function generateTestData(size: number) {
   const variables: Record<string, string> = {};
   const templateParts: string[] = ['Template:'];
-  
+
   for (let i = 0; i < size; i++) {
     const key = `var${i}`;
     variables[key] = `value${i}`;
     templateParts.push(` %#${key}#%`);
   }
-  
+
   return {
     template: templateParts.join(''),
     variables
@@ -100,70 +100,70 @@ function generateTestData(size: number) {
 }
 
 // 简单替换性能测试 (10个变量)
-performanceGroup.add('简单替换性能(10变量)', new Test('简单替换性能(10变量)', 'sync', function() {
+performanceGroup.add('简单替换性能(10变量)', new Test('简单替换性能(10变量)', 'sync', function () {
   const { template, variables } = generateTestData(10);
   const startTime = Date.now();
-  
+
   // 执行100次替换
   for (let i = 0; i < 100; i++) {
     template.replaceVariable(variables);
   }
-  
+
   const duration = Date.now() - startTime;
-  console.log(`10变量x100次替换耗时: ${duration}ms (平均${duration/100}ms/次)`);
+  console.log(`10变量x100次替换耗时: ${duration}ms (平均${duration / 100}ms/次)`);
   this.assertTrue(duration < 1000, '性能测试应在1秒内完成');
 }));
 
 // 中等替换性能测试 (100个变量)
-performanceGroup.add('中等替换性能(100变量)', new Test('中等替换性能(100变量)', 'sync', function() {
+performanceGroup.add('中等替换性能(100变量)', new Test('中等替换性能(100变量)', 'sync', function () {
   const { template, variables } = generateTestData(100);
   const startTime = Date.now();
-  
+
   // 执行50次替换
   for (let i = 0; i < 50; i++) {
     template.replaceVariable(variables);
   }
-  
+
   const duration = Date.now() - startTime;
-  console.log(`100变量x50次替换耗时: ${duration}ms (平均${duration/50}ms/次)`);
+  console.log(`100变量x50次替换耗时: ${duration}ms (平均${duration / 50}ms/次)`);
   this.assertTrue(duration < 1000, '性能测试应在1秒内完成');
 }));
 
 // 大量替换性能测试 (1000个变量)
-performanceGroup.add('大量替换性能(1000变量)', new Test('大量替换性能(1000变量)', 'sync', function() {
+performanceGroup.add('大量替换性能(1000变量)', new Test('大量替换性能(1000变量)', 'sync', function () {
   const { template, variables } = generateTestData(1000);
   const startTime = Date.now();
-  
+
   // 执行10次替换
   for (let i = 0; i < 10; i++) {
     template.replaceVariable(variables);
   }
-  
+
   const duration = Date.now() - startTime;
-  console.log(`1000变量x10次替换耗时: ${duration}ms (平均${duration/10}ms/次)`);
+  console.log(`1000变量x10次替换耗时: ${duration}ms (平均${duration / 10}ms/次)`);
   this.assertTrue(duration < 2000, '性能测试应在2秒内完成');
 }));
 
 // 深度嵌套性能测试
-performanceGroup.add('深度嵌套替换性能', new Test('深度嵌套替换性能', 'sync', function() {
+performanceGroup.add('深度嵌套替换性能', new Test('深度嵌套替换性能', 'sync', function () {
   const variables: Record<string, string> = {};
   let template = 'Start: %#var0#%';
-  
+
   // 创建10层深度的嵌套替换
   for (let i = 0; i < 10; i++) {
     variables[`var${i}`] = `Level${i}: %#var${i + 1}#%`;
   }
   variables['var10'] = 'End';
-  
+
   const startTime = Date.now();
-  
+
   // 执行20次嵌套替换
   for (let i = 0; i < 20; i++) {
     template.replaceVariable(variables);
   }
-  
+
   const duration = Date.now() - startTime;
-  console.log(`10层嵌套x20次替换耗时: ${duration}ms (平均${duration/20}ms/次)`);
+  console.log(`10层嵌套x20次替换耗时: ${duration}ms (平均${duration / 20}ms/次)`);
   this.assertTrue(duration < 1000, '性能测试应在1秒内完成');
 }));
 
