@@ -7,7 +7,7 @@
   "scripts": {
     "test": "node ./test/main.ts",
     "build": "node ./build/build.ts",
-    "release": "node ./build/release.js"
+    "release": "node ./build/release.ts"
   },
   "dependencies": {
     "dexie": "^3.2.7",
