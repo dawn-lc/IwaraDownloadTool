@@ -22,7 +22,7 @@ function checkCleanWorkingTree() {
 
 function fetchLatestTags() {
     console.log('🔄 同步远程标签...');
-    run('git fetch --tags');
+    run('git fetch --tags --force');
 }
 
 function cleanDanglingTags() {
