@@ -22,7 +22,7 @@ function checkCleanWorkingTree() {
 
 function fetchLatestTags() {
     console.log('🔄 同步远程标签...');
-    run('git fetch --tags');
+    run('git fetch --tags --force');
 }
 
 function cleanDanglingTags() {
@@ -142,6 +142,9 @@ function main() {
 
         console.log('🏷️ 创建带注释的标签...');
         run(`git tag -a ${newTag} -m "Version ${version}"`);
+
+        console.log('🔄 拉取远程最新分支以确保快进...');
+        run('git pull --rebase');
 
         console.log('🚀 推送代码...');
         run('git push');

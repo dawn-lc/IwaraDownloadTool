@@ -7,6 +7,7 @@ import { unlimitedFetch, renderNode } from "./extension"
 import { Path } from "./class"
 import { parseVideoInfo, pushDownloadTask } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
+import { originalConsole } from "./hijack";
 
 /**
  * 刷新Iwara.tv的访问令牌
@@ -28,7 +29,7 @@ export async function refreshToken(): Promise<string> {
         const { accessToken } = await res.json()
         return accessToken || authorization
     } catch (error) {
-        console.warn('Failed to refresh token:', error)
+        originalConsole.warn('Failed to refresh token:', error)
     }
     return authorization
 }
@@ -128,11 +129,11 @@ export function getTextNode(node: Node | Element): string {
  */
 export function newToast(type: ToastType, params?: ToastOptions): Toast {
     const logFunc = {
-        [ToastType.Warn]: console.warn,
-        [ToastType.Error]: console.error,
-        [ToastType.Log]: console.log,
-        [ToastType.Info]: console.info,
-    }[type] || console.log
+        [ToastType.Warn]: originalConsole.warn,
+        [ToastType.Error]: originalConsole.error,
+        [ToastType.Log]: originalConsole.log,
+        [ToastType.Info]: originalConsole.info,
+    }[type] || originalConsole.log
     if (isNullOrUndefined(params)) params = {}
     if (!isNullOrUndefined(params.id) && activeToasts.has(params.id)) activeToasts.get(params.id)?.hide()
     switch (type) {
@@ -224,7 +225,7 @@ export function analyzeLocalPath(path: string): Path {
 export async function EnvCheck(): Promise<boolean> {
     try {
         if (GM_info.scriptHandler !== 'ScriptCat' && GM_info.downloadMode !== 'browser') {
-            GM_getValue('isDebug') && console.debug(GM_info)
+            GM_getValue('isDebug') && originalConsole.debug('[Debug]', GM_info)
             throw new Error('%#browserDownloadModeError#%')
         }
     } catch (error: any) {
@@ -411,7 +412,7 @@ export function aria2Download(videoInfo: FullVideoInfo) {
             })
         ]
         let res = await aria2API('aria2.addUri', params)
-        console.log(`Aria2 ${title} ${JSON.stringify(res)}`)
+        originalConsole.log(`Aria2 ${title} ${JSON.stringify(res)}`)
         newToast(
             ToastType.Info,
             {
@@ -467,7 +468,7 @@ export function iwaraDownloaderDownload(videoInfo: FullVideoInfo) {
             }))
         })).json()
         if (r.code === 0) {
-            console.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
+            originalConsole.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
             newToast(
                 ToastType.Info,
                 {
@@ -603,7 +604,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         if (videoID.isEmpty()) return
         return videoID
     } catch (error) {
-        GM_getValue('isDebug') && console.debug(`check aria2 task file fail! ${stringify(task)}`)
+        GM_getValue('isDebug') && originalConsole.debug(`[Debug] check aria2 task file fail! ${stringify(task)}`)
         return
     }
 }

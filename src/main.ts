@@ -1,6 +1,6 @@
 import "./env";
 import { delay, isCacheVideoInfo, isFailVideoInfo, isInitVideoInfo, isNullOrUndefined, isString, isVideoInfo, prune, stringify } from "./env";
-import { originalAddEventListener, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
+import { originalAddEventListener, originalConsole, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
 import { Dictionary, MultiPage, SyncDictionary, Version } from "./class";
@@ -89,7 +89,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
     let Type: VideoInfoType = info.Type
     let RAW: Iwara.Video | undefined = info.RAW
     let UpdateTime: number = 0
-    GM_getValue('isDebug') && console.debug(info)
+    GM_getValue('isDebug') && originalConsole.debug('[Debug]', info)
     try {
         switch (info.Type) {
             case "cache":
@@ -540,7 +540,7 @@ class menu {
                     if (isNullOrUndefined(value) || this.pageType === value) return true
                     target[prop] = value
                     this.pageChange()
-                    GM_getValue('isDebug') && console.debug(`Page change to ${this.pageType}`)
+                    GM_getValue('isDebug') && originalConsole.debug(`[Debug] Page change to ${this.pageType}`)
                     return true
                 }
                 return target[prop] = value;
@@ -593,10 +593,10 @@ class menu {
 
         let pageCount = 0;
         const MAX_FIND_PAGES = 64;
-        GM_getValue('isDebug') && console.debug(`[Debug] Starting fetch loop. MAX_PAGES=${MAX_FIND_PAGES}`);
+        GM_getValue('isDebug') && originalConsole.debug(`[Debug] Starting fetch loop. MAX_PAGES=${MAX_FIND_PAGES}`);
 
         while (pageCount < MAX_FIND_PAGES) {
-            GM_getValue('isDebug') && console.debug(`[Debug] Fetching page ${pageCount}.`);
+            GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetching page ${pageCount}.`);
             const response = await unlimitedFetch(
                 `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${pageCount}`,
                 {
@@ -604,38 +604,38 @@ class menu {
                     headers: await getAuth(),
                 }
             );
-            GM_getValue('isDebug') && console.debug('[Debug] Received response, parsing JSON.');
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] Received response, parsing JSON.');
             const data = (await response.json() as Iwara.IPage).results as Iwara.Video[];
-            GM_getValue('isDebug') && console.debug(`[Debug] Page ${pageCount} returned ${data.length} videos.`);
+            GM_getValue('isDebug') && originalConsole.debug(`[Debug] Page ${pageCount} returned ${data.length} videos.`);
             data.forEach(info => info.user.following = true);
-            GM_getValue('isDebug') && console.debug('[Debug] Marked all fetched videos as following.');
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] Marked all fetched videos as following.');
             const videoPromises = data.map(info => parseVideoInfo({
                 Type: 'cache',
                 ID: info.id,
                 RAW: info,
                 UpdateTime: Date.now()
             }));
-            GM_getValue('isDebug') && console.debug('[Debug] Initializing VideoInfo promises.');
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] Initializing VideoInfo promises.');
             const videoInfos = await Promise.all(videoPromises);
             parseUnlistedAndPrivateVideos.push(...videoInfos);
-            GM_getValue('isDebug') && console.debug('[Debug] All VideoInfo objects initialized.');
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] All VideoInfo objects initialized.');
             if (thisWeekVideos.intersect(videoInfos, "ID").any()) {
                 break;
             }
-            GM_getValue('isDebug') && console.debug(`[Debug] Latest private video not found on page ${pageCount}, continuing.`);
+            GM_getValue('isDebug') && originalConsole.debug(`[Debug] Latest private video not found on page ${pageCount}, continuing.`);
             pageCount++;
 
-            GM_getValue('isDebug') && console.debug(`[Debug] Incremented page to ${pageCount}, delaying next fetch.`);
+            GM_getValue('isDebug') && originalConsole.debug(`[Debug] Incremented page to ${pageCount}, delaying next fetch.`);
             await delay(1000);
         }
-        GM_getValue('isDebug') && console.debug('[Debug] Fetch loop ended. Start updating the database');
+        GM_getValue('isDebug') && originalConsole.debug('[Debug] Fetch loop ended. Start updating the database');
         const toUpdate = parseUnlistedAndPrivateVideos.difference((await db.videos.where('ID').anyOf(parseUnlistedAndPrivateVideos.map(v => v.ID)).toArray()).filter(v => v.Type === 'full'), 'ID')
         if (toUpdate.any()) {
-            GM_getValue('isDebug') && console.debug(`[Debug] Need to update ${toUpdate.length} pieces of data.`);
+            GM_getValue('isDebug') && originalConsole.debug(`[Debug] Need to update ${toUpdate.length} pieces of data.`);
             await db.videos.bulkPut(toUpdate)
-            GM_getValue('isDebug') && console.debug(`[Debug] Update Completed.`);
+            GM_getValue('isDebug') && originalConsole.debug(`[Debug] Update Completed.`);
         } else {
-            GM_getValue('isDebug') && console.debug(`[Debug] No need to update data.`);
+            GM_getValue('isDebug') && originalConsole.debug(`[Debug] No need to update data.`);
         }
     }
 
@@ -708,7 +708,7 @@ class menu {
         let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {
             aria2TaskCheckAndRestart()
         })
-        GM_getValue('isDebug') && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
+        config.experimentalFeatures && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
 
         switch (this.pageType) {
             case PageType.Video:
@@ -742,7 +742,7 @@ class menu {
         if (config.addUnlistedAndPrivate && this.pageType === PageType.VideoList) {
             this.parseUnlistedAndPrivate()
         } else {
-            GM_getValue('isDebug') && console.debug('[Debug] Conditions not met: addUnlistedAndPrivate or pageType mismatch.');
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] Conditions not met: addUnlistedAndPrivate or pageType mismatch.');
         }
     }
     public inject() {
@@ -902,7 +902,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                     default:
                         break
                 }
-                GM_getValue('isDebug') && console.debug('Download task pushed:', videoInfo);
+                GM_getValue('isDebug') && originalConsole.debug('[Debug] Download task pushed:', videoInfo);
             }
             selectList.delete(videoInfo.ID)
             break;
@@ -937,7 +937,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             ).show()
             break;
         default:
-            GM_getValue('isDebug') && console.debug('Unknown type:', videoInfo);
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] Unknown type:', videoInfo);
             break;
     }
 }
@@ -1001,7 +1001,7 @@ function othersDownloadMetadata(videoInfo: FullVideoInfo): void {
     URL.revokeObjectURL(url);
 }
 function firstRun() {
-    console.log('First run config reset!')
+    originalConsole.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
     Config.destroyInstance()
     editConfig = new configEdit(config)
@@ -1183,7 +1183,7 @@ function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
 }
 function pageChange() {
     pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
-    GM_getValue('isDebug') && console.debug(pageSelectButtons)
+    GM_getValue('isDebug') && originalConsole.debug('[Debug]', pageSelectButtons)
 }
 async function addDownloadTask() {
     let textArea = renderNode({
@@ -1485,7 +1485,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
         debugger
         //@ts-ignore
         unsafeWindow.Toast = Toast
-        console.debug(stringify(GM_info))
+        originalConsole.debug(stringify(GM_info))
     }
     GM_getTabs((tabs) => {
         if (Object.keys(tabs).length != 1) return;
@@ -1507,7 +1507,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
     }
     GM_addStyle(mainCSS);
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
-        GM_getValue('isDebug') && console.debug(`Fetch ${input}`)
+        GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
         if (!isNullOrUndefined(init) && !isNullOrUndefined(init.headers)) {
             let authorization = null
@@ -1527,14 +1527,14 @@ if (!unsafeWindow.IwaraDownloadTool) {
             }
             if (!isNullOrUndefined(authorization) && authorization !== config.authorization) {
                 let playload = getPlayload(authorization)
+                let token = authorization.split(' ').pop() ?? ''
                 if (playload['type'] === 'refresh_token') {
-                    GM_getValue('isDebug') && console.debug(`refresh_token: ${authorization.split(' ').pop()}`)
-                    if (isNullOrUndefined(localStorage.getItem('token'))) localStorage.setItem('token', authorization.split(' ').pop() ?? '')
+                    GM_getValue('isDebug') && originalConsole.debug(`[Debug] refresh_token: ${'*'.repeat(token.length)}`)
+                    if (isNullOrUndefined(localStorage.getItem('token'))) localStorage.setItem('token', token)
                 }
                 if (playload['type'] === 'access_token') {
                     config.authorization = authorization
-                    GM_getValue('isDebug') && console.debug(JSON.parse(decodeURIComponent(encodeURIComponent(window.atob(config.authorization.split('.')[1])))))
-                    GM_getValue('isDebug') && console.debug(`access_token: ${config.authorization.split(' ').pop()}`)
+                    GM_getValue('isDebug') && originalConsole.debug(`[Debug] access_token: ${'*'.repeat(token.length)}`)
                 }
             }
         }
@@ -1555,7 +1555,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         }
 
                         if (!config.addUnlistedAndPrivate) break
-                        GM_getValue('isDebug') && console.debug(url.searchParams)
+                        GM_getValue('isDebug') && originalConsole.debug('[Debug]', url.searchParams)
                         if (url.searchParams.has('user')) break
                         if (url.searchParams.has('subscribed')) break
                         if (url.searchParams.has('sort') ? url.searchParams.get('sort') !== 'date' : false) break
