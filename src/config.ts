@@ -1,8 +1,9 @@
 
 import "./env";
-import { isNullOrUndefined, stringify } from "./env"
-import { DownloadType } from "./enum"
-import { i18nList } from "./i18n"
+import { isNullOrUndefined, stringify } from "./env";
+import { originalConsole } from "./hijack";
+import { DownloadType } from "./enum";
+import { i18nList } from "./i18n";
 const DEFAULT_CONFIG = {
     language: 'zh_cn',
     autoFollow: false,
@@ -91,7 +92,7 @@ export class Config {
                 if (property === 'language') {
                     return Config.getLanguage(value)
                 }
-                GM_getValue('isDebug') && console.debug(`get: ${property} ${stringify(value)}`)
+                GM_getValue('isDebug') && originalConsole.debug(`[Debug] get: ${property} ${/password/i.test(property) || /token/i.test(property) || /authorization/i.test(property) ? '凭证已隐藏' : stringify(value)}`)
                 return value
             },
             set: function (target, property: string, value) {
@@ -100,14 +101,14 @@ export class Config {
                     return true
                 }
                 GM_setValue(property, value)
-                GM_getValue('isDebug') && console.debug(`set: ${property} ${stringify(value)}`)
+                GM_getValue('isDebug') && originalConsole.debug(`[Debug] set: ${property} ${/password/i.test(property) || /token/i.test(property) || /authorization/i.test(property) ? '凭证已隐藏' : stringify(value)}`)
                 if (!isNullOrUndefined(target.configChange)) target.configChange(property)
                 return true
             }
         })
         GM_listValues().forEach((value) => {
             GM_addValueChangeListener(value, (name: string, old_value: any, new_value: any, remote: boolean) => {
-                GM_getValue('isDebug') && console.debug(`$Is Remote: ${remote} Change Value: ${name}`)//old: ${getString(old_value)} new: ${getString(new_value)}
+                GM_getValue('isDebug') && originalConsole.debug(`[Debug] Config Change Is Remote: ${remote} Change Value: ${name}`)//old: ${stringify(old_value)} new: ${stringify(new_value)}
                 if (remote && !isNullOrUndefined(body.configChange)) body.configChange(name)
             })
         })
