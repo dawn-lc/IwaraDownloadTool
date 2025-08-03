@@ -37,10 +37,10 @@ function rollback(to: string, tag?: string) {
     }
 }
 
+cleanDanglingTags();
 const backup = getCurrentCommit();
 
 try {
-    cleanDanglingTags();
     run('npm version patch');
     const newTag = getLatestTag();
 
