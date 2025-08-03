@@ -4,7 +4,21 @@ function run(cmd: string) {
     console.log(`$ ${cmd}`);
     return execSync(cmd, { stdio: 'inherit' });
 }
+function cleanDanglingTags() {
+    const allTags = execSync('git tag', { encoding: 'utf-8' }).split('\n').filter(Boolean);
+    const mergedTags = execSync('git tag --merged HEAD', { encoding: 'utf-8' }).split('\n').filter(Boolean);
 
+    const danglingTags = allTags.filter(tag => !mergedTags.includes(tag));
+
+    if (danglingTags.length > 0) {
+        console.log('⚠️ 检测到悬空 tag：', danglingTags.join(', '));
+        danglingTags.forEach(tag => {
+            execSync(`git tag -d ${tag}`, { stdio: 'inherit' });
+        });
+    } else {
+        console.log('✅ 没有悬空 tag');
+    }
+}
 function getCurrentCommit(): string {
     return execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
 }
@@ -26,6 +40,7 @@ function rollback(to: string, tag?: string) {
 const backup = getCurrentCommit();
 
 try {
+    cleanDanglingTags();
     run('npm version patch');
     const newTag = getLatestTag();
 
