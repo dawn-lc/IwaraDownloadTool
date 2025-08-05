@@ -8,7 +8,6 @@ on:
       - 'package-lock.json'
       - 'src/*'
       - 'build/*'
-      - 'lib/*'
       - '.github/workflows/Release.yml'
 env:
   release_tag: latest
@@ -28,8 +27,9 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: master
+        fetch-depth: 0
     - name: 安装依赖项
-      run: npm ci
+      run: npm install
     - name: 编译
       run: npm run build ${{ env.release_tag }}
     - name: 获取编译结果
@@ -57,3 +57,16 @@ jobs:
           --latest \
           --title "正式版/Release ${{ env.current_version }}" \
           --generate-notes
+    - name: 删除Dev分支
+      run: |
+        # 判断远端是否存在 dev
+        if git ls-remote --heads origin dev | grep -q 'dev'; then
+          echo "Deleting remote dev branch"
+          git push origin --delete dev
+        else
+          echo "Remote dev branch already deleted"
+        fi
+    - name: 重建Dev分支
+      run: |
+        git checkout -b dev origin/master
+        git push origin dev

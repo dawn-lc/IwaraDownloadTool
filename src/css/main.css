@@ -1,22 +1,40 @@
-@keyframes rainbow {
+@keyframes rainbow-horizontal {
     0% {
         background-position: 0% 0%;
     }
 
     100% {
-        background-position: 100% 0%;
+        background-position: 200% 0%;
+    }
+}
+
+@keyframes rainbow-vertical {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    100% {
+        background-position: 0% 200%;
     }
 }
 
 .rainbow-text {
-    background-image: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);
-    background-size: 300% 100%;
+    background-image:
+        linear-gradient(to right,
+            rgb(255, 64, 64),
+            rgb(255, 255, 64),
+            rgb(64, 255, 64),
+            rgb(64, 255, 255),
+            rgb(64, 64, 255),
+            rgb(255, 64, 255),
+            rgb(255, 64, 64));
+    background-size: 200% 100%;
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: rainbow 0.8s infinite linear;
+    animation: rainbow-horizontal .8s infinite linear;
+    font-weight: bold;
 }
-
 
 #pluginMenu {
     z-index: 2147483644;
@@ -40,25 +58,22 @@
 #pluginMenu:not(.expanded)::before {
     content: '';
     position: absolute;
-    left: -2px;
+    left: 0;
     top: 0;
     bottom: 0;
-    width: 3px;
-    background: linear-gradient(to bottom, red, orange, yellow, green, blue, indigo, violet);
-    background-size: 100% 300%;
-    animation: rainbow-glow 2s linear infinite;
-    filter: blur(4px);
-    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-}
-
-@keyframes rainbow-glow {
-    0% {
-        background-position: 0% 0%;
-    }
-
-    100% {
-        background-position: 0% 300%;
-    }
+    width: 1px;
+    background: linear-gradient(to bottom,
+            rgb(255, 64, 64),
+            rgb(255, 255, 64),
+            rgb(64, 255, 64),
+            rgb(64, 255, 255),
+            rgb(64, 64, 255),
+            rgb(255, 64, 255),
+            rgb(255, 64, 64));
+    filter: blur(3px);
+    box-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
+    background-size: 100% 200%;
+    animation: rainbow-vertical 1.6s infinite linear;
 }
 
 #pluginMenu.expanded {
