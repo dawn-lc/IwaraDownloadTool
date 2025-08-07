@@ -88,7 +88,6 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
     let ID: string = info.ID
     let Type: VideoInfoType = info.Type
     let RAW: Iwara.Video | undefined = info.RAW
-    let UpdateTime: number = 0
     GM_getValue('isDebug') && originalConsole.debug('[Debug]', info)
     try {
         switch (info.Type) {
@@ -105,18 +104,17 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 if (isNullOrUndefined(sourceResult.id)) {
                     Type = 'fail'
                     return {
-                        ID, Type, RAW, UpdateTime, Msg: sourceResult.message ?? stringify(sourceResult)
+                        ID, Type, RAW, Msg: sourceResult.message ?? stringify(sourceResult)
                     }
                 }
                 RAW = sourceResult as Iwara.Video
                 ID = RAW.id
                 Type = 'full'
-                UpdateTime = Date.now()
                 break;
             default:
                 Type = 'fail'
                 return {
-                    ID, Type, RAW, UpdateTime, Msg: "Unknown type"
+                    ID, Type, RAW, Msg: "Unknown type"
                 }
         }
     } catch (error) {
@@ -128,14 +126,14 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                         `${info.RAW?.title}[${ID}] %#parsingFailed#%`
                     ], '%#createTask#%'),
                 async onClick() {
-                    await parseVideoInfo({ Type: 'init', ID, RAW, UpdateTime })
+                    await parseVideoInfo({ Type: 'init', ID, RAW, UploadTime: 0 })
                     this.hide()
                 },
             }
         ).show()
         Type = 'fail'
         return {
-            ID, Type, RAW, UpdateTime, Msg: stringify(error)
+            ID, Type, RAW, Msg: stringify(error)
         }
     }
 
@@ -177,7 +175,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
     if (External) {
         Type = 'fail'
         return {
-            Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, UpdateTime, Msg: "external Video"
+            Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, Msg: "external Video"
         }
     }
 
@@ -215,25 +213,24 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 DownloadUrl = decodeURIComponent(`https:${Source}`)
                 Comments = `${(await getCommentDatas(ID)).map(i => i.body).join('\n')}`.normalize('NFKC')
 
-                UpdateTime = Date.now()
                 return {
-                    Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, FileName, DownloadQuality, ExternalUrl, Description, Comments, DownloadUrl, Size, Following, Unlisted, Friend, UpdateTime
+                    Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, FileName, DownloadQuality, ExternalUrl, Description, Comments, DownloadUrl, Size, Following, Unlisted, Friend
                 }
             case "partial":
                 return {
-                    Type, RAW, ID, Alias, Author, AuthorID, UploadTime, Title, Tags, Liked, External, ExternalUrl, Unlisted, Private, UpdateTime
+                    Type, RAW, ID, Alias, Author, AuthorID, UploadTime, Title, Tags, Liked, External, ExternalUrl, Unlisted, Private
                 }
             default:
                 Type = 'fail'
                 return {
-                    Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, UpdateTime, Msg: "Unknown type"
+                    Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, Msg: "Unknown type"
                 }
         }
     }
     catch (error) {
         Type = 'fail'
         return {
-            Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, UpdateTime, Msg: stringify(error)
+            Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, Msg: stringify(error)
         }
     }
 }
@@ -583,10 +580,10 @@ class menu {
 
     public async parseUnlistedAndPrivate() {
         const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
-        const lastWeekTimestamp = Date.now() - 604800000
-        const thisWeekVideos = await db.videos
+        const lastMonthTimestamp = Date.now() - 30 * 24 * 60 * 60 * 1000
+        const thisMonthUnlistedAndPrivateVideos = await db.videos
             .where('UploadTime')
-            .between(lastWeekTimestamp, Infinity)
+            .between(lastMonthTimestamp, Infinity)
             .and(i => (!isInitVideoInfo(i) && !isFailVideoInfo(i) && !isCacheVideoInfo(i)) && (i.Private || i.Unlisted))
             .toArray();
         let parseUnlistedAndPrivateVideos: VideoInfo[] = []
@@ -612,24 +609,28 @@ class menu {
             const videoPromises = data.map(info => parseVideoInfo({
                 Type: 'cache',
                 ID: info.id,
-                RAW: info,
-                UpdateTime: Date.now()
+                RAW: info
             }));
             GM_getValue('isDebug') && originalConsole.debug('[Debug] Initializing VideoInfo promises.');
             const videoInfos = await Promise.all(videoPromises);
             parseUnlistedAndPrivateVideos.push(...videoInfos);
             GM_getValue('isDebug') && originalConsole.debug('[Debug] All VideoInfo objects initialized.');
-            if (thisWeekVideos.intersect(videoInfos, "ID").any()) {
+            if (thisMonthUnlistedAndPrivateVideos.intersect(videoInfos, 'ID').any()) {
                 break;
             }
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Latest private video not found on page ${pageCount}, continuing.`);
             pageCount++;
 
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Incremented page to ${pageCount}, delaying next fetch.`);
-            await delay(1000);
+            await delay(100);
         }
         GM_getValue('isDebug') && originalConsole.debug('[Debug] Fetch loop ended. Start updating the database');
-        const toUpdate = parseUnlistedAndPrivateVideos.difference((await db.videos.where('ID').anyOf(parseUnlistedAndPrivateVideos.map(v => v.ID)).toArray()).filter(v => v.Type === 'full'), 'ID')
+        const toUpdate = parseUnlistedAndPrivateVideos.difference(
+            (
+                await db.videos.where('ID').anyOf(
+                    parseUnlistedAndPrivateVideos.map(v => v.ID)
+                ).toArray()
+            ).filter(v => v.Type === 'full'), 'ID')
         if (toUpdate.any()) {
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Need to update ${toUpdate.length} pieces of data.`);
             await db.videos.bulkPut(toUpdate)
@@ -700,8 +701,7 @@ class menu {
         let downloadThisButton = this.button('downloadThis', async (name, event) => {
             let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
             await pushDownloadTask(await parseVideoInfo({
-                Type: 'init',
-                ID, UpdateTime: Date.now()
+                Type: 'init', ID
             }), true)
         })
 
@@ -821,16 +821,30 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             if (!bypass) {
                 const authorInfo = await db.follows.get(videoInfo.AuthorID);
                 if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
-                    if ((await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
+                    let followerResponse = await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
                         method: 'POST',
                         headers: await getAuth()
-                    })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Alias} %#autoFollowFailed#%`, close: true, onClick() { this.hide() } }).show()
+                    })
+                    if (followerResponse.status !== 201) {
+                        newToast(ToastType.Warn, {
+                            text: `${videoInfo.Alias} %#autoFollowFailed#% ${await followerResponse.text()}`,
+                            close: true,
+                            onClick() { this.hide() }
+                        }).show()
+                    }
                 }
                 if (config.autoLike && !videoInfo.Liked) {
-                    if ((await unlimitedFetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
+                    let likeResponse = await unlimitedFetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
                         method: 'POST',
                         headers: await getAuth()
-                    })).status !== 201) newToast(ToastType.Warn, { text: `${videoInfo.Title} %#autoLikeFailed#%`, close: true, onClick() { this.hide() } }).show()
+                    });
+                    if (likeResponse.status !== 201) {
+                        newToast(ToastType.Warn, {
+                            text: `${videoInfo.Title} %#autoLikeFailed#% ${await likeResponse.text()}`,
+                            close: true,
+                            onClick() { this.hide() }
+                        }).show()
+                    }
                 }
                 if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
                     let toastBody = toastNode([
@@ -930,7 +944,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                         if (videoInfo.External && !isNullOrUndefined(videoInfo.ExternalUrl) && !videoInfo.ExternalUrl.isEmpty()) {
                             GM_openInTab(videoInfo.ExternalUrl, { active: false, insert: true, setParent: true })
                         } else {
-                            await pushDownloadTask(await parseVideoInfo({ Type: 'init', ID: videoInfo.ID, RAW: videoInfo.RAW ?? cache?.RAW, UpdateTime: Date.now() }))
+                            await pushDownloadTask(await parseVideoInfo({ Type: 'init', ID: videoInfo.ID, RAW: videoInfo.RAW ?? cache?.RAW }))
                         }
                     },
                 }
@@ -1076,20 +1090,23 @@ function uninjectCheckbox(element: Element | Node) {
 }
 async function injectCheckbox(element: Element) {
     let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-    let Name = element.querySelector('.videoTeaser__title')?.getAttribute('title') ?? undefined;
-
-    let Alias = element.querySelector('a.username')?.getAttribute('title') ?? undefined;
-    let Author = (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
     if (isNullOrUndefined(ID)) return
+    let info = await db.videos.get(ID)
+    let Title = info?.Type === 'full' || info?.Type === 'partial' ? info?.Title : info?.RAW?.title ?? element.querySelector('.videoTeaser__title')?.getAttribute('title') ?? undefined;
+    let Alias = info?.Type === 'full' || info?.Type === 'partial' ? info?.Alias : info?.RAW?.user.name ?? element.querySelector('a.username')?.getAttribute('title') ?? undefined;
+    let Author = info?.Type === 'full' || info?.Type === 'partial' ? info?.Author : info?.RAW?.user.username ?? (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
+    let UploadTime = info?.Type === 'full' || info?.Type === 'partial' ? info?.UploadTime : new Date(info?.RAW?.updatedAt ?? 0).getTime()
+
     let button = renderNode({
         nodeType: 'input',
         attributes: {
             type: 'checkbox',
             videoID: ID,
             checked: selectList.has(ID) ? true : undefined,
-            videoName: Name,
+            videoName: Title,
             videoAlias: Alias,
-            videoAuthor: Author
+            videoAuthor: Author,
+            videoUploadTime: UploadTime
         },
         className: 'selectButton',
         events: {
@@ -1097,10 +1114,10 @@ async function injectCheckbox(element: Element) {
                 (event.target as HTMLInputElement).checked ? selectList.set(ID, {
                     Type: 'init',
                     ID,
-                    Title: Name,
-                    Alias: Alias,
-                    Author: Author,
-                    UpdateTime: Date.now()
+                    Title,
+                    Alias,
+                    Author,
+                    UploadTime
                 }) : selectList.delete(ID)
                 event.stopPropagation()
                 event.stopImmediatePropagation()
@@ -1130,8 +1147,6 @@ async function injectCheckbox(element: Element) {
         }
     }
 
-
-
     if (pluginMenu.pageType === PageType.Playlist) {
         let deletePlaylistItme = renderNode({
             nodeType: 'button',
@@ -1146,7 +1161,7 @@ async function injectCheckbox(element: Element) {
                         method: 'DELETE',
                         headers: await getAuth()
                     })).ok) {
-                        newToast(ToastType.Info, { text: `${Name} %#deleteSucceed#%`, close: true }).show()
+                        newToast(ToastType.Info, { text: `${Title} %#deleteSucceed#%`, close: true }).show()
                         deletePlaylistItme.remove()
                     }
                     event.preventDefault()
@@ -1337,10 +1352,36 @@ async function analyzeDownloadTask(taskList: Dictionary<VideoInfo> = selectList)
         updateParsingProgress()
     }
 
-    for (let videoInfo of taskList) {
-        !config.enableUnsafeMode && await delay(3000)
-        await pushDownloadTask(await parseVideoInfo(videoInfo[1]))
-        taskList.delete(videoInfo[0])
+
+    for (let [id, info] of taskList) {
+        let video = info
+        let failCount = 0
+        await delay(200)
+        while (video.Type !== 'full' && failCount < 3) {
+            video = await parseVideoInfo(video)
+            if (video.Type !== 'full') {
+                failCount++;
+                !config.enableUnsafeMode && await delay(3000)
+            } else {
+                taskList.set(id, video)
+                break;
+            }
+        }
+    }
+
+    let success = taskList.valuesArray().filter(i => i.Type === 'full')
+
+    let fails = taskList.valuesArray().difference(success, 'ID')
+
+    for (let info of success.sort((a, b) => a.UploadTime - b.UploadTime)) {
+        pushDownloadTask(info)
+        taskList.delete(info.ID)
+        updateParsingProgress()
+    }
+
+    for (let info of fails) {
+        pushDownloadTask(info)
+        taskList.delete(info.ID)
         updateParsingProgress()
     }
 
@@ -1501,9 +1542,14 @@ if (!unsafeWindow.IwaraDownloadTool) {
             GM_deleteValue('selectList')
         }
     });
-    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.2.76')) === VersionState.Low) {
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.31')) === VersionState.Low) {
         selectList.clear()
         GM_deleteValue('selectList')
+        try {
+            db.delete()
+        } catch (error) {
+            originalConsole.error(error)
+        }
     }
     GM_addStyle(mainCSS);
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
@@ -1548,7 +1594,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         if (!cloneResponse.ok) break;
 
                         const cloneBody = await cloneResponse.json() as Iwara.IPage
-                        const list = (await Promise.allSettled((cloneBody.results as Iwara.Video[]).map(info => parseVideoInfo({ Type: 'cache', ID: info.id, RAW: info, UpdateTime: Date.now() })))).filter(i => i.status === 'fulfilled').map(i => i.value).filter(i => i.Type === 'partial' || i.Type === 'full');
+                        const list = (await Promise.allSettled((cloneBody.results as Iwara.Video[]).map(info => parseVideoInfo({ Type: 'cache', ID: info.id, RAW: info })))).filter(i => i.status === 'fulfilled').map(i => i.value).filter(i => i.Type === 'partial' || i.Type === 'full');
                         const toUpdate = list.difference((await db.videos.where('ID').anyOf(list.map(v => v.ID)).toArray()).filter(v => v.Type === 'full'), 'ID')
                         if (toUpdate.any()) {
                             await db.videos.bulkPut(toUpdate)

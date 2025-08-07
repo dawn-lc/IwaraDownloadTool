@@ -139,7 +139,6 @@ declare type VideoInfoType = 'full' | 'partial' | 'cache' | 'init' | 'fail'
 declare interface VideoInfoBase {
     Type: VideoInfoType;
     ID: string;
-    UpdateTime: number
     RAW?: Iwara.Video;
 }
 
