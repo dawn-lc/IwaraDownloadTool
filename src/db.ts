@@ -14,7 +14,7 @@ export class Database extends Dexie {
         this.version(2).stores({
             follows: 'id, username, name, friend, following, followedBy',
             friends: 'id, username, name, friend, following, followedBy',
-            videos: 'ID, Type, UploadTime, UpdateTime, Private, Unlisted',
+            videos: 'ID, Type, UploadTime, Private, Unlisted',
             caches: 'ID'
         })
         this.follows = this.table("follows")

@@ -2,35 +2,93 @@ import "./env"
 import { i18nList } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
-import { isArray, isNullOrUndefined, prune } from "./env";
+import { delay, isArray, isNullOrUndefined, prune } from "./env";
 
 /**
- * 执行跨域fetch请求，自动处理同源检测
- * @param {RequestInfo} input - 请求URL或Request对象
- * @param {RequestInit} [init] - 可选的请求配置
- * @param {boolean} [force] - 是否强制使用GM_xmlhttpRequest
- * @returns {Promise<Response>} 返回响应Promise
- * @throws {Error} 当init.headers不是字符串元组数组时抛出错误
+ * 通用增强版 fetch 函数，支持跨域请求、重试机制、失败提示等特性。
+ * 
+ * - 自动检测同源，跨域时使用 GM_xmlhttpRequest 发起请求
+ * - 可通过 options 强制跨域、开启重试、定制失败行为
+ * 
+ * @param {RequestInfo} input - 请求 URL 或 Request 对象
+ * @param {RequestInit} [init] - 可选的请求配置对象
+ * @param {Object} [options] - 扩展选项（不传则行为与原始 fetch 相同）
+ * @param {boolean} [options.force=false] - 是否强制使用 GM_xmlhttpRequest 发起请求（无视同源判断）
+ * @param {boolean} [options.retry=false] - 是否开启失败自动重试
+ * @param {number} [options.maxRetries=3] - 最大重试次数
+ * @param {number} [options.retryDelay=1000] - 重试间隔（毫秒）
+ * @param {number|number[]} [options.successStatus=[200, 201]] - 判定为成功的响应状态码，可为单个或多个
+ * @param {number|number[]} [options.failStatuses=[403, 404]] - 判定为失败且不重试的状态码列表，可为单个或多个
+ * @param {(res: Response) => Promise<void> | void} [options.onFail] - 失败状态时调用的提示函数，可用于自定义弹窗等
+ * 
+ * @returns {Promise<Response>} - 返回 Response 对象 Promise
  */
-export const unlimitedFetch = (input: RequestInfo, init?: RequestInit, force?: boolean): Promise<Response> => {
-    return force || (typeof input === 'string' ? input : input.url).toURL().hostname !== unsafeWindow.location.hostname ? new Promise((resolve, reject) => {
-        GM_xmlhttpRequest({
-            method: (init && init.method) as Tampermonkey.Request['method'],
-            url: typeof input === 'string' ? input : input.url,
-            headers: (init && init.headers) as Tampermonkey.RequestHeaders || {},
-            data: ((init && init.body) || null) as Tampermonkey.Request['data'],
-            onload: function (response: Tampermonkey.ResponseBase) {
-                resolve(new Response(response.responseText, {
-                    status: response.status,
-                    statusText: response.statusText,
-                }))
-            },
-            onerror: function (error: Tampermonkey.ErrorResponse) {
-                reject(error);
-            }
-        })
-    }) : originalFetch(input, init)
-}
+export const unlimitedFetch = async (
+    input: RequestInfo,
+    init: RequestInit = {},
+    options?: {
+        force?: boolean;
+        retry?: boolean;
+        maxRetries?: number;
+        retryDelay?: number;
+        successStatus?: number | number[];
+        failStatuses?: number | number[];
+        onFail?: (response: Response) => Promise<void> | void;
+    }
+): Promise<Response> => {
+    const {
+        force = false,
+        retry = false,
+        maxRetries = 3,
+        retryDelay = 3000,
+        successStatus = [200, 201],
+        failStatuses = [403, 404],
+        onFail,
+    } = options || {};
+
+    const successStatuses = Array.isArray(successStatus) ? successStatus : [successStatus];
+    const failStatusList = Array.isArray(failStatuses) ? failStatuses : [failStatuses];
+
+    const url = typeof input === 'string' ? input : input.url;
+    const isCrossOrigin = force || new URL(url).hostname !== unsafeWindow.location.hostname;
+
+    const doFetch = async (): Promise<Response> => {
+        if (isCrossOrigin) {
+            return new Promise((resolve, reject) => {
+                GM_xmlhttpRequest({
+                    method: init.method as Tampermonkey.Request['method'],
+                    url,
+                    headers: (init.headers as Tampermonkey.RequestHeaders) || {},
+                    data: (init.body as Tampermonkey.Request['data']) || undefined,
+                    onload: (response) => {
+                        resolve(new Response(response.responseText, {
+                            status: response.status,
+                            statusText: response.statusText,
+                        }));
+                    },
+                    onerror: reject
+                });
+            });
+        } else {
+            return originalFetch(input, init);
+        }
+    };
+
+    if (!retry) return doFetch();
+    let lastResponse: Response = await doFetch();
+    let attempts = 1;
+    while (attempts < maxRetries) {
+        if (successStatuses.includes(lastResponse.status)) return lastResponse;
+        if (failStatusList.includes(lastResponse.status)) break;
+        attempts++;
+        await delay(retryDelay);
+        lastResponse = await doFetch();
+    }
+    if (onFail) await onFail(lastResponse);
+    return lastResponse;
+};
+
+
 
 /**
  * 查找匹配指定条件的DOM元素

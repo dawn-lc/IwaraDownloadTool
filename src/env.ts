@@ -218,8 +218,7 @@ const hasValidID = (info: VideoInfo) => isString(info.ID) && isNotEmpty(info.ID)
 export const isInitVideoInfo = (info: VideoInfo): info is InitVideoInfo =>
     !isNullOrUndefined(info) &&
     info.Type === 'init' &&
-    hasValidID(info) &&
-    isNumber(info.UpdateTime);
+    hasValidID(info);
 
 export const isFullVideoInfo = (info: VideoInfo): info is FullVideoInfo =>
     !isNullOrUndefined(info) &&
