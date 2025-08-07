@@ -80,7 +80,7 @@ body:
     id: logs
     attributes:
       label: 相关日志
-      description: 请打开开发者工具复制并粘贴相关的日志到下方的文本框中。(不提供日志将无法排除解决问题，您的反馈将会被忽略)
+      description: 【不提供日志将无法排除解决问题，您的反馈将会被忽略】请按F12或Ctrl+Shift+J打开开发者工具-->找到控制台-->回到页面打开脚本设置-->开启调试模式-->回到开发者工具-->复制并粘贴相关的日志到当前文本框中。
       render: Text
     validations:
       required: true

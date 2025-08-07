@@ -80,7 +80,7 @@ body:
     id: logs
     attributes:
       label: 関連するログ
-      description: 開発者ツールを開き、関連するログをコピーしてここに貼り付けてください。
+      description: 【ログがないと問題を解決できません、報告は無視されます】F12またはCtrl+Shift+Jを押して開発者ツールを開く-->コンソールタブを見つける-->スクリプト設定に戻る-->デバッグモードを有効にする-->開発者ツールに戻る-->関連するログをコピーしてここに貼り付けてください。
       render: Text
     validations:
       required: true
