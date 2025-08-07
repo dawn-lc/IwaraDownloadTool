@@ -1547,6 +1547,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
         GM_deleteValue('selectList')
         try {
             db.delete()
+            unsafeWindow.location.reload()
         } catch (error) {
             originalConsole.error(error)
         }
