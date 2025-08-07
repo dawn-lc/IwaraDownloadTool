@@ -820,30 +820,46 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
             if (!bypass) {
                 const authorInfo = await db.follows.get(videoInfo.AuthorID);
                 if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
-                    let followerResponse = await unlimitedFetch(`https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    })
-                    if (followerResponse.status !== 201) {
-                        newToast(ToastType.Warn, {
-                            text: `${videoInfo.Alias} %#autoFollowFailed#% ${await followerResponse.text()}`,
-                            close: true,
-                            onClick() { this.hide() }
-                        }).show()
-                    }
+                    await unlimitedFetch(
+                        `https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`,
+                        {
+                            method: 'POST',
+                            headers: await getAuth()
+                        },
+                        {
+                            retry: true,
+                            successStatus: 201,
+                            failStatuses: [403, 404],
+                            onFail: async (res) => {
+                                newToast(ToastType.Warn, {
+                                    text: `${videoInfo.Alias} %#autoFollowFailed#% ${res.status}`,
+                                    close: true,
+                                    onClick() { this.hide() }
+                                }).show();
+                            }
+                        }
+                    );
                 }
                 if (config.autoLike && !videoInfo.Liked) {
-                    let likeResponse = await unlimitedFetch(`https://api.iwara.tv/video/${videoInfo.ID}/like`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    });
-                    if (likeResponse.status !== 201) {
-                        newToast(ToastType.Warn, {
-                            text: `${videoInfo.Title} %#autoLikeFailed#% ${await likeResponse.text()}`,
-                            close: true,
-                            onClick() { this.hide() }
-                        }).show()
-                    }
+                    await unlimitedFetch(
+                        `https://api.iwara.tv/video/${videoInfo.ID}/like`,
+                        {
+                            method: 'POST',
+                            headers: await getAuth()
+                        },
+                        {
+                            retry: true,
+                            successStatus: 201,
+                            failStatuses: [403, 404],
+                            onFail: async (res) => {
+                                newToast(ToastType.Warn, {
+                                    text: `${videoInfo.Alias} %#autoLikeFailed#% ${res.status}`,
+                                    close: true,
+                                    onClick() { this.hide() }
+                                }).show();
+                            }
+                        }
+                    )
                 }
                 if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
                     let toastBody = toastNode([
@@ -1351,37 +1367,11 @@ async function analyzeDownloadTask(taskList: Dictionary<VideoInfo> = selectList)
         updateParsingProgress()
     }
 
-
     for (let [id, info] of taskList) {
-        let video = info
-        let failCount = 0
-        await delay(200)
-        while (video.Type !== 'full' && failCount < 3) {
-            video = await parseVideoInfo(video)
-            if (video.Type !== 'full') {
-                failCount++;
-                !config.enableUnsafeMode && await delay(3000)
-            } else {
-                taskList.set(id, video)
-                break;
-            }
-        }
-    }
-
-    let success = taskList.valuesArray().filter(i => i.Type === 'full')
-
-    let fails = taskList.valuesArray().difference(success, 'ID')
-
-    for (let info of success.sort((a, b) => a.UploadTime - b.UploadTime)) {
-        pushDownloadTask(info)
-        taskList.delete(info.ID)
+        await pushDownloadTask(await parseVideoInfo(info))
+        taskList.delete(id)
         updateParsingProgress()
-    }
-
-    for (let info of fails) {
-        pushDownloadTask(info)
-        taskList.delete(info.ID)
-        updateParsingProgress()
+        !config.enableUnsafeMode && await delay(3000)
     }
 
     parsingProgressToast.hide()
@@ -1486,22 +1476,25 @@ async function main() {
             method: 'GET',
             headers: await getAuth()
         })).json() as Iwara.LocalUser
-        let profile = await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
-            method: 'GET',
-            headers: await getAuth()
-        })).json() as Iwara.Profile
-        if (user.user.id !== profile.user.id) {
-            if (!profile.user.following) {
-                unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/followers`, {
-                    method: 'POST',
-                    headers: await getAuth()
-                })
-            }
-            if (!profile.user.friend) {
-                unlimitedFetch(`https://api.iwara.tv/user/${profile.user.id}/friends`, {
-                    method: 'POST',
-                    headers: await getAuth()
-                })
+        let authorProfile = await db.follows.where('username').equals('dawn').first()
+        if (isNullOrUndefined(authorProfile)) {
+            authorProfile = (await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
+                method: 'GET',
+                headers: await getAuth()
+            })).json() as Iwara.Profile).user
+            if (user.user.id !== authorProfile.id) {
+                if (!authorProfile.following) {
+                    unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/followers`, {
+                        method: 'POST',
+                        headers: await getAuth()
+                    })
+                }
+                if (!authorProfile.friend) {
+                    unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/friends`, {
+                        method: 'POST',
+                        headers: await getAuth()
+                    })
+                }
             }
         }
     }
@@ -1609,8 +1602,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
                         const sortedList = list.sort((a, b) => a.UploadTime - b.UploadTime)
                         const minTime = sortedList.at(0)!.UploadTime
                         const maxTime = sortedList.at(-1)!.UploadTime
-                        const startTime = new Date(minTime).sub({ hours: 2 }).getTime()
-                        const endTime = new Date(maxTime).add({ hours: 2 }).getTime()
+                        const startTime = new Date(minTime).sub({ hours: 4 }).getTime()
+                        const endTime = new Date(maxTime).add({ hours: 4 }).getTime()
                         const cache = (await db.getFilteredVideos(startTime, endTime)).filter(i => i.Type === 'partial' || i.Type === 'full').sort((a, b) => a.UploadTime - b.UploadTime).map(i => i.RAW)
                         if (!cache.any()) break
                         cloneBody.count += cache.length

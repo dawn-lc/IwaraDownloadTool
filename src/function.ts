@@ -708,8 +708,7 @@ export async function aria2TaskCheckAndRestart() {
                         const task = needRestart[i]
                         await pushDownloadTask(await parseVideoInfo({
                             Type: "init",
-                            ID: task.id,
-                            UpdateTime: 0
+                            ID: task.id
                         }), true)
                         let activeTasks = active.filter(
                             (activeTask: { id: string, data: Aria2.Status }) => activeTask.id === task.id
