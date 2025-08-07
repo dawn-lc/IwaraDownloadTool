@@ -88,7 +88,6 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
     let ID: string = info.ID
     let Type: VideoInfoType = info.Type
     let RAW: Iwara.Video | undefined = info.RAW
-    GM_getValue('isDebug') && originalConsole.debug('[Debug]', info)
     try {
         switch (info.Type) {
             case "cache":
