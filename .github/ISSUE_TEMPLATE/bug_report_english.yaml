@@ -80,7 +80,7 @@ body:
     id: logs
     attributes:
       label: Relevant Logs
-      description: 【Without logs we cannot solve the issue, your report will be ignored】Please press F12 or Ctrl+Shift+J to open developer tools-->find Console tab-->go back to script settings-->enable debug mode-->return to developer tools-->copy and paste relevant logs here.
+      description: 【Without logs we cannot solve the issue, your report will be ignored】Please press F12 or Ctrl+Shift+I to open developer tools-->find Console tab-->go back to script settings-->enable debug mode-->return to developer tools-->copy and paste relevant logs here.
       render: Text
     validations:
       required: true
