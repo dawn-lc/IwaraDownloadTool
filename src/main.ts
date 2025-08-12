@@ -1,6 +1,6 @@
 import "./env";
 import { delay, isCacheVideoInfo, isFailVideoInfo, isInitVideoInfo, isNullOrUndefined, isString, isVideoInfo, prune, stringify } from "./env";
-import { originalAddEventListener, originalConsole, originalFetch, originalNodeAppendChild, originalHistoryPushState, originalElementRemove, originalNodeRemoveChild, originalHistoryReplaceState, originalLocalStorageSetItem, originalLocalStorageRemoveItem, originalLocalStorageClear } from "./hijack";
+import { originalAddEventListener, originalConsole, originalFetch, originalNodeAppendChild, originalHistoryPushState, originalElementRemove, originalNodeRemoveChild, originalHistoryReplaceState, originalStorageSetItem, originalStorageRemoveItem, originalStorageClear } from "./hijack";
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
 import { Dictionary, MultiPage, SyncDictionary, Version } from "./class";
@@ -1246,10 +1246,6 @@ function pageChange() {
     pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
     GM_getValue('isDebug') && originalConsole.debug('[Debug]', pageSelectButtons)
 }
-function localStorageChange() {
-    pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
-    GM_getValue('isDebug') && originalConsole.debug('[Debug]', pageSelectButtons)
-}
 async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
@@ -1460,18 +1456,18 @@ function hijackHistoryReplaceState() {
         pageChange()
     }
 }
-function hijacklocalStorage() {
-    unsafeWindow.localStorage.setItem = function (key, value) {
-        originalLocalStorageSetItem.call(this, key, value)
-        if (key === 'token') pageChange()
+function hijackStorage() {
+    unsafeWindow.Storage.prototype.setItem = function (key, value) {
+        originalStorageSetItem.call(this, key, value)
+        if (key === 'token') pluginMenu.pageChange()
     }
-    unsafeWindow.localStorage.removeItem = function (key) {
-        originalLocalStorageRemoveItem.call(this, key)
-        if (key === 'token') pageChange()
+    unsafeWindow.Storage.prototype.removeItem = function (key) {
+        originalStorageRemoveItem.call(this, key)
+        if (key === 'token') pluginMenu.pageChange()
     }
-    unsafeWindow.localStorage.clear = function () {
-        originalLocalStorageClear.call(this)
-        pageChange()
+    unsafeWindow.Storage.prototype.clear = function () {
+        originalStorageClear.call(this)
+        pluginMenu.pageChange()
     }
 }
 async function main() {
@@ -1496,7 +1492,7 @@ async function main() {
     if (config.autoInjectCheckbox) hijackNodeAppendChild()
     hijackNodeRemoveChild()
     hijackElementRemove()
-    hijacklocalStorage()
+    hijackStorage()
     originalAddEventListener('mouseover', (event: Event) => {
         mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
     })

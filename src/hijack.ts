@@ -10,9 +10,9 @@ export const originalElementRemove = unsafeWindow.Element.prototype.remove;
 
 export const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener;
 
-export const originalLocalStorageSetItem = unsafeWindow.localStorage.setItem;
-export const originalLocalStorageRemoveItem = unsafeWindow.localStorage.removeItem;
-export const originalLocalStorageClear = unsafeWindow.localStorage.clear;
+export const originalStorageSetItem = unsafeWindow.Storage.prototype.setItem;
+export const originalStorageRemoveItem = unsafeWindow.Storage.prototype.removeItem;
+export const originalStorageClear = unsafeWindow.Storage.prototype.clear;
 
 export const originalConsole = {
     log: unsafeWindow.console.log.bind(unsafeWindow.console),
