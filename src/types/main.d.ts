@@ -100,6 +100,7 @@ declare type Pruned<T> =
     : T extends object
     ? { [K in keyof T as Pruned<T[K]> extends never ? never : K]: Pruned<T[K]> }
     : T;
+
 declare type ThrottleOptions = {
     /** 
      * 是否在节流开始时立即执行
@@ -133,13 +134,11 @@ declare interface LocalPath {
     baseName: string;
 }
 
-
 declare type VideoInfoType = 'full' | 'partial' | 'cache' | 'init' | 'fail'
 
 declare interface VideoInfoBase {
     Type: VideoInfoType;
     ID: string;
-    UpdateTime: number
     RAW?: Iwara.Video;
 }
 

@@ -57,7 +57,7 @@ export class Config {
     aria2Token: string
     iwaraDownloaderPath: string
     iwaraDownloaderToken: string
-    authorization!: string;
+    authorization?: string;
     priority: Record<string, number>
     [key: string]: any
     constructor() {

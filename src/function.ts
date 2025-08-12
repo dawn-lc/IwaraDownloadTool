@@ -15,24 +15,50 @@ import { originalConsole } from "./hijack";
  * @returns {Promise<string>} 返回新的访问令牌或回退到配置中的授权令牌
  */
 export async function refreshToken(): Promise<string> {
-    const { authorization } = config
+    const { authorization } = config;
+    const refreshToken = authorization ?? localStorage.getItem('token');
+    if (!refreshToken?.trim()) {
+        throw new Error(`Refresh token failed: no refresh token`);
+    }
+
+    const oldAccessToken = localStorage.getItem('accessToken');
     try {
-        const res = await unlimitedFetch('https://api.iwara.tv/user/token', {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`
+        const res = await unlimitedFetch(
+            'https://api.iwara.tv/user/token',
+            {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${refreshToken}`
+                }
             }
-        })
+        );
+
         if (!res.ok) {
             throw new Error(`Refresh token failed with status: ${res.status}`);
         }
-        const { accessToken } = await res.json()
-        return accessToken || authorization
+
+        const { accessToken } = await res.json();
+        if (!accessToken) {
+            throw new Error(`No access token in response`);
+        }
+
+        if (!oldAccessToken || oldAccessToken !== accessToken) {
+            localStorage.setItem('accessToken', accessToken);
+        }
+
+        return accessToken;
+
     } catch (error) {
-        originalConsole.warn('Failed to refresh token:', error)
+        originalConsole.warn('Failed to refresh token:', error);
+
+        if (!oldAccessToken?.trim()) {
+            throw new Error(`Refresh token failed and no valid access token available`);
+        }
+
+        return oldAccessToken;
     }
-    return authorization
 }
+
 /**
  * 获取请求认证头信息
  * @async
@@ -42,7 +68,7 @@ export async function refreshToken(): Promise<string> {
 export async function getAuth(url?: string): Promise<{ Cooike: string; Authorization: string; } & { 'X-Version': string; }> {
     return prune({
         'Cooike': unsafeWindow.document.cookie,
-        'Authorization': config.authorization,
+        'Authorization': `Bearer ${localStorage.getItem('accessToken') ?? await refreshToken()}`,
         'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined
     })
 }
@@ -398,8 +424,6 @@ export function aria2Download(videoInfo: FullVideoInfo) {
         let params = [
             [downloadUrl.href],
             prune({
-
-                'allow-overwrite': "true",
                 'all-proxy': config.downloadProxy,
                 'all-proxy-passwd': !config.downloadProxy.isEmpty() ? config.downloadProxyPassword : undefined,
                 'all-proxy-user': !config.downloadProxy.isEmpty() ? config.downloadProxyUsername : undefined,
@@ -416,6 +440,7 @@ export function aria2Download(videoInfo: FullVideoInfo) {
         newToast(
             ToastType.Info,
             {
+                gravity: 'bottom',
                 node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
             }
         ).show()
@@ -708,8 +733,7 @@ export async function aria2TaskCheckAndRestart() {
                         const task = needRestart[i]
                         await pushDownloadTask(await parseVideoInfo({
                             Type: "init",
-                            ID: task.id,
-                            UpdateTime: 0
+                            ID: task.id
                         }), true)
                         let activeTasks = active.filter(
                             (activeTask: { id: string, data: Aria2.Status }) => activeTask.id === task.id
