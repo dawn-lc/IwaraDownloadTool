@@ -1,10 +1,19 @@
 export const originalFetch = unsafeWindow.fetch;
-export const originalPushState = unsafeWindow.history.pushState;
-export const originalReplaceState = unsafeWindow.history.replaceState;
+
+export const originalHistoryPushState = unsafeWindow.history.pushState;
+export const originalHistoryReplaceState = unsafeWindow.history.replaceState;
+
 export const originalNodeAppendChild = unsafeWindow.Node.prototype.appendChild;
-export const originalRemoveChild = unsafeWindow.Node.prototype.removeChild;
-export const originalRemove = unsafeWindow.Element.prototype.remove;
+export const originalNodeRemoveChild = unsafeWindow.Node.prototype.removeChild;
+
+export const originalElementRemove = unsafeWindow.Element.prototype.remove;
+
 export const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener;
+
+export const originalLocalStorageSetItem = unsafeWindow.localStorage.setItem;
+export const originalLocalStorageRemoveItem = unsafeWindow.localStorage.removeItem;
+export const originalLocalStorageClear = unsafeWindow.localStorage.clear;
+
 export const originalConsole = {
     log: unsafeWindow.console.log.bind(unsafeWindow.console),
     info: unsafeWindow.console.info.bind(unsafeWindow.console),

@@ -1,6 +1,6 @@
 import "./env";
 import { delay, isCacheVideoInfo, isFailVideoInfo, isInitVideoInfo, isNullOrUndefined, isString, isVideoInfo, prune, stringify } from "./env";
-import { originalAddEventListener, originalConsole, originalFetch, originalNodeAppendChild, originalPushState, originalRemove, originalRemoveChild, originalReplaceState } from "./hijack";
+import { originalAddEventListener, originalConsole, originalFetch, originalNodeAppendChild, originalHistoryPushState, originalElementRemove, originalNodeRemoveChild, originalHistoryReplaceState, originalLocalStorageSetItem, originalLocalStorageRemoveItem, originalLocalStorageClear } from "./hijack";
 import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
 import { Dictionary, MultiPage, SyncDictionary, Version } from "./class";
@@ -590,7 +590,7 @@ class menu {
     }
 
     public async parseUnlistedAndPrivate() {
-        if (!isLoggedIn) return
+        if (!isLoggedIn()) return
         const lastMonthTimestamp = Date.now() - 30 * 24 * 60 * 60 * 1000
         const thisMonthUnlistedAndPrivateVideos = await db.videos
             .where('UploadTime')
@@ -606,7 +606,7 @@ class menu {
         while (pageCount < MAX_FIND_PAGES) {
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetching page ${pageCount}.`);
             const response = await unlimitedFetch(
-                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${rating}&page=${pageCount}`,
+                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${rating()}&page=${pageCount}`,
                 { method: 'GET', headers: await getAuth() },
                 {
                     retry: true,
@@ -670,7 +670,7 @@ class menu {
         let baseButtons = [
             manualDownloadButton,
             settingsButton,
-            ...(isLoggedIn ? [parseUnlistedAndPrivate] : [])
+            ...(isLoggedIn() ? [parseUnlistedAndPrivate] : [])
         ];
 
         let injectCheckboxButton = this.button('injectCheckbox', (name, event) => {
@@ -779,11 +779,11 @@ class menu {
         }
     }
 }
-
+var isLoggedIn = () => Boolean(unsafeWindow.localStorage.getItem('token'))
+var rating = () => localStorage.getItem('rating') ?? 'all'
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
-var isLoggedIn = Boolean(unsafeWindow.localStorage.getItem('token'))
-var rating = localStorage.getItem('rating') ?? 'all'
+
 export var pageStatus = new MultiPage()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 export function getSelectButton(id: string): HTMLInputElement | undefined {
@@ -1246,6 +1246,10 @@ function pageChange() {
     pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
     GM_getValue('isDebug') && originalConsole.debug('[Debug]', pageSelectButtons)
 }
+function localStorageChange() {
+    pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
+    GM_getValue('isDebug') && originalConsole.debug('[Debug]', pageSelectButtons)
+}
 async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
@@ -1434,25 +1438,39 @@ function hijackNodeAppendChild() {
 function hijackNodeRemoveChild() {
     Node.prototype.removeChild = function <T extends Node>(child: T): T {
         uninjectCheckbox(child)
-        return originalRemoveChild.apply(this, [child]) as T
+        return originalNodeRemoveChild.apply(this, [child]) as T
     }
 
 }
 function hijackElementRemove() {
     Element.prototype.remove = function () {
         uninjectCheckbox(this)
-        return originalRemove.apply(this)
+        return originalElementRemove.apply(this)
     }
 }
 function hijackHistoryPushState() {
     unsafeWindow.history.pushState = function (...args) {
-        originalPushState.apply(this, args)
+        originalHistoryPushState.apply(this, args)
         pageChange()
     }
 }
 function hijackHistoryReplaceState() {
     unsafeWindow.history.replaceState = function (...args) {
-        originalReplaceState.apply(this, args)
+        originalHistoryReplaceState.apply(this, args)
+        pageChange()
+    }
+}
+function hijacklocalStorage() {
+    unsafeWindow.localStorage.setItem = function (key, value) {
+        originalLocalStorageSetItem.call(this, key, value)
+        if (key === 'token') pageChange()
+    }
+    unsafeWindow.localStorage.removeItem = function (key) {
+        originalLocalStorageRemoveItem.call(this, key)
+        if (key === 'token') pageChange()
+    }
+    unsafeWindow.localStorage.clear = function () {
+        originalLocalStorageClear.call(this)
         pageChange()
     }
 }
@@ -1478,7 +1496,7 @@ async function main() {
     if (config.autoInjectCheckbox) hijackNodeAppendChild()
     hijackNodeRemoveChild()
     hijackElementRemove()
-
+    hijacklocalStorage()
     originalAddEventListener('mouseover', (event: Event) => {
         mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
     })
@@ -1503,7 +1521,7 @@ async function main() {
         }
     }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
     originalNodeAppendChild.call(unsafeWindow.document.body, watermark)
-    if (isLoggedIn) {
+    if (isLoggedIn()) {
         let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
             method: 'GET',
             headers: await getAuth()
@@ -1544,6 +1562,7 @@ async function main() {
     ).show()
 }
 var mouseTarget: Element | null = null
+
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
     if (GM_getValue('isDebug')) {
