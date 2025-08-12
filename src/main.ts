@@ -590,7 +590,7 @@ class menu {
     }
 
     public async parseUnlistedAndPrivate() {
-        const getRating = localStorage.getItem('rating') ?? 'all'
+        if (!isLoggedIn) return
         const lastMonthTimestamp = Date.now() - 30 * 24 * 60 * 60 * 1000
         const thisMonthUnlistedAndPrivateVideos = await db.videos
             .where('UploadTime')
@@ -606,7 +606,7 @@ class menu {
         while (pageCount < MAX_FIND_PAGES) {
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetching page ${pageCount}.`);
             const response = await unlimitedFetch(
-                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${pageCount}`,
+                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${rating}&page=${pageCount}`,
                 { method: 'GET', headers: await getAuth() },
                 {
                     retry: true,
@@ -664,7 +664,14 @@ class menu {
         let settingsButton = this.button('settings', (name, event) => {
             editConfig.inject()
         })
-        let baseButtons = [manualDownloadButton, settingsButton]
+        let parseUnlistedAndPrivate = this.button('parseUnlistedAndPrivate', (name, event) => {
+            this.parseUnlistedAndPrivate()
+        })
+        let baseButtons = [
+            manualDownloadButton,
+            settingsButton,
+            ...(isLoggedIn ? [parseUnlistedAndPrivate] : [])
+        ];
 
         let injectCheckboxButton = this.button('injectCheckbox', (name, event) => {
             if (unsafeWindow.document.querySelector('.selectButton')) {
@@ -707,10 +714,15 @@ class menu {
                 close: true
             }).show()
         })
-        let parseUnlistedAndPrivate = this.button('parseUnlistedAndPrivate', (name, event) => {
-            this.parseUnlistedAndPrivate()
-        })
-        let selectButtons = [injectCheckboxButton, deselectAllButton, reverseSelectButton, selectThisButton, deselectThisButton, downloadSelectedButton, parseUnlistedAndPrivate]
+
+        let selectButtons = [
+            injectCheckboxButton,
+            deselectAllButton,
+            reverseSelectButton,
+            selectThisButton,
+            deselectThisButton,
+            downloadSelectedButton
+        ]
 
         let downloadThisButton = this.button('downloadThis', async (name, event) => {
             let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
@@ -770,6 +782,8 @@ class menu {
 
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
+var isLoggedIn = Boolean(unsafeWindow.localStorage.getItem('token'))
+var rating = localStorage.getItem('rating') ?? 'all'
 export var pageStatus = new MultiPage()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 export function getSelectButton(id: string): HTMLInputElement | undefined {
@@ -1489,7 +1503,7 @@ async function main() {
         }
     }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
     originalNodeAppendChild.call(unsafeWindow.document.body, watermark)
-    if (!(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()) {
+    if (isLoggedIn) {
         let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
             method: 'GET',
             headers: await getAuth()
