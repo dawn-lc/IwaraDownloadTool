@@ -19,7 +19,8 @@ import { delay, isArray, isNullOrUndefined, prune } from "./env";
  * @param {number} [options.retryDelay=1000] - 重试间隔（毫秒）
  * @param {number|number[]} [options.successStatus=[200, 201]] - 判定为成功的响应状态码，可为单个或多个
  * @param {number|number[]} [options.failStatuses=[403, 404]] - 判定为失败且不重试的状态码列表，可为单个或多个
- * @param {(res: Response) => Promise<void> | void} [options.onFail] - 失败状态时调用的提示函数，可用于自定义弹窗等
+ * @param {(res: Response) => Promise<void> | void} [options.onFail] - 失败状态时调用函数
+ * @param {(res: Response) => Promise<void> | void} [options.onRetry] - 重试状态时调用函数
  * 
  * @returns {Promise<Response>} - 返回 Response 对象 Promise
  */
@@ -34,6 +35,7 @@ export const unlimitedFetch = async (
         successStatus?: number | number[];
         failStatuses?: number | number[];
         onFail?: (response: Response) => Promise<void> | void;
+        onRetry?: (response: Response) => Promise<void> | void;
     }
 ): Promise<Response> => {
     const {
@@ -44,6 +46,7 @@ export const unlimitedFetch = async (
         successStatus = [200, 201],
         failStatuses = [403, 404],
         onFail,
+        onRetry,
     } = options || {};
 
     const successStatuses = Array.isArray(successStatus) ? successStatus : [successStatus];
@@ -81,6 +84,7 @@ export const unlimitedFetch = async (
         if (successStatuses.includes(lastResponse.status)) return lastResponse;
         if (failStatusList.includes(lastResponse.status)) break;
         attempts++;
+        if (onRetry) await onRetry(lastResponse);
         await delay(retryDelay);
         lastResponse = await doFetch();
     }

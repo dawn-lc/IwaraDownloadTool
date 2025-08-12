@@ -8,7 +8,7 @@ import { config, Config } from "./config";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
-import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, toastNode } from "./function";
+import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, refreshToken, toastNode } from "./function";
 import mainCSS from "./css/main.css";
 
 async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
@@ -99,7 +99,19 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
             case "fail":
             case "partial":
             case "full":
-                let sourceResult = await (await unlimitedFetch(`https://api.iwara.tv/video/${info.ID}`, { headers: await getAuth() })).json() as Iwara.IResult
+                let sourceResult = await (await unlimitedFetch(
+                    `https://api.iwara.tv/video/${info.ID}`,
+                    {
+                        headers: await getAuth()
+                    },
+                    {
+                        retry: true,
+                        maxRetries: 3,
+                        failStatuses: [403, 404],
+                        retryDelay: 1000,
+                        onRetry: async () => { await refreshToken() }
+                    }
+                )).json() as Iwara.IResult
                 if (isNullOrUndefined(sourceResult.id)) {
                     Type = 'fail'
                     return {
@@ -578,7 +590,7 @@ class menu {
     }
 
     public async parseUnlistedAndPrivate() {
-        const getRating = () => unsafeWindow.document.querySelector('input.radioField--checked[name=rating]')?.getAttribute('value') ?? 'all'
+        const getRating = localStorage.getItem('rating') ?? 'all'
         const lastMonthTimestamp = Date.now() - 30 * 24 * 60 * 60 * 1000
         const thisMonthUnlistedAndPrivateVideos = await db.videos
             .where('UploadTime')
@@ -595,16 +607,17 @@ class menu {
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetching page ${pageCount}.`);
             const response = await unlimitedFetch(
                 `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${getRating}&page=${pageCount}`,
+                { method: 'GET', headers: await getAuth() },
                 {
-                    method: 'GET',
-                    headers: await getAuth(),
+                    retry: true,
+                    retryDelay: 1000,
+                    onRetry: async () => { await refreshToken() }
                 }
             );
             GM_getValue('isDebug') && originalConsole.debug('[Debug] Received response, parsing JSON.');
             const data = (await response.json() as Iwara.IPage).results as Iwara.Video[];
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Page ${pageCount} returned ${data.length} videos.`);
             data.forEach(info => info.user.following = true);
-            GM_getValue('isDebug') && originalConsole.debug('[Debug] Marked all fetched videos as following.');
             const videoPromises = data.map(info => parseVideoInfo({
                 Type: 'cache',
                 ID: info.id,
@@ -613,8 +626,10 @@ class menu {
             GM_getValue('isDebug') && originalConsole.debug('[Debug] Initializing VideoInfo promises.');
             const videoInfos = await Promise.all(videoPromises);
             parseUnlistedAndPrivateVideos.push(...videoInfos);
+            let test = videoInfos.filter(i => i.Type === 'partial' && (i.Private || i.Unlisted)).any()
             GM_getValue('isDebug') && originalConsole.debug('[Debug] All VideoInfo objects initialized.');
-            if (thisMonthUnlistedAndPrivateVideos.intersect(videoInfos, 'ID').any()) {
+            if (test && thisMonthUnlistedAndPrivateVideos.intersect(videoInfos, 'ID').any()) {
+                GM_getValue('isDebug') && originalConsole.debug(`[Debug] Found private video on page ${pageCount}.`);
                 break;
             }
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Latest private video not found on page ${pageCount}, continuing.`);
@@ -829,14 +844,15 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                         {
                             retry: true,
                             successStatus: 201,
-                            failStatuses: [403, 404],
+                            failStatuses: [404],
                             onFail: async (res) => {
                                 newToast(ToastType.Warn, {
                                     text: `${videoInfo.Alias} %#autoFollowFailed#% ${res.status}`,
                                     close: true,
                                     onClick() { this.hide() }
                                 }).show();
-                            }
+                            },
+                            onRetry: async () => { await refreshToken() }
                         }
                     );
                 }
@@ -850,14 +866,15 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                         {
                             retry: true,
                             successStatus: 201,
-                            failStatuses: [403, 404],
+                            failStatuses: [404],
                             onFail: async (res) => {
                                 newToast(ToastType.Warn, {
                                     text: `${videoInfo.Alias} %#autoLikeFailed#% ${res.status}`,
                                     close: true,
                                     onClick() { this.hide() }
                                 }).show();
-                            }
+                            },
+                            onRetry: async () => { await refreshToken() }
                         }
                     )
                 }
@@ -1447,6 +1464,7 @@ async function main() {
     if (config.autoInjectCheckbox) hijackNodeAppendChild()
     hijackNodeRemoveChild()
     hijackElementRemove()
+
     originalAddEventListener('mouseover', (event: Event) => {
         mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
     })
@@ -1564,16 +1582,13 @@ if (!unsafeWindow.IwaraDownloadTool) {
                     }
                 }
             }
-            if (!isNullOrUndefined(authorization) && authorization !== config.authorization) {
+            if (!isNullOrUndefined(authorization)) {
                 let playload = getPlayload(authorization)
                 let token = authorization.split(' ').pop() ?? ''
-                if (playload['type'] === 'refresh_token') {
-                    GM_getValue('isDebug') && originalConsole.debug(`[Debug] refresh_token: ${'*'.repeat(token.length)}`)
-                    if (isNullOrUndefined(localStorage.getItem('token'))) localStorage.setItem('token', token)
-                }
-                if (playload['type'] === 'access_token') {
-                    config.authorization = authorization
-                    GM_getValue('isDebug') && originalConsole.debug(`[Debug] access_token: ${'*'.repeat(token.length)}`)
+                if (playload['type'] === 'refresh_token' && !token.isEmpty()) {
+                    localStorage.setItem('token', token)
+                    config.authorization = token
+                    GM_getValue('isDebug') && originalConsole.debug(`[Debug] refresh_token: 凭证已隐藏`)
                 }
             }
         }
@@ -1582,6 +1597,15 @@ if (!unsafeWindow.IwaraDownloadTool) {
                 if (url.hostname !== 'api.iwara.tv' || url.pathname.isEmpty()) return resolve(response)
                 let path = url.pathname.toLowerCase().split('/').slice(1)
                 switch (path[0]) {
+                    case 'user':
+                        if (path[1] === 'token') {
+                            const cloneResponse = response.clone()
+                            if (!cloneResponse.ok) break;
+                            const { accessToken } = await cloneResponse.json()
+                            let token = localStorage.getItem('accessToken')
+                            if (isNullOrUndefined(token) || token !== accessToken) localStorage.setItem('accessToken', accessToken)
+                        }
+                        break
                     case 'videos':
                         const cloneResponse = response.clone()
                         if (!cloneResponse.ok) break;
@@ -1614,7 +1638,6 @@ if (!unsafeWindow.IwaraDownloadTool) {
                             statusText: cloneResponse.statusText,
                             headers: Object.fromEntries(cloneResponse.headers.entries())
                         }))
-                    case '':
                     default:
                         break
                 }
