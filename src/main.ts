@@ -779,39 +779,23 @@ class menu {
         }
     }
 }
-var isLoggedIn = () => Boolean(unsafeWindow.localStorage.getItem('token'))
+
+var isLoggedIn = () => !(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()
 var rating = () => localStorage.getItem('rating') ?? 'all'
+var mouseTarget: Element | null = null
+
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
 
+export var selectList = new SyncDictionary<VideoInfo>('selectList');
 export var pageStatus = new MultiPage()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
-export function getSelectButton(id: string): HTMLInputElement | undefined {
-    return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
-}
-function updateButtonState(videoID: string) {
-    const selectButton = getSelectButton(videoID)
-    if (selectButton) selectButton.checked = selectList.has(videoID)
-}
 
-function saveSelectList(): void {
-    GM_getTabs((tabs) => {
-        if (Object.keys(tabs).length > 1) return;
-        GM_setValue('selectList', {
-            timestamp: selectList.timestamp,
-            selectList: selectList.toArray()
-        });
-    });
-}
-export var selectList = new SyncDictionary<VideoInfo>('selectList');
-originalAddEventListener.call(unsafeWindow.document, "visibilitychange", saveSelectList)
 var selected = renderNode({
     nodeType: 'span',
     childs: ` %#selected#% ${selectList.size} `
 })
-function updateSelected() {
-    selected.textContent = ` ${i18nList[config.language].selected} ${selectList.size} `
-}
+
 var watermark = renderNode({
     nodeType: 'p',
     className: 'fixed-bottom-right',
@@ -821,6 +805,28 @@ var watermark = renderNode({
         GM_getValue('isDebug') ? `%#isDebug#%` : ''
     ]
 })
+
+export function getSelectButton(id: string): HTMLInputElement | undefined {
+    return pageSelectButtons.has(id) ? pageSelectButtons.get(id) : unsafeWindow.document.querySelector(`input.selectButton[videoid="${id}"]`) as HTMLInputElement
+}
+function saveSelectList(): void {
+    GM_getTabs((tabs) => {
+        if (Object.keys(tabs).length > 1) return;
+        GM_setValue('selectList', {
+            timestamp: selectList.timestamp,
+            selectList: selectList.toArray()
+        });
+    });
+}
+function updateSelected() {
+    selected.textContent = ` ${i18nList[config.language].selected} ${selectList.size} `
+}
+function updateButtonState(videoID: string) {
+    const selectButton = getSelectButton(videoID)
+    if (selectButton) selectButton.checked = selectList.has(videoID)
+}
+
+originalAddEventListener.call(unsafeWindow.document, "visibilitychange", saveSelectList)
 pageStatus.onPageLeave = () => {
     saveSelectList()
 }
@@ -842,165 +848,6 @@ selectList.onSync = () => {
     updateSelected();
 };
 
-export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
-    switch (videoInfo.Type) {
-        case "full":
-            await db.videos.put(videoInfo, videoInfo.ID)
-            if (!bypass) {
-                const authorInfo = await db.follows.get(videoInfo.AuthorID);
-                if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
-                    await unlimitedFetch(
-                        `https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`,
-                        {
-                            method: 'POST',
-                            headers: await getAuth()
-                        },
-                        {
-                            retry: true,
-                            successStatus: 201,
-                            failStatuses: [404],
-                            onFail: async (res) => {
-                                newToast(ToastType.Warn, {
-                                    text: `${videoInfo.Alias} %#autoFollowFailed#% ${res.status}`,
-                                    close: true,
-                                    onClick() { this.hide() }
-                                }).show();
-                            },
-                            onRetry: async () => { await refreshToken() }
-                        }
-                    );
-                }
-                if (config.autoLike && !videoInfo.Liked) {
-                    await unlimitedFetch(
-                        `https://api.iwara.tv/video/${videoInfo.ID}/like`,
-                        {
-                            method: 'POST',
-                            headers: await getAuth()
-                        },
-                        {
-                            retry: true,
-                            successStatus: 201,
-                            failStatuses: [404],
-                            onFail: async (res) => {
-                                newToast(ToastType.Warn, {
-                                    text: `${videoInfo.Alias} %#autoLikeFailed#% ${res.status}`,
-                                    close: true,
-                                    onClick() { this.hide() }
-                                }).show();
-                            },
-                            onRetry: async () => { await refreshToken() }
-                        }
-                    )
-                }
-                if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
-                    let toastBody = toastNode([
-                        `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
-                        { nodeType: 'br' },
-                        `%#openVideoLink#%`
-                    ], '%#createTask#%')
-                    newToast(
-                        ToastType.Warn,
-                        {
-                            node: toastBody,
-                            close: config.autoCopySaveFileName,
-                            onClick() {
-                                GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
-                                if (config.autoCopySaveFileName) {
-                                    GM_setClipboard(getDownloadPath(videoInfo).fullName, "text")
-                                    toastBody.appendChild(renderNode({
-                                        nodeType: 'p',
-                                        childs: '%#copySucceed#%'
-                                    }))
-                                } else {
-                                    this.hide()
-                                }
-                            }
-                        }
-                    ).show()
-                    return
-                }
-            }
-            if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
-                newToast(
-                    ToastType.Warn,
-                    {
-                        node: toastNode([
-                            `${videoInfo.Title.truncate(64)}[${videoInfo.ID}] %#downloadQualityError#%`,
-                            { nodeType: 'br' },
-                            `%#tryReparseDownload#%`
-                        ], '%#createTask#%'),
-                        async onClick() {
-                            this.hide()
-                            await pushDownloadTask(await parseVideoInfo(videoInfo))
-                        }
-                    }
-                ).show()
-                return
-            }
-            switch (config.downloadType) {
-                case DownloadType.Aria2:
-                    aria2Download(videoInfo)
-                    break
-                case DownloadType.IwaraDownloader:
-                    iwaraDownloaderDownload(videoInfo)
-                    break
-                case DownloadType.Browser:
-                    browserDownload(videoInfo)
-                    break
-                default:
-                    othersDownload(videoInfo)
-                    break
-            }
-            if (config.autoDownloadMetadata) {
-                switch (config.downloadType) {
-                    case DownloadType.Others:
-                        othersDownloadMetadata(videoInfo)
-                        break
-                    case DownloadType.Browser:
-                        browserDownloadMetadata(videoInfo)
-                        break
-                    default:
-                        break
-                }
-                GM_getValue('isDebug') && originalConsole.debug('[Debug] Download task pushed:', videoInfo);
-            }
-            selectList.delete(videoInfo.ID)
-            break;
-        case "partial":
-            const partialCache = await db.videos.get(videoInfo.ID)
-            if (!isNullOrUndefined(partialCache) && partialCache.Type !== 'full') await db.videos.put(videoInfo, videoInfo.ID)
-        case "cache":
-        case "init":
-            return await pushDownloadTask(await parseVideoInfo(videoInfo))
-        case "fail":
-            const cache = await db.videos.get(videoInfo.ID)
-            newToast(
-                ToastType.Error,
-                {
-                    close: true,
-                    node: toastNode([
-                        `${videoInfo.Title ?? videoInfo.RAW?.title ?? cache?.RAW?.title}[${videoInfo.ID}] %#parsingFailed#%`,
-                        { nodeType: 'br' },
-                        videoInfo.Msg,
-                        { nodeType: 'br' },
-                        videoInfo.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
-                    ], '%#createTask#%'),
-                    async onClick() {
-                        this.hide()
-                        if (videoInfo.External && !isNullOrUndefined(videoInfo.ExternalUrl) && !videoInfo.ExternalUrl.isEmpty()) {
-                            GM_openInTab(videoInfo.ExternalUrl, { active: false, insert: true, setParent: true })
-                        } else {
-                            await pushDownloadTask(await parseVideoInfo({ Type: 'init', ID: videoInfo.ID, RAW: videoInfo.RAW ?? cache?.RAW }))
-                        }
-                    },
-                }
-            ).show()
-            break;
-        default:
-            GM_getValue('isDebug') && originalConsole.debug('[Debug] Unknown type:', videoInfo);
-            break;
-    }
-}
 function generateMatadataURL(videoInfo: FullVideoInfo): string {
     const metadataContent = generateMetadataContent(videoInfo);
     const blob = new Blob([metadataContent], { type: 'text/plain' });
@@ -1059,192 +906,6 @@ function othersDownloadMetadata(videoInfo: FullVideoInfo): void {
     downloadHandle.click();
     downloadHandle.remove();
     URL.revokeObjectURL(url);
-}
-function firstRun() {
-    originalConsole.log('First run config reset!')
-    GM_listValues().forEach(i => GM_deleteValue(i))
-    Config.destroyInstance()
-    editConfig = new configEdit(config)
-    let confirmButton = renderNode({
-        nodeType: 'button',
-        attributes: {
-            disabled: true,
-            title: i18nList[config.language].ok
-        },
-        childs: '%#ok#%',
-        events: {
-            click: () => {
-                GM_setValue('isFirstRun', false)
-                GM_setValue('version', GM_info.script.version)
-                unsafeWindow.document.querySelector('#pluginOverlay')?.remove()
-                editConfig.inject()
-            }
-        }
-    })
-    originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
-        nodeType: 'div',
-        attributes: {
-            id: 'pluginOverlay'
-        },
-        childs: [
-            {
-                nodeType: 'div',
-                className: 'main',
-                childs: [
-                    { nodeType: 'p', childs: '%#useHelpForBase#%' },
-                    { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
-                    { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
-                    { nodeType: 'p', childs: i18nList[config.language].useHelpForManualDownload },
-                    { nodeType: 'p', childs: i18nList[config.language].useHelpForBugreport }
-                ]
-            },
-            {
-                nodeType: 'div',
-                className: 'checkbox-container',
-                childs: {
-                    nodeType: 'label',
-                    className: ['checkbox-label', 'rainbow-text'],
-                    childs: [{
-                        nodeType: 'input',
-                        className: 'checkbox',
-                        attributes: {
-                            type: 'checkbox',
-                            name: 'agree-checkbox'
-                        },
-                        events: {
-                            change: (event: Event) => {
-                                confirmButton.disabled = !(event.target as HTMLInputElement).checked
-                            }
-                        }
-                    }, '%#alreadyKnowHowToUse#%'
-                    ]
-                }
-            },
-            confirmButton
-        ]
-    }))
-}
-function uninjectCheckbox(element: Element | Node) {
-    if (element instanceof HTMLElement) {
-        if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
-            element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID')!)
-        }
-        if (element.querySelector('input.selectButton')) {
-            element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')!))
-        }
-    }
-}
-async function injectCheckbox(element: Element) {
-    let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
-    if (isNullOrUndefined(ID)) return
-    let info = await db.videos.get(ID)
-    let Title = info?.Type === 'full' || info?.Type === 'partial' ? info?.Title : info?.RAW?.title ?? element.querySelector('.videoTeaser__title')?.getAttribute('title') ?? undefined;
-    let Alias = info?.Type === 'full' || info?.Type === 'partial' ? info?.Alias : info?.RAW?.user.name ?? element.querySelector('a.username')?.getAttribute('title') ?? undefined;
-    let Author = info?.Type === 'full' || info?.Type === 'partial' ? info?.Author : info?.RAW?.user.username ?? (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
-    let UploadTime = info?.Type === 'full' || info?.Type === 'partial' ? info?.UploadTime : new Date(info?.RAW?.updatedAt ?? 0).getTime()
-
-    let button = renderNode({
-        nodeType: 'input',
-        attributes: {
-            type: 'checkbox',
-            videoID: ID,
-            checked: selectList.has(ID) ? true : undefined,
-            videoName: Title,
-            videoAlias: Alias,
-            videoAuthor: Author,
-            videoUploadTime: UploadTime
-        },
-        className: 'selectButton',
-        events: {
-            click: (event: Event) => {
-                (event.target as HTMLInputElement).checked ? selectList.set(ID, {
-                    Type: 'init',
-                    ID,
-                    Title,
-                    Alias,
-                    Author,
-                    UploadTime
-                }) : selectList.delete(ID)
-                event.stopPropagation()
-                event.stopImmediatePropagation()
-                return false
-            }
-        }
-    })
-    let item = element.querySelector('.videoTeaser__thumbnail')?.parentElement
-    item?.style.setProperty('position', 'relative')
-    pageSelectButtons.set(ID, button)
-    originalNodeAppendChild.call(item, button)
-
-    if (!isNullOrUndefined(Author)) {
-        const AuthorInfo = await db.follows.where('username').equals(Author).first()
-        if (AuthorInfo?.following && element.querySelector('.videoTeaser__thumbnail')?.querySelector('.follow') === null) {
-            originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), renderNode(
-                {
-                    nodeType: 'div',
-                    className: 'follow',
-                    childs: {
-                        nodeType: 'div',
-                        className: ['text', 'text--white', 'text--tiny', 'text--bold'],
-                        childs: '%#following#%'
-                    }
-                }
-            ))
-        }
-    }
-
-    if (pluginMenu.pageType === PageType.Playlist) {
-        let deletePlaylistItme = renderNode({
-            nodeType: 'button',
-            attributes: {
-                videoID: ID
-            },
-            childs: '%#delete#%',
-            className: 'deleteButton',
-            events: {
-                click: async (event: Event) => {
-                    if ((await unlimitedFetch(`https://api.iwara.tv/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
-                        method: 'DELETE',
-                        headers: await getAuth()
-                    })).ok) {
-                        newToast(ToastType.Info, { text: `${Title} %#deleteSucceed#%`, close: true }).show()
-                        deletePlaylistItme.remove()
-                    }
-                    event.preventDefault()
-                    event.stopPropagation()
-                    event.stopImmediatePropagation()
-                    return false
-                }
-            }
-        })
-        originalNodeAppendChild.call(item, deletePlaylistItme)
-    }
-}
-function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
-    if (unsafeWindow.location.pathname.toLowerCase().endsWith('/search')) {
-        return PageType.Search;
-    }
-
-    const extractPageType = (page: Element | null | undefined): PageType | undefined => {
-        if (isNullOrUndefined(page)) return undefined;
-        if (page.classList.length < 2) return PageType.Page;
-        const pageClass = page.classList[1]?.split('-').pop();
-        return !isNullOrUndefined(pageClass) && isPageType(pageClass) ? (pageClass as PageType) : PageType.Page;
-    };
-
-    if (isNullOrUndefined(mutationsList)) {
-        return extractPageType(unsafeWindow.document.querySelector('.page'));
-    }
-
-    for (const mutation of mutationsList) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            return extractPageType(Array.from(mutation.addedNodes).find((node): node is Element => node instanceof Element && node.classList.contains('page')))
-        }
-    }
-}
-function pageChange() {
-    pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
-    GM_getValue('isDebug') && originalConsole.debug('[Debug]', pageSelectButtons)
 }
 async function addDownloadTask() {
     let textArea = renderNode({
@@ -1418,6 +1079,289 @@ async function analyzeDownloadTask(taskList: Dictionary<VideoInfo> = selectList)
         }
     ).show()
 }
+export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
+    switch (videoInfo.Type) {
+        case "full":
+            await db.videos.put(videoInfo, videoInfo.ID)
+            if (!bypass) {
+                const authorInfo = await db.follows.get(videoInfo.AuthorID);
+                if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
+                    await unlimitedFetch(
+                        `https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`,
+                        {
+                            method: 'POST',
+                            headers: await getAuth()
+                        },
+                        {
+                            retry: true,
+                            successStatus: 201,
+                            failStatuses: [404],
+                            onFail: async (res) => {
+                                newToast(ToastType.Warn, {
+                                    text: `${videoInfo.Alias} %#autoFollowFailed#% ${res.status}`,
+                                    close: true,
+                                    onClick() { this.hide() }
+                                }).show();
+                            },
+                            onRetry: async () => { await refreshToken() }
+                        }
+                    );
+                }
+                if (config.autoLike && !videoInfo.Liked) {
+                    await unlimitedFetch(
+                        `https://api.iwara.tv/video/${videoInfo.ID}/like`,
+                        {
+                            method: 'POST',
+                            headers: await getAuth()
+                        },
+                        {
+                            retry: true,
+                            successStatus: 201,
+                            failStatuses: [404],
+                            onFail: async (res) => {
+                                newToast(ToastType.Warn, {
+                                    text: `${videoInfo.Alias} %#autoLikeFailed#% ${res.status}`,
+                                    close: true,
+                                    onClick() { this.hide() }
+                                }).show();
+                            },
+                            onRetry: async () => { await refreshToken() }
+                        }
+                    )
+                }
+                if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
+                    let toastBody = toastNode([
+                        `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
+                        { nodeType: 'br' },
+                        `%#openVideoLink#%`
+                    ], '%#createTask#%')
+                    newToast(
+                        ToastType.Warn,
+                        {
+                            node: toastBody,
+                            close: config.autoCopySaveFileName,
+                            onClick() {
+                                GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
+                                if (config.autoCopySaveFileName) {
+                                    GM_setClipboard(getDownloadPath(videoInfo).fullName, "text")
+                                    toastBody.appendChild(renderNode({
+                                        nodeType: 'p',
+                                        childs: '%#copySucceed#%'
+                                    }))
+                                } else {
+                                    this.hide()
+                                }
+                            }
+                        }
+                    ).show()
+                    return
+                }
+            }
+            if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
+                newToast(
+                    ToastType.Warn,
+                    {
+                        node: toastNode([
+                            `${videoInfo.Title.truncate(64)}[${videoInfo.ID}] %#downloadQualityError#%`,
+                            { nodeType: 'br' },
+                            `%#tryReparseDownload#%`
+                        ], '%#createTask#%'),
+                        async onClick() {
+                            this.hide()
+                            await pushDownloadTask(await parseVideoInfo(videoInfo))
+                        }
+                    }
+                ).show()
+                return
+            }
+            switch (config.downloadType) {
+                case DownloadType.Aria2:
+                    aria2Download(videoInfo)
+                    break
+                case DownloadType.IwaraDownloader:
+                    iwaraDownloaderDownload(videoInfo)
+                    break
+                case DownloadType.Browser:
+                    browserDownload(videoInfo)
+                    break
+                default:
+                    othersDownload(videoInfo)
+                    break
+            }
+            if (config.autoDownloadMetadata) {
+                switch (config.downloadType) {
+                    case DownloadType.Others:
+                        othersDownloadMetadata(videoInfo)
+                        break
+                    case DownloadType.Browser:
+                        browserDownloadMetadata(videoInfo)
+                        break
+                    default:
+                        break
+                }
+                GM_getValue('isDebug') && originalConsole.debug('[Debug] Download task pushed:', videoInfo);
+            }
+            selectList.delete(videoInfo.ID)
+            break;
+        case "partial":
+            const partialCache = await db.videos.get(videoInfo.ID)
+            if (!isNullOrUndefined(partialCache) && partialCache.Type !== 'full') await db.videos.put(videoInfo, videoInfo.ID)
+        case "cache":
+        case "init":
+            return await pushDownloadTask(await parseVideoInfo(videoInfo))
+        case "fail":
+            const cache = await db.videos.get(videoInfo.ID)
+            newToast(
+                ToastType.Error,
+                {
+                    close: true,
+                    node: toastNode([
+                        `${videoInfo.Title ?? videoInfo.RAW?.title ?? cache?.RAW?.title}[${videoInfo.ID}] %#parsingFailed#%`,
+                        { nodeType: 'br' },
+                        videoInfo.Msg,
+                        { nodeType: 'br' },
+                        videoInfo.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
+                    ], '%#createTask#%'),
+                    async onClick() {
+                        this.hide()
+                        if (videoInfo.External && !isNullOrUndefined(videoInfo.ExternalUrl) && !videoInfo.ExternalUrl.isEmpty()) {
+                            GM_openInTab(videoInfo.ExternalUrl, { active: false, insert: true, setParent: true })
+                        } else {
+                            await pushDownloadTask(await parseVideoInfo({ Type: 'init', ID: videoInfo.ID, RAW: videoInfo.RAW ?? cache?.RAW }))
+                        }
+                    },
+                }
+            ).show()
+            break;
+        default:
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] Unknown type:', videoInfo);
+            break;
+    }
+}
+
+function uninjectCheckbox(element: Element | Node) {
+    if (element instanceof HTMLElement) {
+        if (element instanceof HTMLInputElement && element.classList.contains('selectButton')) {
+            element.hasAttribute('videoID') && pageSelectButtons.delete(element.getAttribute('videoID')!)
+        }
+        if (element.querySelector('input.selectButton')) {
+            element.querySelectorAll('.selectButton').forEach(i => i.hasAttribute('videoID') && pageSelectButtons.delete(i.getAttribute('videoID')!))
+        }
+    }
+}
+async function injectCheckbox(element: Element) {
+    let ID = (element.querySelector('a.videoTeaser__thumbnail') as HTMLLinkElement).href.toURL().pathname.split('/')[2]
+    if (isNullOrUndefined(ID)) return
+    let info = await db.videos.get(ID)
+    let Title = info?.Type === 'full' || info?.Type === 'partial' ? info?.Title : info?.RAW?.title ?? element.querySelector('.videoTeaser__title')?.getAttribute('title') ?? undefined;
+    let Alias = info?.Type === 'full' || info?.Type === 'partial' ? info?.Alias : info?.RAW?.user.name ?? element.querySelector('a.username')?.getAttribute('title') ?? undefined;
+    let Author = info?.Type === 'full' || info?.Type === 'partial' ? info?.Author : info?.RAW?.user.username ?? (element.querySelector('a.username') as HTMLLinkElement)?.href.toURL().pathname.split('/').pop()
+    let UploadTime = info?.Type === 'full' || info?.Type === 'partial' ? info?.UploadTime : new Date(info?.RAW?.updatedAt ?? 0).getTime()
+
+    let button = renderNode({
+        nodeType: 'input',
+        attributes: {
+            type: 'checkbox',
+            videoID: ID,
+            checked: selectList.has(ID) ? true : undefined,
+            videoName: Title,
+            videoAlias: Alias,
+            videoAuthor: Author,
+            videoUploadTime: UploadTime
+        },
+        className: 'selectButton',
+        events: {
+            click: (event: Event) => {
+                (event.target as HTMLInputElement).checked ? selectList.set(ID, {
+                    Type: 'init',
+                    ID,
+                    Title,
+                    Alias,
+                    Author,
+                    UploadTime
+                }) : selectList.delete(ID)
+                event.stopPropagation()
+                event.stopImmediatePropagation()
+                return false
+            }
+        }
+    })
+    let item = element.querySelector('.videoTeaser__thumbnail')?.parentElement
+    item?.style.setProperty('position', 'relative')
+    pageSelectButtons.set(ID, button)
+    originalNodeAppendChild.call(item, button)
+
+    if (!isNullOrUndefined(Author)) {
+        const AuthorInfo = await db.follows.where('username').equals(Author).first()
+        if (AuthorInfo?.following && element.querySelector('.videoTeaser__thumbnail')?.querySelector('.follow') === null) {
+            originalNodeAppendChild.call(element.querySelector('.videoTeaser__thumbnail'), renderNode(
+                {
+                    nodeType: 'div',
+                    className: 'follow',
+                    childs: {
+                        nodeType: 'div',
+                        className: ['text', 'text--white', 'text--tiny', 'text--bold'],
+                        childs: '%#following#%'
+                    }
+                }
+            ))
+        }
+    }
+
+    if (pluginMenu.pageType === PageType.Playlist) {
+        let deletePlaylistItme = renderNode({
+            nodeType: 'button',
+            attributes: {
+                videoID: ID
+            },
+            childs: '%#delete#%',
+            className: 'deleteButton',
+            events: {
+                click: async (event: Event) => {
+                    if ((await unlimitedFetch(`https://api.iwara.tv/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
+                        method: 'DELETE',
+                        headers: await getAuth()
+                    })).ok) {
+                        newToast(ToastType.Info, { text: `${Title} %#deleteSucceed#%`, close: true }).show()
+                        deletePlaylistItme.remove()
+                    }
+                    event.preventDefault()
+                    event.stopPropagation()
+                    event.stopImmediatePropagation()
+                    return false
+                }
+            }
+        })
+        originalNodeAppendChild.call(item, deletePlaylistItme)
+    }
+}
+function getPageType(mutationsList?: MutationRecord[]): PageType | undefined {
+    if (unsafeWindow.location.pathname.toLowerCase().endsWith('/search')) {
+        return PageType.Search;
+    }
+
+    const extractPageType = (page: Element | null | undefined): PageType | undefined => {
+        if (isNullOrUndefined(page)) return undefined;
+        if (page.classList.length < 2) return PageType.Page;
+        const pageClass = page.classList[1]?.split('-').pop();
+        return !isNullOrUndefined(pageClass) && isPageType(pageClass) ? (pageClass as PageType) : PageType.Page;
+    };
+
+    if (isNullOrUndefined(mutationsList)) {
+        return extractPageType(unsafeWindow.document.querySelector('.page'));
+    }
+
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            return extractPageType(Array.from(mutation.addedNodes).find((node): node is Element => node instanceof Element && node.classList.contains('page')))
+        }
+    }
+}
+function pageChange() {
+    pluginMenu.pageType = getPageType() ?? pluginMenu.pageType
+    GM_getValue('isDebug') && originalConsole.debug('[Debug]', pageSelectButtons)
+}
+
 function hijackAddEventListener() {
     unsafeWindow.EventTarget.prototype.addEventListener = function (type, listener, options) {
         originalAddEventListener.call(this, type, listener, options)
@@ -1470,6 +1414,72 @@ function hijackStorage() {
         pluginMenu.pageChange()
     }
 }
+
+function firstRun() {
+    originalConsole.log('First run config reset!')
+    GM_listValues().forEach(i => GM_deleteValue(i))
+    Config.destroyInstance()
+    editConfig = new configEdit(config)
+    let confirmButton = renderNode({
+        nodeType: 'button',
+        attributes: {
+            disabled: true,
+            title: i18nList[config.language].ok
+        },
+        childs: '%#ok#%',
+        events: {
+            click: () => {
+                GM_setValue('isFirstRun', false)
+                GM_setValue('version', GM_info.script.version)
+                unsafeWindow.document.querySelector('#pluginOverlay')?.remove()
+                editConfig.inject()
+            }
+        }
+    })
+    originalNodeAppendChild.call(unsafeWindow.document.body, renderNode({
+        nodeType: 'div',
+        attributes: {
+            id: 'pluginOverlay'
+        },
+        childs: [
+            {
+                nodeType: 'div',
+                className: 'main',
+                childs: [
+                    { nodeType: 'p', childs: '%#useHelpForBase#%' },
+                    { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
+                    { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
+                    { nodeType: 'p', childs: i18nList[config.language].useHelpForManualDownload },
+                    { nodeType: 'p', childs: i18nList[config.language].useHelpForBugreport }
+                ]
+            },
+            {
+                nodeType: 'div',
+                className: 'checkbox-container',
+                childs: {
+                    nodeType: 'label',
+                    className: ['checkbox-label', 'rainbow-text'],
+                    childs: [{
+                        nodeType: 'input',
+                        className: 'checkbox',
+                        attributes: {
+                            type: 'checkbox',
+                            name: 'agree-checkbox'
+                        },
+                        events: {
+                            change: (event: Event) => {
+                                confirmButton.disabled = !(event.target as HTMLInputElement).checked
+                            }
+                        }
+                    }, '%#alreadyKnowHowToUse#%'
+                    ]
+                }
+            },
+            confirmButton
+        ]
+    }))
+}
+
 async function main() {
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.0')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
@@ -1477,6 +1487,17 @@ async function main() {
     }
     if (GM_getValue('isFirstRun', true)) {
         firstRun()
+        return
+    }
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.31')) === VersionState.Low) {
+        selectList.clear()
+        GM_deleteValue('selectList')
+        try {
+            db.delete()
+            unsafeWindow.location.reload()
+        } catch (error) {
+            originalConsole.error(error)
+        }
         return
     }
     if (!await check()) {
@@ -1557,14 +1578,11 @@ async function main() {
         }
     ).show()
 }
-var mouseTarget: Element | null = null
 
 if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
     if (GM_getValue('isDebug')) {
         debugger
-        //@ts-ignore
-        unsafeWindow.Toast = Toast
         originalConsole.debug(stringify(GM_info))
     }
     GM_getTabs((tabs) => {
@@ -1581,16 +1599,6 @@ if (!unsafeWindow.IwaraDownloadTool) {
             GM_deleteValue('selectList')
         }
     });
-    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.31')) === VersionState.Low) {
-        selectList.clear()
-        GM_deleteValue('selectList')
-        try {
-            db.delete()
-            unsafeWindow.location.reload()
-        } catch (error) {
-            originalConsole.error(error)
-        }
-    }
     GM_addStyle(mainCSS);
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetch ${input}`)
