@@ -11,6 +11,12 @@ import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, refreshToken, toastNode } from "./function";
 import mainCSS from "./css/main.css";
 
+
+export var isLoggedIn = () => !(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()
+export var rating = () => localStorage.getItem('rating') ?? 'all'
+var mouseTarget: Element | null = null
+
+
 async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
     return await (await unlimitedFetch(`https://api.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
 }
@@ -779,10 +785,6 @@ class menu {
         }
     }
 }
-
-var isLoggedIn = () => !(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()
-var rating = () => localStorage.getItem('rating') ?? 'all'
-var mouseTarget: Element | null = null
 
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
