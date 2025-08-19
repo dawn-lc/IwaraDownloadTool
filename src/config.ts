@@ -115,9 +115,33 @@ export class Config {
         return body
     }
     private static getLanguage(value?: string): string {
-        let env = (navigator.language ?? navigator.languages[0] ?? DEFAULT_CONFIG.language).replace('-', '_')
-        let main = env.split('_').shift() ?? DEFAULT_CONFIG.language.split('_').shift()!
-        return isNullOrUndefined(value) ? isNullOrUndefined(i18nList[env]) ? (!isNullOrUndefined(i18nList[main]) ? main : DEFAULT_CONFIG.language) : env : !isNullOrUndefined(i18nList[value]) ? value : Config.getLanguage()
+        function formatLanguage(value: string) {
+            return value.replace('-', '_').toLowerCase()
+        }
+        function getMainLanguage(value: string) {
+            return value.split('_').shift()!
+        }
+        let custom = formatLanguage(value ?? DEFAULT_CONFIG.language)
+        if (!isNullOrUndefined(custom)) {
+            if (!isNullOrUndefined(i18nList[custom])) {
+                return custom
+            } else {
+                let customMain = getMainLanguage(custom)
+                if (!isNullOrUndefined(i18nList[customMain])) {
+                    return customMain
+                }
+            }
+        }
+        let env = formatLanguage(navigator.language ?? navigator.languages[0] ?? DEFAULT_CONFIG.language)
+        if (!isNullOrUndefined(i18nList[env])) {
+            return env
+        } else {
+            let main = getMainLanguage(env)
+            if (!isNullOrUndefined(i18nList[main])) {
+                return main
+            }
+        }
+        return DEFAULT_CONFIG.language
     }
     public static getInstance(): Config {
         if (isNullOrUndefined(Config.instance)) Config.instance = new Config()
