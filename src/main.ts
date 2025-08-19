@@ -12,6 +12,11 @@ import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, ar
 import mainCSS from "./css/main.css";
 
 export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
+
+export var isLoggedIn = () => !(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()
+export var rating = () => localStorage.getItem('rating') ?? 'all'
+var mouseTarget: Element | null = null
+
 async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
     return await (await unlimitedFetch(`https://api.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
 }
@@ -780,10 +785,6 @@ class menu {
         }
     }
 }
-
-var isLoggedIn = () => !(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()
-var rating = () => localStorage.getItem('rating') ?? 'all'
-var mouseTarget: Element | null = null
 
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)

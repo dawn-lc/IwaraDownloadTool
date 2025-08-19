@@ -5,7 +5,7 @@ import { ToastType, DownloadType } from "./enum"
 import { config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Path } from "./class"
-import { parseVideoInfo, pushDownloadTask } from "./main"
+import { isLoggedIn, parseVideoInfo, pushDownloadTask } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 import { originalConsole } from "./hijack";
 
@@ -16,6 +16,7 @@ import { originalConsole } from "./hijack";
  */
 export async function refreshToken(): Promise<string> {
     const { authorization } = config;
+    if (!isLoggedIn()) throw new Error(`Refresh token failed: Not logged in`)
     const refreshToken = authorization ?? localStorage.getItem('token');
     if (!refreshToken?.trim()) {
         throw new Error(`Refresh token failed: no refresh token`);
@@ -68,7 +69,7 @@ export async function refreshToken(): Promise<string> {
 export async function getAuth(url?: string): Promise<{ Cooike: string; Authorization: string; } & { 'X-Version': string; }> {
     return prune({
         'Cooike': unsafeWindow.document.cookie,
-        'Authorization': `Bearer ${localStorage.getItem('accessToken') ?? await refreshToken()}`,
+        'Authorization': isLoggedIn() ? `Bearer ${localStorage.getItem('accessToken') ?? await refreshToken()}` : undefined,
         'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined
     })
 }
