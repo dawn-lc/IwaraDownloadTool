@@ -1,8 +1,8 @@
 import "./env";
+import { DownloadType, PageType, ToastType, VersionState } from "./enum";
 import { delay, isCacheVideoInfo, isFailVideoInfo, isInitVideoInfo, isNullOrUndefined, isString, isVideoInfo, prune, stringify } from "./env";
 import { originalAddEventListener, originalConsole, originalFetch, originalNodeAppendChild, originalHistoryPushState, originalElementRemove, originalNodeRemoveChild, originalHistoryReplaceState, originalStorageSetItem, originalStorageRemoveItem, originalStorageClear } from "./hijack";
 import { i18nList } from "./i18n";
-import { DownloadType, PageType, ToastType, VersionState, isPageType } from "./enum";
 import { Dictionary, MultiPage, SyncDictionary, Version } from "./class";
 import { config, Config } from "./config";
 import { db } from "./db";
@@ -11,6 +11,7 @@ import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, refreshToken, toastNode } from "./function";
 import mainCSS from "./css/main.css";
 
+export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
     return await (await unlimitedFetch(`https://api.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
 }

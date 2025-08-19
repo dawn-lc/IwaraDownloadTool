@@ -130,10 +130,17 @@ export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: Re
     const { nodeType, attributes, events, className, childs } = renderCode;
     const node = document.createElement(nodeType);
 
-    (!isNullOrUndefined(events) && Object.keys(events).length > 0) && Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler));
-    (!isNullOrUndefined(className) && className.length > 0) && node.classList.add(...(typeof className === 'string' ? [className] : className));
-    !isNullOrUndefined(childs) && node.append(...(isArray(childs) ? childs : [childs]).filter(child => !isNullOrUndefined(child)).map(renderNode));
-    (!isNullOrUndefined(attributes) && Object.keys(attributes).length > 0) && Object.entries(attributes).forEach(([key, value]: [string, string]) => { (node as any)[key] = value; node.setAttribute(key, value) });
-
+    if (!isNullOrUndefined(events) && Object.keys(events).length > 0) {
+        Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler))
+    }
+    if (!isNullOrUndefined(className) && className.length > 0) {
+        node.classList.add(...(typeof className === 'string' ? [className] : className))
+    }
+    if (!isNullOrUndefined(childs)) {
+        node.append(...(isArray(childs) ? childs : [childs]).filter(child => !isNullOrUndefined(child)).map(renderNode))
+    }
+    if (!isNullOrUndefined(attributes) && Object.keys(attributes).length > 0) {
+        Object.entries(attributes).forEach(([key, value]: [string, string]) => { (node as any)[key] = value; node.setAttribute(key, value) })
+    }
     return node;
 }
