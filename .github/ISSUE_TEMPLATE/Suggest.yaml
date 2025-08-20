@@ -10,7 +10,7 @@ body:
     attributes:
       label: 在提出建议之前...
       options:
-      - label: 我已经搜索了现有的 issues
+      - label: 我已经搜索了现有的建议，且没有找到类似的建议
         required: true
       - label: 我在提出建议之前至少花费了 5 分钟来思考和准备
         required: true
