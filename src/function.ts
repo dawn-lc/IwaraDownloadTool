@@ -17,8 +17,8 @@ import { originalConsole } from "./hijack";
 export async function refreshToken(): Promise<string> {
     const { authorization } = config;
     if (!isLoggedIn()) throw new Error(`Refresh token failed: Not logged in`)
-    const refreshToken = authorization ?? localStorage.getItem('token');
-    if (!refreshToken?.trim()) {
+    const refreshToken = localStorage.getItem('token') ?? authorization;
+    if (isNullOrUndefined(refreshToken) || refreshToken.isEmpty()) {
         throw new Error(`Refresh token failed: no refresh token`);
     }
 
