@@ -571,6 +571,33 @@ class menu {
             childs: body.interfacePage
         })
 
+        let mouseoutTimer: number | null = null;
+
+        originalAddEventListener.call(body.interface, 'mouseover', (event: Event) => {
+            // 清除之前的计时器
+            if (mouseoutTimer !== null) {
+                clearTimeout(mouseoutTimer);
+                mouseoutTimer = null;
+            }
+            body.interface.classList.add('expanded');
+        })
+
+        originalAddEventListener.call(body.interface, 'mouseout', (event: Event) => {
+            const e = event as MouseEvent;
+            const relatedTarget = e.relatedTarget as Node;
+
+            // 检查鼠标是否移动到子元素上
+            if (relatedTarget && body.interface.contains(relatedTarget)) {
+                return; // 鼠标移动到子元素上，不触发收起
+            }
+
+            // 设置300毫秒延迟后收起
+            mouseoutTimer = setTimeout(() => {
+                body.interface.classList.remove('expanded');
+                mouseoutTimer = null;
+            }, 300);
+        })
+
         originalAddEventListener.call(body.interface, 'click', (event: Event) => {
             if (event.target === body.interface) {
                 body.interface.classList.toggle('expanded');
@@ -611,6 +638,15 @@ class menu {
 
         while (pageCount < MAX_FIND_PAGES) {
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetching page ${pageCount}.`);
+            /*
+            const response = await unlimitedFetch(`https://api.iwara.tv/search?type=videos&sort=date&limit=50&query=${encodeURIComponent('{private:true}')}&rating=${rating()}&page=${pageCount}`,
+                { method: 'GET', headers: await getAuth() },
+                {
+                    retry: true,
+                    retryDelay: 1000,
+                    onRetry: async () => { await refreshToken() }
+                })
+            */
             const response = await unlimitedFetch(
                 `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${rating()}&page=${pageCount}`,
                 { method: 'GET', headers: await getAuth() },
@@ -1448,7 +1484,7 @@ function firstRun() {
                 nodeType: 'div',
                 className: 'main',
                 childs: [
-                    { nodeType: 'p', childs: '%#useHelpForBase#%' },
+                    { nodeType: 'p', childs: i18nList[config.language].useHelpForBase },
                     { nodeType: 'p', childs: '%#useHelpForInjectCheckbox#%' },
                     { nodeType: 'p', childs: '%#useHelpForCheckDownloadLink#%' },
                     { nodeType: 'p', childs: i18nList[config.language].useHelpForManualDownload },
@@ -1516,9 +1552,6 @@ async function main() {
     hijackNodeRemoveChild()
     hijackElementRemove()
     hijackStorage()
-    originalAddEventListener('mouseover', (event: Event) => {
-        mouseTarget = (event as MouseEvent).target instanceof Element ? (event as MouseEvent).target as Element : null
-    })
     hijackHistoryPushState()
     hijackHistoryReplaceState()
     originalAddEventListener('mouseover', (event: Event) => {
