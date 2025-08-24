@@ -61,7 +61,7 @@
     "downloadingSelected": "正在下载所选，请稍后...",
     "injectCheckbox": "开关选择框",
     "configError": "脚本配置中存在错误，请修改。",
-    "alreadyKnowHowToUse": "我已知晓如何使用!!!",
+    "alreadyKnowHowToUse": "我已知晓如何使用!!!（此页面仅显示一次）",
     "notice": [
         "加载完成",
         {
@@ -71,14 +71,20 @@
         {
             "nodeType": "br"
         },
-        "重构视频信息解析器，更新本地数据库缓存结构（请手动清理遗留数据）。",
+        "优化交互体验，更新使用指南。",
         {
             "nodeType": "br"
         },
-        "添加已关注提示在复选框下方。"
+        "修复部分问题"
     ],
-    "useHelpForBase": "请认真阅读使用指南！",
-    "useHelpForInjectCheckbox": "开启“%#autoInjectCheckbox#%”以获得更好的体验！或等待加载出视频卡片后，点击侧边栏中[%#injectCheckbox#%]开启下载选择框",
+    "useHelpForBase": [
+        "请认真阅读使用指南！",
+        {
+            "nodeType": "br"
+        },
+        "点击网页侧边的灰色侧栏展开脚本菜单，根据需求点击菜单中的功能。"
+    ],
+    "useHelpForInjectCheckbox": "打开任意存在视频卡片的页面，脚本会在视频卡片上注入复选框，点击复选框或鼠标悬浮在视频卡片上按空格将会勾选此视频。",
     "useHelpForCheckDownloadLink": "开启“%#checkDownloadLink#%”功能会在下载视频前会检查视频简介以及评论，如果在其中发现疑似第三方网盘下载链接，将会弹出提示，您可以点击提示打开视频页面。",
     "useHelpForManualDownload": [
         "使用手动下载功能需要提供视频ID，如需批量手动下载请提供使用“|”分割的视频ID。",

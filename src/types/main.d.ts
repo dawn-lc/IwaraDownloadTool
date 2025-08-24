@@ -1,8 +1,4 @@
 /**
- * 用户脚本环境
- */
-declare var unsafeWindow: Window & typeof globalThis;
-/**
  * 国际化字符串接口
  * 键值对结构，值可以是:
  * - 渲染代码对象

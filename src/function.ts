@@ -68,6 +68,7 @@ export async function refreshToken(): Promise<string> {
  */
 export async function getAuth(url?: string): Promise<{ Cooike: string; Authorization: string; } & { 'X-Version': string; }> {
     return prune({
+        'Accept': 'application/json',
         'Cooike': unsafeWindow.document.cookie,
         'Authorization': isLoggedIn() ? `Bearer ${localStorage.getItem('accessToken') ?? await refreshToken()}` : undefined,
         'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined
