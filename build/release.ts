@@ -80,6 +80,31 @@ function getPackageVersion(): string {
     }
 }
 
+function checkAndCleanRebase(): void {
+    try {
+        // 检查是否存在 rebase 目录
+        execSync('dir .git\\ | findstr rebase', { stdio: 'pipe' });
+        console.log('⚠️ 检测到未完成的 rebase 操作，正在清理...');
+
+        try {
+            // 尝试正常中止 rebase
+            execSync('git rebase --abort', { stdio: 'pipe' });
+            console.log('✅ 已中止 rebase 操作');
+        } catch {
+            // 如果正常中止失败，尝试手动删除 rebase 目录
+            try {
+                execSync('Remove-Item -Recurse -Force .git\\rebase-merge*', { stdio: 'pipe' });
+                console.log('✅ 已清理 rebase 目录');
+            } catch {
+                console.warn('⚠️ 清理 rebase 目录失败，可能需要手动处理');
+            }
+        }
+    } catch {
+        // 没有找到 rebase 目录，正常继续
+        console.log('✅ 无未完成的 rebase 操作');
+    }
+}
+
 function rollback(commit: string, tag?: string) {
     console.log(`⏪ 回滚到提交: ${commit}`);
     run(`git reset --hard ${commit}`);
@@ -142,6 +167,9 @@ function main() {
 
         console.log('🏷️ 创建带注释的标签...');
         run(`git tag -a ${newTag} -m "Version ${version}"`);
+
+        console.log('🔄 检查并清理未完成的 rebase 操作...');
+        checkAndCleanRebase();
 
         console.log('🔄 拉取远程最新分支以确保快进...');
         run('git pull --rebase');
