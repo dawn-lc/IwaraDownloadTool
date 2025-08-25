@@ -100,7 +100,6 @@ export function checkIsHaveDownloadLink(comment: string): boolean {
         'mexa.sh',
         'mexashare',
         'mx-sh.net',
-        'uploaded.',
         'icerbox',
         'alfafile',
         '1drv.ms',
@@ -108,6 +107,11 @@ export function checkIsHaveDownloadLink(comment: string): boolean {
         'gofile.io',
         'workupload.com',
         'pixeldrain.',
+        'dailyuploads.net',
+        'katfile.com',
+        'fikper.com',
+        'frdl.io',
+        'rg.to',
         'gigafile.nu'
     ].filter(i => comment.toLowerCase().includes(i)).any()
 }

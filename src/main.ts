@@ -1527,7 +1527,7 @@ async function main() {
         firstRun()
         return
     }
-    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.31')) === VersionState.Low) {
+    if (db.name !== 'IwaraDownloadTool') {
         selectList.clear()
         GM_deleteValue('selectList')
         try {

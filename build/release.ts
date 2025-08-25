@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 
 function run(cmd: string) {
-    console.log(`$ ${cmd}`);
+    //console.log(`$ ${cmd}`);
     try {
         return execSync(cmd, { stdio: 'inherit' });
     } catch (error) {
