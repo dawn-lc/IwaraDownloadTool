@@ -10,7 +10,7 @@ declare interface I18N {
 }
 
 declare interface PageEvent {
-    type: 'join' | 'leave'
+    type: 'join' | 'leave' | 'suicide'
     id: string
 }
 

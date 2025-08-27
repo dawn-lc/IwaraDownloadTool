@@ -71,11 +71,11 @@
         {
             "nodeType": "br"
         },
-        "优化交互体验，更新使用指南。",
+        "此版本修复了无限刷新问题。",
         {
             "nodeType": "br"
         },
-        "修复部分问题"
+        "优化了脚本样式使其与Iwara主题一致。"
     ],
     "useHelpForBase": [
         "请认真阅读使用指南！",
@@ -125,6 +125,8 @@
     "openVideoLink": "→ 进入视频页面 ←",
     "copySucceed": "复制成功！",
     "pushTaskSucceed": "推送下载任务成功！",
+    "exportConfig": "导出配置",
+    "exportConfigSucceed": "配置已导出至剪切板！",
     "connectionTest": "连接测试",
     "settingsCheck": "配置检查",
     "createTask": "创建任务",
