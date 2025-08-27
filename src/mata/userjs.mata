@@ -37,5 +37,6 @@
 // @grant             GM_getTabs
 // @grant             GM_info
 // @grant             unsafeWindow
+// @grant             window.close
 // @run-at            document-start
 // ==/UserScript==

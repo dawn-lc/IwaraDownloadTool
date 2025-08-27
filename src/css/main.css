@@ -38,17 +38,16 @@
 
 #pluginMenu {
     z-index: 2147483644;
-    color: white;
     position: fixed;
     top: 50%;
-    right: 0px;
-    padding: 10px 30px;
-    background-color: #565656;
-    border: 1px solid #ccc;
+    right: 0;
+    padding: 10px 26px;
+    background-color: var(--body-dark);
+    border: 1px solid var(--text);
     border-radius: 5px;
-    box-shadow: 0 0 10px #ccc;
-    transform: translateX(calc(100% - 30px)) translateY(-50%);
-    transition: transform 0.3s ease-in-out;
+    box-shadow: 0 0 10px var(--text);
+    transform: translate(calc(100% - 26px)) translateY(-50%);
+    transition: transform .3s ease-in-out;
 }
 
 #pluginMenu:not(.expanded) {
@@ -56,24 +55,16 @@
 }
 
 #pluginMenu:not(.expanded)::before {
-    content: '';
+    content: "";
+    mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgLTk2MCA5NjAgOTYwIj48cGF0aCBkPSJNNTYwLTI0MCAzMjAtNDgwbDI0MC0yNDAgNTYgNTYtMTg0IDE4NCAxODQgMTg0LTU2IDU2WiIvPjwvc3ZnPg==") no-repeat center;
+    background-color: var(--text);
+    width: 24px;
+    height: 24px;
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: linear-gradient(to bottom,
-            rgb(255, 64, 64),
-            rgb(255, 255, 64),
-            rgb(64, 255, 64),
-            rgb(64, 255, 255),
-            rgb(64, 64, 255),
-            rgb(255, 64, 255),
-            rgb(255, 64, 64));
-    filter: blur(3px);
-    box-shadow: 0 0 3px rgba(255, 255, 255, 0.5);
-    background-size: 100% 200%;
-    animation: rainbow-vertical 1.6s infinite linear;
+    top: 50%;
+    line-height: 0;
+    transform: translate(0%, -50%);
 }
 
 #pluginMenu.expanded {
@@ -91,10 +82,11 @@
     cursor: pointer;
     text-align: center;
     user-select: none;
+    color: var(--text);
 }
 
 #pluginMenu li:hover {
-    background-color: #000000cc;
+    background-color: var(--primary-dark);
     border-radius: 3px;
 }
 
@@ -134,10 +126,10 @@
 }
 
 #pluginConfig button {
-    background-color: blue;
+    background-color: var(--primary);
     margin: 0px 20px 0px 20px;
     padding: 10px 20px;
-    color: white;
+    color: var(--primary-text);
     font-size: 18px;
     border: none;
     border-radius: 4px;
@@ -145,11 +137,11 @@
 }
 
 #pluginConfig button {
-    background-color: blue;
+    background-color: var(--primary);
 }
 
 #pluginConfig button[disabled] {
-    background-color: darkgray;
+    background-color: var(--muted);
     cursor: not-allowed;
 }
 
@@ -215,7 +207,7 @@
     position: relative;
     width: 40px;
     height: 20px;
-    background: #ccc;
+    background: var(--muted);
     border-radius: 10px;
     transition: border-color .2s, background-color .2s;
 }
@@ -226,8 +218,8 @@
     width: 40%;
     height: 80%;
     border-radius: 50%;
-    background: #fff;
-    box-shadow: 0, 0, 2px, #999;
+    background: var(--white);
+    box-shadow: 0, 0, 2px, var(--muted);
     transition: .2s;
     top: 2px;
     position: absolute;
@@ -235,7 +227,7 @@
 }
 
 #pluginConfig input[type='checkbox'].switch:checked {
-    background: rgb(19, 206, 102);
+    background: var(--success);
 }
 
 #pluginConfig input[type='checkbox'].switch:checked::after {
@@ -260,7 +252,7 @@
 }
 
 #pluginOverlay .main {
-    color: white;
+    color: var(--text);
     font-size: 24px;
     width: 60%;
     background-color: rgba(64, 64, 64, 0.75);
@@ -277,7 +269,7 @@
 
 #pluginOverlay button {
     padding: 10px 20px;
-    color: white;
+    color: var(--primary-text);
     font-size: 18px;
     border: none;
     border-radius: 4px;
@@ -285,11 +277,11 @@
 }
 
 #pluginOverlay button {
-    background-color: blue;
+    background-color: var(--primary);
 }
 
 #pluginOverlay button[disabled] {
-    background-color: darkgray;
+    background-color: var(--muted);
     cursor: not-allowed;
 }
 
@@ -307,7 +299,7 @@
 }
 
 #pluginOverlay .checkbox-label {
-    color: white;
+    color: var(--text);
     font-size: 32px;
     font-weight: bold;
     margin-left: 10px;
@@ -341,7 +333,7 @@
 }
 
 .selectButton {
-    accent-color: rgb(50, 110, 193);
+    accent-color: var(--primary);
     position: absolute;
     width: 38px;
     height: 38px;
@@ -352,7 +344,7 @@
 }
 
 .deleteButton {
-    accent-color: rgb(226, 55, 55);
+    accent-color: var(--danger);
     position: absolute;
     width: 38px;
     height: 38px;
@@ -462,7 +454,7 @@
 
 .toast-close {
     position: absolute;
-    color: white;
+    color: var(--text);
     top: 5px;
     right: 5px;
     cursor: pointer;
@@ -477,8 +469,8 @@
     padding: 14px 18px 14px 18px;
     max-width: 100%;
     box-sizing: border-box;
-    background: rgb(55, 208, 255);
-    color: white;
+    background: var(--primary);
+    color: var(--primary-text);
     cursor: pointer;
     white-space: normal;
     word-break: break-all;

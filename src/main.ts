@@ -706,13 +706,27 @@ class menu {
         let settingsButton = this.button('settings', (name, event) => {
             editConfig.inject()
         })
-        let parseUnlistedAndPrivate = this.button('parseUnlistedAndPrivate', (name, event) => {
-            this.parseUnlistedAndPrivate()
+
+        let exportConfigButton = this.button('exportConfig', (name, event) => {
+            GM_setClipboard(stringify(config));
+            newToast(
+                ToastType.Info,
+                {
+                    node: toastNode(i18nList[config.language].exportConfigSucceed),
+                    duration: 3000,
+                    gravity: 'bottom',
+                    position: 'center',
+                    onClick() {
+                        this.hide();
+                    }
+                }
+            ).show()
         })
+
         let baseButtons = [
             manualDownloadButton,
-            settingsButton,
-            ...(isLoggedIn() ? [parseUnlistedAndPrivate] : [])
+            exportConfigButton,
+            settingsButton
         ];
 
         let injectCheckboxButton = this.button('injectCheckbox', (name, event) => {
@@ -1527,11 +1541,14 @@ async function main() {
         firstRun()
         return
     }
-    if (db.name !== 'IwaraDownloadTool') {
-        selectList.clear()
-        GM_deleteValue('selectList')
+    if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.22')) === VersionState.Low) {
+        alert(i18nList[config.language].configurationIncompatible)
         try {
-            db.delete()
+            pageStatus.suicide()
+            selectList.clear()
+            GM_deleteValue('selectList')
+            await db.delete()
+            GM_setValue('version', GM_info.script.version)
             unsafeWindow.location.reload()
         } catch (error) {
             originalConsole.error(error)
@@ -1618,6 +1635,8 @@ if (!unsafeWindow.IwaraDownloadTool) {
     unsafeWindow.IwaraDownloadTool = true;
     if (GM_getValue('isDebug')) {
         debugger
+        // @ts-ignore
+        unsafeWindow.pageStatus = pageStatus
         originalConsole.debug(stringify(GM_info))
     }
     GM_getTabs((tabs) => {

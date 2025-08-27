@@ -1,6 +1,7 @@
 import "./env";
 import { prune, UUID } from "./env";
 import { VersionState } from "./enum";
+import { originalAddEventListener } from "./hijack";
 /**
  * 路径处理类
  * 实现LocalPath接口，提供路径解析和规范化功能
@@ -480,27 +481,32 @@ export class SyncDictionary<T> extends Dictionary<T> {
 
 export class MultiPage {
     public readonly pageId: string;
-    public onPageJoin?: (pageId: string) => void;;
-    public onPageLeave?: (pageId: string) => void;;
-    public onLastPage?: () => void;;
+    public onLastPage?: () => void;
+    public onPageJoin?: (pageId: string) => void;
+    public onPageLeave?: (pageId: string) => void;
 
     private readonly channel: BroadcastChannel;
     private beforeUnloadHandler: () => void;
 
     constructor() {
-        this.pageId = UUID();        
+        this.pageId = UUID();
         GM_saveTab({ id: this.pageId });
         this.channel = new BroadcastChannel('page-status-channel');
         this.channel.onmessage = (event: MessageEvent<PageEvent>) => this.handleMessage(event.data)
         this.channel.postMessage({ type: 'join', id: this.pageId });
         this.beforeUnloadHandler = () => {
             this.channel.postMessage({ type: 'leave', id: this.pageId });
-            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+            originalAddEventListener.call(unsafeWindow.document, 'beforeunload', this.beforeUnloadHandler);
         };
-        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+        originalAddEventListener.call(unsafeWindow.document, 'beforeunload', this.beforeUnloadHandler);
+    }
+    public suicide() {
+        this.channel.postMessage({ type: 'suicide', id: this.pageId });
     }
     private handleMessage(message: PageEvent) {
         switch (message.type) {
+            case 'suicide':
+                if (this.pageId !== message.id) unsafeWindow.close();
             case 'join':
                 this.onPageJoin?.(message.id);
                 break;
