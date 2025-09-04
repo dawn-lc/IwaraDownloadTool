@@ -483,16 +483,9 @@ export class VCSyncDictionary<T> extends Dictionary<T> {
 
     private handleMessage(msg: VCMessage<T>) {
         if (msg.id === this.id) return;
-
         const cmp = compareVC(msg.vectorClock, this.vectorClock);
-
-        if (cmp === 'before') return; // 落后消息直接丢弃
-
-        // 并发/领先 → 合并向量时钟
-        this.vectorClock = mergeVC(this.vectorClock, msg.vectorClock);
-
-        switch (msg.type) {
-            case 'sync':
+        if (cmp === 'before') {
+            if (msg.type === 'sync') {
                 this.channel.postMessage({
                     type: 'state',
                     state: super.toArray(),
@@ -500,7 +493,11 @@ export class VCSyncDictionary<T> extends Dictionary<T> {
                     vectorClock: { ...this.vectorClock },
                     wallClock: Date.now()
                 });
-                break;
+            }
+            return;
+        }
+        this.vectorClock = mergeVC(this.vectorClock, msg.vectorClock);
+        switch (msg.type) {
             case 'state':
                 super.clear();
                 this.keyWallClock.clear();

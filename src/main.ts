@@ -1747,11 +1747,9 @@ if (!unsafeWindow.IwaraDownloadTool) {
         try {
             selectList = VCSyncDictionary.load('selectList') ?? new VCSyncDictionary<VideoInfo>('selectList');
         } catch (error) {
-            console.error('load selectList failed, resetting:', error);
             GM_deleteValue('selectList');
             selectList = new VCSyncDictionary<VideoInfo>('selectList');
         }
-
     });
     GM_addStyle(mainCSS);
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
