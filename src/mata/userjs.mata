@@ -15,13 +15,13 @@
 // @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.mata.js
 // @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.user.js
 // @connect           iwara.tv
-// @connect           *.iwara.tv
+// @connect           *.iwara.*
 // @connect           mmdfans.net
 // @connect           *.mmdfans.net
 // @connect           localhost
 // @connect           127.0.0.1 
 // @connect           *
-// @match             *://*.iwara.tv/*
+// @include           /^https?:\/\/(?:[^\/]+\.)?iwara\.[a-z]+\/.*$/
 // @grant             GM_getValue
 // @grant             GM_setValue
 // @grant             GM_listValues

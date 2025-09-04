@@ -1,3 +1,4 @@
 import Moment from "moment";
 import Dexie from "dexie";
-export { Moment , Dexie };
+import { getDomain } from "tldts";
+export { Moment, Dexie, getDomain };

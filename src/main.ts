@@ -1,15 +1,37 @@
 import "./env";
+import { i18nList } from "./i18n";
 import { DownloadType, PageType, ToastType, VersionState } from "./enum";
 import { delay, isCacheVideoInfo, isFailVideoInfo, isInitVideoInfo, isNullOrUndefined, isString, isVideoInfo, prune, stringify } from "./env";
 import { originalAddEventListener, originalConsole, originalFetch, originalNodeAppendChild, originalHistoryPushState, originalElementRemove, originalNodeRemoveChild, originalHistoryReplaceState, originalStorageSetItem, originalStorageRemoveItem, originalStorageClear } from "./hijack";
-import { i18nList } from "./i18n";
-import { Dictionary, MultiPage, SyncDictionary, Version } from "./class";
 import { config, Config } from "./config";
+import { Dictionary, MultiPage, SyncDictionary, VCSyncDictionary, Version } from "./class";
 import { db } from "./db";
 import "./date";
 import { findElement, renderNode, unlimitedFetch } from "./extension";
 import { analyzeLocalPath, aria2API, aria2Download, aria2TaskCheckAndRestart, aria2TaskExtractVideoID, browserDownload, browserDownloadErrorParse, check, checkIsHaveDownloadLink, getAuth, getDownloadPath, getPlayload, iwaraDownloaderDownload, newToast, othersDownload, refreshToken, toastNode } from "./function";
 import mainCSS from "./css/main.css";
+
+import { getDomain } from "./import";
+
+if ((getDomain(unsafeWindow.location.href) !== "iwara.tv" && getDomain(unsafeWindow.location.href) !== "iwara.zip") && unsafeWindow.location.hostname.includes('iwara')) {
+    // @ts-ignore
+    XMLHttpRequest.prototype.open = undefined
+    // @ts-ignore
+    unsafeWindow.fetch = undefined
+    // @ts-ignore
+    unsafeWindow.WebSocket = undefined
+    if (!confirm(stringify(i18nList[config.language].notOfficialWarning))) {
+        unsafeWindow.location.href = "about:blank"
+        unsafeWindow.close()
+    } else {
+        throw "Not official"
+    }
+}
+
+if (getDomain(unsafeWindow.location.href) !== "iwara.tv") {
+    throw "Not target"
+}
+
 
 export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 
@@ -839,7 +861,7 @@ class menu {
 var pluginMenu = new menu()
 var editConfig = new configEdit(config)
 
-export var selectList = new SyncDictionary<VideoInfo>('selectList');
+export var selectList = new VCSyncDictionary<VideoInfo>('selectList');
 export var pageStatus = new MultiPage()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 
@@ -864,10 +886,7 @@ export function getSelectButton(id: string): HTMLInputElement | undefined {
 function saveSelectList(): void {
     GM_getTabs((tabs) => {
         if (Object.keys(tabs).length > 1) return;
-        GM_setValue('selectList', {
-            timestamp: selectList.timestamp,
-            selectList: selectList.toArray()
-        });
+        selectList.save()
     });
 }
 function updateSelected() {
@@ -1639,21 +1658,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
         unsafeWindow.pageStatus = pageStatus
         originalConsole.debug(stringify(GM_info))
     }
-    GM_getTabs((tabs) => {
-        if (Object.keys(tabs).length != 1) return;
-        try {
-            let selectListStorage = GM_getValue('selectList', { timestamp: selectList.timestamp, selectList: selectList.toArray() })
-            if (selectListStorage.timestamp > selectList.timestamp) {
-                selectListStorage.selectList.forEach(([key, value]) => {
-                    selectList.set(key, value)
-                })
-            }
-        } catch (error) {
-            selectList.clear()
-            GM_deleteValue('selectList')
-        }
-    });
-    GM_addStyle(mainCSS);
+
     unsafeWindow.fetch = async (input: Request | string | URL, init?: RequestInit) => {
         GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetch ${input}`)
         let url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL()
@@ -1736,5 +1741,18 @@ if (!unsafeWindow.IwaraDownloadTool) {
             })
             .catch((err) => reject(err))) as Promise<Response>
     }
+
+    GM_getTabs((tabs) => {
+        if (Object.keys(tabs).length != 1) return;
+        try {
+            selectList = VCSyncDictionary.load('selectList') ?? new VCSyncDictionary<VideoInfo>('selectList');
+        } catch (error) {
+            console.error('load selectList failed, resetting:', error);
+            GM_deleteValue('selectList');
+            selectList = new VCSyncDictionary<VideoInfo>('selectList');
+        }
+
+    });
+    GM_addStyle(mainCSS);
     (unsafeWindow.document.body ? Promise.resolve() : new Promise(resolve => originalAddEventListener.call(unsafeWindow.document, "DOMContentLoaded", resolve))).then(main)
 }

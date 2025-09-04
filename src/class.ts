@@ -1,7 +1,7 @@
 import "./env";
-import { prune, UUID } from "./env";
+import { compareVC, mergeVC, prune, UUID } from "./env";
 import { VersionState } from "./enum";
-import { originalAddEventListener } from "./hijack";
+import { originalAddEventListener, originalRemoveEventListener } from "./hijack";
 /**
  * 路径处理类
  * 实现LocalPath接口，提供路径解析和规范化功能
@@ -389,6 +389,174 @@ export class Dictionary<T> extends Map<string, T> {
         return Array.from(this.values())
     }
 }
+
+export class VCSyncDictionary<T> extends Dictionary<T> {
+    public onSet?: (key: string, value: T) => void;
+    public onDel?: (key: string) => void;
+    public onSync?: () => void;
+    private channelName: string;
+    private id: string;
+    private channel: BroadcastChannel;
+    private vectorClock: VectorClock;
+    /** 每个 key 的 wallClock 记录，用于并发 LWW 冲突解决 */
+    private keyWallClock: Map<string, number>;
+
+    constructor(channelName: string, initial: Array<[string, T]> = []) {
+        super(initial.length ? initial : undefined);
+        this.channelName = channelName;
+        this.id = UUID();
+        this.vectorClock = { [this.id]: 0 };
+        this.keyWallClock = new Map();
+
+        // 初始化初始值的 wallClock
+        const now = Date.now();
+        for (const [k] of initial) {
+            this.keyWallClock.set(k, now);
+        }
+
+        this.channel = new BroadcastChannel(channelName);
+        this.channel.onmessage = ({ data: msg }: { data: VCMessage<T> }) =>
+            this.handleMessage(msg);
+
+        this.channel.postMessage({
+            type: 'sync',
+            id: this.id,
+            vectorClock: this.vectorClock,
+            wallClock: Date.now()
+        });
+    }
+
+    private incrementVC() {
+        this.vectorClock[this.id] = (this.vectorClock[this.id] ?? 0) + 1;
+    }
+
+    public override set(key: string, value: T): this {
+        this.incrementVC();
+        const wallClock = Date.now();
+        super.set(key, value);
+        this.keyWallClock.set(key, wallClock);
+
+        this.channel.postMessage({
+            type: 'set',
+            key,
+            value,
+            id: this.id,
+            vectorClock: { ...this.vectorClock },
+            wallClock
+        });
+        this.onSet?.(key, value);
+        return this;
+    }
+
+    public override delete(key: string): boolean {
+        this.incrementVC();
+        const wallClock = Date.now();
+        const existed = super.delete(key);
+        if (existed) {
+            this.keyWallClock.set(key, wallClock);
+            this.channel.postMessage({
+                type: 'delete',
+                key,
+                id: this.id,
+                vectorClock: { ...this.vectorClock },
+                wallClock
+            });
+            this.onDel?.(key);
+        }
+        return existed;
+    }
+
+    public override clear(): void {
+        this.incrementVC();
+        const wallClock = Date.now();
+        super.clear();
+        this.keyWallClock.clear();
+        this.channel.postMessage({
+            type: 'state',
+            state: super.toArray(),
+            id: this.id,
+            vectorClock: { ...this.vectorClock },
+            wallClock
+        });
+        this.onSync?.();
+    }
+
+    private handleMessage(msg: VCMessage<T>) {
+        if (msg.id === this.id) return;
+
+        const cmp = compareVC(msg.vectorClock, this.vectorClock);
+
+        if (cmp === 'before') return; // 落后消息直接丢弃
+
+        // 并发/领先 → 合并向量时钟
+        this.vectorClock = mergeVC(this.vectorClock, msg.vectorClock);
+
+        switch (msg.type) {
+            case 'sync':
+                this.channel.postMessage({
+                    type: 'state',
+                    state: super.toArray(),
+                    id: this.id,
+                    vectorClock: { ...this.vectorClock },
+                    wallClock: Date.now()
+                });
+                break;
+            case 'state':
+                super.clear();
+                this.keyWallClock.clear();
+                const now = Date.now();
+                for (const [key, value] of msg.state) {
+                    super.set(key, value);
+                    this.keyWallClock.set(key, now);
+                }
+                this.onSync?.();
+                break;
+            case 'set': {
+                const { key, value, wallClock } = msg;
+                const localWallClock = this.keyWallClock.get(key) ?? 0;
+                if (cmp === 'after' || (cmp === 'concurrent' && wallClock > localWallClock)) {
+                    super.set(key, value);
+                    this.keyWallClock.set(key, wallClock);
+                    this.onSet?.(key, value);
+                }
+                break;
+            }
+            case 'delete': {
+                const { key, wallClock } = msg;
+                const localWallClock = this.keyWallClock.get(key) ?? 0;
+                if (cmp === 'after' || (cmp === 'concurrent' && wallClock > localWallClock)) {
+                    if (super.delete(key)) {
+                        this.keyWallClock.set(key, wallClock);
+                        this.onDel?.(key);
+                    }
+                }
+                break;
+            }
+        }
+    }
+    public save() {
+        const obj = {
+            data: super.toArray(),
+            vectorClock: this.vectorClock,
+            keyWallClock: Array.from(this.keyWallClock.entries()),
+            id: this.id
+        };
+        GM_setValue(this.channelName, obj);
+    }
+    public static load<T>(channelName: string): VCSyncDictionary<T> | undefined {
+        const obj = GM_getValue(channelName, undefined) as
+            | { data: Array<[string, T]>; vectorClock: VectorClock; keyWallClock: Array<[string, number]>; id: string; }
+            | undefined;
+        if (!obj) return undefined;
+
+        const dict = new VCSyncDictionary<T>(channelName, obj.data);
+        dict.vectorClock = obj.vectorClock || {};
+        dict.keyWallClock = new Map(obj.keyWallClock || []);
+        dict.id = obj.id || UUID();
+        return dict;
+    }
+}
+
 export class SyncDictionary<T> extends Dictionary<T> {
     /** 当通过 set 或接收消息设置时触发 */
     public onSet?: (key: string, value: T) => void;
@@ -398,6 +566,7 @@ export class SyncDictionary<T> extends Dictionary<T> {
     public onSync?: () => void;
 
     public timestamp: number;
+    public lifetime: number;
     private id: string;
     private channel: BroadcastChannel;
 
@@ -409,18 +578,23 @@ export class SyncDictionary<T> extends Dictionary<T> {
         const hasInitial = prune(initial).any();
         super(hasInitial ? initial : undefined);
         this.timestamp = hasInitial ? Date.now() : 0;
+        this.lifetime = hasInitial ? performance.now() : 0;
         this.id = UUID();
         this.channel = new BroadcastChannel(channelName);
         this.channel.onmessage = ({ data: msg }: { data: Message<T> }) => this.handleMessage(msg);
-        this.channel.postMessage({ type: 'sync', id: this.id, timestamp: this.timestamp });
+        this.channel.postMessage({ type: 'sync', id: this.id, timestamp: this.timestamp, lifetime: this.lifetime });
+    }
+    private setTimestamp(timestamp?: number) {
+        this.timestamp = timestamp ?? Date.now();
+        this.lifetime = performance.now();
     }
     /**
      * 重写：设置值并广播，同时记录时间戳
      */
     public override set(key: string, value: T): this {
-        this.timestamp = Date.now();
+        this.setTimestamp()
         super.set(key, value);
-        this.channel.postMessage({ type: 'set', key, value, timestamp: this.timestamp, id: this.id });
+        this.channel.postMessage({ type: 'set', key, value, timestamp: this.timestamp, lifetime: this.lifetime, id: this.id });
         this.onSet?.(key, value);
         return this;
     }
@@ -428,19 +602,21 @@ export class SyncDictionary<T> extends Dictionary<T> {
      * 重写：删除并广播，同时记录时间戳
      */
     public override delete(key: string): boolean {
-        this.timestamp = Date.now();
+        this.setTimestamp()
         const existed = super.delete(key);
-        this.channel.postMessage({ type: 'delete', key, timestamp: this.timestamp, id: this.id });
-        if (existed) this.onDel?.(key);
+        if (existed) {
+            this.onDel?.(key);
+            this.channel.postMessage({ type: 'delete', key, timestamp: this.timestamp, lifetime: this.lifetime, id: this.id });
+        }
         return existed;
     }
     /**
      * 重写：清空并广播，同时记录时间戳
      */
     public override clear(): void {
-        this.timestamp = Date.now();
+        this.setTimestamp()
         super.clear();
-        this.channel.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+        this.channel.postMessage({ timestamp: this.timestamp, lifetime: this.lifetime, id: this.id, type: 'state', state: super.toArray() });
         this.onSync?.();
     }
     /**
@@ -449,10 +625,11 @@ export class SyncDictionary<T> extends Dictionary<T> {
     private handleMessage(msg: Message<T>) {
         if (msg.id === this.id) return;
         if (msg.type === 'sync') {
-            this.channel.postMessage({ timestamp: this.timestamp, id: this.id, type: 'state', state: super.toArray() });
+            this.channel.postMessage({ timestamp: this.timestamp, lifetime: this.lifetime, id: this.id, type: 'state', state: super.toArray() });
             return;
         }
-        if (msg.timestamp < this.timestamp) return;
+        if (msg.timestamp === this.timestamp && msg.lifetime === this.lifetime) return;
+        if (msg.timestamp < this.timestamp || msg.lifetime < this.lifetime) return;
         switch (msg.type) {
             case 'state': {
                 super.clear();
@@ -460,22 +637,26 @@ export class SyncDictionary<T> extends Dictionary<T> {
                     const [key, value] = msg.state[index];
                     super.set(key, value);
                 }
+                this.setTimestamp(msg.timestamp);
                 this.onSync?.();
                 break;
             }
             case 'set': {
                 const { key, value } = msg;
                 super.set(key, value);
+                this.setTimestamp(msg.timestamp);
                 this.onSet?.(key, value);
                 break;
             }
             case 'delete': {
                 const { key } = msg;
-                if (super.delete(key)) this.onDel?.(key);
+                if (super.delete(key)) {
+                    this.setTimestamp(msg.timestamp);
+                    this.onDel?.(key);
+                }
                 break;
             }
         }
-        this.timestamp = Date.now();
     }
 }
 
@@ -484,19 +665,17 @@ export class MultiPage {
     public onLastPage?: () => void;
     public onPageJoin?: (pageId: string) => void;
     public onPageLeave?: (pageId: string) => void;
-
     private readonly channel: BroadcastChannel;
     private beforeUnloadHandler: () => void;
-
     constructor() {
         this.pageId = UUID();
         GM_saveTab({ id: this.pageId });
         this.channel = new BroadcastChannel('page-status-channel');
-        this.channel.onmessage = (event: MessageEvent<PageEvent>) => this.handleMessage(event.data)
+        this.channel.onmessage = (event: MessageEvent<PageEvent>) => this.handleMessage(event.data);
         this.channel.postMessage({ type: 'join', id: this.pageId });
         this.beforeUnloadHandler = () => {
             this.channel.postMessage({ type: 'leave', id: this.pageId });
-            originalAddEventListener.call(unsafeWindow.document, 'beforeunload', this.beforeUnloadHandler);
+            originalRemoveEventListener.call(unsafeWindow.document, 'beforeunload', this.beforeUnloadHandler);
         };
         originalAddEventListener.call(unsafeWindow.document, 'beforeunload', this.beforeUnloadHandler);
     }
@@ -507,6 +686,7 @@ export class MultiPage {
         switch (message.type) {
             case 'suicide':
                 if (this.pageId !== message.id) unsafeWindow.close();
+                break;
             case 'join':
                 this.onPageJoin?.(message.id);
                 break;
