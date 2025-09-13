@@ -21,7 +21,7 @@
 // @connect           localhost
 // @connect           127.0.0.1 
 // @connect           *
-// @include           /^https?:\/\/(?:[^\/]+\.)?iwara\.[a-z]+\/.*$/
+// @include           *://*.iwara.*/*
 // @grant             GM_getValue
 // @grant             GM_setValue
 // @grant             GM_listValues
