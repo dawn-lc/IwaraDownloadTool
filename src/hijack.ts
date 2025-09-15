@@ -9,6 +9,7 @@ export const originalNodeRemoveChild = unsafeWindow.Node.prototype.removeChild;
 export const originalElementRemove = unsafeWindow.Element.prototype.remove;
 
 export const originalAddEventListener = unsafeWindow.EventTarget.prototype.addEventListener;
+export const originalRemoveEventListener = unsafeWindow.EventTarget.prototype.removeEventListener;
 
 export const originalStorageSetItem = unsafeWindow.Storage.prototype.setItem;
 export const originalStorageRemoveItem = unsafeWindow.Storage.prototype.removeItem;

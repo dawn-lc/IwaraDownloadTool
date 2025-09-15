@@ -14,6 +14,20 @@ declare interface PageEvent {
     id: string
 }
 
+declare type VectorClock = Record<string, number>;
+declare interface VCMessageBase {
+    type: MessageType
+    id: string
+    vectorClock: VectorClock
+    wallClock: number
+}
+
+declare type VCMessage<T> =
+    | (VCMessageBase & { type: 'sync' })
+    | (VCMessageBase & { type: 'state'; state: Array<[string, T]> })
+    | (VCMessageBase & { type: 'set'; key: string; value: T })
+    | (VCMessageBase & { type: 'delete'; key: string })
+
 /** 内部使用的消息条目类型 */
 declare type MessageType = 'sync' | 'state' | 'set' | 'delete'
 
@@ -21,6 +35,7 @@ declare interface MessageBase {
     type: MessageType
     id: string
     timestamp: number
+    lifetime: number
 }
 
 declare type Message<T> =

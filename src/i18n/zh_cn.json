@@ -32,6 +32,7 @@
     "autoDownloadMetadata": "自动下载视频元数据",
     "videoMetadata": "视频元数据",
     "autoInjectCheckbox": "自动注入选择框",
+    "notOfficialWarning": "警告，此网站不是Iwara官方网站，请勿填写任何敏感信息！\n继续浏览该网站？",
     "autoCopySaveFileName": "自动复制根据规则生成的文件名",
     "configurationIncompatible": "初始化或配置文件不兼容，请重新配置！",
     "browserDownloadNotEnabled": "未启用下载功能！",
@@ -71,11 +72,11 @@
         {
             "nodeType": "br"
         },
-        "此版本修复了无限刷新问题。",
+        "解决了批量选中或取消选择时多标签页不同步的问题。",
         {
             "nodeType": "br"
         },
-        "优化了脚本样式使其与Iwara主题一致。"
+        "添加安全检查，本脚本将拒绝在风险网站上加载功能模块。"
     ],
     "useHelpForBase": [
         "请认真阅读使用指南！",

@@ -1,6 +1,6 @@
 const root = process.cwd();
 import esbuild from 'esbuild';
-import { promises,existsSync, mkdirSync, readFileSync, writeFileSync  } from 'fs';
+import { promises, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { isNullOrUndefined, UUID } from "../src/env.ts";
 import inlineCSS from './inlineCSS.ts';
@@ -100,7 +100,7 @@ esbuild.build({
         js: matadata
     },
     platform: 'browser',
-    loader: { '.json': 'json'},
+    loader: { '.json': 'json' },
     target: [
         'es2022',
         'chrome92',
@@ -135,19 +135,19 @@ esbuild.build({
         'firefox90',
         'safari15.4'
     ],
-    loader: { '.json': 'json'},
-    plugins: [inlineCSS,removeComments],
+    loader: { '.json': 'json' },
+    plugins: [inlineCSS, removeComments],
     charset: 'utf8',
     ignoreAnnotations: true,
     legalComments: 'none',
     tsconfigRaw: tsconfig
-}).then(async (result)=>{
+}).then(async (result) => {
     if (result.outputFiles.any()) {
         let output = result.outputFiles[0].text
             .replace(/\r?\n/gm, '\r\n')
             .replaceAll('/* @__PURE__ */', '')
-            .replace(/.*\/\/ (?![=@]).*$/gm,'')
-            .replace(/^\s*$/gm,'');
+            .replace(/.*\/\/ (?![=@]).*$/gm, '')
+            .replace(/^\s*$/gm, '');
         await promises.writeFile(distUncompressPath, output);
     } else {
         process.exit(1);
