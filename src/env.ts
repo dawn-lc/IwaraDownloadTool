@@ -590,6 +590,12 @@ export function debounce<T extends (...args: any[]) => any>(
 export function delay(time: number) {
     return new Promise(resolve => setTimeout(resolve, time))
 }
+export function hasProperty(element: HTMLElement, property: string): boolean {
+    return property in element;
+}
+export function hasOwnProperty<T extends HTMLElement, K extends PropertyKey>(element: T, prop: K): element is T & Record<K, unknown> {
+    return prop in element;
+}
 export function hasFunction<T, K extends string>(obj: T, method: K): obj is T & { [P in K]: Function } {
     return (
         isObject(obj) &&

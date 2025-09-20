@@ -121,7 +121,7 @@ export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: Re
     if (typeof code === 'string') {
         return document.createTextNode(code.replaceVariable(i18nList[config.language])) as any;
     }
-    if (code instanceof Node) {
+    if (renderCode instanceof Node) {
         return code as any;
     }
     if (typeof renderCode !== 'object' || !renderCode.nodeType) {
@@ -131,16 +131,19 @@ export const renderNode = <T extends keyof HTMLElementTagNameMap>(renderCode: Re
     const node = document.createElement(nodeType);
 
     if (!isNullOrUndefined(events) && Object.keys(events).length > 0) {
-        Object.entries(events).forEach(([eventName, eventHandler]: [string, EventListenerOrEventListenerObject]) => originalAddEventListener.call(node, eventName, eventHandler))
+        Object.entries(events).forEach(([eventName, eventHandler]) => originalAddEventListener.call(node, eventName, eventHandler))
+    }
+    if (!isNullOrUndefined(attributes) && Object.keys(attributes).length > 0) {
+        Object.entries(attributes).forEach(([key, value]) => {
+            node.setAttribute(key, value);
+            (node as any)[key] = value
+        })
     }
     if (!isNullOrUndefined(className) && className.length > 0) {
         node.classList.add(...(typeof className === 'string' ? [className] : className))
     }
     if (!isNullOrUndefined(childs)) {
         node.append(...(isArray(childs) ? childs : [childs]).filter(child => !isNullOrUndefined(child)).map(renderNode))
-    }
-    if (!isNullOrUndefined(attributes) && Object.keys(attributes).length > 0) {
-        Object.entries(attributes).forEach(([key, value]: [string, string]) => { (node as any)[key] = value; node.setAttribute(key, value) })
     }
     return node;
 }

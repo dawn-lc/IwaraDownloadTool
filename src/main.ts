@@ -13,7 +13,11 @@ import mainCSS from "./css/main.css";
 
 import { getDomain } from "./import";
 
-if ((getDomain(unsafeWindow.location.href) !== "iwara.tv" && getDomain(unsafeWindow.location.href) !== "iwara.zip") && unsafeWindow.location.hostname.includes('iwara')) {
+
+var officialWhiteList = ['iwara.tv', 'iwara.zip', 'iwara.shop']
+var domain = getDomain(unsafeWindow.location.href) ?? ''
+
+if (!officialWhiteList.includes(domain) && unsafeWindow.location.hostname.includes('iwara')) {
     // @ts-ignore
     XMLHttpRequest.prototype.open = undefined
     // @ts-ignore
@@ -28,7 +32,7 @@ if ((getDomain(unsafeWindow.location.href) !== "iwara.tv" && getDomain(unsafeWin
     }
 }
 
-if (getDomain(unsafeWindow.location.href) !== "iwara.tv") {
+if (domain !== "iwara.tv") {
     throw "Not target"
 }
 
