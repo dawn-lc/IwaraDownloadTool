@@ -29,6 +29,7 @@
     "addUnlistedAndPrivate": "Force display unlisted and private videos (requires following the author)",
     "parseUnlistedAndPrivate": "Parse recent unlisted and private videos",
     "checkDownloadLink": "Check third-party cloud storage download links",
+    "notOfficialWarning": "Warning: This website is not the official Iwara website. Do not enter any sensitive information!\nContinue browsing this website?",
     "checkPriority": "Check download quality",
     "autoDownloadMetadata": "Auto-download metadata",
     "videoMetadata": "Video Metadata",
@@ -71,10 +72,20 @@
         {
             "nodeType": "br"
         },
-        "Optimized notification display module, smoother animations (rewrote Toastify JS)"
+        "Fixed the issue of batch selection or deselection not synchronizing across multiple tabs.",
+        {
+            "nodeType": "br"
+        },
+        "Added security checks. This script will refuse to load functional modules on risky websites."
     ],
-    "useHelpForBase": "Please read the usage guide carefully!",
-    "useHelpForInjectCheckbox": "Enable \"%#autoInjectCheckbox#%\" for a better experience! Or wait for video cards to load, then click [%#injectCheckbox#%] in the sidebar to enable the selection box.",
+    "useHelpForBase": [
+        "Please read the usage guide carefully!",
+        {
+            "nodeType": "br"
+        },
+        "Click the gray sidebar on the webpage to expand the script menu, then click the functions in the menu according to your needs."
+    ],
+    "useHelpForInjectCheckbox": "Open any page with video cards, and the script will inject checkboxes on the video cards. Click the checkbox or hover over the video card and press space to select this video.",
     "useHelpForCheckDownloadLink": "Enabling \"%#checkDownloadLink#%\" will check the video description and comments before downloading. If third-party cloud storage links are found, a prompt will appear allowing you to visit the video page.",
     "useHelpForManualDownload": [
         "To use manual download, provide the video ID. For batch manual download, use \"|\" to separate video IDs.",
@@ -115,6 +126,8 @@
     "openVideoLink": "→ Visit Video Page ←",
     "copySucceed": "Copy succeeded!",
     "pushTaskSucceed": "Task pushed successfully!",
+    "exportConfig": "Export Configuration",
+    "exportConfigSucceed": "Configuration exported to clipboard!",
     "connectionTest": "Connection Test",
     "settingsCheck": "Settings Check",
     "createTask": "Create Task",

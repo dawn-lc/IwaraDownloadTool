@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Mark stale issues
-        uses: actions/stale@v8
+        uses: actions/stale@v10
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           stale-issue-message: |
@@ -48,10 +48,12 @@ jobs:
             ご協力ありがとうございます！  
           days-before-stale: 4
           days-before-close: 3
-          stale-issue-label: '过期'
-          exempt-issue-labels: 'pinned,安全,增强,BUG'
-          operations-per-run: 30
-          remove-stale-when-updated: true
           days-before-pr-stale: -1
           days-before-pr-close: -1
+          ignore-issue-updates: true
+          remove-stale-when-updated: true
+          operations-per-run: 30
+          stale-issue-label: '过期'
+          close-issue-label: '自动关闭'
+          exempt-issue-labels: 'pinned,处理中'
           debug-only: false
