@@ -50,7 +50,6 @@ jobs:
           days-before-close: 3
           days-before-pr-stale: -1
           days-before-pr-close: -1
-          ignore-issue-updates: true
           remove-stale-when-updated: true
           operations-per-run: 30
           stale-issue-label: '过期'
