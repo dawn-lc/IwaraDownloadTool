@@ -4,6 +4,7 @@
 
 # Iwara 视频下载工具
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool?ref=badge_shield)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool?ref=badge_shield&issueType=security)
 ![GitHub All Releases](https://img.shields.io/github/downloads/dawn-lc/IwaraDownloadTool/total)
 
 
