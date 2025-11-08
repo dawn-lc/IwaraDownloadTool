@@ -131,6 +131,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
             case "fail":
             case "partial":
             case "full":
+                GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse full source`)
                 let sourceResult = await (await unlimitedFetch(
                     `https://api.iwara.tv/video/${info.ID}`,
                     {
@@ -254,6 +255,8 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18nList[config.language].videoSourceNotAvailable.toString())
 
                 DownloadUrl = decodeURIComponent(`https:${Source}`)
+
+                GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse all comment`)
                 Comments = `${(await getCommentDatas(ID)).map(i => i.body).join('\n')}`.normalize('NFKC')
 
                 return {
@@ -869,19 +872,38 @@ export var selectList = new VCSyncDictionary<VideoInfo>('selectList');
 export var pageStatus = new MultiPage()
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 
+
+var debugSwitchCount = 0
+
 var selected = renderNode({
     nodeType: 'span',
     childs: ` %#selected#% ${selectList.size} `
 })
-
+var debugFlag = renderNode({
+    nodeType: 'span',
+    childs: `${GM_getValue('isDebug') ? i18nList[config.language].isDebug : ''}`
+})
 var watermark = renderNode({
     nodeType: 'p',
     className: 'fixed-bottom-right',
     childs: [
         `%#appName#% ${GM_getValue('version')} `,
         selected,
-        GM_getValue('isDebug') ? `%#isDebug#%` : ''
-    ]
+        debugFlag
+    ],
+    events: {
+        click: (e: Event) => {
+            if (GM_getValue('isDebug')) return
+            if (debugSwitchCount < 5) {
+                debugSwitchCount++
+                return
+            } else {
+                GM_setValue('isDebug', true)
+                debugFlag.textContent = `${GM_getValue('isDebug') ? i18nList[config.language].isDebug : ''}`
+                unsafeWindow.location.reload()
+            }
+        }
+    }
 })
 
 export function getSelectButton(id: string): HTMLInputElement | undefined {
@@ -1491,7 +1513,6 @@ function hijackStorage() {
 }
 
 function firstRun() {
-    originalConsole.log('First run config reset!')
     GM_listValues().forEach(i => GM_deleteValue(i))
     Config.destroyInstance()
     editConfig = new configEdit(config)
