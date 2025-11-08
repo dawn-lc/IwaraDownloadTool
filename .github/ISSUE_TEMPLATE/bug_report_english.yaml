@@ -1,7 +1,7 @@
 name: Bug Report
 description: Feedback on encountered BUGs, abnormal phenomena in use, etc.
 title: "[Bug]: "
-labels: ["bug"]
+labels: ["BUG"]
 assignees:
   - dawn-lc
 body:
@@ -80,7 +80,10 @@ body:
     id: logs
     attributes:
       label: Relevant Logs
-      description: 【Without logs we cannot solve the issue, your report will be ignored】Please press F12 or Ctrl+Shift+I to open developer tools-->find Console tab-->go back to script settings-->enable debug mode-->return to developer tools-->copy and paste relevant logs here.
+      description: |
+        [ Without logs or submitting irrelevant content, we cannot solve the problem, your feedback will be ignored ]
+        1. Click on the script name in the bottom right corner of the page 5 times or more to enable debug mode (enabling debug mode will force refresh the page!)
+        2. Please press F12 or Ctrl+Shift+I to open developer tools --> find Console tab --> copy all logs and paste them into the current text box.
       render: Text
     validations:
       required: true
