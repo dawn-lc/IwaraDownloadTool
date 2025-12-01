@@ -30,7 +30,7 @@ const inlineCSS = {
             } catch (error) {
                 return {
                     errors: [{
-                        text: `Failed to inline CSS: ${error.message}`,
+                        text: `Failed to inline CSS: ${error}`,
                         detail: error
                     }]
                 };

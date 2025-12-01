@@ -57,6 +57,7 @@
 #pluginMenu:not(.expanded)::before {
     content: "";
     mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgLTk2MCA5NjAgOTYwIj48cGF0aCBkPSJNNTYwLTI0MCAzMjAtNDgwbDI0MC0yNDAgNTYgNTYtMTg0IDE4NCAxODQgMTg0LTU2IDU2WiIvPjwvc3ZnPg==") no-repeat center;
+    -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgLTk2MCA5NjAgOTYwIj48cGF0aCBkPSJNNTYwLTI0MCAzMjAtNDgwbDI0MC0yNDAgNTYgNTYtMTg0IDE4NCAxODQgMTg0LTU2IDU2WiIvPjwvc3ZnPg==") no-repeat center;
     background-color: var(--text);
     width: 24px;
     height: 24px;
@@ -255,7 +256,7 @@
     color: var(--text);
     font-size: 24px;
     width: 60%;
-    background-color: rgba(64, 64, 64, 0.75);
+    background-color: var(--body);
     padding: 24px;
     margin: 10px;
     overflow-y: auto;

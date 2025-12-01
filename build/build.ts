@@ -1,10 +1,10 @@
 const root = process.cwd();
 import esbuild from 'esbuild';
+import { minify } from 'terser';
 import { promises, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { isNullOrUndefined, UUID } from "../src/env.ts";
 import inlineCSS from './inlineCSS.ts';
-import removeComments from './removeComments.ts'
 
 function parseMetadata(content: string): any {
     const lines = content
@@ -15,7 +15,7 @@ function parseMetadata(content: string): any {
     if (!lines.any()) {
         throw new Error("No metadata block found");
     }
-    let results = {};
+    let results = {} as Record<string, any>;
     lines.reduce((result, line) => {
         const [key, value] = line.splitLimit(' ', 1).map(i => i.trim()).filter(i => !i.isEmpty());
         !isNullOrUndefined(key) && !isNullOrUndefined(value) &&
@@ -44,7 +44,7 @@ function serializeMetadata(metadata: any): string {
     return results.join('\r\n');
 };
 
-function mkdir(path) {
+function mkdir(path: string) {
     return existsSync(path) || mkdirSync(path)
 }
 
@@ -123,6 +123,7 @@ esbuild.build({
     write: false,
     treeShaking: false,
     minify: false,
+    legalComments: 'none',
     sourcemap: false,
     banner: {
         js: matadata
@@ -136,19 +137,27 @@ esbuild.build({
         'safari15.4'
     ],
     loader: { '.json': 'json' },
-    plugins: [inlineCSS, removeComments],
+    plugins: [inlineCSS],
     charset: 'utf8',
     ignoreAnnotations: true,
-    legalComments: 'none',
     tsconfigRaw: tsconfig
 }).then(async (result) => {
     if (result.outputFiles.any()) {
-        let output = result.outputFiles[0].text
-            .replace(/\r?\n/gm, '\r\n')
-            .replaceAll('/* @__PURE__ */', '')
-            .replace(/.*\/\/ (?![=@]).*$/gm, '')
-            .replace(/^\s*$/gm, '');
-        await promises.writeFile(distUncompressPath, output);
+        const { code } = await minify(result.outputFiles[0].text, {
+            ecma: 2020,
+            compress: false,
+            mangle: false,
+            format: {
+                beautify: true,
+                indent_level: 2,
+                indent_start: 0,
+                max_line_len: false,
+                comments: false,
+                semicolons: true
+            }
+        });
+        if (isNullOrUndefined(code)) throw 'minify fail';
+        await promises.writeFile(distUncompressPath, code.replace(/\r?\n/gm, '\r\n'));
     } else {
         process.exit(1);
     }
