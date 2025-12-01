@@ -10,12 +10,16 @@ body:
     attributes:
       label: Before Reporting...
       options:
-      - label: I have spent at least 5 minutes thinking and preparing before submitting this issue.
-        required: true
-      - label: I have read the relevant documentation and searched existing issues.
-        required: true
-      - label: I understand that if I do not provide enough information, the issue may be ignored.
-        required: true
+        - label: I have spent at least 5 minutes thinking and preparing before submitting this issue.
+          required: true
+        - label: I have read the relevant documentation and searched existing issues.
+          required: true
+        - label: I understand that if I do not provide enough information, the issue may be ignored.
+          required: true
+        - label: I have filled in a short and clear title so that developers can quickly determine the general situation when browsing the Issue list.
+          required: true
+        - label: I have not carefully read these contents and believe this will not affect subsequent processing.
+          required: false
   - type: textarea
     id: describe
     attributes:
@@ -106,3 +110,10 @@ body:
         Tip: You can click this area and drag files into the text box to upload and share them.
     validations:
       required: false
+  - type: checkboxes
+    id: finalCheck
+    attributes:
+      label: Final Step...
+      options:
+        - label: I have not carefully filled in the above contents and believe this will not affect subsequent processing.
+          required: false
