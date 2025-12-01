@@ -10,12 +10,16 @@ body:
     attributes:
       label: Before Making Suggestions...
       options:
-      - label: I have searched existing suggestions and found no similar ones
-        required: true
-      - label: I have spent at least 5 minutes thinking and preparing before making this suggestion
-        required: true
-      - label: I am using the latest version of the script
-        required: false
+        - label: I have searched existing suggestions and found no similar ones
+          required: true
+        - label: I have spent at least 5 minutes thinking and preparing before making this suggestion
+          required: true
+        - label: I have filled in a short and clear title so that developers can quickly determine the general situation when browsing the Issue list
+          required: true
+        - label: I have not carefully read these contents and believe this will not affect subsequent processing
+          required: false
+        - label: I am using the latest version of the script
+          required: false
   - type: dropdown
     id: browsers
     attributes:
@@ -63,3 +67,10 @@ body:
         Anything that helps us understand your suggestion better.
     validations:
       required: false
+  - type: checkboxes
+    id: finalCheck
+    attributes:
+      label: Final Step...
+      options:
+        - label: I have not carefully filled in the above contents and believe this will not affect subsequent processing
+          required: false

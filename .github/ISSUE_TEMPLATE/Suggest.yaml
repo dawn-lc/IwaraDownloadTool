@@ -10,12 +10,16 @@ body:
     attributes:
       label: 在提出建议之前...
       options:
-      - label: 我已经搜索了现有的建议，且没有找到类似的建议
-        required: true
-      - label: 我在提出建议之前至少花费了 5 分钟来思考和准备
-        required: true
-      - label: 我正在使用最新版的脚本
-        required: false
+        - label: 我已经搜索了现有的建议，且没有找到类似的建议
+          required: true
+        - label: 我在提出建议之前至少花费了 5 分钟来思考和准备
+          required: true
+        - label: 我填写了简短且清晰明确的标题，以便开发者在翻阅 Issue 列表时能快速确定大致情况
+          required: true
+        - label: 我未仔细阅读这些内容，并相信这不会影响后续的处理
+          required: false
+        - label: 我正在使用最新版的脚本
+          required: false
   - type: dropdown
     id: browsers
     attributes:
@@ -63,3 +67,10 @@ body:
         任何能让我们对你所提出的建议有更多了解的东西。
     validations:
       required: false
+  - type: checkboxes
+    id: finalCheck
+    attributes:
+      label: 最后一步...
+      options:
+        - label: 我未认真填写上述内容，并相信这不会影响后续的处理
+          required: false

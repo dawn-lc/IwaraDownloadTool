@@ -1,4 +1,4 @@
-name: 提案
+name: 提案する
 description: スクリプトに対する提案を提出する
 title: "[提案]: "
 labels: ["建议"]
@@ -10,12 +10,16 @@ body:
     attributes:
       label: 提案の前に...
       options:
-      - label: 既存の提案を検索し、類似の提案が見つかりませんでした
-        required: true
-      - label: 提案をする前に少なくとも5分間、考えたり準備したりしました
-        required: true
-      - label: 最新版のスクリプトを使用しています
-        required: false
+        - label: 既存の提案を検索し、類似の提案が見つかりませんでした
+          required: true
+        - label: 提案をする前に少なくとも5分間、考えたり準備したりしました
+          required: true
+        - label: 短く明確なタイトルを記入し、開発者がIssueリストを閲覧する際に状況を素早く把握できるようにしました
+          required: true
+        - label: これらの内容を注意深く読んでおらず、これが後の処理に影響しないと信じています
+          required: false
+        - label: 最新版のスクリプトを使用しています
+          required: false
   - type: dropdown
     id: browsers
     attributes:
@@ -63,3 +67,10 @@ body:
         提案をより理解するための情報を提供してください。
     validations:
       required: false
+  - type: checkboxes
+    id: finalCheck
+    attributes:
+      label: 最後のステップ...
+      options:
+        - label: 上記の内容を注意深く記入しておらず、これが後の処理に影響しないと信じています
+          required: false

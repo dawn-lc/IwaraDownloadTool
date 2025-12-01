@@ -10,12 +10,16 @@ body:
     attributes:
       label: 報告の前に...
       options:
-      - label: 問題を提出する前に少なくとも5分間、考えたり準備したりしました。
-        required: true
-      - label: 関連するドキュメントを読み、既存のIssueを検索しました。
-        required: true
-      - label: 十分な情報を提供しない場合、問題が無視される可能性があることを理解しています。
-        required: true
+        - label: 問題を提出する前に少なくとも5分間、考えたり準備したりしました。
+          required: true
+        - label: 関連するドキュメントを読み、既存のIssueを検索しました。
+          required: true
+        - label: 十分な情報を提供しない場合、問題が無視される可能性があることを理解しています。
+          required: true
+        - label: 短く明確なタイトルを記入し、開発者がIssueリストを閲覧する際に状況を素早く把握できるようにしました。
+          required: true
+        - label: これらの内容を注意深く読んでおらず、これが後の処理に影響しないと信じています。
+          required: false
   - type: textarea
     id: describe
     attributes:
@@ -106,3 +110,10 @@ body:
         ヒント: このエリアをクリックし、ファイルをドラッグしてテキストボックスにアップロードできます。
     validations:
       required: false
+  - type: checkboxes
+    id: finalCheck
+    attributes:
+      label: 最後のステップ...
+      options:
+        - label: 上記の内容を注意深く記入しておらず、これが後の処理に影響しないと信じています。
+          required: false

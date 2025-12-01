@@ -37,6 +37,21 @@ if (domain !== "iwara.tv") {
 }
 
 
+switch (GM_info.scriptHandler) {
+    case 'Via':
+        // @ts-ignore
+        window.GM_getTabs = (p0?: (tabs: any) => void) => { }
+        // @ts-ignore
+        window.GM_saveTab = () => { }
+        break;
+    case 'Tampermonkey':
+    case 'ScriptCat':
+        break;
+    default:
+        throw `Not support ${GM_info.scriptHandler}`
+}
+
+
 export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 
 export var isLoggedIn = () => !(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()
@@ -1639,25 +1654,22 @@ async function main() {
             method: 'GET',
             headers: await getAuth()
         })).json() as Iwara.LocalUser
-        let authorProfile = await db.follows.where('username').equals('dawn').first()
-        if (isNullOrUndefined(authorProfile)) {
-            authorProfile = (await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
-                method: 'GET',
-                headers: await getAuth()
-            })).json() as Iwara.Profile).user
-            if (user.user.id !== authorProfile.id) {
-                if (!authorProfile.following) {
-                    unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/followers`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    })
-                }
-                if (!authorProfile.friend) {
-                    unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/friends`, {
-                        method: 'POST',
-                        headers: await getAuth()
-                    })
-                }
+        let authorProfile = (await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
+            method: 'GET',
+            headers: await getAuth()
+        })).json() as Iwara.Profile).user
+        if (user.user.id !== authorProfile.id) {
+            if (!authorProfile.following) {
+                unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/followers`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })
+            }
+            if (!authorProfile.friend) {
+                unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/friends`, {
+                    method: 'POST',
+                    headers: await getAuth()
+                })
             }
         }
     }
@@ -1766,7 +1778,7 @@ if (!unsafeWindow.IwaraDownloadTool) {
             })
             .catch((err) => reject(err))) as Promise<Response>
     }
-
+    // @ts-ignore
     GM_getTabs((tabs) => {
         if (Object.keys(tabs).length != 1) return;
         try {
