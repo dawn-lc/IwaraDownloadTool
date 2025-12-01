@@ -152,8 +152,20 @@ esbuild.build({
                 indent_level: 2,
                 indent_start: 0,
                 max_line_len: false,
-                comments: false,
-                semicolons: true
+                semicolons: true,
+                comments: function (node, comment) {
+                    if (comment.type === "comment2" || comment.type === "comment1") {
+                        const text = comment.value.trim();
+                        if (
+                            text.startsWith("==UserScript==") ||
+                            text.endsWith("==/UserScript==") ||
+                            text.startsWith("@")
+                        ) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
             }
         });
         if (isNullOrUndefined(code)) throw 'minify fail';
