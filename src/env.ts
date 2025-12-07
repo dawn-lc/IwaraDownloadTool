@@ -656,39 +656,6 @@ export function prune<T>(data: T): Pruned<T> {
 }
 
 /**
- * 比较两个向量时钟的关系：
- * - 'before' 表示 vc1 < vc2
- * - 'after' 表示 vc1 > vc2
- * - 'concurrent' 表示 vc1 和 vc2 并发
- * - 'equal' 表示相等
- */
-export function compareVC(vc1: VectorClock, vc2: VectorClock): 'before' | 'after' | 'concurrent' | 'equal' {
-    vc1 = vc1 || {};
-    vc2 = vc2 || {};
-    let less = false, greater = false;
-    const keys = new Set([...Object.keys(vc1), ...Object.keys(vc2)]);
-    for (const k of keys) {
-        const a = vc1[k] ?? 0;
-        const b = vc2[k] ?? 0;
-        if (a < b) less = true;
-        if (a > b) greater = true;
-    }
-    if (less && !greater) return 'before';
-    if (!less && greater) return 'after';
-    if (!less && !greater) return 'equal';
-    return 'concurrent';
-}
-
-
-export function mergeVC(vc1: VectorClock, vc2: VectorClock): VectorClock {
-    const result: VectorClock = { ...vc1 };
-    for (const k in vc2) {
-        result[k] = Math.max(result[k] ?? 0, vc2[k]);
-    }
-    return result;
-}
-
-/**
  * 字符串变量替换方法
  * @param {Record<string, unknown>} replacements - 替换键值对对象
  * @returns {string} 返回替换后的字符串
@@ -721,8 +688,9 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
         for (const { value, placeholderRegex, placeholderFormatRegex } of patterns) {
             if (placeholderRegex.test(next)) {
                 let format = next.match(placeholderFormatRegex)
+
                 if (!isNullOrUndefined(format) && format.any() && !format[0].isEmpty() && hasFunction(value, 'format')) {
-                    next = next.replace(placeholderRegex, stringify(value.format(escapeRegex(format[0]))));
+                    next = next.replace(placeholderRegex, stringify(value.format(format[0])));
                 } else {
                     next = next.replace(placeholderRegex, stringify(value instanceof Date ? value.format('YYYY-MM-DD') : value));
                 }

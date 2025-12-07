@@ -1,5 +1,5 @@
 import "./env";
-import { compareVC, mergeVC, prune, UUID } from "./env";
+import { isNullOrUndefined, prune, UUID } from "./env";
 import { VersionState } from "./enum";
 import { originalAddEventListener, originalRemoveEventListener } from "./hijack";
 /**
@@ -390,167 +390,225 @@ export class Dictionary<T> extends Map<string, T> {
     }
 }
 
-export class VCSyncDictionary<T> extends Dictionary<T> {
+export class GMSyncDictionary<T> extends Dictionary<T> {
+    /** 当通过 set 或接收消息设置时触发 */
     public onSet?: (key: string, value: T) => void;
+    /** 当删除时触发 */
     public onDel?: (key: string) => void;
+    /** 完成初次或增量同步后触发 */
     public onSync?: () => void;
-    private channelName: string;
-    private id: string;
-    private channel: BroadcastChannel;
-    private vectorClock: VectorClock;
-    /** 每个 key 的 wallClock 记录，用于并发 LWW 冲突解决 */
-    private keyWallClock: Map<string, number>;
 
-    constructor(channelName: string, initial: Array<[string, T]> = []) {
-        super(initial.length ? initial : undefined);
-        this.channelName = channelName;
-        this.id = UUID();
-        this.vectorClock = { [this.id]: 0 };
-        this.keyWallClock = new Map();
+    private name: string;
+    private listenerId: number | null = null;
+    private static readonly BATCH_THRESHOLD = 10;
 
-        // 初始化初始值的 wallClock
-        const now = Date.now();
-        for (const [k] of initial) {
-            this.keyWallClock.set(k, now);
+    /**
+     * 构造函数
+     * @param name 存储在GM_setValue中的键名
+     * @param initial 初始值列表
+     */
+    constructor(name: string, initial: Array<[string, T]> = []) {
+        // 验证初始值格式
+        if (!Array.isArray(initial)) {
+            throw new Error('GMSyncDictionary: initial must be an array');
+        }
+        // 验证每个元素是否为[key, value]格式
+        for (const item of initial) {
+            if (!Array.isArray(item) || item.length !== 2) {
+                throw new Error('GMSyncDictionary: each initial item must be a [string, T] tuple');
+            }
         }
 
-        this.channel = new BroadcastChannel(channelName);
-        this.channel.onmessage = ({ data: msg }: { data: VCMessage<T> }) =>
-            this.handleMessage(msg);
+        // 从GM存储中加载现有数据，如果没有则使用初始值
+        const stored = GM_getValue(name, undefined);
+        if (isNullOrUndefined(stored)) {
+            // 没有存储数据，使用初始值
+            super(initial);
+            // 保存到GM存储
+            this.saveToStorage();
+        } else {
+            // 有存储数据，从存储中加载
+            const entries = Object.entries(stored) as Array<[string, T]>;
+            super(entries);
+        }
 
-        this.channel.postMessage({
-            type: 'sync',
-            id: this.id,
-            vectorClock: this.vectorClock,
-            wallClock: Date.now()
-        });
+        this.name = name;
+
+        // 设置GM值变化监听器
+        this.setupValueChangeListener();
     }
 
-    private incrementVC() {
-        this.vectorClock[this.id] = (this.vectorClock[this.id] ?? 0) + 1;
+    /**
+     * 设置GM值变化监听器
+     */
+    private setupValueChangeListener(): void {
+        // 移除现有的监听器（如果有）
+        if (this.listenerId !== null) {
+            GM_removeValueChangeListener(this.listenerId);
+        }
+
+        // 添加新的监听器
+        this.listenerId = GM_addValueChangeListener(
+            this.name,
+            (key: string, oldValue: any, newValue: any, remote: boolean) => {
+                // 只有远程变化才需要处理（其他标签页的修改）
+                if (key === this.name && remote) {
+                    this.handleRemoteChange(newValue);
+                }
+            }
+        );
     }
 
+    /**
+     * 处理远程变化
+     * @param newValue 新的值
+     */
+    private handleRemoteChange(newValue: any): void {
+        if (isNullOrUndefined(newValue)) {
+            // 如果新值为空，清空字典
+            super.clear();
+            this.onSync?.();
+            return;
+        }
+
+        // 将新值转换为字典
+        const newEntries = Object.entries(newValue) as Array<[string, T]>;
+        const newMap = new Map(newEntries);
+
+        // 获取当前的所有键
+        const currentKeys = new Set(this.keys());
+
+        // 计算新增/更新的键和删除的键
+        const addedOrUpdated: Array<[string, T]> = [];
+        const deleted: string[] = [];
+
+        for (const [key, value] of newEntries) {
+            if (!currentKeys.has(key)) {
+                // 新增的键
+                addedOrUpdated.push([key, value]);
+            } else {
+                // 可能更新的键，检查值是否相同
+                const currentValue = this.get(key);
+                if (currentValue !== value) {
+                    addedOrUpdated.push([key, value]);
+                }
+                currentKeys.delete(key);
+            }
+        }
+        // 剩余在currentKeys中的键将被删除
+        for (const key of currentKeys) {
+            deleted.push(key);
+        }
+
+        const totalChanges = addedOrUpdated.length + deleted.length;
+
+        // 根据变化数量决定是全量同步还是增量更新
+        if (totalChanges > GMSyncDictionary.BATCH_THRESHOLD) {
+            // 变化数量大，执行全量替换
+            super.clear();
+            for (const [key, value] of newEntries) {
+                super.set(key, value);
+            }
+            this.onSync?.();
+        } else {
+            // 变化数量小，执行增量更新并触发对应事件
+            for (const [key, value] of addedOrUpdated) {
+                super.set(key, value);
+                this.onSet?.(key, value);
+            }
+            for (const key of deleted) {
+                super.delete(key);
+                this.onDel?.(key);
+            }
+        }
+    }
+
+    /**
+     * 保存当前字典到GM存储
+     */
+    private saveToStorage(): void {
+        const obj = Object.fromEntries(this);
+        GM_setValue(this.name, obj);
+    }
+
+    /**
+     * 重写set方法：设置值并保存到GM存储
+     */
     public override set(key: string, value: T): this {
-        this.incrementVC();
-        const wallClock = Date.now();
         super.set(key, value);
-        this.keyWallClock.set(key, wallClock);
-
-        this.channel.postMessage({
-            type: 'set',
-            key,
-            value,
-            id: this.id,
-            vectorClock: { ...this.vectorClock },
-            wallClock
-        });
+        this.saveToStorage();
         this.onSet?.(key, value);
         return this;
     }
 
+    /**
+     * 重写delete方法：删除值并保存到GM存储
+     */
     public override delete(key: string): boolean {
-        this.incrementVC();
-        const wallClock = Date.now();
-        const existed = super.delete(key);
-        if (existed) {
-            this.keyWallClock.set(key, wallClock);
-            this.channel.postMessage({
-                type: 'delete',
-                key,
-                id: this.id,
-                vectorClock: { ...this.vectorClock },
-                wallClock
-            });
+        const result = super.delete(key);
+        if (result) {
+            this.saveToStorage();
             this.onDel?.(key);
         }
-        return existed;
+        return result;
     }
 
+    /**
+     * 重写clear方法：清空字典并保存到GM存储
+     */
     public override clear(): void {
-        this.incrementVC();
-        const wallClock = Date.now();
         super.clear();
-        this.keyWallClock.clear();
-        this.channel.postMessage({
-            type: 'state',
-            state: super.toArray(),
-            id: this.id,
-            vectorClock: { ...this.vectorClock },
-            wallClock
-        });
+        this.saveToStorage();
         this.onSync?.();
     }
 
-    private handleMessage(msg: VCMessage<T>) {
-        if (msg.id === this.id) return;
-        const cmp = compareVC(msg.vectorClock, this.vectorClock);
-        if (cmp === 'before') {
-            if (msg.type === 'sync') {
-                this.channel.postMessage({
-                    type: 'state',
-                    state: super.toArray(),
-                    id: this.id,
-                    vectorClock: { ...this.vectorClock },
-                    wallClock: Date.now()
-                });
-            }
-            return;
-        }
-        this.vectorClock = mergeVC(this.vectorClock, msg.vectorClock);
-        switch (msg.type) {
-            case 'state':
-                super.clear();
-                this.keyWallClock.clear();
-                const now = Date.now();
-                for (const [key, value] of msg.state) {
-                    super.set(key, value);
-                    this.keyWallClock.set(key, now);
-                }
-                this.onSync?.();
-                break;
-            case 'set': {
-                const { key, value, wallClock } = msg;
-                const localWallClock = this.keyWallClock.get(key) ?? 0;
-                if (cmp === 'after' || (cmp === 'concurrent' && wallClock > localWallClock)) {
-                    super.set(key, value);
-                    this.keyWallClock.set(key, wallClock);
-                    this.onSet?.(key, value);
-                }
-                break;
-            }
-            case 'delete': {
-                const { key, wallClock } = msg;
-                const localWallClock = this.keyWallClock.get(key) ?? 0;
-                if (cmp === 'after' || (cmp === 'concurrent' && wallClock > localWallClock)) {
-                    if (super.delete(key)) {
-                        this.keyWallClock.set(key, wallClock);
-                        this.onDel?.(key);
-                    }
-                }
-                break;
-            }
-        }
+    /**
+     * 获取值（从父类继承）
+     */
+    public override get(key: string): T | undefined {
+        return super.get(key);
     }
-    public save() {
-        const obj = {
-            data: super.toArray(),
-            vectorClock: this.vectorClock,
-            keyWallClock: Array.from(this.keyWallClock.entries()),
-            id: this.id
-        };
-        GM_setValue(this.channelName, obj);
-    }
-    public static load<T>(channelName: string): VCSyncDictionary<T> | undefined {
-        const obj = GM_getValue(channelName, undefined) as
-            | { data: Array<[string, T]>; vectorClock: VectorClock; keyWallClock: Array<[string, number]>; id: string; }
-            | undefined;
-        if (!obj) return undefined;
 
-        const dict = new VCSyncDictionary<T>(channelName, obj.data);
-        dict.vectorClock = obj.vectorClock || {};
-        dict.keyWallClock = new Map(obj.keyWallClock || []);
-        dict.id = obj.id || UUID();
-        return dict;
+    /**
+     * 检查键是否存在（从父类继承）
+     */
+    public override has(key: string): boolean {
+        return super.has(key);
+    }
+
+    /**
+     * 获取字典大小（从父类继承）
+     */
+    public override get size(): number {
+        return super.size;
+    }
+
+    /**
+     * 销毁监听器
+     */
+    public destroy(): void {
+        if (this.listenerId !== null) {
+            GM_removeValueChangeListener(this.listenerId);
+            this.listenerId = null;
+        }
+    }
+
+    /**
+     * 重新加载GM存储中的数据
+     */
+    public reloadFromStorage(): void {
+        const stored = GM_getValue(this.name, {});
+        const entries = Object.entries(stored) as Array<[string, T]>;
+
+        // 清空当前字典
+        super.clear();
+
+        // 加载新数据
+        for (const [key, value] of entries) {
+            super.set(key, value);
+        }
+
+        this.onSync?.();
     }
 }
 

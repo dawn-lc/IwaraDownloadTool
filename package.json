@@ -10,16 +10,14 @@
     "release": "node ./build/release.ts"
   },
   "dependencies": {
-    "dexie": "^4.2.1",
-    "moment": "^2.30.1",
+    "dayjs": "^1.11.19",
+    "idb": "^8.0.3",
     "tldts": "^7.0.19"
   },
   "devDependencies": {
-    "@types/moment": "^2.13.0",
     "@types/node": "^24.10.1",
     "@types/tampermonkey": "^5.0.5",
     "esbuild": "^0.27.0",
-    "terser": "^5.44.1",
     "typescript": "^5.9.3"
   }
 }

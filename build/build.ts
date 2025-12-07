@@ -1,10 +1,10 @@
 const root = process.cwd();
 import esbuild from 'esbuild';
-import { minify } from 'terser';
 import { promises, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { isNullOrUndefined, UUID } from "../src/env.ts";
 import inlineCSS from './inlineCSS.ts';
+import minifyModules from './minifyModules.ts';
 
 function parseMetadata(content: string): any {
     const lines = content
@@ -137,39 +137,19 @@ esbuild.build({
         'safari15.4'
     ],
     loader: { '.json': 'json' },
-    plugins: [inlineCSS],
+    plugins: [minifyModules, inlineCSS],
     charset: 'utf8',
     ignoreAnnotations: true,
     tsconfigRaw: tsconfig
 }).then(async (result) => {
     if (result.outputFiles.any()) {
-        const { code } = await minify(result.outputFiles[0].text, {
-            ecma: 2020,
-            compress: false,
-            mangle: false,
-            format: {
-                beautify: true,
-                indent_level: 2,
-                indent_start: 0,
-                max_line_len: false,
-                semicolons: true,
-                comments: function (node, comment) {
-                    if (comment.type === "comment2" || comment.type === "comment1") {
-                        const text = comment.value.trim();
-                        if (
-                            text.startsWith("==UserScript==") ||
-                            text.endsWith("==/UserScript==") ||
-                            text.startsWith("@")
-                        ) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-            }
-        });
-        if (isNullOrUndefined(code)) throw 'minify fail';
-        await promises.writeFile(distUncompressPath, code.replace(/\r?\n/gm, '\r\n'));
+        let out = result.outputFiles[0].text
+            .replace(/\r?\n/gm, '\r\n')
+            .replace(/ \/\* .*? \*\//g, '')
+            .replace(/\/\*\*[\s\S]*?\*\//g, '')
+            .replace(/\/\/ (?![@=]).*$/gm, '')
+            .replace(/^\s*[\r\n]/gm, '');
+        await promises.writeFile(distUncompressPath, out);
     } else {
         process.exit(1);
     }

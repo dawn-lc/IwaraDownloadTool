@@ -1,13 +1,14 @@
 import "./env";
-import { isConvertibleToNumber, isNullOrUndefined, prune, stringify, UUID } from "./env"
+import { delay, isConvertibleToNumber, isNullOrUndefined, isString, isVideoInfo, prune, stringify, UUID } from "./env"
 import { i18nList } from "./i18n"
 import { ToastType, DownloadType } from "./enum"
 import { config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
-import { Path } from "./class"
-import { isLoggedIn, parseVideoInfo, pushDownloadTask } from "./main"
+import { Dictionary, Path } from "./class"
+import { isLoggedIn, selectList } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 import { originalConsole } from "./hijack";
+import { db } from "./db";
 
 /**
  * 刷新Iwara.tv的访问令牌
@@ -362,13 +363,13 @@ export async function aria2Check(): Promise<boolean> {
     return true
 }
 /**
- * 检查IwaraDownloader RPC连接是否正常
+ * 检查iwaradl RPC连接是否正常
  * @async
  * @returns {Promise<boolean>} 如果连接正常返回true，否则返回false
  */
-export async function iwaraDownloaderCheck(): Promise<boolean> {
+export async function iwaradlCheck(): Promise<boolean> {
     try {
-        let res = await (await unlimitedFetch(config.iwaraDownloaderPath, {
+        let res = await (await unlimitedFetch(config.iwaradlPath, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -377,7 +378,7 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
             body: JSON.stringify(prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'State',
-                'token': config.iwaraDownloaderToken
+                'token': config.iwaradlToken
             }))
         })).json()
 
@@ -390,7 +391,7 @@ export async function iwaraDownloaderCheck(): Promise<boolean> {
             ToastType.Error,
             {
                 node: toastNode([
-                    `IwaraDownloader RPC %#connectionTest#%`,
+                    `iwaradl RPC %#connectionTest#%`,
                     { nodeType: 'br' },
                     stringify(error)
                 ], '%#settingsCheck#%'),
@@ -453,12 +454,12 @@ export function aria2Download(videoInfo: FullVideoInfo) {
     }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
 }
 /**
- * 通过IwaraDownloader下载视频
+ * 通过iwaradl下载视频
  * @param {FullVideoInfo} videoInfo - 视频信息对象
  */
-export function iwaraDownloaderDownload(videoInfo: FullVideoInfo) {
+export function iwaradlDownload(videoInfo: FullVideoInfo) {
     (async function (videoInfo: FullVideoInfo) {
-        let r = await (await unlimitedFetch(config.iwaraDownloaderPath, {
+        let r = await (await unlimitedFetch(config.iwaradlPath, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -467,7 +468,7 @@ export function iwaraDownloaderDownload(videoInfo: FullVideoInfo) {
             body: JSON.stringify(prune({
                 'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
                 'code': 'add',
-                'token': config.iwaraDownloaderToken,
+                'token': config.iwaradlToken,
                 'data': {
                     'info': {
                         'title': videoInfo.Title,
@@ -479,6 +480,7 @@ export function iwaraDownloaderDownload(videoInfo: FullVideoInfo) {
                         'uploadTime': videoInfo.UploadTime,
                         'comments': videoInfo.Comments,
                         'tags': videoInfo.Tags,
+                        'quality': videoInfo.DownloadQuality,
                         'path': config.downloadPath.replaceVariable(
                             {
                                 NowTime: new Date(),
@@ -514,7 +516,7 @@ export function iwaraDownloaderDownload(videoInfo: FullVideoInfo) {
                         `${videoInfo.Title}[${videoInfo.ID}] %#pushTaskFailed#% `,
                         { nodeType: 'br' },
                         r.msg
-                    ], '%#iwaraDownloaderDownload#%'),
+                    ], '%#iwaradlDownload#%'),
                     onClick() {
                         toast.hide()
                     }
@@ -780,8 +782,8 @@ export async function check(): Promise<boolean> {
         switch (config.downloadType) {
             case DownloadType.Aria2:
                 return await aria2Check()
-            case DownloadType.IwaraDownloader:
-                return await iwaraDownloaderCheck()
+            case DownloadType.Iwaradl:
+                return await iwaradlCheck()
             case DownloadType.Browser:
                 return await EnvCheck()
             default:
@@ -806,4 +808,582 @@ async function getXVersion(urlString: string): Promise<string> {
     return Array.from(new Uint8Array(hashBuffer))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('')
+}
+
+
+async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
+    return await (await unlimitedFetch(`https://api.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
+}
+async function getCommentDatas(id: string, commentID?: string): Promise<Iwara.Comment[]> {
+    let comments: Iwara.Comment[] = []
+    let base = await getCommentData(id, commentID)
+    comments.push(...base.results as Iwara.Comment[])
+    for (let page = 1; page < Math.ceil(base.count / base.limit); page++) {
+        comments.push(...(await getCommentData(id, commentID, page)).results as Iwara.Comment[])
+    }
+    let replies: Iwara.Comment[] = []
+    for (let index = 0; index < comments.length; index++) {
+        const comment = comments[index]
+        if (comment.numReplies > 0) {
+            replies.push(...await getCommentDatas(id, comment.id))
+        }
+    }
+    comments.push(...replies)
+    return comments
+}
+
+export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
+    let ID: string = info.ID
+    let Type: VideoInfoType = info.Type
+    let RAW: Iwara.Video | undefined = info.RAW
+    try {
+        switch (info.Type) {
+            case "cache":
+                RAW = info.RAW
+                ID = RAW.id
+                Type = 'partial'
+                break;
+            case "init":
+            case "fail":
+            case "partial":
+            case "full":
+                GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse full source`)
+                let sourceResult = await (await unlimitedFetch(
+                    `https://api.iwara.tv/video/${info.ID}`,
+                    {
+                        headers: await getAuth()
+                    },
+                    {
+                        retry: true,
+                        maxRetries: 3,
+                        failStatuses: [403, 404],
+                        retryDelay: 1000,
+                        onRetry: async () => { await refreshToken() }
+                    }
+                )).json() as Iwara.IResult
+                if (isNullOrUndefined(sourceResult.id)) {
+                    Type = 'fail'
+                    return {
+                        ID, Type, RAW, Msg: sourceResult.message ?? stringify(sourceResult)
+                    }
+                }
+                RAW = sourceResult as Iwara.Video
+                ID = RAW.id
+                Type = 'full'
+                break;
+            default:
+                Type = 'fail'
+                return {
+                    ID, Type, RAW, Msg: "Unknown type"
+                }
+        }
+    } catch (error) {
+        newToast(
+            ToastType.Error,
+            {
+                node:
+                    toastNode([
+                        `${info.RAW?.title}[${ID}] %#parsingFailed#%`
+                    ], '%#createTask#%'),
+                async onClick() {
+                    await parseVideoInfo({ Type: 'init', ID, RAW, UploadTime: 0 })
+                    this.hide()
+                },
+            }
+        ).show()
+        Type = 'fail'
+        return {
+            ID, Type, RAW, Msg: stringify(error)
+        }
+    }
+
+
+    let FileName: string
+    let Size: number
+    let External: boolean
+    let ExternalUrl: string | undefined
+    let Description: string | undefined
+    let DownloadQuality: string
+    let DownloadUrl: string
+    let Comments: string
+    let UploadTime: number
+    let Title: string
+    let Tags: Iwara.Tag[]
+    let Liked: boolean
+    let Alias: string
+    let Author: string
+    let AuthorID: string
+    let Private: boolean
+    let Unlisted: boolean
+    let Following: boolean
+    let Friend: boolean
+
+    UploadTime = new Date(RAW.createdAt ?? 0).getTime()
+    Title = RAW.title
+    Tags = RAW.tags
+    Liked = RAW.liked
+    Alias = RAW.user.name
+    Author = RAW.user.username
+    AuthorID = RAW.user.id
+    Private = RAW.private
+    Unlisted = RAW.unlisted
+
+
+    External = !isNullOrUndefined(RAW.embedUrl) && !RAW.embedUrl.isEmpty()
+    ExternalUrl = RAW.embedUrl
+
+    if (External) {
+        Type = 'fail'
+        return {
+            Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, Msg: "external Video"
+        }
+    }
+
+    try {
+        switch (Type) {
+            case "full":
+                Following = RAW.user.following
+                Friend = RAW.user.friend
+
+                if (Following) {
+                    await db.putFollow(RAW.user)
+                } else {
+                    await db.deleteFollow(AuthorID)
+                }
+
+                if (Friend) {
+                    await db.putFriend(RAW.user)
+                } else {
+                    await db.deleteFriend(AuthorID)
+                }
+
+                Description = RAW.body
+                FileName = RAW.file.name
+                Size = RAW.file.size
+                let VideoFileSource = (await (await unlimitedFetch(RAW.fileUrl, { headers: await getAuth(RAW.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
+                if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) throw new Error(i18nList[config.language].getVideoSourceFailed.toString())
+
+                DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
+                let fileList = VideoFileSource.filter(x => x.name === DownloadQuality)
+                if (!fileList.any()) throw new Error(i18nList[config.language].noAvailableVideoSource.toString())
+
+                let Source = fileList[Math.floor(Math.random() * fileList.length)].src.download
+                if (isNullOrUndefined(Source) || Source.isEmpty()) throw new Error(i18nList[config.language].videoSourceNotAvailable.toString())
+
+                DownloadUrl = decodeURIComponent(`https:${Source}`)
+
+                GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse all comment`)
+                Comments = `${(await getCommentDatas(ID)).map(i => i.body).join('\n')}`.normalize('NFKC')
+
+                return {
+                    Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, FileName, DownloadQuality, ExternalUrl, Description, Comments, DownloadUrl, Size, Following, Unlisted, Friend
+                }
+            case "partial":
+                return {
+                    Type, RAW, ID, Alias, Author, AuthorID, UploadTime, Title, Tags, Liked, External, ExternalUrl, Unlisted, Private
+                }
+            default:
+                Type = 'fail'
+                return {
+                    Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, Msg: "Unknown type"
+                }
+        }
+    }
+    catch (error) {
+        Type = 'fail'
+        return {
+            Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, ExternalUrl, Description, Unlisted, Msg: stringify(error)
+        }
+    }
+}
+
+function generateMatadataURL(videoInfo: FullVideoInfo): string {
+    const metadataContent = generateMetadataContent(videoInfo);
+    const blob = new Blob([metadataContent], { type: 'text/plain' });
+    return URL.createObjectURL(blob);
+}
+function getMatadataPath(videoInfo: FullVideoInfo): string {
+    const videoPath = getDownloadPath(videoInfo);
+    return `${videoPath.directory}/${videoPath.baseName}.json`;
+}
+function generateMetadataContent(videoInfo: FullVideoInfo): string {
+    const metadata = Object.assign(videoInfo, {
+        DownloadPath: getDownloadPath(videoInfo).fullPath,
+        MetaDataVersion: GM_info.script.version,
+    });
+    return JSON.stringify(metadata, (key, value) => {
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        return value;
+    }, 2);
+}
+function browserDownloadMetadata(videoInfo: FullVideoInfo): void {
+    const url = generateMatadataURL(videoInfo);
+    function toastError(error: Tampermonkey.DownloadErrorResponse | Error) {
+        newToast(
+            ToastType.Error,
+            {
+                node: toastNode([
+                    `${videoInfo.Title}[${videoInfo.ID}] %#videoMetadata#% %#downloadFailed#%`,
+                    { nodeType: 'br' },
+                    browserDownloadErrorParse(error)
+                ], '%#browserDownload#%'),
+                close: true
+            }
+        ).show()
+    }
+    GM_download({
+        url: url,
+        saveAs: false,
+        name: getMatadataPath(videoInfo),
+        onerror: (err) => toastError(err),
+        ontimeout: () => toastError(new Error('%#browserDownloadTimeout#%')),
+        onload: () => URL.revokeObjectURL(url)
+    });
+}
+function othersDownloadMetadata(videoInfo: FullVideoInfo): void {
+    const url = generateMatadataURL(videoInfo);
+    const metadataFile = analyzeLocalPath(getMatadataPath(videoInfo)).fullName
+    const downloadHandle = renderNode({
+        nodeType: 'a',
+        attributes: {
+            href: url,
+            download: metadataFile
+        }
+    });
+    downloadHandle.click();
+    downloadHandle.remove();
+    URL.revokeObjectURL(url);
+}
+export async function addDownloadTask() {
+    let textArea = renderNode({
+        nodeType: "textarea",
+        attributes: {
+            placeholder: i18nList[config.language].manualDownloadTips,
+            style: 'margin-bottom: 10px;',
+            rows: "16",
+            cols: "96"
+        }
+    })
+    let body = renderNode({
+        nodeType: "div",
+        attributes: {
+            id: "pluginOverlay"
+        },
+        childs: [
+            textArea,
+            {
+                nodeType: "button",
+                events: {
+                    click: (e: Event) => {
+                        if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
+                            let list: Array<[string, VideoInfo]> = [];
+                            try {
+                                const parsed = JSON.parse(textArea.value);
+                                if (Array.isArray(parsed)) {
+                                    list = parsed.map(item => {
+                                        if (Array.isArray(item) && isString(item[0]) && !item[0].isEmpty()) {
+                                            if (!isVideoInfo(item[1])) {
+                                                item[1].Type = 'init'
+                                                item[1].ID = item[1].ID ?? item[0]
+                                                item[1].UpdateTime = item[1].UpdateTime ?? Date.now()
+                                            }
+                                        }
+                                        return [...item]
+                                    }) as Array<[string, VideoInfo]>;
+                                } else {
+                                    throw new Error('解析结果不是符合预期的列表');
+                                }
+                            } catch (error) {
+                                list = textArea.value.split('|').map(ID => [ID.trim(), {
+                                    Type: 'init',
+                                    ID: ID.trim(),
+                                    UpdateTime: Date.now()
+                                }]);
+                            }
+                            if (list.length > 0) {
+                                analyzeDownloadTask(new Dictionary<VideoInfo>(list));
+                            }
+                        }
+                        body.remove()
+                    }
+                },
+                childs: i18nList[config.language].ok
+            }
+        ]
+    })
+    unsafeWindow.document.body.appendChild(body)
+}
+async function downloadTaskUnique(taskList: Dictionary<VideoInfo>) {
+    let stoped: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
+            'aria2.tellStopped',
+            [
+                0,
+                4096,
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'errorCode',
+                    'bittorrent'
+                ]
+            ]
+        ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+    );
+    let active: Array<{ id: string, data: Aria2.Status }> = prune(
+        (await aria2API(
+            'aria2.tellActive',
+            [
+                [
+                    'gid',
+                    'status',
+                    'files',
+                    'downloadSpeed',
+                    'bittorrent'
+                ]
+            ]
+        ))
+            .result
+            .filter(
+                (task: Aria2.Status) =>
+                    isNullOrUndefined(task.bittorrent)
+            )
+            .map(
+                (task: Aria2.Status) => {
+                    let ID = aria2TaskExtractVideoID(task)
+                    if (!isNullOrUndefined(ID) && !ID.isEmpty()) {
+                        return {
+                            id: ID,
+                            data: task
+                        }
+                    }
+                }
+            )
+    );
+    let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped.filter(
+        (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete'
+    ).unique('id');
+    let startedAndCompleted = [...active, ...downloadCompleted].map(i => i.id);
+    for (let key of taskList.keysArray().intersect(startedAndCompleted)) {
+        taskList.delete(key)
+    }
+}
+export async function analyzeDownloadTask(taskList: Dictionary<VideoInfo> = selectList) {
+    let size = taskList.size
+    let node = renderNode({
+        nodeType: 'p',
+        childs: `${i18nList[config.language].parsingProgress}[${taskList.size}/${size}]`
+    })
+
+    let parsingProgressToast = newToast(ToastType.Info, {
+        node: node,
+        duration: -1
+    })
+
+    function updateParsingProgress() {
+        node.firstChild!.textContent = `${i18nList[config.language].parsingProgress}[${taskList.size}/${size}]`
+    }
+
+    parsingProgressToast.show()
+    if (config.experimentalFeatures && config.downloadType === DownloadType.Aria2) {
+        await downloadTaskUnique(taskList)
+        updateParsingProgress()
+    }
+
+    for (let [id, info] of taskList) {
+        await pushDownloadTask(await parseVideoInfo(info))
+        taskList.delete(id)
+        updateParsingProgress()
+        !config.enableUnsafeMode && await delay(3000)
+    }
+
+    parsingProgressToast.hide()
+    newToast(
+        ToastType.Info,
+        {
+            text: `%#allCompleted#%`,
+            duration: -1,
+            close: true,
+            onClick() {
+                this.hide()
+            }
+        }
+    ).show()
+}
+export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = false) {
+    switch (videoInfo.Type) {
+        case "full":
+            await db.putVideo(videoInfo)
+            if (!bypass) {
+                const authorInfo = await db.getFollowById(videoInfo.AuthorID);
+                if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
+                    await unlimitedFetch(
+                        `https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`,
+                        {
+                            method: 'POST',
+                            headers: await getAuth()
+                        },
+                        {
+                            retry: true,
+                            successStatus: 201,
+                            failStatuses: [404],
+                            onFail: async (res) => {
+                                newToast(ToastType.Warn, {
+                                    text: `${videoInfo.Alias} %#autoFollowFailed#% ${res.status}`,
+                                    close: true,
+                                    onClick() { this.hide() }
+                                }).show();
+                            },
+                            onRetry: async () => { await refreshToken() }
+                        }
+                    );
+                }
+                if (config.autoLike && !videoInfo.Liked) {
+                    await unlimitedFetch(
+                        `https://api.iwara.tv/video/${videoInfo.ID}/like`,
+                        {
+                            method: 'POST',
+                            headers: await getAuth()
+                        },
+                        {
+                            retry: true,
+                            successStatus: 201,
+                            failStatuses: [404],
+                            onFail: async (res) => {
+                                newToast(ToastType.Warn, {
+                                    text: `${videoInfo.Alias} %#autoLikeFailed#% ${res.status}`,
+                                    close: true,
+                                    onClick() { this.hide() }
+                                }).show();
+                            },
+                            onRetry: async () => { await refreshToken() }
+                        }
+                    )
+                }
+                if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
+                    let toastBody = toastNode([
+                        `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
+                        { nodeType: 'br' },
+                        `%#openVideoLink#%`
+                    ], '%#createTask#%')
+                    newToast(
+                        ToastType.Warn,
+                        {
+                            node: toastBody,
+                            close: config.autoCopySaveFileName,
+                            onClick() {
+                                GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
+                                if (config.autoCopySaveFileName) {
+                                    GM_setClipboard(getDownloadPath(videoInfo).fullName, "text")
+                                    toastBody.appendChild(renderNode({
+                                        nodeType: 'p',
+                                        childs: '%#copySucceed#%'
+                                    }))
+                                } else {
+                                    this.hide()
+                                }
+                            }
+                        }
+                    ).show()
+                    return
+                }
+            }
+            if (config.checkPriority && videoInfo.DownloadQuality !== config.downloadPriority) {
+                newToast(
+                    ToastType.Warn,
+                    {
+                        node: toastNode([
+                            `${videoInfo.Title.truncate(64)}[${videoInfo.ID}] %#downloadQualityError#%`,
+                            { nodeType: 'br' },
+                            `%#tryReparseDownload#%`
+                        ], '%#createTask#%'),
+                        async onClick() {
+                            this.hide()
+                            await pushDownloadTask(await parseVideoInfo(videoInfo))
+                        }
+                    }
+                ).show()
+                return
+            }
+            switch (config.downloadType) {
+                case DownloadType.Aria2:
+                    aria2Download(videoInfo)
+                    break
+                case DownloadType.Iwaradl:
+                    iwaradlDownload(videoInfo)
+                    break
+                case DownloadType.Browser:
+                    browserDownload(videoInfo)
+                    break
+                default:
+                    othersDownload(videoInfo)
+                    break
+            }
+            if (config.autoDownloadMetadata) {
+                switch (config.downloadType) {
+                    case DownloadType.Others:
+                        othersDownloadMetadata(videoInfo)
+                        break
+                    case DownloadType.Browser:
+                        browserDownloadMetadata(videoInfo)
+                        break
+                    default:
+                        break
+                }
+                GM_getValue('isDebug') && originalConsole.debug('[Debug] Download task pushed:', videoInfo);
+            }
+            selectList.delete(videoInfo.ID)
+            break;
+        case "partial":
+            const partialCache = await db.getVideoById(videoInfo.ID)
+            if (!isNullOrUndefined(partialCache) && partialCache.Type !== 'full') await db.putVideo(videoInfo)
+        case "cache":
+        case "init":
+            return await pushDownloadTask(await parseVideoInfo(videoInfo))
+        case "fail":
+            const cache = await db.getVideoById(videoInfo.ID)
+            newToast(
+                ToastType.Error,
+                {
+                    close: true,
+                    node: toastNode([
+                        `${videoInfo.Title ?? videoInfo.RAW?.title ?? cache?.RAW?.title}[${videoInfo.ID}] %#parsingFailed#%`,
+                        { nodeType: 'br' },
+                        videoInfo.Msg,
+                        { nodeType: 'br' },
+                        videoInfo.External ? `%#openVideoLink#%` : `%#tryReparseDownload#%`
+                    ], '%#createTask#%'),
+                    async onClick() {
+                        this.hide()
+                        if (videoInfo.External && !isNullOrUndefined(videoInfo.ExternalUrl) && !videoInfo.ExternalUrl.isEmpty()) {
+                            GM_openInTab(videoInfo.ExternalUrl, { active: false, insert: true, setParent: true })
+                        } else {
+                            await pushDownloadTask(await parseVideoInfo({ Type: 'init', ID: videoInfo.ID, RAW: videoInfo.RAW ?? cache?.RAW }))
+                        }
+                    },
+                }
+            ).show()
+            break;
+        default:
+            GM_getValue('isDebug') && originalConsole.debug('[Debug] Unknown type:', videoInfo);
+            break;
+    }
 }

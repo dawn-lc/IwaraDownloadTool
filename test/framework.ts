@@ -160,10 +160,10 @@ export class Assertions {
 export class Test extends Assertions {
   name: string;
   type: TestType;
-  body: () => void | Promise<void>;
+  body: (this: Test) => void | Promise<void>;
   options: TestOptions;
 
-  constructor(name: string, type: TestType, body: () => void | Promise<void>, options: TestOptions = {}) {
+  constructor(name: string, type: TestType, body: (this: Test) => void | Promise<void>, options: TestOptions = {}) {
     super();
     this.name = name;
     this.type = type;
@@ -231,8 +231,8 @@ export class TestGroup {
     testGroups.set(this.name, this);
   }
 
-  add(name: string, test: Test) {
-    this.tests.set(name, test);
+  add(test: Test) {
+    this.tests.set(test.name, test);
   }
 
   delete(name: string) {
@@ -303,7 +303,7 @@ export class TestGroup {
     for (const [name, test] of this.tests) {
       const result = await this.runTest(name);
       results.push(result);
-      
+
       summary.totalDuration += result.duration;
       if (test.options.skip) {
         summary.skippedTests++;

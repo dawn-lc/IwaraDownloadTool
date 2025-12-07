@@ -14,6 +14,7 @@ const DEFAULT_CONFIG = {
     experimentalFeatures: false,
     autoInjectCheckbox: true,
     checkDownloadLink: false,
+    filterLikedVideos: false,
     checkPriority: true,
     addUnlistedAndPrivate: false,
     downloadPriority: 'Source',
@@ -45,6 +46,7 @@ export class Config {
     experimentalFeatures: boolean
     autoInjectCheckbox: boolean
     autoCopySaveFileName: boolean
+    filterLikedVideos: boolean
     checkDownloadLink: boolean
     checkPriority: boolean
     downloadPriority: string
@@ -68,6 +70,7 @@ export class Config {
         this.experimentalFeatures = DEFAULT_CONFIG.experimentalFeatures
         this.enableUnsafeMode = DEFAULT_CONFIG.enableUnsafeMode
         this.autoInjectCheckbox = DEFAULT_CONFIG.autoInjectCheckbox
+        this.filterLikedVideos = DEFAULT_CONFIG.filterLikedVideos
         this.checkDownloadLink = DEFAULT_CONFIG.checkDownloadLink
         this.checkPriority = DEFAULT_CONFIG.checkPriority
         this.addUnlistedAndPrivate = DEFAULT_CONFIG.addUnlistedAndPrivate
