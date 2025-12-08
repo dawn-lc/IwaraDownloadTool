@@ -1,5 +1,5 @@
 import "./env";
-import { isNullOrUndefined, prune, UUID } from "./env";
+import { isNullOrUndefined, isVideoInfo, prune, UUID } from "./env";
 import { VersionState } from "./enum";
 import { originalAddEventListener, originalRemoveEventListener } from "./hijack";
 /**
@@ -420,21 +420,21 @@ export class GMSyncDictionary<T> extends Dictionary<T> {
         }
 
         // 从GM存储中加载现有数据，如果没有则使用初始值
-        const stored = GM_getValue(name, undefined);
+        const stored = GM_getValue(name);
+
         if (isNullOrUndefined(stored)) {
-            // 没有存储数据，使用初始值
             super(initial);
-            // 保存到GM存储
             this.saveToStorage();
         } else {
-            // 有存储数据，从存储中加载
             const entries = Object.entries(stored) as Array<[string, T]>;
-            super(entries);
+            try {
+                super(entries.filter(([id, info]) => isVideoInfo(info)));
+            } catch (error) {
+                super(initial);
+                this.saveToStorage();
+            }
         }
-
         this.name = name;
-
-        // 设置GM值变化监听器
         this.setupValueChangeListener();
     }
 
