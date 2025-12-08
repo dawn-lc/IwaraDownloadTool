@@ -408,33 +408,14 @@ export class GMSyncDictionary<T> extends Dictionary<T> {
      * @param initial 初始值列表
      */
     constructor(name: string, initial: Array<[string, T]> = []) {
-        // 验证初始值格式
-        if (!Array.isArray(initial)) {
-            throw new Error('GMSyncDictionary: initial must be an array');
-        }
-        // 验证每个元素是否为[key, value]格式
-        for (const item of initial) {
-            if (!Array.isArray(item) || item.length !== 2) {
-                throw new Error('GMSyncDictionary: each initial item must be a [string, T] tuple');
-            }
-        }
-
-        // 从GM存储中加载现有数据，如果没有则使用初始值
-        const stored = GM_getValue(name);
-
-        if (isNullOrUndefined(stored)) {
-            super(initial);
-            this.saveToStorage();
-        } else {
-            const entries = Object.entries(stored) as Array<[string, T]>;
-            try {
-                super(entries.filter(([id, info]) => isVideoInfo(info)));
-            } catch (error) {
-                super(initial);
-                this.saveToStorage();
-            }
+        let stored = initial.any() ? initial : GM_getValue(name, initial);
+        try {
+            super(stored.filter(([_, info]) => isVideoInfo(info)));
+        } catch (error) {
+            super()
         }
         this.name = name;
+        this.saveToStorage();
         this.setupValueChangeListener();
     }
 
@@ -446,14 +427,12 @@ export class GMSyncDictionary<T> extends Dictionary<T> {
         if (this.listenerId !== null) {
             GM_removeValueChangeListener(this.listenerId);
         }
-
-        // 添加新的监听器
         this.listenerId = GM_addValueChangeListener(
             this.name,
-            (key: string, oldValue: any, newValue: any, remote: boolean) => {
+            (key: string, oldValue: unknown, newValue: unknown, remote: boolean) => {
                 // 只有远程变化才需要处理（其他标签页的修改）
                 if (key === this.name && remote) {
-                    this.handleRemoteChange(newValue);
+                    this.handleRemoteChange(newValue as [string, T][]);
                 }
             }
         );
@@ -463,31 +442,20 @@ export class GMSyncDictionary<T> extends Dictionary<T> {
      * 处理远程变化
      * @param newValue 新的值
      */
-    private handleRemoteChange(newValue: any): void {
+    private handleRemoteChange(newValue: [string, T][]): void {
         if (isNullOrUndefined(newValue)) {
             // 如果新值为空，清空字典
             super.clear();
             this.onSync?.();
             return;
         }
-
-        // 将新值转换为字典
-        const newEntries = Object.entries(newValue) as Array<[string, T]>;
-        const newMap = new Map(newEntries);
-
-        // 获取当前的所有键
         const currentKeys = new Set(this.keys());
-
-        // 计算新增/更新的键和删除的键
         const addedOrUpdated: Array<[string, T]> = [];
         const deleted: string[] = [];
-
-        for (const [key, value] of newEntries) {
+        for (const [key, value] of newValue) {
             if (!currentKeys.has(key)) {
-                // 新增的键
                 addedOrUpdated.push([key, value]);
             } else {
-                // 可能更新的键，检查值是否相同
                 const currentValue = this.get(key);
                 if (currentValue !== value) {
                     addedOrUpdated.push([key, value]);
@@ -495,23 +463,17 @@ export class GMSyncDictionary<T> extends Dictionary<T> {
                 currentKeys.delete(key);
             }
         }
-        // 剩余在currentKeys中的键将被删除
         for (const key of currentKeys) {
             deleted.push(key);
         }
-
         const totalChanges = addedOrUpdated.length + deleted.length;
-
-        // 根据变化数量决定是全量同步还是增量更新
         if (totalChanges > GMSyncDictionary.BATCH_THRESHOLD) {
-            // 变化数量大，执行全量替换
             super.clear();
-            for (const [key, value] of newEntries) {
+            for (const [key, value] of newValue) {
                 super.set(key, value);
             }
             this.onSync?.();
         } else {
-            // 变化数量小，执行增量更新并触发对应事件
             for (const [key, value] of addedOrUpdated) {
                 super.set(key, value);
                 this.onSet?.(key, value);
@@ -527,8 +489,7 @@ export class GMSyncDictionary<T> extends Dictionary<T> {
      * 保存当前字典到GM存储
      */
     private saveToStorage(): void {
-        const obj = Object.fromEntries(this);
-        GM_setValue(this.name, obj);
+        GM_setValue(this.name, this.toArray());
     }
 
     /**
@@ -591,24 +552,6 @@ export class GMSyncDictionary<T> extends Dictionary<T> {
             GM_removeValueChangeListener(this.listenerId);
             this.listenerId = null;
         }
-    }
-
-    /**
-     * 重新加载GM存储中的数据
-     */
-    public reloadFromStorage(): void {
-        const stored = GM_getValue(this.name, {});
-        const entries = Object.entries(stored) as Array<[string, T]>;
-
-        // 清空当前字典
-        super.clear();
-
-        // 加载新数据
-        for (const [key, value] of entries) {
-            super.set(key, value);
-        }
-
-        this.onSync?.();
     }
 }
 
