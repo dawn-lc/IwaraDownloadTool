@@ -49,6 +49,8 @@ async function handleUserTokenResponse(response: Response): Promise<void> {
     }
 }
 
+
+
 /**
  * 处理 /videos 响应，更新数据库并可能修改返回结果
  */
@@ -115,6 +117,31 @@ async function handleVideosResponse(response: Response, url: URL): Promise<Respo
     });
 }
 
+
+/**
+ * 处理 /video/* 响应，mikoto.iwara.tv 无法下载临时解决方案
+ */
+async function handleVideoFileResponse(response: Response): Promise<Response> {
+    const cloneResponse = response.clone();
+    if (!cloneResponse.ok) return response;
+    const cloneBody = await cloneResponse.json() as Iwara.Source[];
+    if (cloneBody.some(x => x.src.download.toURL().host === 'mikoto.iwara.tv' || x.src.view.toURL().host === 'mikoto.iwara.tv')) {
+        cloneBody.forEach(item => {
+            if (item.src.download.toURL().host === 'mikoto.iwara.tv') {
+                item.src.download = item.src.download.replace('mikoto.iwara.tv', 'hime.iwara.tv');
+            }
+            if (item.src.view.toURL().host === 'mikoto.iwara.tv') {
+                item.src.view = item.src.view.replace('mikoto.iwara.tv', 'hime.iwara.tv');
+            }
+        });
+    }
+    return new Response(JSON.stringify(cloneBody), {
+        status: cloneResponse.status,
+        statusText: cloneResponse.statusText,
+        headers: Object.fromEntries(cloneResponse.headers.entries())
+    });
+}
+
 /**
  * 创建拦截后的 fetch 函数
  */
@@ -122,29 +149,33 @@ export function createInterceptedFetch(): typeof unsafeWindow.fetch {
     return async function (input: Request | string | URL, init?: RequestInit): Promise<Response> {
         GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetch ${input}`);
         const url = (input instanceof Request ? input.url : input instanceof URL ? input.href : input).toURL();
-
-        // 处理 Authorization 头
         if (!isUndefined(init) && init.headers) {
             handleAuthorizationHeader(init);
         }
-
         return new Promise((resolve, reject) =>
             originalFetch(input, init)
                 .then(async (response) => {
-                    // 只拦截 api.iwara.tv 的请求
-                    if (url.hostname !== 'api.iwara.tv' || url.pathname.isEmpty()) {
-                        return resolve(response);
-                    }
-
-                    const path = url.pathname.toLowerCase().split('/').slice(1);
-                    switch (path[0]) {
-                        case 'user':
-                            if (path[1] === 'token') await handleUserTokenResponse(response);
-                            break;
-                        case 'videos':
-                            return resolve(await handleVideosResponse(response, url));
-                        default:
-                            break;
+                    if (!url.pathname.isEmpty()) {
+                        const path = url.pathname.toLowerCase().split('/').slice(1);
+                        if (url.hostname === 'files.iwara.tv') {
+                            switch (path[0]) {
+                                case 'file':
+                                    return resolve(await handleVideoFileResponse(response));
+                                default:
+                                    break;
+                            }
+                        }
+                        if (url.hostname === 'api.iwara.tv') {
+                            switch (path[0]) {
+                                case 'user':
+                                    if (path[1] === 'token') await handleUserTokenResponse(response);
+                                    break;
+                                case 'videos':
+                                    return resolve(await handleVideosResponse(response, url));
+                                default:
+                                    break;
+                            }
+                        }
                     }
                     return resolve(response);
                 })

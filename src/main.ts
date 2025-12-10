@@ -18,7 +18,6 @@ import { createInterceptedFetch } from "./fetchInterceptor";
 import mainCSS from "./css/main.css";
 GM_addStyle(mainCSS);
 
-
 import { getDomain } from "tldts";
 var officialWhiteList = ['iwara.tv', 'iwara.zip', 'iwara.shop']
 var domain = getDomain(unsafeWindow.location.href) ?? ''
@@ -295,15 +294,15 @@ async function main() {
     }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
 
     if (isLoggedIn()) {
-        let user = await (await unlimitedFetch('https://api.iwara.tv/user', {
+        let localUser = (await (await unlimitedFetch('https://api.iwara.tv/user', {
             method: 'GET',
             headers: await getAuth()
-        })).json() as Iwara.LocalUser
+        })).json() as Iwara.LocalUser).user
         let authorProfile = (await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
             method: 'GET',
             headers: await getAuth()
         })).json() as Iwara.Profile).user
-        if (user.user.id !== authorProfile.id) {
+        if (localUser.id !== authorProfile.id) {
             if (!authorProfile.following) {
                 unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/followers`, {
                     method: 'POST',

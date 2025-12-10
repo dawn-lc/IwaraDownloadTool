@@ -962,7 +962,17 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 Size = RAW.file.size
                 let VideoFileSource = (await (await unlimitedFetch(RAW.fileUrl, { headers: await getAuth(RAW.fileUrl) })).json() as Iwara.Source[]).sort((a, b) => (!isNullOrUndefined(config.priority[b.name]) ? config.priority[b.name] : 0) - (!isNullOrUndefined(config.priority[a.name]) ? config.priority[a.name] : 0))
                 if (isNullOrUndefined(VideoFileSource) || !(VideoFileSource instanceof Array) || VideoFileSource.length < 1) throw new Error(i18nList[config.language].getVideoSourceFailed.toString())
-
+                // mikoto.iwara.tv 无法下载临时解决方案
+                if (VideoFileSource.some(x => x.src.download.toURL().host === 'mikoto.iwara.tv' || x.src.view.toURL().host === 'mikoto.iwara.tv')) {
+                    VideoFileSource.forEach(item => {
+                        if (item.src.download.toURL().host === 'mikoto.iwara.tv') {
+                            item.src.download = item.src.download.replace('mikoto.iwara.tv', 'hime.iwara.tv');
+                        }
+                        if (item.src.view.toURL().host === 'mikoto.iwara.tv') {
+                            item.src.view = item.src.view.replace('mikoto.iwara.tv', 'hime.iwara.tv');
+                        }
+                    });
+                }
                 DownloadQuality = config.checkPriority ? config.downloadPriority : VideoFileSource[0].name
                 let fileList = VideoFileSource.filter(x => x.name === DownloadQuality)
                 if (!fileList.any()) throw new Error(i18nList[config.language].noAvailableVideoSource.toString())
