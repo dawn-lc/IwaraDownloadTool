@@ -32,9 +32,6 @@
 // @grant             GM_download
 // @grant             GM_xmlhttpRequest
 // @grant             GM_openInTab
-// @grant             GM_getTab
-// @grant             GM_saveTab
-// @grant             GM_getTabs
 // @grant             GM_info
 // @grant             unsafeWindow
 // @grant             window.close
