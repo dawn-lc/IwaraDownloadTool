@@ -1,6 +1,6 @@
 export enum DownloadType {
     Aria2,
-    IwaraDownloader,
+    Iwaradl,
     Browser,
     Others
 }

@@ -56,7 +56,8 @@
   `2024-02-19_ExampleAuthorID_2024-02-18_ExampleTitle_Source[ExampleID].MP4`
 
 ## Dependencies
-- [moment.js](https://github.com/moment/moment/) - [MIT License](https://opensource.org/licenses/MIT)
-- [Dexie.js](https://github.com/dexie/Dexie.js) - [Apache-2.0 License](https://opensource.org/license/apache-2-0)
-- [emoji-regex](https://github.com/slevithan/emoji-regex-xs/) - [MIT License](https://opensource.org/licenses/MIT)
+- [day.js](https://github.com/iamkun/dayjs) - [MIT License](https://opensource.org/licenses/MIT)
+- [idb](https://github.com/jakearchibald/idb) - [ISC License](https://opensource.org/license/isc)
+- [esbuild](https://github.com/evanw/esbuild) - [MIT License](https://opensource.org/licenses/MIT)
+- [emoji-regex](https://github.com/slevithan/emoji-regex-xs) - [MIT License](https://opensource.org/licenses/MIT)
 - [aria2rpc](https://github.com/pboymt/aria2rpc)

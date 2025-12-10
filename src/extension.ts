@@ -3,7 +3,9 @@ import { i18nList } from "./i18n";
 import { config } from "./config";
 import { originalAddEventListener, originalFetch } from "./hijack";
 import { delay, isArray, isNullOrUndefined, prune } from "./env";
+import dayjs from "dayjs";
 
+Date.prototype.format = (format?: string) => dayjs(this).format(format);
 /**
  * 通用增强版 fetch 函数，支持跨域请求、重试机制、失败提示等特性。
  * 

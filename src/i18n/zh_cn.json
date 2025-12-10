@@ -8,8 +8,8 @@
     "downloadProxyPassword": "下载代理密码: ",
     "aria2Path": "Aria2 RPC: ",
     "aria2Token": "Aria2 密钥: ",
-    "iwaraDownloaderPath": "IwaraDownloader RPC: ",
-    "iwaraDownloaderToken": "IwaraDownloader 密钥: ",
+    "iwaradlPath": "iwaradl RPC: ",
+    "iwaradlToken": "iwaradl 密钥: ",
     "experimentalFeatures": "实验性功能",
     "enableUnsafeMode": "激进模式（风险自行承担）",
     "rename": "重命名",
@@ -23,13 +23,14 @@
     "isDebug": "调试模式",
     "downloadType": "下载方式",
     "browserDownload": "浏览器下载",
-    "iwaraDownloaderDownload": "IwaraDownloader下载",
+    "iwaradlDownload": "iwaradl下载",
     "autoFollow": "自动关注选中的视频作者",
     "autoLike": "自动点赞选中的视频",
     "addUnlistedAndPrivate": "不公开和私有视频强制显示(需关注作者)",
     "checkDownloadLink": "第三方网盘下载地址检查",
     "checkPriority": "下载画质检查",
     "autoDownloadMetadata": "自动下载视频元数据",
+    "filterLikedVideos": "过滤时间线上的已喜欢视频",
     "videoMetadata": "视频元数据",
     "autoInjectCheckbox": "自动注入选择框",
     "notOfficialWarning": "警告，此网站不是Iwara官方网站，请勿填写任何敏感信息！\n继续浏览该网站？",
@@ -76,7 +77,7 @@
         {
             "nodeType": "br"
         },
-        "添加安全检查，本脚本将拒绝在风险网站上加载功能模块。"
+        "添加隐藏时间线上已喜欢的视频功能。"
     ],
     "useHelpForBase": [
         "请认真阅读使用指南！",

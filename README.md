@@ -56,9 +56,10 @@
 [![Contributors](https://contrib.rocks/image?repo=dawn-lc/IwaraDownloadTool&max=1000)](https://github.com/dawn-lc/IwaraDownloadTool/graphs/contributors)
 
 ## 依赖库
-- [moment.js](https://github.com/moment/moment/) - [MIT License](https://opensource.org/licenses/MIT)
-- [Dexie.js](https://github.com/dexie/Dexie.js) - [Apache-2.0 License](https://opensource.org/license/apache-2-0)
-- [emoji-regex](https://github.com/slevithan/emoji-regex-xs/) - [MIT License](https://opensource.org/licenses/MIT)
+- [day.js](https://github.com/iamkun/dayjs) - [MIT License](https://opensource.org/licenses/MIT)
+- [idb](https://github.com/jakearchibald/idb) - [ISC License](https://opensource.org/license/isc)
+- [esbuild](https://github.com/evanw/esbuild) - [MIT License](https://opensource.org/licenses/MIT)
+- [emoji-regex](https://github.com/slevithan/emoji-regex-xs) - [MIT License](https://opensource.org/licenses/MIT)
 - [aria2rpc](https://github.com/pboymt/aria2rpc)
 
 ## 开源许可
