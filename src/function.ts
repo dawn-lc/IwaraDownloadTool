@@ -411,22 +411,10 @@ export async function iwaradlCheck(): Promise<boolean> {
  * @param {FullVideoInfo} videoInfo - 视频信息对象
  */
 export function aria2Download(videoInfo: FullVideoInfo) {
-    (async function (id: string, author: string, title: string, uploadTime: number, info: string, tag: Array<{
-        id: string
-        type: string
-    }>, quality: string, alias: string, downloadUrl: URL) {
-        let localPath = analyzeLocalPath(config.downloadPath.replaceVariable(
-            {
-                NowTime: new Date(),
-                UploadTime: new Date(uploadTime),
-                AUTHOR: author,
-                ID: id,
-                TITLE: title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replaceEmojis('_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
-                ALIAS: alias,
-                QUALITY: quality
-            }
-        ).trim())
-        downloadUrl.searchParams.set('videoid', id)
+    (async function (videoInfo: FullVideoInfo) {
+        let localPath = getDownloadPath(videoInfo)
+        let downloadUrl = videoInfo.DownloadUrl.toURL()
+        downloadUrl.searchParams.set('videoid', videoInfo.ID)
         downloadUrl.searchParams.set('download', localPath.fullName)
         let params = [
             [downloadUrl.href],
@@ -443,7 +431,7 @@ export function aria2Download(videoInfo: FullVideoInfo) {
             })
         ]
         let res = await aria2API('aria2.addUri', params)
-        originalConsole.log(`Aria2 ${title} ${JSON.stringify(res)}`)
+        originalConsole.log(`Aria2 ${videoInfo.Title} ${JSON.stringify(res)}`)
         newToast(
             ToastType.Info,
             {
@@ -451,7 +439,7 @@ export function aria2Download(videoInfo: FullVideoInfo) {
                 node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
             }
         ).show()
-    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl.toURL()))
+    }(videoInfo))
 }
 /**
  * 通过iwaradl下载视频
@@ -560,16 +548,13 @@ export function browserDownloadErrorParse(error: Tampermonkey.DownloadErrorRespo
  * @param {FullVideoInfo} videoInfo - 视频信息对象
  */
 export function browserDownload(videoInfo: FullVideoInfo) {
-    (async function (ID: string, Author: string, Title: string, UploadTime: number, Info: string, Tag: Array<{
-        id: string
-        type: string
-    }>, DownloadQuality: string, Alias: string, DownloadUrl: string) {
+    (async function (videoInfo: FullVideoInfo) {
         function toastError(error: Tampermonkey.DownloadErrorResponse | Error) {
             let toast = newToast(
                 ToastType.Error,
                 {
                     node: toastNode([
-                        `${Title}[${ID}] %#downloadFailed#%`,
+                        `${videoInfo.Title}[${videoInfo.ID}] %#downloadFailed#%`,
                         { nodeType: 'br' },
                         browserDownloadErrorParse(error),
                         { nodeType: 'br' },
@@ -584,13 +569,13 @@ export function browserDownload(videoInfo: FullVideoInfo) {
             toast.show()
         }
         GM_download({
-            url: DownloadUrl,
+            url: videoInfo.DownloadUrl,
             saveAs: false,
             name: getDownloadPath(videoInfo).fullPath,
             onerror: (err) => toastError(err),
             ontimeout: () => toastError(new Error('%#browserDownloadTimeout#%'))
         })
-    }(videoInfo.ID, videoInfo.Author, videoInfo.Title, videoInfo.UploadTime, videoInfo.Comments, videoInfo.Tags, videoInfo.DownloadQuality, videoInfo.Alias, videoInfo.DownloadUrl))
+    }(videoInfo))
 }
 /**
  * 调用Aria2 RPC API
