@@ -442,11 +442,14 @@ String.prototype.replaceEmojis = function (replace?: string | null) {
     return this.replaceAll(emojiRegex, replace ?? '')
 }
 String.prototype.toURL = function () {
-    let URLString = this
-    if (URLString.split('//')[0].isEmpty()) {
-        URLString = `${unsafeWindow.location.protocol}${URLString}`
+    try {
+        return new URL(this.toString())
+    } catch (error) {
+        if (error instanceof TypeError && this.toString().startsWith('//')) {
+            return new URL(unsafeWindow.location.protocol + this.toString())
+        }
+        throw error
     }
-    return new URL(URLString.toString())
 }
 
 Date.prototype.add = function ({
@@ -688,7 +691,6 @@ String.prototype.replaceVariable = function (replacements: Record<string, unknow
         for (const { value, placeholderRegex, placeholderFormatRegex } of patterns) {
             if (placeholderRegex.test(next)) {
                 let format = next.match(placeholderFormatRegex)
-
                 if (!isNullOrUndefined(format) && format.any() && !format[0].isEmpty() && hasFunction(value, 'format')) {
                     next = next.replace(placeholderRegex, stringify(value.format(format[0])));
                 } else {
