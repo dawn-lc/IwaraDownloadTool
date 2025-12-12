@@ -717,7 +717,9 @@ export class waterMark {
         }
     })
     constructor() {
-        originalNodeAppendChild.call(unsafeWindow.document.body, this.bdoy)
         return this
+    }
+    public inject() {
+        originalNodeAppendChild.call(unsafeWindow.document.body, this.bdoy)
     }
 }

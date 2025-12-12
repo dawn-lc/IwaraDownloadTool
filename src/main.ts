@@ -62,9 +62,9 @@ export var rating = () => localStorage.getItem('rating') ?? 'all'
 export var selectList = new GMSyncDictionary<VideoInfo>('selectList')
 export var pageSelectButtons = new Dictionary<HTMLInputElement>()
 export var mouseTarget: Element | null = null
-export var watermark = new waterMark();
 export var pluginMenu = new menu();
 export var editConfig = new configEdit(config);
+export var watermark = new waterMark();
 
 selectList.onSet = (key) => {
     updateButtonState(key)
@@ -237,6 +237,7 @@ function firstRun() {
     }))
 }
 async function main() {
+    watermark.inject()
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.0')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
         alert(i18nList[config.language].configurationIncompatible)
