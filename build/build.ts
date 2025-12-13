@@ -144,11 +144,12 @@ esbuild.build({
 }).then(async (result) => {
     if (result.outputFiles.any()) {
         let out = result.outputFiles[0].text
-            .replace(/\r?\n/gm, '\r\n')
+            .replace(/\r\n?|\n/g, '\r\n')
             .replace(/ \/\* .*? \*\//g, '')
             .replace(/\/\*\*[\s\S]*?\*\//g, '')
             .replace(/\/\/ (?![@=]).*$/gm, '')
-            .replace(/^\s*[\r\n]/gm, '');
+            .replace(/\r\n?|\n/g, '\r\n')
+            .replace(/^\s*$/gm, '');
         await promises.writeFile(distUncompressPath, out);
     } else {
         process.exit(1);
