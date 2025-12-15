@@ -1093,8 +1093,7 @@ export async function addDownloadTask() {
                             } catch (error) {
                                 list = textArea.value.split('|').map(ID => [ID.trim(), {
                                     Type: 'init',
-                                    ID: ID.trim(),
-                                    UpdateTime: Date.now()
+                                    ID: ID.trim()
                                 }]);
                             }
                             if (list.length > 0) {
