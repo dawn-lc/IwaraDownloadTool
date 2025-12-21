@@ -117,31 +117,6 @@ async function handleVideosResponse(response: Response, url: URL): Promise<Respo
     });
 }
 
-
-/**
- * 处理 /video/* 响应，mikoto.iwara.tv 无法下载临时解决方案
- */
-async function handleVideoFileResponse(response: Response): Promise<Response> {
-    const cloneResponse = response.clone();
-    if (!cloneResponse.ok) return response;
-    const cloneBody = await cloneResponse.json() as Iwara.Source[];
-    if (cloneBody.some(x => x.src.download.toURL().host === 'mikoto.iwara.tv' || x.src.view.toURL().host === 'mikoto.iwara.tv')) {
-        cloneBody.forEach(item => {
-            if (item.src.download.toURL().host === 'mikoto.iwara.tv') {
-                item.src.download = item.src.download.replace('mikoto.iwara.tv', 'hime.iwara.tv');
-            }
-            if (item.src.view.toURL().host === 'mikoto.iwara.tv') {
-                item.src.view = item.src.view.replace('mikoto.iwara.tv', 'hime.iwara.tv');
-            }
-        });
-    }
-    return new Response(JSON.stringify(cloneBody), {
-        status: cloneResponse.status,
-        statusText: cloneResponse.statusText,
-        headers: Object.fromEntries(cloneResponse.headers.entries())
-    });
-}
-
 /**
  * 创建拦截后的 fetch 函数
  */
@@ -157,14 +132,6 @@ export function createInterceptedFetch(): typeof unsafeWindow.fetch {
                 .then(async (response) => {
                     if (!url.pathname.isEmpty()) {
                         const path = url.pathname.toLowerCase().split('/').slice(1);
-                        if (url.hostname === 'files.iwara.tv') {
-                            switch (path[0]) {
-                                case 'file':
-                                    return resolve(await handleVideoFileResponse(response));
-                                default:
-                                    break;
-                            }
-                        }
                         if (url.hostname === 'api.iwara.tv') {
                             switch (path[0]) {
                                 case 'user':
