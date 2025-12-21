@@ -18,6 +18,7 @@ interface TestResult {
   name: string;
   passed: boolean;
   duration: number;
+  comment?: string;
   error?: Error;
 }
 
@@ -160,6 +161,7 @@ export class Assertions {
 export class Test extends Assertions {
   name: string;
   type: TestType;
+  comment?: string;
   body: (this: Test) => void | Promise<void>;
   options: TestOptions;
 
@@ -179,31 +181,46 @@ export class Test extends Assertions {
     if (this.options.skip) {
       return {
         name: this.name,
+        comment: this.comment,
         passed: true,
         duration: 0
       };
     }
 
     const startTime = Date.now();
+    let timeoutId: NodeJS.Timeout | null = null;
+
     try {
       if (this.type === 'async') {
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error(`测试超时（${this.options.timeout}ms）`)), this.options.timeout);
+          timeoutId = setTimeout(() => reject(new Error(`测试超时（${this.options.timeout}ms）`)), this.options.timeout);
         });
         await Promise.race([this.body(), timeoutPromise]);
       } else {
         await this.body();
       }
 
+      // 清理超时定时器
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
       return {
         name: this.name,
         passed: true,
+        comment: this.comment,
         duration: Date.now() - startTime
       };
     } catch (error) {
+      // 清理超时定时器
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+
       return {
         name: this.name,
         passed: false,
+        comment: this.comment,
         duration: Date.now() - startTime,
         error: error instanceof Error ? error : new Error(String(error))
       };
@@ -320,32 +337,27 @@ export class TestGroup {
       await hook();
     }
 
-    return summary;
-  }
-
-  // 格式化测试报告
-  formatTestReport(summary: TestSummary): string {
     const lines: string[] = [];
-    lines.push(`测试组: ${summary.groupName}`);
-    if (summary.description) {
-      lines.push(`描述: ${summary.description}`);
-    }
-    lines.push(`总测试数: ${summary.totalTests}`);
-    lines.push(`通过: ${summary.passedTests}`);
-    lines.push(`失败: ${summary.failedTests}`);
-    lines.push(`跳过: ${summary.skippedTests}`);
-    lines.push(`总耗时: ${summary.totalDuration}ms\n`);
+    lines.push(`\n测试组: ${summary.groupName}\n${summary.description ? `描述: ${summary.description}` : ''}`);
 
     summary.results.forEach(result => {
       lines.push(`[${result.passed ? '✓' : '✗'}] ${result.name} (${result.duration}ms)`);
+      if (result.comment) lines.push(result.comment);
       if (!result.passed && result.error) {
-        lines.push(`  错误: ${result.error.message}`);
+        lines.push(`错误: ${result.error.message}`);
         if (result.error.stack) {
-          lines.push(`  堆栈: ${result.error.stack}`);
+          lines.push(`堆栈: ${result.error.stack}`);
         }
       }
     });
 
-    return lines.join('\n');
+    lines.push(`\n总测试数: ${summary.totalTests}`);
+    lines.push(`通过: ${summary.passedTests}`);
+    lines.push(`失败: ${summary.failedTests}`);
+    lines.push(`跳过: ${summary.skippedTests}`);
+    lines.push(`总耗时: ${summary.totalDuration}ms`);
+    console.log(lines.join('\n'));
+
+    return summary;
   }
 }
