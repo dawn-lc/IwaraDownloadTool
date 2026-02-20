@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
     downloadProxyPassword: '',
     aria2Path: 'http://127.0.0.1:6800/jsonrpc',
     aria2Token: '',
-    iwaradlPath: 'http://127.0.0.1:6800/jsonrpc',
+    iwaradlPath: 'http://127.0.0.1:23456/api/tasks',
     iwaradlToken: '',
     priority: {
         'Source': 100,
