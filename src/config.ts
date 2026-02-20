@@ -126,14 +126,16 @@ export class Config {
         function getMainLanguage(value: string) {
             return value.split('_').shift()!
         }
-        let custom = formatLanguage(value ?? DEFAULT_CONFIG.language)
-        if (!isNullOrUndefined(custom)) {
-            if (!isNullOrUndefined(i18nList[custom])) {
-                return custom
-            } else {
-                let customMain = getMainLanguage(custom)
-                if (!isNullOrUndefined(i18nList[customMain])) {
-                    return customMain
+        if (!isNullOrUndefined(GM_getValue('language', undefined))) {
+            let custom = formatLanguage(value ?? DEFAULT_CONFIG.language)
+            if (!isNullOrUndefined(custom)) {
+                if (!isNullOrUndefined(i18nList[custom])) {
+                    return custom
+                } else {
+                    let customMain = getMainLanguage(custom)
+                    if (!isNullOrUndefined(i18nList[customMain])) {
+                        return customMain
+                    }
                 }
             }
         }
