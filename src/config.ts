@@ -25,8 +25,8 @@ const DEFAULT_CONFIG = {
     downloadProxyPassword: '',
     aria2Path: 'http://127.0.0.1:6800/jsonrpc',
     aria2Token: '',
-    iwaraDownloaderPath: 'http://127.0.0.1:6800/jsonrpc',
-    iwaraDownloaderToken: '',
+    iwaradlPath: 'http://127.0.0.1:6800/jsonrpc',
+    iwaradlToken: '',
     priority: {
         'Source': 100,
         '540': 99,
@@ -57,8 +57,8 @@ export class Config {
     downloadProxyPassword: string
     aria2Path: string
     aria2Token: string
-    iwaraDownloaderPath: string
-    iwaraDownloaderToken: string
+    iwaradlPath: string
+    iwaradlToken: string
     authorization?: string;
     priority: Record<string, number>
     [key: string]: any
@@ -82,8 +82,8 @@ export class Config {
         this.downloadProxyPassword = DEFAULT_CONFIG.downloadProxyPassword
         this.aria2Path = DEFAULT_CONFIG.aria2Path
         this.aria2Token = DEFAULT_CONFIG.aria2Token
-        this.iwaraDownloaderPath = DEFAULT_CONFIG.iwaraDownloaderPath
-        this.iwaraDownloaderToken = DEFAULT_CONFIG.iwaraDownloaderToken
+        this.iwaradlPath = DEFAULT_CONFIG.iwaradlPath
+        this.iwaradlToken = DEFAULT_CONFIG.iwaradlToken
         this.priority = DEFAULT_CONFIG.priority
         this.autoDownloadMetadata = DEFAULT_CONFIG.autoDownloadMetadata;
         let body = new Proxy(this, {

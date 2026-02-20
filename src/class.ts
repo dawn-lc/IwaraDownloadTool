@@ -20,25 +20,25 @@ export class Path implements LocalPath {
      * @param inputPath 输入路径字符串
      * @throws 如果路径为空或无效
      */
-    constructor(inputPath: string) {
+    constructor(input: string, validate: boolean = true) {
         // 空路径处理
-        if (inputPath === "") {
+        if (input === "") {
             throw new Error("路径不能为空");
         }
 
         // 不接受UNC路径（以"\\\\"开头）
-        if (this.isUNC(inputPath)) {
+        if (this.isUNC(input)) {
             throw new Error("不接受UNC路径");
         }
 
         // 判断路径类型（Windows绝对、Unix绝对或相对路径）
-        const detectedType = this.detectPathType(inputPath);
+        const detectedType = this.detectPathType(input);
 
         // 根据不同平台校验路径基本合法性
-        this.validatePath(inputPath, detectedType);
+        if (validate) this.validatePath(input, detectedType);
 
         // 归一化路径：统一分隔符、合并重复分隔符、处理末尾斜杠，并解析导航路径
-        const normalized = this.normalizePath(inputPath, detectedType);
+        const normalized = this.normalizePath(input, detectedType);
 
         // 从归一化后的路径中提取目录、文件名、基础名与拓展名
         const directory = this.extractDirectory(normalized, detectedType);

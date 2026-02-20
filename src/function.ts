@@ -1,5 +1,5 @@
 import "./env";
-import { delay, isConvertibleToNumber, isNullOrUndefined, isString, isVideoInfo, prune, stringify, UUID } from "./env"
+import { delay, isArray, isConvertibleToNumber, isNullOrUndefined, isString, isVideoInfo, prune, stringify, UUID } from "./env"
 import { i18nList } from "./i18n"
 import { ToastType, DownloadType } from "./enum"
 import { config } from "./config"
@@ -370,24 +370,20 @@ export async function aria2Check(): Promise<boolean> {
 export async function iwaradlCheck(): Promise<boolean> {
     try {
         let res = await (await unlimitedFetch(config.iwaradlPath, {
-            method: 'POST',
+            method: 'GET',
             headers: {
                 'accept': 'application/json',
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify(prune({
-                'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
-                'code': 'State',
-                'token': config.iwaradlToken
-            }))
+                'content-type': 'application/json',
+                'authorization': `Bearer ${config.iwaradlToken}`
+            }
         })).json()
 
-        if (res.code !== 0) {
-            throw new Error(res.msg)
+        if (!isArray(res)) {
+            throw new Error(`后端未启动或无响应`)
         }
 
     } catch (error: any) {
-        let toast = newToast(
+        newToast(
             ToastType.Error,
             {
                 node: toastNode([
@@ -397,11 +393,10 @@ export async function iwaradlCheck(): Promise<boolean> {
                 ], '%#settingsCheck#%'),
                 position: 'center',
                 onClick() {
-                    toast.hide()
+                    this.hide()
                 }
             }
-        )
-        toast.show()
+        ).show()
         return false
     }
     return true
@@ -447,70 +442,54 @@ export function aria2Download(videoInfo: FullVideoInfo) {
  */
 export function iwaradlDownload(videoInfo: FullVideoInfo) {
     (async function (videoInfo: FullVideoInfo) {
-        let r = await (await unlimitedFetch(config.iwaradlPath, {
-            method: 'POST',
-            headers: {
-                'accept': 'application/json',
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify(prune({
-                'ver': GM_getValue('version', '0.0.0').split('.').map(i => Number(i)),
-                'code': 'add',
-                'token': config.iwaradlToken,
-                'data': {
-                    'info': {
-                        'title': videoInfo.Title,
-                        'url': videoInfo.DownloadUrl,
-                        'size': videoInfo.Size,
-                        'source': videoInfo.ID,
-                        'alias': videoInfo.Alias,
-                        'author': videoInfo.Author,
-                        'uploadTime': videoInfo.UploadTime,
-                        'comments': videoInfo.Comments,
-                        'tags': videoInfo.Tags,
-                        'quality': videoInfo.DownloadQuality,
-                        'path': config.downloadPath.replaceVariable(
-                            {
-                                NowTime: new Date(),
-                                UploadTime: videoInfo.UploadTime,
-                                AUTHOR: videoInfo.Author,
-                                ID: videoInfo.ID,
-                                TITLE: videoInfo.Title,
-                                ALIAS: videoInfo.Alias,
-                                QUALITY: videoInfo.DownloadQuality
-                            }
-                        )
-                    },
-                    'option': {
-                        'proxy': config.downloadProxy,
-                        'cookies': unsafeWindow.document.cookie
+        try {
+            let proxyURL: URL | undefined
+            if (!config.downloadProxy.isEmpty()) {
+                proxyURL = new URL(config.downloadProxy)
+                proxyURL.username = config.downloadProxyUsername
+                proxyURL.password = config.downloadProxyPassword
+            }
+            let downloadPathTemplate = new Path(config.downloadPath, false)
+            let response = await unlimitedFetch(config.iwaradlPath, {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'content-type': 'application/json',
+                    'authorization': `Bearer ${config.iwaradlToken}`
+                },
+                body: JSON.stringify(prune({
+                    "urls": [`https://www.iwara.tv/video/${videoInfo.ID}`],
+                    'options': {
+                        'proxy_url': proxyURL ? proxyURL.href : undefined,
+                        'cookies': unsafeWindow.document.cookie,
+                        "download_dir": downloadPathTemplate.directory,
+                        "filename_template": downloadPathTemplate.fullName
                     }
-                }
-            }))
-        })).json()
-        if (r.code === 0) {
-            originalConsole.log(`${videoInfo.Title} %#pushTaskSucceed#% ${r}`)
+                }))
+            })
+            if (response.ok) {
+                originalConsole.log(`${videoInfo.Title} %#pushTaskSucceed#%`)
+                newToast(
+                    ToastType.Info,
+                    {
+                        node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
+                    }
+                ).show()
+            }
+        } catch (error) {
             newToast(
-                ToastType.Info,
-                {
-                    node: toastNode(`${videoInfo.Title}[${videoInfo.ID}] %#pushTaskSucceed#%`)
-                }
-            ).show()
-        } else {
-            let toast = newToast(
                 ToastType.Error,
                 {
                     node: toastNode([
                         `${videoInfo.Title}[${videoInfo.ID}] %#pushTaskFailed#% `,
                         { nodeType: 'br' },
-                        r.msg
+                        stringify(error)
                     ], '%#iwaradlDownload#%'),
                     onClick() {
-                        toast.hide()
+                        this.hide()
                     }
                 }
-            )
-            toast.show()
+            ).show()
         }
     }(videoInfo))
 }
