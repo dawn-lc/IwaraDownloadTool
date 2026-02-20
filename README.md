@@ -62,6 +62,9 @@
 - [emoji-regex](https://github.com/slevithan/emoji-regex-xs) - [MIT License](https://opensource.org/licenses/MIT)
 - [aria2rpc](https://github.com/pboymt/aria2rpc)
 
+## 同类项目
+- [iwaradl](https://github.com/Izumiko/iwaradl) - [MIT License](https://opensource.org/licenses/MIT) CLI Iwara 视频下载器
+
 ## 开源许可
 
 本项目基于 [MIT License](https://opensource.org/licenses/MIT) 协议开源，请遵守相关协议条款。

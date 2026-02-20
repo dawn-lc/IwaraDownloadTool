@@ -36,4 +36,5 @@
 // @grant             unsafeWindow
 // @grant             window.close
 // @run-at            document-start
+// @noframes          
 // ==/UserScript==

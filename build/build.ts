@@ -12,37 +12,67 @@ function parseMetadata(content: string): any {
         .split('\n')
         .filter(i => !i.isEmpty())
         .map(line => line.trimHead('// @'));
+
     if (!lines.any()) {
         throw new Error("No metadata block found");
     }
+
     let results = {} as Record<string, any>;
+
     lines.reduce((result, line) => {
-        const [key, value] = line.splitLimit(' ', 1).map(i => i.trim()).filter(i => !i.isEmpty());
-        !isNullOrUndefined(key) && !isNullOrUndefined(value) &&
-            !key.isEmpty() && !value.isEmpty()
-            &&
-            (!isNullOrUndefined(result[key])
-                ? Array.isArray(result[key])
-                    ? result[key].push(value)
-                    : result[key] = [result[key], value]
-                : result[key] = value
-            );
+        const parts = line.splitLimit(' ', 1)
+            .map(i => i.trim())
+            .filter(i => !i.isEmpty());
+
+        const key = parts[0];
+        const value = parts[1];
+
+        if (isNullOrUndefined(key) || key.isEmpty()) {
+            return result;
+        }
+
+        const finalValue = isNullOrUndefined(value) ? null : value;
+
+        if (!isNullOrUndefined(result[key])) {
+            Array.isArray(result[key])
+                ? result[key].push(finalValue)
+                : result[key] = [result[key], finalValue];
+        } else {
+            result[key] = finalValue;
+        }
+
         return result;
     }, results);
+
     return results;
-};
+}
 function serializeMetadata(metadata: any): string {
-    let pad = Object.keys(metadata).reduce((a, b) => a.length > b.length ? a : b).length + 1;
+    let pad = Object.keys(metadata)
+        .reduce((a, b) => a.length > b.length ? a : b).length + 1;
+
     let results = ['// ==UserScript=='];
+
     Object.entries(metadata).reduce((result, [key, value]) => {
+
+        const pushLine = (v: any) => {
+            if (v === null) {
+                result.push(`// @${key}`);
+            } else {
+                result.push(`// @${key.padEnd(pad, ' ')}${v}`);
+            }
+        };
+
         Array.isArray(value)
-            ? result.push(...value.map(v => `// @${key.padEnd(pad, ' ')}${v}`))
-            : result.push(`// @${key.padEnd(pad, ' ')}${value}`);
+            ? value.forEach(pushLine)
+            : pushLine(value);
+
         return result;
     }, results);
+
     results.push('// ==/UserScript==');
+
     return results.join('\r\n');
-};
+}
 
 function mkdir(path: string) {
     return existsSync(path) || mkdirSync(path)
