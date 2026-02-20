@@ -132,7 +132,7 @@ export function createInterceptedFetch(): typeof unsafeWindow.fetch {
                 .then(async (response) => {
                     if (!url.pathname.isEmpty()) {
                         const path = url.pathname.toLowerCase().split('/').slice(1);
-                        if (url.hostname === 'api.iwara.tv') {
+                        if (url.hostname === 'apiq.iwara.tv') {
                             switch (path[0]) {
                                 case 'user':
                                     if (path[1] === 'token') await handleUserTokenResponse(response);

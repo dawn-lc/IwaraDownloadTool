@@ -26,7 +26,7 @@ export async function refreshToken(): Promise<string> {
     const oldAccessToken = localStorage.getItem('accessToken');
     try {
         const res = await unlimitedFetch(
-            'https://api.iwara.tv/user/token',
+            'https://apiq.iwara.tv/user/token',
             {
                 method: 'POST',
                 headers: {
@@ -788,7 +788,7 @@ export async function check(): Promise<boolean> {
  */
 async function getXVersion(urlString: string): Promise<string> {
     let url = urlString.toURL()
-    const data = new TextEncoder().encode([url.pathname.split("/").pop(), url.searchParams.get('expires'), '5nFp9kmbNnHdAFhaqMvt'].join('_'))
+    const data = new TextEncoder().encode([url.pathname.split("/").pop(), url.searchParams.get('expires'), 'mSvL05GfEmeEmsEYfGCnVpEjYgTJraJN'].join('_'))
     const hashBuffer = await crypto.subtle.digest('SHA-1', data)
     return Array.from(new Uint8Array(hashBuffer))
         .map(b => b.toString(16).padStart(2, '0'))
@@ -797,7 +797,7 @@ async function getXVersion(urlString: string): Promise<string> {
 
 
 async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
-    return await (await unlimitedFetch(`https://api.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
+    return await (await unlimitedFetch(`https://apiq.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
 }
 async function getCommentDatas(id: string, commentID?: string): Promise<Iwara.Comment[]> {
     let comments: Iwara.Comment[] = []
@@ -834,7 +834,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
             case "full":
                 GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse full source`)
                 let sourceResult = await (await unlimitedFetch(
-                    `https://api.iwara.tv/video/${info.ID}`,
+                    `https://apiq.iwara.tv/video/${info.ID}`,
                     {
                         headers: await getAuth()
                     },
@@ -1219,7 +1219,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 const authorInfo = await db.getFollowById(videoInfo.AuthorID);
                 if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
                     await unlimitedFetch(
-                        `https://api.iwara.tv/user/${videoInfo.AuthorID}/followers`,
+                        `https://apiq.iwara.tv/user/${videoInfo.AuthorID}/followers`,
                         {
                             method: 'POST',
                             headers: await getAuth()
@@ -1241,7 +1241,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 }
                 if (config.autoLike && !videoInfo.Liked) {
                     await unlimitedFetch(
-                        `https://api.iwara.tv/video/${videoInfo.ID}/like`,
+                        `https://apiq.iwara.tv/video/${videoInfo.ID}/like`,
                         {
                             method: 'POST',
                             headers: await getAuth()

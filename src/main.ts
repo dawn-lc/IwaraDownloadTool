@@ -3,6 +3,7 @@ if (unsafeWindow.IwaraDownloadTool) {
 }
 unsafeWindow.IwaraDownloadTool = true;
 
+import mainCSS from "./css/main.css";
 import { isNullOrUndefined, stringify } from "./env";
 import { i18nList } from "./i18n";
 import { config, Config } from "./config";
@@ -15,8 +16,7 @@ import { configEdit, injectCheckbox, menu, uninjectCheckbox, waterMark } from ".
 import { PageType, ToastType, VersionState } from "./enum";
 import { createInterceptedFetch } from "./fetchInterceptor";
 
-import mainCSS from "./css/main.css";
-GM_addStyle(mainCSS);
+
 
 import { getDomain } from "tldts";
 var officialWhiteList = ['iwara.tv', 'iwara.zip', 'iwara.shop']
@@ -237,6 +237,7 @@ function firstRun() {
     }))
 }
 async function main() {
+    GM_addStyle(mainCSS);
     watermark.inject()
     if (new Version(GM_getValue('version', '0.0.0')).compare(new Version('3.3.0')) === VersionState.Low) {
         GM_setValue('isFirstRun', true)
@@ -293,25 +294,24 @@ async function main() {
             o.disconnect()
         }
     }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
-
     if (isLoggedIn()) {
-        let localUser = (await (await unlimitedFetch('https://api.iwara.tv/user', {
+        let localUser = (await (await unlimitedFetch('https://apiq.iwara.tv/user', {
             method: 'GET',
             headers: await getAuth()
         })).json() as Iwara.LocalUser).user
-        let authorProfile = (await (await unlimitedFetch('https://api.iwara.tv/profile/dawn', {
+        let authorProfile = (await (await unlimitedFetch('https://apiq.iwara.tv/profile/dawn', {
             method: 'GET',
             headers: await getAuth()
         })).json() as Iwara.Profile).user
         if (localUser.id !== authorProfile.id) {
             if (!authorProfile.following) {
-                unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/followers`, {
+                unlimitedFetch(`https://apiq.iwara.tv/user/${authorProfile.id}/followers`, {
                     method: 'POST',
                     headers: await getAuth()
                 })
             }
             if (!authorProfile.friend) {
-                unlimitedFetch(`https://api.iwara.tv/user/${authorProfile.id}/friends`, {
+                unlimitedFetch(`https://apiq.iwara.tv/user/${authorProfile.id}/friends`, {
                     method: 'POST',
                     headers: await getAuth()
                 })

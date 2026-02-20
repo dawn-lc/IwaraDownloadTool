@@ -87,7 +87,7 @@ export async function injectCheckbox(element: Element) {
             className: 'deleteButton',
             events: {
                 click: async (event: Event) => {
-                    if ((await unlimitedFetch(`https://api.iwara.tv/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
+                    if ((await unlimitedFetch(`https://apiq.iwara.tv/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
                         method: 'DELETE',
                         headers: await getAuth()
                     })).ok) {
@@ -490,17 +490,8 @@ export class menu {
 
         while (pageCount < MAX_FIND_PAGES) {
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetching page ${pageCount}.`);
-            /*
-            const response = await unlimitedFetch(`https://api.iwara.tv/search?type=videos&sort=date&limit=50&query=${encodeURIComponent('{private:true}')}&rating=${rating()}&page=${pageCount}`,
-                { method: 'GET', headers: await getAuth() },
-                {
-                    retry: true,
-                    retryDelay: 1000,
-                    onRetry: async () => { await refreshToken() }
-                })
-            */
             const response = await unlimitedFetch(
-                `https://api.iwara.tv/videos?subscribed=true&limit=50&rating=${rating()}&page=${pageCount}`,
+                `https://apiq.iwara.tv/videos?subscribed=true&limit=50&rating=${rating()}&page=${pageCount}`,
                 { method: 'GET', headers: await getAuth() },
                 {
                     retry: true,
@@ -677,10 +668,14 @@ export class menu {
         }
     }
     public inject() {
-        this.observer.observe(unsafeWindow.document.getElementById('app')!, { childList: true, subtree: true });
-        if (!unsafeWindow.document.querySelector('#pluginMenu')) {
+        try {
+            this.observer.observe(unsafeWindow.document.getElementById('app')!, { childList: true, subtree: true });
+            if (!unsafeWindow.document.querySelector('#pluginMenu')) {
+                originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
+                this.pageType = getPageType() ?? this.pageType
+            }
+        } catch (error) {
             originalNodeAppendChild.call(unsafeWindow.document.body, this.interface)
-            this.pageType = getPageType() ?? this.pageType
         }
     }
 }
