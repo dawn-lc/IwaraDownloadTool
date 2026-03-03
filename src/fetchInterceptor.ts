@@ -1,8 +1,8 @@
 import { originalConsole, originalFetch } from "./hijack";
 import { config } from "./config";
 import { db } from "./db";
-import { getPlayload, parseVideoInfo } from "./function";
-import { isNull, isUndefined } from "./env";
+import { getAuth, getPlayload, parseVideoInfo } from "./function";
+import { isNull, isNullOrUndefined, isString, isUndefined } from "./env";
 
 /**
  * 处理请求头中的 Authorization，如果是 refresh_token 则隐藏凭证并更新本地存储

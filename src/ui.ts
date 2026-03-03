@@ -3,7 +3,7 @@ import { db } from "./db";
 import { DownloadType, PageType, ToastType } from "./enum";
 import { isNullOrUndefined, delay, stringify } from "./env";
 import { renderNode, unlimitedFetch } from "./extension";
-import { check, getAuth, refreshToken, newToast, toastNode, aria2TaskCheckAndRestart, parseVideoInfo, addDownloadTask, analyzeDownloadTask, pushDownloadTask } from "./function";
+import { check, getAuth, refreshToken, newToast, toastNode, aria2TaskCheckAndRestart, parseVideoInfo, addDownloadTask, analyzeDownloadTask, pushDownloadTask, deletePlaylist } from "./function";
 import { originalNodeAppendChild, originalConsole, originalAddEventListener } from "./hijack";
 import { i18nList } from "./i18n";
 import { editConfig, getPageType, isLoggedIn, pageSelectButtons, rating, selectList } from "./main";
@@ -369,7 +369,15 @@ export class configEdit {
             ...proxyConfigInput
         ]
         let iwaradlConfigInput = [
-            this.inputComponent('iwaradlPath'),
+            this.inputComponent('iwaradlPath', 'text', renderNode({
+                nodeType: 'a',
+                childs: '%#iwaradlLink#%',
+                className: 'rainbow-text',
+                attributes: {
+                    style: 'float: inline-end;',
+                    href: 'https://github.com/Izumiko/iwaradl'
+                }
+            })),
             this.inputComponent('iwaradlToken', 'password'),
             ...proxyConfigInput
         ]
@@ -631,6 +639,10 @@ export class menu {
             aria2TaskCheckAndRestart()
         })
         config.experimentalFeatures && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
+
+        let playlistDeleteButton = this.button('playlistDelete', (name, event) => {
+            deletePlaylist()
+        })
 
         switch (this.pageType) {
             case PageType.Video:

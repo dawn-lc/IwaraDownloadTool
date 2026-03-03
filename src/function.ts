@@ -605,6 +605,19 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         return
     }
 }
+export async function deletePlaylist() {
+    let title = unsafeWindow.document.querySelector('div.page-playlist__details > div.text.text--h3.text--bold')!.textContent
+    let id = unsafeWindow.location.href.toLowerCase().split('/').slice(1)[1];
+    if ((await unlimitedFetch(`https://apiq.iwara.tv/playlist`, {
+        method: 'DELETE',
+        headers: await getAuth(),
+        body: JSON.stringify({
+            title
+        })
+    })).ok) {
+        newToast(ToastType.Info, { text: `${title} %#deleteSucceed#%`, close: true }).show()
+    }
+}
 /**
  * 检查并重启异常的Aria2下载任务
  */
