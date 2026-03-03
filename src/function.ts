@@ -5,7 +5,7 @@ import { ToastType, DownloadType } from "./enum"
 import { config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Dictionary, Path } from "./class"
-import { isLoggedIn, selectList } from "./main"
+import { domain, isLoggedIn, selectList } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 import { originalConsole } from "./hijack";
 import { db } from "./db";
@@ -69,10 +69,12 @@ export async function refreshToken(): Promise<string> {
  */
 export async function getAuth(url?: string): Promise<{ Cooike: string; Authorization: string; } & { 'X-Version': string; }> {
     return prune({
+        'Referer': `${window.location.origin}/`,
         'Accept': 'application/json',
         'Cooike': unsafeWindow.document.cookie,
         'Authorization': isLoggedIn() ? `Bearer ${localStorage.getItem('accessToken') ?? await refreshToken()}` : undefined,
-        'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined
+        'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined,
+        'X-Site': unsafeWindow.location.hostname
     })
 }
 /**
@@ -458,7 +460,7 @@ export function iwaradlDownload(videoInfo: FullVideoInfo) {
                     'authorization': `Bearer ${config.iwaradlToken}`
                 },
                 body: JSON.stringify(prune({
-                    "urls": [`https://www.iwara.tv/video/${videoInfo.ID}`],
+                    "urls": [`https://www.${domain}/video/${videoInfo.ID}`],
                     'options': {
                         'proxy_url': proxyURL ? proxyURL.href : undefined,
                         'cookies': unsafeWindow.document.cookie,
@@ -1265,7 +1267,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                             node: toastBody,
                             close: config.autoCopySaveFileName,
                             onClick() {
-                                GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
+                                GM_openInTab(`https://www.${domain}/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                                 if (config.autoCopySaveFileName) {
                                     GM_setClipboard(getDownloadPath(videoInfo).fullName, "text")
                                     toastBody.appendChild(renderNode({

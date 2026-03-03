@@ -16,11 +16,9 @@ import { configEdit, injectCheckbox, menu, uninjectCheckbox, waterMark } from ".
 import { PageType, ToastType, VersionState } from "./enum";
 import { createInterceptedFetch } from "./fetchInterceptor";
 
-
-
 import { getDomain } from "tldts";
 var officialWhiteList = ['iwara.tv', 'iwara.zip', 'iwara.shop', 'iwara.ai']
-var domain = getDomain(unsafeWindow.location.href) ?? ''
+export var domain = getDomain(unsafeWindow.location.href) ?? ''
 if (!officialWhiteList.includes(domain) && unsafeWindow.location.hostname.includes('iwara')) {
     // @ts-ignore
     XMLHttpRequest.prototype.open = undefined
@@ -35,7 +33,7 @@ if (!officialWhiteList.includes(domain) && unsafeWindow.location.hostname.includ
         throw "Not official"
     }
 }
-if (domain !== "iwara.tv") {
+if (domain !== "iwara.tv" && domain !== "iwara.ai") {
     throw "Not target"
 }
 
