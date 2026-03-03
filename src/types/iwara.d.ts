@@ -56,6 +56,17 @@ declare namespace Iwara {
         results: IResult[]
     }
 
+    interface Playlist extends IResult {
+        playlist: {
+            id: string;
+            title: string;
+            thumbnail: string | null;
+            numVideos: number;
+            user: User;
+            siteId: string;
+        };
+    }
+
     interface IResult {
         id?: string
         createdAt?: string

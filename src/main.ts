@@ -19,7 +19,7 @@ import { createInterceptedFetch } from "./fetchInterceptor";
 
 
 import { getDomain } from "tldts";
-var officialWhiteList = ['iwara.tv', 'iwara.zip', 'iwara.shop']
+var officialWhiteList = ['iwara.tv', 'iwara.zip', 'iwara.shop', 'iwara.ai']
 var domain = getDomain(unsafeWindow.location.href) ?? ''
 if (!officialWhiteList.includes(domain) && unsafeWindow.location.hostname.includes('iwara')) {
     // @ts-ignore
