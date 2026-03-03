@@ -131,7 +131,37 @@ declare type DebounceOptions = {
      */
     immediate?: boolean
 }
-
+declare enum DownloadType {
+    Aria2,
+    Iwaradl,
+    Browser,
+    Others
+}
+declare interface ImportConfig {
+    language: string;
+    autoFollow: boolean;
+    autoLike: boolean;
+    autoCopySaveFileName: boolean;
+    autoDownloadMetadata: boolean;
+    enableUnsafeMode: boolean;
+    experimentalFeatures: boolean;
+    autoInjectCheckbox: boolean;
+    checkDownloadLink: boolean;
+    filterLikedVideos: boolean;
+    checkPriority: boolean;
+    addUnlistedAndPrivate: boolean;
+    downloadPriority: keyof Record<string, number>;
+    downloadType: DownloadType;
+    downloadPath: string;
+    downloadProxy: string;
+    downloadProxyUsername: string;
+    downloadProxyPassword: string;
+    aria2Path: string;
+    aria2Token: string;
+    iwaradlPath: string;
+    iwaradlToken: string;
+    priority: Record<string, number>;
+}
 /**
  * 本地路径信息接口
  * 描述文件路径的各个组成部分

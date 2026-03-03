@@ -2,7 +2,7 @@ import "./env";
 import { delay, isArray, isConvertibleToNumber, isNullOrUndefined, isString, isVideoInfo, prune, stringify, UUID } from "./env"
 import { i18nList } from "./i18n"
 import { ToastType, DownloadType } from "./enum"
-import { config } from "./config"
+import { Config, config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Dictionary, Path } from "./class"
 import { domain, isLoggedIn, selectList } from "./main"
@@ -607,19 +607,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         return
     }
 }
-export async function deletePlaylist() {
-    let title = unsafeWindow.document.querySelector('div.page-playlist__details > div.text.text--h3.text--bold')!.textContent
-    let id = unsafeWindow.location.href.toLowerCase().split('/').slice(1)[1];
-    if ((await unlimitedFetch(`https://apiq.iwara.tv/playlist`, {
-        method: 'DELETE',
-        headers: await getAuth(),
-        body: JSON.stringify({
-            title
-        })
-    })).ok) {
-        newToast(ToastType.Info, { text: `${title} %#deleteSucceed#%`, close: true }).show()
-    }
-}
+
 /**
  * 检查并重启异常的Aria2下载任务
  */
@@ -1034,6 +1022,58 @@ function othersDownloadMetadata(videoInfo: FullVideoInfo): void {
     downloadHandle.remove();
     URL.revokeObjectURL(url);
 }
+
+export async function importConfig() {
+    let textArea = renderNode({
+        nodeType: "textarea",
+        attributes: {
+            placeholder: i18nList[config.language].importConfig,
+            style: 'margin-bottom: 10px;',
+            rows: "16",
+            cols: "96"
+        }
+    })
+    let body = renderNode({
+        nodeType: "div",
+        attributes: {
+            id: "pluginOverlay"
+        },
+        childs: [
+            textArea,
+            {
+                nodeType: "button",
+                events: {
+                    click: (e: Event) => {
+                        if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
+                            try {
+                                let tempConfig = JSON.parse(textArea.value)
+                                if (!tempConfig || typeof tempConfig !== 'object') {
+                                    throw "配置校验失败"
+                                }
+                                Config.initInstance(tempConfig)
+                                unsafeWindow.location.reload()
+                            } catch (error) {
+                                newToast(ToastType.Error, {
+                                    node: renderNode({
+                                        nodeType: 'p',
+                                        childs: [
+                                            "%#importConfigFail#%",
+                                            stringify(error)
+                                        ]
+                                    })
+                                }).show()
+                            }
+                        }
+                        body.remove()
+                    }
+                },
+                childs: i18nList[config.language].ok
+            }
+        ]
+    })
+    unsafeWindow.document.body.appendChild(body)
+}
+
 export async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
