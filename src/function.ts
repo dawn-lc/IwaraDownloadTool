@@ -2,10 +2,10 @@ import "./env";
 import { delay, isArray, isConvertibleToNumber, isNullOrUndefined, isString, isVideoInfo, prune, stringify, UUID } from "./env"
 import { i18nList } from "./i18n"
 import { ToastType, DownloadType } from "./enum"
-import { config } from "./config"
+import { Config, config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Dictionary, Path } from "./class"
-import { isLoggedIn, selectList } from "./main"
+import { domain, isLoggedIn, selectList } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 import { originalConsole } from "./hijack";
 import { db } from "./db";
@@ -69,10 +69,12 @@ export async function refreshToken(): Promise<string> {
  */
 export async function getAuth(url?: string): Promise<{ Cooike: string; Authorization: string; } & { 'X-Version': string; }> {
     return prune({
+        'Referer': `${window.location.origin}/`,
         'Accept': 'application/json',
         'Cooike': unsafeWindow.document.cookie,
         'Authorization': isLoggedIn() ? `Bearer ${localStorage.getItem('accessToken') ?? await refreshToken()}` : undefined,
-        'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined
+        'X-Version': !isNullOrUndefined(url) && !url.isEmpty() ? await getXVersion(url) : undefined,
+        'X-Site': unsafeWindow.location.hostname
     })
 }
 /**
@@ -458,7 +460,7 @@ export function iwaradlDownload(videoInfo: FullVideoInfo) {
                     'authorization': `Bearer ${config.iwaradlToken}`
                 },
                 body: JSON.stringify(prune({
-                    "urls": [`https://www.iwara.tv/video/${videoInfo.ID}`],
+                    "urls": [`https://www.${domain}/video/${videoInfo.ID}`],
                     'options': {
                         'proxy_url': proxyURL ? proxyURL.href : undefined,
                         'cookies': unsafeWindow.document.cookie,
@@ -605,19 +607,7 @@ export function aria2TaskExtractVideoID(task: Aria2.Status): string | undefined 
         return
     }
 }
-export async function deletePlaylist() {
-    let title = unsafeWindow.document.querySelector('div.page-playlist__details > div.text.text--h3.text--bold')!.textContent
-    let id = unsafeWindow.location.href.toLowerCase().split('/').slice(1)[1];
-    if ((await unlimitedFetch(`https://apiq.iwara.tv/playlist`, {
-        method: 'DELETE',
-        headers: await getAuth(),
-        body: JSON.stringify({
-            title
-        })
-    })).ok) {
-        newToast(ToastType.Info, { text: `${title} %#deleteSucceed#%`, close: true }).show()
-    }
-}
+
 /**
  * 检查并重启异常的Aria2下载任务
  */
@@ -1032,6 +1022,58 @@ function othersDownloadMetadata(videoInfo: FullVideoInfo): void {
     downloadHandle.remove();
     URL.revokeObjectURL(url);
 }
+
+export async function importConfig() {
+    let textArea = renderNode({
+        nodeType: "textarea",
+        attributes: {
+            placeholder: i18nList[config.language].importConfig,
+            style: 'margin-bottom: 10px;',
+            rows: "16",
+            cols: "96"
+        }
+    })
+    let body = renderNode({
+        nodeType: "div",
+        attributes: {
+            id: "pluginOverlay"
+        },
+        childs: [
+            textArea,
+            {
+                nodeType: "button",
+                events: {
+                    click: (e: Event) => {
+                        if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
+                            try {
+                                let tempConfig = JSON.parse(textArea.value)
+                                if (!tempConfig || typeof tempConfig !== 'object') {
+                                    throw "配置校验失败"
+                                }
+                                Config.initInstance(tempConfig)
+                                unsafeWindow.location.reload()
+                            } catch (error) {
+                                newToast(ToastType.Error, {
+                                    node: renderNode({
+                                        nodeType: 'p',
+                                        childs: [
+                                            "%#importConfigFail#%",
+                                            stringify(error)
+                                        ]
+                                    })
+                                }).show()
+                            }
+                        }
+                        body.remove()
+                    }
+                },
+                childs: i18nList[config.language].ok
+            }
+        ]
+    })
+    unsafeWindow.document.body.appendChild(body)
+}
+
 export async function addDownloadTask() {
     let textArea = renderNode({
         nodeType: "textarea",
@@ -1265,7 +1307,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                             node: toastBody,
                             close: config.autoCopySaveFileName,
                             onClick() {
-                                GM_openInTab(`https://www.iwara.tv/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
+                                GM_openInTab(`https://www.${domain}/video/${videoInfo.ID}`, { active: false, insert: true, setParent: true })
                                 if (config.autoCopySaveFileName) {
                                     GM_setClipboard(getDownloadPath(videoInfo).fullName, "text")
                                     toastBody.appendChild(renderNode({

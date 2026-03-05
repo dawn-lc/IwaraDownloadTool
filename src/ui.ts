@@ -3,7 +3,7 @@ import { db } from "./db";
 import { DownloadType, PageType, ToastType } from "./enum";
 import { isNullOrUndefined, delay, stringify } from "./env";
 import { renderNode, unlimitedFetch } from "./extension";
-import { check, getAuth, refreshToken, newToast, toastNode, aria2TaskCheckAndRestart, parseVideoInfo, addDownloadTask, analyzeDownloadTask, pushDownloadTask, deletePlaylist } from "./function";
+import { check, getAuth, refreshToken, newToast, toastNode, aria2TaskCheckAndRestart, parseVideoInfo, addDownloadTask, analyzeDownloadTask, pushDownloadTask, importConfig } from "./function";
 import { originalNodeAppendChild, originalConsole, originalAddEventListener } from "./hijack";
 import { i18nList } from "./i18n";
 import { editConfig, getPageType, isLoggedIn, pageSelectButtons, rating, selectList } from "./main";
@@ -118,6 +118,7 @@ export class configEdit {
         this.interfacePage = renderNode({
             nodeType: 'p'
         })
+
         let save = renderNode({
             nodeType: 'button',
             childs: '%#save#%',
@@ -570,10 +571,26 @@ export class menu {
                 }
             ).show()
         })
+        let importConfigButton = this.button('importConfig', (name, event) => {
+            importConfig()
+        })
+        renderNode({
+            nodeType: 'button',
+            childs: '%#importConfig#%',
+            attributes: {
+                title: i18nList[config.language].save
+            },
+            events: {
+                click: async () => {
+
+                }
+            }
+        })
 
         let baseButtons = [
             manualDownloadButton,
             exportConfigButton,
+            importConfigButton,
             settingsButton
         ];
 
@@ -639,10 +656,6 @@ export class menu {
             aria2TaskCheckAndRestart()
         })
         config.experimentalFeatures && originalNodeAppendChild.call(this.interfacePage, aria2TaskCheckButton)
-
-        let playlistDeleteButton = this.button('playlistDelete', (name, event) => {
-            deletePlaylist()
-        })
 
         switch (this.pageType) {
             case PageType.Video:
