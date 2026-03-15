@@ -12,6 +12,8 @@
     "iwaradlToken": "iwaradl トークン: ",
     "experimentalFeatures": "実験的機能",
     "enableUnsafeMode": "アンセーフモード（自己責任で使用）",
+    "enableBeautify": "美化",
+    "enableWidescreen": "ワイドスクリーン適応",
     "rename": "名前変更",
     "save": "保存",
     "reset": "リセット",
@@ -45,6 +47,7 @@
     "browserDownloadUnknownError": "不明なエラー。ダウンロード時に提供されたパラメータに問題がある可能性があります。ファイル名が有効か確認してください！",
     "browserDownloadTimeout": "ダウンロードがタイムアウトしました。ネットワーク環境を確認してください！",
     "variable": "→ 利用可能な変数を表示 ←",
+    "iwaradlLink": "→ iwaradl 公式サイト ←",
     "downloadTime": "ダウンロード時間 ",
     "uploadTime": "公開時間 ",
     "example": "例: ",
@@ -73,11 +76,7 @@
         {
             "nodeType": "br"
         },
-        "バッチ選択または選択解除時の複数タブ間の同期問題を解決しました。",
-        {
-            "nodeType": "br"
-        },
-        "セキュリティチェックを追加。このスクリプトはリスクのあるサイトでは機能モジュールの読み込みを拒否します。"
+        "ビデオカード美化とワイドスクリーン適応を内蔵"
     ],
     "useHelpForBase": [
         "使用ガイドをよくお読みください！",
@@ -128,7 +127,10 @@
     "copySucceed": "コピー成功！",
     "pushTaskSucceed": "ダウンロードタスクのプッシュ成功！",
     "exportConfig": "設定をエクスポート",
+    "importConfig": "設定をインポート",
     "exportConfigSucceed": "設定がクリップボードにエクスポートされました！",
+    "importConfigSucceed": "設定のインポートが成功しました！",
+    "importConfigFail": "設定のインポートに失敗しました！",
     "connectionTest": "接続テスト",
     "settingsCheck": "設定チェック",
     "createTask": "タスク作成",
@@ -142,6 +144,7 @@
     "parsingProgress": "解析進捗: ",
     "manualDownloadTips": "個別ダウンロードはここに動画IDを直接入力してください。バッチダウンロードは「|」で区切った動画IDを提供してください。例: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\nまたは、以下の形式のオブジェクトの配列をJSON文字列で提供してください\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\n例: \r\n[{ key: \"AeGUIRO2D5vQ6F\", value: { Title: \"237知更鳥\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" } },{ key: \"qQsUMJa19LcK3L\", value: { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation's Symphony\", Author: \"temptations_symphony\" } }]",
     "externalVideo": "外部動画",
+    "playlistDelete": "プレイリストを削除",
     "noAvailableVideoSource": "利用可能な動画ソースがありません",
     "videoSourceNotAvailable": "動画ソースURLが利用できません",
     "getVideoSourceFailed": "動画ソースの取得に失敗しました",
