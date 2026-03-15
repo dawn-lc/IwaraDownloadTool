@@ -4,6 +4,8 @@ if (unsafeWindow.IwaraDownloadTool) {
 unsafeWindow.IwaraDownloadTool = true;
 
 import mainCSS from "./css/main.css";
+import beautifyCSS from "./css/beautify.css";
+import widescreenCSS from "./css/widescreen.css"
 import { isNullOrUndefined, stringify } from "./env";
 import { i18nList } from "./i18n";
 import { config, Config } from "./config";
@@ -292,6 +294,8 @@ async function main() {
             o.disconnect()
         }
     }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
+    config.enableBeautify && GM_addStyle(beautifyCSS)
+    config.enableWidescreen && GM_addStyle(widescreenCSS)
     if (isLoggedIn()) {
         let localUser = (await (await unlimitedFetch('https://apiq.iwara.tv/user', {
             method: 'GET',

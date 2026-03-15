@@ -195,6 +195,8 @@ export class configEdit {
                         this.switchButton('addUnlistedAndPrivate'),
                         this.switchButton('experimentalFeatures'),
                         this.switchButton('enableUnsafeMode'),
+                        this.switchButton('enableWidescreen'),
+                        this.switchButton('enableBeautify'),
                         this.switchButton('isDebug', GM_getValue, (name: string, e) => {
                             GM_setValue(name, (e.target as HTMLInputElement).checked)
                             unsafeWindow.location.reload()
