@@ -11,6 +11,8 @@ const DEFAULT_CONFIG: ImportConfig = {
     autoCopySaveFileName: false,
     autoDownloadMetadata: false,
     enableUnsafeMode: false,
+    enableBeautify: false,
+    enableWidescreen: false,
     experimentalFeatures: false,
     autoInjectCheckbox: true,
     checkDownloadLink: false,
@@ -46,6 +48,8 @@ export class Config {
     autoDownloadMetadata: boolean = DEFAULT_CONFIG.autoDownloadMetadata
     addUnlistedAndPrivate: boolean = DEFAULT_CONFIG.addUnlistedAndPrivate
     enableUnsafeMode: boolean = DEFAULT_CONFIG.enableUnsafeMode
+    enableBeautify: boolean = DEFAULT_CONFIG.enableBeautify
+    enableWidescreen: boolean = DEFAULT_CONFIG.enableWidescreen
     experimentalFeatures: boolean = DEFAULT_CONFIG.experimentalFeatures
     autoInjectCheckbox: boolean = DEFAULT_CONFIG.autoInjectCheckbox
     autoCopySaveFileName: boolean = DEFAULT_CONFIG.autoCopySaveFileName

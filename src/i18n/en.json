@@ -12,6 +12,8 @@
     "iwaradlToken": "iwaradl Token: ",
     "experimentalFeatures": "Experimental Features",
     "enableUnsafeMode": "Unsafe Mode (Use at your own risk)",
+    "enableBeautify": "Beautify",
+    "enableWidescreen": "Widescreen Adaptation",
     "rename": "Rename",
     "save": "Save",
     "reset": "Reset",
@@ -45,6 +47,7 @@
     "browserDownloadUnknownError": "Unknown error, possibly due to invalid download parameters. Please check if the filename is valid!",
     "browserDownloadTimeout": "Download timed out. Please check your network connection!",
     "variable": "View available variables",
+    "iwaradlLink": "→ iwaradl Official Website ←",
     "downloadTime": "Download Time ",
     "uploadTime": "Upload Time ",
     "example": "Example: ",
@@ -73,11 +76,7 @@
         {
             "nodeType": "br"
         },
-        "Fixed the issue of batch selection or deselection not synchronizing across multiple tabs.",
-        {
-            "nodeType": "br"
-        },
-        "Added security checks. This script will refuse to load functional modules on risky websites."
+        "Built-in video card beautification and widescreen adaptation"
     ],
     "useHelpForBase": [
         "Please read the usage guide carefully!",
@@ -128,7 +127,10 @@
     "copySucceed": "Copy succeeded!",
     "pushTaskSucceed": "Task pushed successfully!",
     "exportConfig": "Export Configuration",
+    "importConfig": "Import Configuration",
     "exportConfigSucceed": "Configuration exported to clipboard!",
+    "importConfigSucceed": "Configuration imported successfully!",
+    "importConfigFail": "Configuration import failed!",
     "connectionTest": "Connection Test",
     "settingsCheck": "Settings Check",
     "createTask": "Create Task",
@@ -142,6 +144,7 @@
     "parsingProgress": "Parsing Progress: ",
     "manualDownloadTips": "For individual downloads, input the video ID here. For batch downloads, separate video IDs with \"|\". Example: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\nOr provide an array of objects in JSON format matching the following structure:\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\nExample: \r\n[{ key: \"AeGUIRO2D5vQ6F\", value: { Title: \"237 Robin\", Alias: \"Riding Cow Chasing Weaving Maiden\", Author: \"user1528210\" } },{ key: \"qQsUMJa19LcK3L\", value: { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation's Symphony\", Author: \"temptations_symphony\" } }]",
     "externalVideo": "External Video",
+    "playlistDelete": "Delete Playlist",
     "noAvailableVideoSource": "No available video sources",
     "videoSourceNotAvailable": "Video source URL unavailable",
     "getVideoSourceFailed": "Failed to get video source",

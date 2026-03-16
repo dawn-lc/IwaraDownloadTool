@@ -144,6 +144,8 @@ declare interface ImportConfig {
     autoCopySaveFileName: boolean;
     autoDownloadMetadata: boolean;
     enableUnsafeMode: boolean;
+    enableBeautify: boolean;
+    enableWidescreen: boolean;
     experimentalFeatures: boolean;
     autoInjectCheckbox: boolean;
     checkDownloadLink: boolean;

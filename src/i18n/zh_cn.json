@@ -12,6 +12,8 @@
     "iwaradlToken": "iwaradl 密钥: ",
     "experimentalFeatures": "实验性功能",
     "enableUnsafeMode": "激进模式（风险自行承担）",
+    "enableBeautify": "美化",
+    "enableWidescreen": "宽屏适配",
     "rename": "重命名",
     "save": "保存",
     "reset": "重置",
@@ -74,7 +76,7 @@
         {
             "nodeType": "br"
         },
-        "现已支持Iwara.ai"
+        "内置视频卡片美化以及宽屏适配"
     ],
     "useHelpForBase": [
         "请认真阅读使用指南！",
