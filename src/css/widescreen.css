@@ -10,3 +10,9 @@
         max-width: 100% !important;
     }
 }
+
+.videoTeaser__title,
+.videoTeaser__byline {
+    line-clamp: 1 !important;
+    -webkit-line-clamp: 1 !important;
+}

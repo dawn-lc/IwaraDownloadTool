@@ -260,6 +260,8 @@ async function main() {
         }
         return
     }
+    config.enableBeautify && GM_addStyle(beautifyCSS)
+    config.enableWidescreen && GM_addStyle(widescreenCSS)
     if (!await check()) {
         newToast(ToastType.Info, {
             text: `%#configError#%`,
@@ -294,8 +296,7 @@ async function main() {
             o.disconnect()
         }
     }).observe(unsafeWindow.document.body, { childList: true, subtree: true })
-    config.enableBeautify && GM_addStyle(beautifyCSS)
-    config.enableWidescreen && GM_addStyle(widescreenCSS)
+
     if (isLoggedIn()) {
         let localUser = (await (await unlimitedFetch('https://apiq.iwara.tv/user', {
             method: 'GET',
