@@ -52,7 +52,7 @@ async function handleUserTokenResponse(response: Response): Promise<void> {
 
 
 /**
- * 处理 /videos 响应，更新数据库并可能修改返回结果
+ * 处理 /videos 响应，更新数据库并修改返回结果
  */
 async function handleVideosResponse(response: Response, url: URL): Promise<Response> {
     const cloneResponse = response.clone();
@@ -85,6 +85,11 @@ async function handleVideosResponse(response: Response, url: URL): Promise<Respo
         cloneBody.results = rawVideos.filter(i => !i.liked);
     }
 
+    // 强制解除时间线翻页限制
+    if (config.enableUnsafeMode) {
+        cloneBody.count += cloneBody.count;
+    }
+
     // 添加未列出和私有视频缓存
     if (!config.addUnlistedAndPrivate) return response;
 
@@ -108,10 +113,6 @@ async function handleVideosResponse(response: Response, url: URL): Promise<Respo
 
     cloneBody.results.push(...cacheVideos);
 
-    // 强制开启时间线翻页
-    if (config.enableUnsafeMode) {
-        cloneBody.count += cloneBody.count;
-    }
 
     cloneBody.count += cacheVideos.length;
     cloneBody.limit += cacheVideos.length;
