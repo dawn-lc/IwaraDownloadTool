@@ -1,3 +1,4 @@
+.page-profile__content *>.col-6.col-sm-4.col-lg-3,
 .moreFromUser__item,
 .moreLikeThis__item {
     margin-bottom: 2%;
@@ -8,9 +9,14 @@
     flex-direction: column;
     height: 100%;
     border-radius: 6px;
-    border: 2px solid color-mix(in srgb, var(--text) 40%, transparent);
+    border: 2px solid color-mix(in srgb, var(--text) 20%, transparent);
     overflow: hidden;
-    background-color: var(--body);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    background-color: var(--body-alt);
+}
+
+.videoTeaser:hover {
+    background-color: color-mix(in srgb, var(--body-alt) 90%, var(--text));
 }
 
 .videoTeaser__content {

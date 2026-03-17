@@ -107,6 +107,12 @@ async function handleVideosResponse(response: Response, url: URL): Promise<Respo
         .map(i => i.RAW);
 
     cloneBody.results.push(...cacheVideos);
+
+    // 强制开启时间线翻页
+    if (config.enableUnsafeMode) {
+        cloneBody.count += cloneBody.count;
+    }
+
     cloneBody.count += cacheVideos.length;
     cloneBody.limit += cacheVideos.length;
 

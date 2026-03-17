@@ -3,10 +3,22 @@
     max-width: 85% !important;
 }
 
+.videoTeaser__title,
+.videoTeaser__byline {
+    line-clamp: 1 !important;
+    -webkit-line-clamp: 1 !important;
+}
+
 @media (max-width: 720px) {
 
     .container,
     .container-fluid {
         max-width: 100% !important;
+    }
+
+    .videoTeaser__title,
+    .videoTeaser__byline {
+        line-clamp: 2 !important;
+        -webkit-line-clamp: 2 !important;
     }
 }
