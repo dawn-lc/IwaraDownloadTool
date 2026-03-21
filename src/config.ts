@@ -5,7 +5,7 @@ import { originalConsole } from "./hijack";
 import { DownloadType } from "./enum";
 import { i18nList } from "./i18n";
 const DEFAULT_CONFIG: ImportConfig = {
-    language: 'zh_cn',
+    language: 'zh',
     autoFollow: false,
     autoLike: false,
     autoCopySaveFileName: false,
