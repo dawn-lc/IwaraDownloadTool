@@ -115,7 +115,8 @@ export function checkIsHaveDownloadLink(comment: string): boolean {
         'fikper.com',
         'frdl.io',
         'rg.to',
-        'gigafile.nu'
+        'gigafile.nu',
+        'mediafire.com'
     ].filter(i => comment.toLowerCase().includes(i)).any()
 }
 /**
