@@ -83,24 +83,28 @@ async function handleVideosResponse(response: Response, url: URL): Promise<Respo
     // 过滤已点赞视频
     if (config.filterLikedVideos) {
         cloneBody.results = rawVideos.filter(i => !i.liked);
+
+        cloneBody.limit = cloneBody.results.length;
+        cloneBody.count = cloneBody.limit * (cloneBody.page + 1) + 1;
     }
 
-    // 强制解除时间线翻页限制
-    if (config.enableUnsafeMode) {
-        cloneBody.count += cloneBody.count;
-    }
+    let preResponse = new Response(JSON.stringify(cloneBody), {
+        status: cloneResponse.status,
+        statusText: cloneResponse.statusText,
+        headers: Object.fromEntries(cloneResponse.headers.entries())
+    });
 
     // 添加未列出和私有视频缓存
-    if (!config.addUnlistedAndPrivate) return response;
+    if (!config.addUnlistedAndPrivate) return preResponse;
 
     // 检查是否满足添加缓存的条件
-    if (url.searchParams.has('user')) return response;
-    if (url.searchParams.has('subscribed')) return response;
-    if (url.searchParams.has('sort') && url.searchParams.get('sort') !== 'date') return response;
+    if (url.searchParams.has('user')) return preResponse;
+    if (url.searchParams.has('subscribed')) return preResponse;
+    if (url.searchParams.has('sort') && url.searchParams.get('sort') !== 'date') return preResponse;
 
     // 获取时间范围并添加缓存视频
     const sortedList = list.sort((a, b) => a.UploadTime - b.UploadTime);
-    if (sortedList.length === 0) return response;
+    if (sortedList.length === 0) return preResponse;
     const minTime = sortedList[0].UploadTime;
     const maxTime = sortedList[sortedList.length - 1].UploadTime;
     const startTime = new Date(minTime).sub({ hours: 4 }).getTime();
@@ -114,14 +118,17 @@ async function handleVideosResponse(response: Response, url: URL): Promise<Respo
     cloneBody.results.push(...cacheVideos);
 
 
-    cloneBody.count += cacheVideos.length;
-    cloneBody.limit += cacheVideos.length;
+    cloneBody.limit = cloneBody.results.length;
+    cloneBody.count = cloneBody.limit * (cloneBody.page + 1) + 1;
 
-    return new Response(JSON.stringify(cloneBody), {
+
+    preResponse = new Response(JSON.stringify(cloneBody), {
         status: cloneResponse.status,
         statusText: cloneResponse.statusText,
         headers: Object.fromEntries(cloneResponse.headers.entries())
     });
+
+    return preResponse
 }
 
 /**
