@@ -846,6 +846,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 }
         }
     } catch (error) {
+        GM_getValue("isDebug") && originalConsole.debug("[Debug]", error);
         newToast(
             ToastType.Error,
             {
