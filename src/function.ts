@@ -826,7 +826,10 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                         maxRetries: 3,
                         failStatuses: [403, 404],
                         retryDelay: 1000,
-                        onRetry: async () => { await refreshToken() }
+                        onRetry: async () => { await refreshToken() },
+                        onFail: async (response) => {
+                            GM_getValue("isDebug") && originalConsole.debug("[Debug]", `${response.url} Fail, response: ${response.text()}`);
+                        }
                     }
                 )).json() as Iwara.IResult
                 if (isNullOrUndefined(sourceResult.id)) {
@@ -846,7 +849,6 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 }
         }
     } catch (error) {
-        GM_getValue("isDebug") && originalConsole.debug("[Debug]", error);
         newToast(
             ToastType.Error,
             {
