@@ -828,7 +828,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                         retryDelay: 1000,
                         onRetry: async () => { await refreshToken() },
                         onFail: async (response) => {
-                            GM_getValue("isDebug") && originalConsole.debug("[Debug]", `${response.url} Fail, response: ${response.text()}`);
+                            GM_getValue("isDebug") && originalConsole.debug("[Debug]", `${response.url} Fail, response: ${await response.text()}`);
                         }
                     }
                 )).json() as Iwara.IResult
