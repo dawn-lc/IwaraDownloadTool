@@ -1,0 +1,15 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "types": [
+            "tampermonkey",
+            "node"
+        ]
+    },
+    "include": [
+        "./**/*.ts",
+        "../src/types/*.d.ts"
+    ]
+}

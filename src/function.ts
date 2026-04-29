@@ -5,7 +5,7 @@ import { ToastType, DownloadType } from "./enum"
 import { Config, config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Dictionary, Path } from "./class"
-import { domain, isLoggedIn, selectList } from "./main"
+import { domain, apiEndpoint, isLoggedIn, selectList } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 import { originalConsole } from "./hijack";
 import { db } from "./db";
@@ -26,7 +26,7 @@ export async function refreshToken(): Promise<string> {
     const oldAccessToken = localStorage.getItem('accessToken');
     try {
         const res = await unlimitedFetch(
-            'https://apiq.iwara.tv/user/token',
+            `https://${apiEndpoint}/user/token`,
             {
                 method: 'POST',
                 headers: {
@@ -780,7 +780,7 @@ async function getXVersion(urlString: string): Promise<string> {
 
 
 async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
-    return await (await unlimitedFetch(`https://apiq.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
+    return await (await unlimitedFetch(`https://${apiEndpoint}/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
 }
 async function getCommentDatas(id: string, commentID?: string): Promise<Iwara.Comment[]> {
     let comments: Iwara.Comment[] = []
@@ -817,7 +817,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
             case "full":
                 GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse full source`)
                 let sourceResult = await (await unlimitedFetch(
-                    `https://apiq.iwara.tv/video/${info.ID}`,
+                    `https://${apiEndpoint}/video/${info.ID}`,
                     {
                         headers: await getAuth()
                     },
@@ -828,7 +828,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                         retryDelay: 1000,
                         onRetry: async () => { await refreshToken() },
                         onFail: async (response) => {
-                            GM_getValue("isDebug") && originalConsole.debug("[Debug]", `${response.url} Fail, response: ${await response.text()}`);
+                            GM_getValue("isDebug") && originalConsole.debug("[Debug]", `${response.url} Fail, response: ${await response.clone().text()}`);
                         }
                     }
                 )).json() as Iwara.IResult
@@ -1257,7 +1257,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 const authorInfo = await db.getFollowById(videoInfo.AuthorID);
                 if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
                     await unlimitedFetch(
-                        `https://apiq.iwara.tv/user/${videoInfo.AuthorID}/followers`,
+                        `https://${apiEndpoint}/user/${videoInfo.AuthorID}/followers`,
                         {
                             method: 'POST',
                             headers: await getAuth()
@@ -1279,7 +1279,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 }
                 if (config.autoLike && !videoInfo.Liked) {
                     await unlimitedFetch(
-                        `https://apiq.iwara.tv/video/${videoInfo.ID}/like`,
+                        `https://${apiEndpoint}/video/${videoInfo.ID}/like`,
                         {
                             method: 'POST',
                             headers: await getAuth()

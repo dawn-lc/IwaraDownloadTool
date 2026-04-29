@@ -4,6 +4,12 @@
     margin-bottom: 2%;
 }
 
+@media (max-width: 720px) {
+    .page-videoList__item {
+        padding: 0 6px 0 2px !important;
+    }
+}
+
 .videoTeaser {
     display: flex;
     flex-direction: column;
