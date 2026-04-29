@@ -126,6 +126,227 @@ emojiTestGroup.add(new Test('肤色修饰符', 'async', function () {
     this.assertEqual(result, '___');
 }));
 
+// ============ Unicode分类: 心形符号变体 (Heart Variants) ============
+// Unicode范围: U+2764(U+FE0F), U+1F493-U+1F49F, U+1F5A4, U+1F90D, U+1FA75-1FA79
+// 覆盖: 真实文件名中的 💕💖💘💓💞🤍💜🖤❤️
+
+emojiTestGroup.add(new Test('心形符号变体-全部替换', 'async', function () {
+    const template = '💕💖💘💓💞🤍💜🖤❤️❤';
+    const result = template.replaceEmojis('_');
+    this.assertEqual(result, '__________');
+}));
+
+emojiTestGroup.add(new Test('心形符号混在文本中', 'async', function () {
+    const template = 'Love 💖 U 💘, forever 💕🤍';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, 'Love  U , forever ');
+}));
+
+emojiTestGroup.add(new Test('心形符号+变异选择器', 'async', function () {
+    const template = '❤️ vs ❤ (with and without VS16)';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, ' vs  (with and without VS16)');
+}));
+
+emojiTestGroup.add(new Test('多个心形连续排列', 'async', function () {
+    const template = '💖💘💖💘';
+    const result = template.replaceEmojis('-');
+    this.assertEqual(result, '----');
+}));
+
+emojiTestGroup.add(new Test('带黑心的混合emoji', 'async', function () {
+    const template = '😈🖤🎶';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+// ============ Unicode分类: 基础表情/人物 (Smileys & People) ============
+// Unicode范围: U+1F600-U+1F64F, U+1F470-U+1F487
+// 覆盖: 真实文件名中的 😈😇😍😊 等
+
+emojiTestGroup.add(new Test('带角恶魔/天使表情', 'async', function () {
+    const template = '😈😇👿👹👺';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('爱心眼表情', 'async', function () {
+    const template = '😍🥰😘😗😙😚';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('限制级符号', 'async', function () {
+    // 🔞 = U+1F51E (SQUARED NO UNDER EIGHTEEN) - 属于 Extended_Pictographic
+    const template = '😍🔞';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('幽灵表情', 'async', function () {
+    const template = '👻💀☠️👽👾🤖🎃';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+// ============ Unicode分类: 肤色修饰符 (Emoji Modifier Fitzpatrick) ============
+// Unicode范围: U+1F3FB-U+1F3FF 
+
+emojiTestGroup.add(new Test('全肤色范围舞者', 'async', function () {
+    const template = '💃🏻💃🏼💃🏽💃🏾💃🏿';
+    const result = template.replaceEmojis('_');
+    this.assertEqual(result, '_____');
+}));
+
+emojiTestGroup.add(new Test('肤色手指指向', 'async', function () {
+    const template = '👉🏻👈🏻';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('肤色手势', 'async', function () {
+    const template = '🤟🏻🤟🏼🤟🏽🤟🏾🤟🏿';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('肤色修饰符混在文本中', 'async', function () {
+    const template = '👉🏻👈🏻💕  Love';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '  Love');
+}));
+
+// ============ Unicode分类: ZWJ复合序列 (Zero Width Joiner Sequences) ============
+// ZWJ = U+200D
+
+emojiTestGroup.add(new Test('ZWJ红发女性', 'async', function () {
+    const template = '👩‍🦰🔪';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('ZWJ烟花火焰', 'async', function () {
+    const template = '🎇‍🔥';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('ZWJ舞伴+下划线', 'async', function () {
+    const template = '👯‍_';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '‍_');
+}));
+
+emojiTestGroup.add(new Test('ZWJ女性骑车', 'async', function () {
+    const template = '👩‍🦰👨‍🦱👧‍🦳';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+// ============ Unicode分类: 物品符号 (Objects) ============
+// Unicode范围: U+1F3XX(前U+1F4XX), U+1F5XX, U+1F6XX, U+1F9XX等
+
+emojiTestGroup.add(new Test('化妆品类符号', 'async', function () {
+    const template = '💄💋👗🎩';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('音乐/舞台类符号', 'async', function () {
+    const template = '🎤🎶🎵🎼🥁🎹';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('星/光/宝石类符号', 'async', function () {
+    const template = '✨🌠💎🌟⭐💫';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('武器工具类符号', 'async', function () {
+    const template = '🔪🗡️⚔️🔫🛡️';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('糖果食物类符号', 'async', function () {
+    const template = '🍬🍭🍫🍿🍩';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('房屋/地标类符号', 'async', function () {
+    const template = '🏘️🏠🏡🏢🏣🏤';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('医疗/身体类符号', 'async', function () {
+    const template = '🩸🩹🩺💉🪦';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('手机科技类符号', 'async', function () {
+    const template = '📱💻🖥️⌨️🖱️';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+// ============ Unicode分类: 动物/自然符号 (Animals & Nature) ============
+// Unicode范围: U+1F400-U+1F43F, U+1F330-U+1F345
+
+emojiTestGroup.add(new Test('动物爪子/兔子/小鸡', 'async', function () {
+    const template = '🐾🐰🐥🐱🐶🐼';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('植物/自然符号', 'async', function () {
+    const template = '🌸🍃🌀🔥🌺🌻🌹🌷';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+// ============ Unicode分类: 装饰符号和特殊图形 (Symbols & Decorations) ============
+// Unicode范围: U+1F7XX(几何图形), U+1F51X(标志), 以及其他扩展图形
+
+emojiTestGroup.add(new Test('紫色几何图形', 'async', function () {
+    const template = '🟣🟢🔴🟡🟠🟤';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+emojiTestGroup.add(new Test('方块标志类', 'async', function () {
+    const template = '🔞🔞🈲🈴🈵';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '');
+}));
+
+// ============ Unicode误伤保护增强: 音符类的边界测试 ============
+// ♪(U+266A) ♬(U+266B) 这些是 Musical Symbols，不属于 Emoji
+// 但它们可能在完整的 Extended_Pictographic 匹配中被误伤
+
+emojiTestGroup.add(new Test('纯音符符号不替换', 'async', function () {
+    const template = '♪♬♩♫';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '♪♬♩♫');
+}));
+
+emojiTestGroup.add(new Test('音符符号保持原文', 'async', function () {
+    const template = '_‎♪    Deep blue town';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '_‎♪    Deep blue town');
+}));
+
+// ♪不替换，但🎶(U+1F3B6)是emoji应替换
+emojiTestGroup.add(new Test('Emoji音符与文字音符区分', 'async', function () {
+    const template = '🎶♪';
+    const result = template.replaceEmojis('');
+    this.assertEqual(result, '♪');
+}));
+
 // 复杂混合测试
 emojiTestGroup.add(new Test('复杂混合场景', 'async', function () {
     const template = '会议📅 时间: 14:00 ⏰ 地点: 办公室🏢 主题: 项目🎯 进展📈';
