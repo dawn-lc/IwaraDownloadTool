@@ -129,8 +129,8 @@ esbuild.build({
     banner: {
         js: matadata
     },
-    platform: 'browser',
     loader: { '.json': 'json' },
+    platform: 'browser',
     target: [
         'es2022',
         'chrome92',
@@ -158,6 +158,7 @@ esbuild.build({
     banner: {
         js: matadata
     },
+    loader: { '.json': 'json' },
     platform: 'browser',
     target: [
         'es2022',
@@ -166,7 +167,6 @@ esbuild.build({
         'firefox90',
         'safari15.4'
     ],
-    loader: { '.json': 'json' },
     plugins: [minifyModules, inlineCSS],
     charset: 'utf8',
     ignoreAnnotations: true,

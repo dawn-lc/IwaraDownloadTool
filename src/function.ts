@@ -681,7 +681,7 @@ export async function aria2TaskCheckAndRestart() {
         .unique('id');
     let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
         .filter(
-            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete'
+            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
         )
         .unique('id');
 
@@ -943,7 +943,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 DownloadUrl = decodeURIComponent(`https:${Source}`)
 
                 GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse all comment`)
-                Comments = `${(await getCommentDatas(ID)).map(i => i.body).join('\n')}`.normalize('NFKC')
+                Comments = JSON.stringify(await getCommentDatas(ID)).normalize('NFKC')
 
                 return {
                     Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, FileName, DownloadQuality, ExternalUrl, Description, Comments, DownloadUrl, Size, Following, Unlisted, Friend
@@ -1102,26 +1102,12 @@ export async function addDownloadTask() {
                         if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
                             let list: Array<[string, VideoInfo]> = [];
                             try {
-                                const parsed = JSON.parse(textArea.value);
-                                if (Array.isArray(parsed)) {
-                                    list = parsed.map(item => {
-                                        if (Array.isArray(item) && isString(item[0]) && !item[0].isEmpty()) {
-                                            if (!isVideoInfo(item[1])) {
-                                                item[1].Type = 'init'
-                                                item[1].ID = item[1].ID ?? item[0]
-                                                item[1].UpdateTime = item[1].UpdateTime ?? Date.now()
-                                            }
-                                        }
-                                        return [...item]
-                                    }) as Array<[string, VideoInfo]>;
-                                } else {
-                                    throw new Error('解析结果不是符合预期的列表');
-                                }
-                            } catch (error) {
                                 list = textArea.value.split('|').map(ID => [ID.trim(), {
                                     Type: 'init',
                                     ID: ID.trim()
                                 }]);
+                            } catch (error) {
+                                throw new Error('解析结果不是符合预期的列表');
                             }
                             if (list.length > 0) {
                                 analyzeDownloadTask(new Dictionary<VideoInfo>(list));

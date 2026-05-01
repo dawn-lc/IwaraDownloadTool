@@ -31,7 +31,7 @@
     "addUnlistedAndPrivate": "Force display unlisted and private videos (requires following the author)",
     "parseUnlistedAndPrivate": "Parse recent unlisted and private videos",
     "checkDownloadLink": "Check third-party cloud storage download links",
-    "notOfficialWarning": "Warning: This website is not the official Iwara website. Do not enter any sensitive information!\nContinue browsing this website?",
+    "notOfficialWarning": "Warning: This website is not the official Iwara website. Do not enter any sensitive information!!! Continue browsing this website?",
     "checkPriority": "Check download quality",
     "autoDownloadMetadata": "Auto-download metadata",
     "filterLikedVideos": "Filter liked videos on timeline",
@@ -55,7 +55,7 @@
     "loadingCompleted": "Loading completed",
     "settings": "Open Settings",
     "downloadThis": "Download current video",
-    "manualDownload": "Manually specify download",
+    "manualDownload": "Manual Download",
     "aria2TaskCheck": "Aria2 Task Restart",
     "reverseSelect": "Reverse selection on this page",
     "deselectThis": "Deselect on this page",
@@ -68,15 +68,7 @@
     "configError": "There is an error in the script configuration. Please modify.",
     "alreadyKnowHowToUse": "I already know how to use it!!!",
     "notice": [
-        "Loading Complete",
-        {
-            "nodeType": "br"
-        },
-        "Notice: ",
-        {
-            "nodeType": "br"
-        },
-        "Built-in video card beautification and widescreen adaptation"
+        "Loading Complete"
     ],
     "useHelpForBase": [
         "Please read the usage guide carefully!",
@@ -92,23 +84,7 @@
         {
             "nodeType": "br"
         },
-        "Example: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L",
-        {
-            "nodeType": "br"
-        },
-        "Or provide an array of objects in JSON format matching the following structure:",
-        {
-            "nodeType": "br"
-        },
-        "[ ID: string, { Title?: string, Alias?: string, Author?: string } ]",
-        {
-            "nodeType": "br"
-        },
-        "Example: ",
-        {
-            "nodeType": "br"
-        },
-        "[[\"AeGUIRO2D5vQ6F\", { Title: \"237 Robin\", Alias: \"Riding Cow Chasing Weaving Maiden\", Author: \"user1528210\" }],[\"qQsUMJa19LcK3L\", { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation's Symphony\", Author: \"temptations_symphony\" }]]"
+        "Example: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L"
     ],
     "useHelpForBugreport": [
         "To report bugs or usage issues, please visit: ",
@@ -142,7 +118,7 @@
     "parsing": "Parsing...",
     "following": "Following",
     "parsingProgress": "Parsing Progress: ",
-    "manualDownloadTips": "For individual downloads, input the video ID here. For batch downloads, separate video IDs with \"|\". Example: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\nOr provide an array of objects in JSON format matching the following structure:\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\nExample: \r\n[{ key: \"AeGUIRO2D5vQ6F\", value: { Title: \"237 Robin\", Alias: \"Riding Cow Chasing Weaving Maiden\", Author: \"user1528210\" } },{ key: \"qQsUMJa19LcK3L\", value: { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation's Symphony\", Author: \"temptations_symphony\" } }]",
+    "manualDownloadTips": "For individual downloads, input the video ID here. For batch downloads, separate video IDs with \"|\". Example: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L",
     "externalVideo": "External Video",
     "playlistDelete": "Delete Playlist",
     "noAvailableVideoSource": "No available video sources",

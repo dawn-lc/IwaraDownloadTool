@@ -21,7 +21,7 @@ const inlineCSS = {
                     minify: true,
                     platform: 'neutral'
                 });
-                const cssContent = result.outputFiles[0].text;
+                const cssContent = result.outputFiles[0].text.trim();
                 const contents = `export default ${JSON.stringify(cssContent)};`;
                 return {
                     contents,
