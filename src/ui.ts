@@ -6,7 +6,7 @@ import { renderNode, unlimitedFetch } from "./extension";
 import { check, getAuth, refreshToken, newToast, toastNode, aria2TaskCheckAndRestart, parseVideoInfo, addDownloadTask, analyzeDownloadTask, pushDownloadTask, importConfig } from "./function";
 import { originalNodeAppendChild, originalConsole, originalAddEventListener } from "./hijack";
 import { i18nList } from "./i18n";
-import { editConfig, getPageType, isLoggedIn, pageSelectButtons, rating, selectList } from "./main";
+import { apiEndpoint, editConfig, getPageType, isLoggedIn, pageSelectButtons, rating, selectList } from "./main";
 
 export function uninjectCheckbox(element: Element | Node) {
     if (element instanceof HTMLElement) {
@@ -87,7 +87,7 @@ export async function injectCheckbox(element: Element) {
             className: 'deleteButton',
             events: {
                 click: async (event: Event) => {
-                    if ((await unlimitedFetch(`https://apiq.iwara.tv/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
+                    if ((await unlimitedFetch(`https://${apiEndpoint}/playlist/${unsafeWindow.location.pathname.split('/')[2]}/${ID}`, {
                         method: 'DELETE',
                         headers: await getAuth()
                     })).ok) {
@@ -414,17 +414,18 @@ export class menu {
     pageType!: PageType;
     interface!: HTMLDivElement;
     interfacePage!: HTMLUListElement;
+    isTouchDevice!: boolean;
     constructor() {
         let body = new Proxy(this, {
             set: (target, prop, value) => {
                 if (prop === 'pageType') {
-                    if (isNullOrUndefined(value) || this.pageType === value) return true
-                    target[prop] = value
+                    if (isNullOrUndefined(value) || target.pageType === value) return true
+                    const ok = Reflect.set(target, prop, value)
                     this.pageChange()
                     GM_getValue('isDebug') && originalConsole.debug(`[Debug] Page change to ${this.pageType}`)
-                    return true
+                    return ok
                 }
-                return target[prop] = value;
+                return Reflect.set(target, prop, value)
             }
         })
         body.interfacePage = renderNode({
@@ -438,50 +439,74 @@ export class menu {
             childs: body.interfacePage
         })
 
-        let mouseoutTimer: number | null = null;
+        // 检测是否为触摸设备（使用 matchMedia 检测 coarse pointer + maxTouchPoints 兜底）
+        body.isTouchDevice = unsafeWindow.matchMedia('(pointer: coarse)').matches || (unsafeWindow.navigator.maxTouchPoints ?? 0) > 0;
 
-        originalAddEventListener.call(body.interface, 'mouseover', (event: Event) => {
-            // 清除之前的计时器
-            if (mouseoutTimer !== null) {
-                clearTimeout(mouseoutTimer);
-                mouseoutTimer = null;
-            }
-            body.interface.classList.add('expanded');
-        })
+        if (body.isTouchDevice) {
+            // 移动端：点击菜单容器切换展开/收起
+            originalAddEventListener.call(body.interface, 'click', (event: Event) => {
+                // 只响应直接点击菜单容器（非子元素冒泡）
+                if (event.target === body.interface) {
+                    body.interface.classList.toggle('expanded');
+                }
+            });
 
-        originalAddEventListener.call(body.interface, 'mouseout', (event: Event) => {
-            const e = event as MouseEvent;
-            const relatedTarget = e.relatedTarget as Node;
+            // 移动端：点击菜单外部区域时收起菜单
+            originalAddEventListener.call(unsafeWindow.document, 'click', (event: Event) => {
+                if (body.interface.classList.contains('expanded') &&
+                    !body.interface.contains(event.target as Node)) {
+                    body.interface.classList.remove('expanded');
+                }
+            });
+        } else {
+            // 桌面端：保持原有的 hover 行为
+            let mouseoutTimer: number | null = null;
 
-            // 检查鼠标是否移动到子元素上
-            if (relatedTarget && body.interface.contains(relatedTarget)) {
-                return; // 鼠标移动到子元素上，不触发收起
-            }
+            originalAddEventListener.call(body.interface, 'mouseover', (event: Event) => {
+                if (mouseoutTimer !== null) {
+                    clearTimeout(mouseoutTimer);
+                    mouseoutTimer = null;
+                }
+                body.interface.classList.add('expanded');
+            })
 
-            // 设置300毫秒延迟后收起
-            mouseoutTimer = setTimeout(() => {
-                body.interface.classList.remove('expanded');
-                mouseoutTimer = null;
-            }, 300);
-        })
+            originalAddEventListener.call(body.interface, 'mouseout', (event: Event) => {
+                const e = event as MouseEvent;
+                const relatedTarget = e.relatedTarget as Node;
 
-        originalAddEventListener.call(body.interface, 'click', (event: Event) => {
-            if (event.target === body.interface) {
-                body.interface.classList.toggle('expanded');
-            }
-        })
+                if (relatedTarget && body.interface.contains(relatedTarget)) {
+                    return;
+                }
+
+                mouseoutTimer = setTimeout(() => {
+                    body.interface.classList.remove('expanded');
+                    mouseoutTimer = null;
+                }, 300);
+            })
+
+            originalAddEventListener.call(body.interface, 'click', (event: Event) => {
+                if (event.target === body.interface) {
+                    body.interface.classList.toggle('expanded');
+                }
+            })
+        }
 
         body.observer = new MutationObserver((mutationsList) => body.pageType = getPageType(mutationsList) ?? body.pageType)
         body.pageType = PageType.Page
         return body
     }
     private button(name: string, click?: (name: string, e: Event) => void) {
+        const self = this;
         return renderNode({
             nodeType: 'li',
             childs: `%#${name}#%`,
             events: {
                 click: (event: Event) => {
                     !isNullOrUndefined(click) && click(name, event)
+                    // 移动端：点击菜单项后自动收起菜单
+                    if (self.isTouchDevice) {
+                        setTimeout(() => self.interface.classList.remove('expanded'), 150);
+                    }
                     event.stopPropagation()
                     return false
                 }
@@ -502,7 +527,7 @@ export class menu {
         while (pageCount < MAX_FIND_PAGES) {
             GM_getValue('isDebug') && originalConsole.debug(`[Debug] Fetching page ${pageCount}.`);
             const response = await unlimitedFetch(
-                `https://apiq.iwara.tv/videos?subscribed=true&limit=50&rating=${rating()}&page=${pageCount}`,
+                `https://${apiEndpoint}/videos?subscribed=true&limit=50&rating=${rating()}&page=${pageCount}`,
                 { method: 'GET', headers: await getAuth() },
                 {
                     retry: true,

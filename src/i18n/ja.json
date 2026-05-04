@@ -31,7 +31,7 @@
     "addUnlistedAndPrivate": "非公開・限定公開動画を強制表示（作者のフォローが必要）",
     "parseUnlistedAndPrivate": "最近の非公開・限定公開動画を解析",
     "checkDownloadLink": "サードパーティクラウドストレージのダウンロードリンクをチェック",
-    "notOfficialWarning": "警告：このサイトはIwara公式サイトではありません。個人情報を入力しないでください！\nこのサイトを閲覧しますか？",
+    "notOfficialWarning": "警告：このサイトはIwara公式サイトではありません。個人情報を入力しないでください！！！ このサイトを閲覧しますか？",
     "checkPriority": "ダウンロード画質チェック",
     "autoDownloadMetadata": "動画メタデータを自動ダウンロード",
     "filterLikedVideos": "タイムライン上のいいね済み動画をフィルタリング",
@@ -55,7 +55,7 @@
     "loadingCompleted": "読み込み完了",
     "settings": "設定を開く",
     "downloadThis": "現在の動画をダウンロード",
-    "manualDownload": "手動で指定ダウンロード",
+    "manualDownload": "手動ダウンロード",
     "aria2TaskCheck": "Aria2タスク再起動",
     "reverseSelect": "このページで選択を反転",
     "deselectThis": "このページの選択を解除",
@@ -68,15 +68,7 @@
     "configError": "スクリプト設定にエラーがあります。修正してください。",
     "alreadyKnowHowToUse": "使用方法を理解しました!!!（このページは一度だけ表示されます）",
     "notice": [
-        "読み込み完了",
-        {
-            "nodeType": "br"
-        },
-        "お知らせ: ",
-        {
-            "nodeType": "br"
-        },
-        "ビデオカード美化とワイドスクリーン適応を内蔵"
+        "読み込み完了"
     ],
     "useHelpForBase": [
         "使用ガイドをよくお読みください！",
@@ -92,23 +84,7 @@
         {
             "nodeType": "br"
         },
-        "例: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L",
-        {
-            "nodeType": "br"
-        },
-        "または、以下の形式のオブジェクトの配列をJSON文字列で提供してください",
-        {
-            "nodeType": "br"
-        },
-        "[ ID: string, { Title?: string, Alias?: string, Author?: string } ] ",
-        {
-            "nodeType": "br"
-        },
-        "例: ",
-        {
-            "nodeType": "br"
-        },
-        "[[\"AeGUIRO2D5vQ6F\", { Title: \"237知更鳥\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" }],[\"qQsUMJa19LcK3L\", { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation's Symphony\", Author: \"temptations_symphony\" }]]"
+        "例: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L"
     ],
     "useHelpForBugreport": [
         "バグや使用上の問題を報告する場合は、以下にアクセスしてください: ",
@@ -142,7 +118,7 @@
     "parsing": "解析中...",
     "following": "フォロー中",
     "parsingProgress": "解析進捗: ",
-    "manualDownloadTips": "個別ダウンロードはここに動画IDを直接入力してください。バッチダウンロードは「|」で区切った動画IDを提供してください。例: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\nまたは、以下の形式のオブジェクトの配列をJSON文字列で提供してください\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\n例: \r\n[{ key: \"AeGUIRO2D5vQ6F\", value: { Title: \"237知更鳥\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" } },{ key: \"qQsUMJa19LcK3L\", value: { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation's Symphony\", Author: \"temptations_symphony\" } }]",
+    "manualDownloadTips": "個別ダウンロードはここに動画IDを直接入力してください。バッチダウンロードは「|」で区切った動画IDを提供してください。例: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L",
     "externalVideo": "外部動画",
     "playlistDelete": "プレイリストを削除",
     "noAvailableVideoSource": "利用可能な動画ソースがありません",

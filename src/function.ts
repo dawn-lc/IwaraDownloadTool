@@ -5,7 +5,7 @@ import { ToastType, DownloadType } from "./enum"
 import { Config, config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Dictionary, Path } from "./class"
-import { domain, isLoggedIn, selectList } from "./main"
+import { domain, apiEndpoint, isLoggedIn, selectList } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 import { originalConsole } from "./hijack";
 import { db } from "./db";
@@ -26,7 +26,7 @@ export async function refreshToken(): Promise<string> {
     const oldAccessToken = localStorage.getItem('accessToken');
     try {
         const res = await unlimitedFetch(
-            'https://apiq.iwara.tv/user/token',
+            `https://${apiEndpoint}/user/token`,
             {
                 method: 'POST',
                 headers: {
@@ -218,7 +218,7 @@ export function getDownloadPath(videoInfo: FullVideoInfo): Path {
             UploadTime: new Date(videoInfo.UploadTime),
             AUTHOR: videoInfo.Author,
             ID: videoInfo.ID,
-            TITLE: videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+            TITLE: videoInfo.Title.normalize('NFKC').replaceEmojis('_').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
             ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
             QUALITY: videoInfo.DownloadQuality,
         })
@@ -681,7 +681,7 @@ export async function aria2TaskCheckAndRestart() {
         .unique('id');
     let downloadCompleted: Array<{ id: string, data: Aria2.Status }> = stoped
         .filter(
-            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete'
+            (task: { id: string, data: Aria2.Status }) => task.data.status === 'complete' || task.data.errorCode === '13'
         )
         .unique('id');
 
@@ -780,7 +780,7 @@ async function getXVersion(urlString: string): Promise<string> {
 
 
 async function getCommentData(id: string, commentID?: string, page: number = 0): Promise<Iwara.IPage> {
-    return await (await unlimitedFetch(`https://apiq.iwara.tv/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
+    return await (await unlimitedFetch(`https://${apiEndpoint}/video/${id}/comments?page=${page}${!isNullOrUndefined(commentID) && !commentID.isEmpty() ? '&parent=' + commentID : ''}`, { headers: await getAuth() })).json() as Iwara.IPage
 }
 async function getCommentDatas(id: string, commentID?: string): Promise<Iwara.Comment[]> {
     let comments: Iwara.Comment[] = []
@@ -817,7 +817,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
             case "full":
                 GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse full source`)
                 let sourceResult = await (await unlimitedFetch(
-                    `https://apiq.iwara.tv/video/${info.ID}`,
+                    `https://${apiEndpoint}/video/${info.ID}`,
                     {
                         headers: await getAuth()
                     },
@@ -826,7 +826,10 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                         maxRetries: 3,
                         failStatuses: [403, 404],
                         retryDelay: 1000,
-                        onRetry: async () => { await refreshToken() }
+                        onRetry: async () => { await refreshToken() },
+                        onFail: async (response) => {
+                            GM_getValue("isDebug") && originalConsole.debug("[Debug]", `${response.url} Fail, response: ${await response.clone().text()}`);
+                        }
                     }
                 )).json() as Iwara.IResult
                 if (isNullOrUndefined(sourceResult.id)) {
@@ -940,7 +943,7 @@ export async function parseVideoInfo(info: VideoInfo): Promise<VideoInfo> {
                 DownloadUrl = decodeURIComponent(`https:${Source}`)
 
                 GM_getValue('isDebug') && originalConsole.debug(`[debug] try parse all comment`)
-                Comments = `${(await getCommentDatas(ID)).map(i => i.body).join('\n')}`.normalize('NFKC')
+                Comments = JSON.stringify(await getCommentDatas(ID)).normalize('NFKC')
 
                 return {
                     Type, RAW, ID, Alias, Author, AuthorID, Private, UploadTime, Title, Tags, Liked, External, FileName, DownloadQuality, ExternalUrl, Description, Comments, DownloadUrl, Size, Following, Unlisted, Friend
@@ -1099,26 +1102,12 @@ export async function addDownloadTask() {
                         if (!isNullOrUndefined(textArea.value) && !textArea.value.isEmpty()) {
                             let list: Array<[string, VideoInfo]> = [];
                             try {
-                                const parsed = JSON.parse(textArea.value);
-                                if (Array.isArray(parsed)) {
-                                    list = parsed.map(item => {
-                                        if (Array.isArray(item) && isString(item[0]) && !item[0].isEmpty()) {
-                                            if (!isVideoInfo(item[1])) {
-                                                item[1].Type = 'init'
-                                                item[1].ID = item[1].ID ?? item[0]
-                                                item[1].UpdateTime = item[1].UpdateTime ?? Date.now()
-                                            }
-                                        }
-                                        return [...item]
-                                    }) as Array<[string, VideoInfo]>;
-                                } else {
-                                    throw new Error('解析结果不是符合预期的列表');
-                                }
-                            } catch (error) {
                                 list = textArea.value.split('|').map(ID => [ID.trim(), {
                                     Type: 'init',
                                     ID: ID.trim()
                                 }]);
+                            } catch (error) {
+                                throw new Error('解析结果不是符合预期的列表');
                             }
                             if (list.length > 0) {
                                 analyzeDownloadTask(new Dictionary<VideoInfo>(list));
@@ -1254,7 +1243,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 const authorInfo = await db.getFollowById(videoInfo.AuthorID);
                 if (config.autoFollow && (!authorInfo?.following || !videoInfo.Following)) {
                     await unlimitedFetch(
-                        `https://apiq.iwara.tv/user/${videoInfo.AuthorID}/followers`,
+                        `https://${apiEndpoint}/user/${videoInfo.AuthorID}/followers`,
                         {
                             method: 'POST',
                             headers: await getAuth()
@@ -1276,7 +1265,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo, bypass: boolean = f
                 }
                 if (config.autoLike && !videoInfo.Liked) {
                     await unlimitedFetch(
-                        `https://apiq.iwara.tv/video/${videoInfo.ID}/like`,
+                        `https://${apiEndpoint}/video/${videoInfo.ID}/like`,
                         {
                             method: 'POST',
                             headers: await getAuth()

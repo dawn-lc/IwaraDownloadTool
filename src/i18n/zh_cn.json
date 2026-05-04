@@ -35,7 +35,7 @@
     "filterLikedVideos": "过滤时间线上的已喜欢视频",
     "videoMetadata": "视频元数据",
     "autoInjectCheckbox": "自动注入选择框",
-    "notOfficialWarning": "警告，此网站不是Iwara官方网站，请勿填写任何敏感信息！\n继续浏览该网站？",
+    "notOfficialWarning": "警告，此网站不是Iwara官方网站，请勿填写任何敏感信息！！！继续浏览该网站？",
     "autoCopySaveFileName": "自动复制根据规则生成的文件名",
     "configurationIncompatible": "初始化或配置文件不兼容，请重新配置！",
     "browserDownloadNotEnabled": "未启用下载功能！",
@@ -54,7 +54,7 @@
     "loadingCompleted": "加载完成",
     "settings": "打开设置",
     "downloadThis": "下载当前视频",
-    "manualDownload": "手动下载指定",
+    "manualDownload": "手动下载",
     "aria2TaskCheck": "Aria2任务重启",
     "reverseSelect": "本页反向选中",
     "deselectThis": "取消本页选中",
@@ -68,15 +68,7 @@
     "configError": "脚本配置中存在错误，请修改。",
     "alreadyKnowHowToUse": "我已知晓如何使用!!!（此页面仅显示一次）",
     "notice": [
-        "加载完成",
-        {
-            "nodeType": "br"
-        },
-        "公告: ",
-        {
-            "nodeType": "br"
-        },
-        "内置视频卡片美化以及宽屏适配"
+        "加载完成"
     ],
     "useHelpForBase": [
         "请认真阅读使用指南！",
@@ -92,23 +84,7 @@
         {
             "nodeType": "br"
         },
-        "例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L",
-        {
-            "nodeType": "br"
-        },
-        "或提供符合以下格式对象的数组json字符串",
-        {
-            "nodeType": "br"
-        },
-        "[ ID: string, { Title?: string, Alias?: string, Author?: string } ] ",
-        {
-            "nodeType": "br"
-        },
-        "例如: ",
-        {
-            "nodeType": "br"
-        },
-        "[[\"AeGUIRO2D5vQ6F\", { Title: \"237知更鸟\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" }],[\"qQsUMJa19LcK3L\", { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation’s_Symphony\", Author: \"temptations_symphony\" }]]"
+        "例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L"
     ],
     "useHelpForBugreport": [
         "反馈遇到的BUG、使用问题等请前往: ",
@@ -142,7 +118,7 @@
     "parsing": "预解析中...",
     "following": "已关注",
     "parsingProgress": "解析进度: ",
-    "manualDownloadTips": "单独下载请直接在此处输入视频ID, 批量下载请提供使用“|”分割的视频ID, 例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L\r\n或提供符合以下格式对象的数组json字符串\r\n{ key: string, value: { Title?: string, Alias?: string, Author?: string } }\r\n例如: \r\n[{ key: \"AeGUIRO2D5vQ6F\", value: { Title: \"237知更鸟\", Alias: \"骑着牛儿追织女\", Author: \"user1528210\" } },{ key: \"qQsUMJa19LcK3L\", value: { Title: \"Mika Automotive Extradimensional\", Alias: \"Temptation’s_Symphony\", Author: \"temptations_symphony\" } }]",
+    "manualDownloadTips": "单独下载请直接在此处输入视频ID, 批量下载请提供使用“|”分割的视频ID, 例如: AeGUIRO2D5vQ6F|qQsUMJa19LcK3L",
     "externalVideo": "非本站视频",
     "playlistDelete": "删除播放列表",
     "noAvailableVideoSource": "没有可供下载的视频源",

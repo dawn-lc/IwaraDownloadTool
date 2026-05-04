@@ -9,8 +9,7 @@
 // @namespace         https://github.com/dawn-lc/
 // @author            dawn-lc
 // @license           Apache-2.0
-// @copyright         2025, Dawnlc (https://dawnlc.me/)
-// @source            https://github.com/dawn-lc/IwaraDownloadTool
+// @copyright         2026, Dawnlc (https://dawnlc.me/)
 // @supportURL        https://github.com/dawn-lc/IwaraDownloadTool/issues
 // @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.mata.js
 // @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.user.js

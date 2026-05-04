@@ -1,7 +1,7 @@
 {
   "name": "iwaradownloadtool",
   "displayName": "IwaraDownloadTool",
-  "version": "3.3.85",
+  "version": "3.3.93",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,14 +10,14 @@
     "release": "node ./build/release.ts"
   },
   "dependencies": {
-    "dayjs": "^1.11.19",
+    "dayjs": "^1.11.20",
     "idb": "^8.0.3",
-    "tldts": "^7.0.19"
+    "tldts": "^7.0.29"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.12.2",
     "@types/tampermonkey": "^5.0.5",
-    "esbuild": "^0.27.0",
-    "typescript": "^5.9.3"
+    "esbuild": "^0.28.0",
+    "typescript": "^6.0.3"
   }
 }

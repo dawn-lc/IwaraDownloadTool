@@ -1,6 +1,8 @@
 import path from 'path';
 import esbuild from 'esbuild';
+
 type PluginBuild = esbuild.PluginBuild;
+
 const inlineCSS = {
     name: 'inlineCSS',
     setup(build: PluginBuild) {
@@ -21,7 +23,7 @@ const inlineCSS = {
                     minify: true,
                     platform: 'neutral'
                 });
-                const cssContent = result.outputFiles[0].text;
+                const cssContent = result.outputFiles[0].text.trim();
                 const contents = `export default ${JSON.stringify(cssContent)};`;
                 return {
                     contents,
