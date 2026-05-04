@@ -128,7 +128,6 @@ emojiTestGroup.add(new Test('肤色修饰符', 'async', function () {
 
 // ============ Unicode分类: 心形符号变体 (Heart Variants) ============
 // Unicode范围: U+2764(U+FE0F), U+1F493-U+1F49F, U+1F5A4, U+1F90D, U+1FA75-1FA79
-// 覆盖: 真实文件名中的 💕💖💘💓💞🤍💜🖤❤️
 
 emojiTestGroup.add(new Test('心形符号变体-全部替换', 'async', function () {
     const template = '💕💖💘💓💞🤍💜🖤❤️❤';
@@ -162,7 +161,6 @@ emojiTestGroup.add(new Test('带黑心的混合emoji', 'async', function () {
 
 // ============ Unicode分类: 基础表情/人物 (Smileys & People) ============
 // Unicode范围: U+1F600-U+1F64F, U+1F470-U+1F487
-// 覆盖: 真实文件名中的 😈😇😍😊 等
 
 emojiTestGroup.add(new Test('带角恶魔/天使表情', 'async', function () {
     const template = '😈😇👿👹👺';

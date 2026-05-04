@@ -218,7 +218,7 @@ export function getDownloadPath(videoInfo: FullVideoInfo): Path {
             UploadTime: new Date(videoInfo.UploadTime),
             AUTHOR: videoInfo.Author,
             ID: videoInfo.ID,
-            TITLE: videoInfo.Title.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
+            TITLE: videoInfo.Title.normalize('NFKC').replaceEmojis('_').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(72),
             ALIAS: videoInfo.Alias.normalize('NFKC').replaceAll(/(\P{Mark})(\p{Mark}+)/gu, '_').replace(/^\.|[\\\\/:*?\"<>|]/img, '_').truncate(64),
             QUALITY: videoInfo.DownloadQuality,
         })
