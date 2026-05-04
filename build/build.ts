@@ -1,178 +1,185 @@
-const root = process.cwd();
 import esbuild from 'esbuild';
 import { promises, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { isNullOrUndefined, UUID } from "../src/env.ts";
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 import inlineCSS from './inlineCSS.ts';
 import minifyModules from './minifyModules.ts';
 
-function parseMetadata(content: string): any {
-    const lines = content
-        .among('// ==UserScript==', '// ==/UserScript==')
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const root = join(__dirname, '..');
+
+const distPath = join(root, 'dist');
+const sourcePath = join(root, 'src');
+const packagePath = join(root, 'package.json');
+const tsconfigPath = join(root, 'tsconfig.json');
+const mataTemplatePath = join(sourcePath, 'mata', 'userjs.mata');
+
+function ensureDir(path: string) {
+    if (!existsSync(path)) mkdirSync(path, { recursive: true });
+}
+
+function UUID(): string {
+    return randomUUID().replaceAll('-', '');
+}
+
+interface MetadataDict {
+    [key: string]: string | (string | null)[] | null;
+}
+
+function parseMetadata(content: string): MetadataDict {
+    const startTag = '// ==UserScript==';
+    const endTag = '// ==/UserScript==';
+
+    const startIndex = content.indexOf(startTag);
+    if (startIndex === -1) throw new Error("No metadata block found");
+
+    const bodyStart = startIndex + startTag.length;
+    const endIndex = content.indexOf(endTag, bodyStart);
+    if (endIndex === -1) throw new Error("Unclosed metadata block");
+
+    const block = content.slice(bodyStart, endIndex);
+
+    const lines = block
         .split('\n')
-        .filter(i => !i.isEmpty())
-        .map(line => line.trimHead('// @'));
+        .map(l => l.trim())
+        .filter(l => l.startsWith('// @'))
+        .map(l => l.replace('// @', '').trim());
 
-    if (!lines.any()) {
-        throw new Error("No metadata block found");
-    }
+    if (lines.length === 0) throw new Error("No metadata entries found");
 
-    let results = {} as Record<string, any>;
+    const results: MetadataDict = {};
 
-    lines.reduce((result, line) => {
-        const parts = line.splitLimit(' ', 1)
-            .map(i => i.trim())
-            .filter(i => !i.isEmpty());
+    for (const line of lines) {
+        const spaceIdx = line.indexOf(' ');
+        const key = spaceIdx === -1 ? line : line.slice(0, spaceIdx);
+        const value = spaceIdx === -1 ? null : line.slice(spaceIdx + 1).trim();
 
-        const key = parts[0];
-        const value = parts[1];
+        if (!key) continue;
 
-        if (isNullOrUndefined(key) || key.isEmpty()) {
-            return result;
-        }
-
-        const finalValue = isNullOrUndefined(value) ? null : value;
-
-        if (!isNullOrUndefined(result[key])) {
-            Array.isArray(result[key])
-                ? result[key].push(finalValue)
-                : result[key] = [result[key], finalValue];
+        if (results[key] !== undefined) {
+            const existing = results[key];
+            if (Array.isArray(existing)) {
+                existing.push(value);
+            } else {
+                results[key] = [existing, value];
+            }
         } else {
-            result[key] = finalValue;
+            results[key] = value;
         }
-
-        return result;
-    }, results);
+    }
 
     return results;
 }
-function serializeMetadata(metadata: any): string {
-    let pad = Object.keys(metadata)
-        .reduce((a, b) => a.length > b.length ? a : b).length + 1;
 
-    let results = ['// ==UserScript=='];
+function serializeMetadata(metadata: MetadataDict): string {
+    const keys = Object.keys(metadata);
+    const maxLen = keys.reduce((a, b) => a.length > b.length ? a : b, '').length;
+    const pad = maxLen + 1;
 
-    Object.entries(metadata).reduce((result, [key, value]) => {
+    const lines: string[] = ['// ==UserScript=='];
 
-        const pushLine = (v: any) => {
+    for (const [key, value] of Object.entries(metadata)) {
+        const values = Array.isArray(value) ? value : [value];
+        for (const v of values) {
             if (v === null) {
-                result.push(`// @${key}`);
+                lines.push(`// @${key}`);
             } else {
-                result.push(`// @${key.padEnd(pad, ' ')}${v}`);
+                lines.push(`// @${key.padEnd(pad, ' ')}${v}`);
             }
-        };
+        }
+    }
 
-        Array.isArray(value)
-            ? value.forEach(pushLine)
-            : pushLine(value);
-
-        return result;
-    }, results);
-
-    results.push('// ==/UserScript==');
-
-    return results.join('\r\n');
+    lines.push('// ==/UserScript==');
+    return lines.join('\r\n');
 }
 
-function mkdir(path: string) {
-    return existsSync(path) || mkdirSync(path)
+function replaceTemplateVars(text: string, vars: Record<string, string>): string {
+    let result = text;
+    for (const [key, value] of Object.entries(vars)) {
+        result = result.replace(new RegExp(`%#${key}#%`, 'g'), value);
+    }
+    return result;
 }
 
-const distPath = join(root, 'dist');
 
-mkdir(distPath);
+async function main() {
+    ensureDir(distPath);
 
-const sourcePath = join(root, 'src');
+    // 读取配置
+    const packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
+    const tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'));
+    const displayName = packageInfo.displayName;
 
-const packagePath = join(root, 'package.json');
-let packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));
+    // 解析 metadata 模板
+    const mataTemplate = parseMetadata(readFileSync(mataTemplatePath, 'utf8'));
 
-const tsconfigPath = join(root, 'tsconfig.json');
-let tsconfig = JSON.parse(readFileSync(tsconfigPath, 'utf8'));
+    // 设置版本
+    const releaseTag = process.argv[2] ?? 'dev';
+    const version = `${packageInfo.version}${releaseTag === 'dev' ? '-dev.' + UUID() : ''}`;
+    mataTemplate.version = version;
+    console.log(`版本: ${version}`);
 
-const mataTemplatePath = join(sourcePath, 'mata', 'userjs.mata');
+    // 替换 URL 占位符
+    const vars: Record<string, string> = {
+        release_tag: releaseTag,
+        display_name: displayName,
+        version: version,
+    };
+    if (typeof mataTemplate.updateURL === 'string') {
+        mataTemplate.updateURL = replaceTemplateVars(mataTemplate.updateURL, vars);
+    }
+    if (typeof mataTemplate.downloadURL === 'string') {
+        mataTemplate.downloadURL = replaceTemplateVars(mataTemplate.downloadURL, vars);
+    }
 
-const mataTempPath = join(distPath, `${packageInfo.displayName}.mata.js`);
+    // 序列化 metadata 并替换模板变量
+    let matadata = serializeMetadata(mataTemplate);
+    matadata = replaceTemplateVars(matadata, vars);
 
-let mataTemplate = parseMetadata(readFileSync(mataTemplatePath, 'utf8'));
-let mata = { ...mataTemplate };
+    // 写入 .mata.js 文件（供 Tampermonkey 检查更新用）
+    const mataTempPath = join(distPath, `${displayName}.mata.js`);
+    writeFileSync(mataTempPath, matadata);
 
-const releaseTag = process.argv[2] ?? 'dev';
-mata.version = `${packageInfo.version}${releaseTag === 'dev' ? '-dev.' + UUID() : ''}`;
+    // 编译入口
+    const mainPath = join(sourcePath, 'main.ts');
+    const distCompressPath = join(distPath, `${displayName}.min.user.js`);
+    const distUncompressPath = join(distPath, `${displayName}.user.js`);
 
-console.log(mata.version);
+    const sharedOptions: esbuild.BuildOptions = {
+        format: 'iife',
+        entryPoints: [mainPath],
+        bundle: true,
+        banner: { js: matadata },
+        loader: { '.json': 'json' },
+        platform: 'browser',
+        target: ['es2022', 'chrome92', 'edge92', 'firefox90', 'safari15.4'],
+        charset: 'utf8',
+        ignoreAnnotations: true,
+        legalComments: 'none',
+        tsconfigRaw: tsconfig,
+    };
 
-mata.updateURL = mata.updateURL.replaceVariable({
-    'release_tag': releaseTag
-});
-mata.downloadURL = mata.downloadURL.replaceVariable({
-    'release_tag': releaseTag
-});
+    await esbuild.build({
+        ...sharedOptions,
+        keepNames: true,
+        allowOverwrite: true,
+        outfile: distCompressPath,
+        minify: true,
+        plugins: [inlineCSS],
+    });
 
-const matadata = serializeMetadata(mata)
+    const result = await esbuild.build({
+        ...sharedOptions,
+        write: false,
+        treeShaking: false,
+        minify: false,
+        sourcemap: false,
+        plugins: [minifyModules, inlineCSS],
+    });
 
-writeFileSync(mataTempPath, matadata);
-
-
-const mainPath = join(sourcePath, 'main.ts');
-
-const distCompressPath = join(distPath, `${packageInfo.displayName}.min.user.js`);
-const distUncompressPath = join(distPath, `${packageInfo.displayName}.user.js`);
-esbuild.build({
-    keepNames: true,
-    allowOverwrite: true,
-    format: 'iife',
-    entryPoints: [mainPath],
-    bundle: true,
-    outfile: distCompressPath,
-    minify: true,
-    banner: {
-        js: matadata
-    },
-    loader: { '.json': 'json' },
-    platform: 'browser',
-    target: [
-        'es2022',
-        'chrome92',
-        'edge92',
-        'firefox90',
-        'safari15.4'
-    ],
-    plugins: [inlineCSS],
-    charset: 'utf8',
-    ignoreAnnotations: true,
-    legalComments: 'none',
-    tsconfigRaw: tsconfig
-}).catch(() => process.exit(1));
-
-
-esbuild.build({
-    entryPoints: [mainPath],
-    format: 'iife',
-    bundle: true,
-    write: false,
-    treeShaking: false,
-    minify: false,
-    legalComments: 'none',
-    sourcemap: false,
-    banner: {
-        js: matadata
-    },
-    loader: { '.json': 'json' },
-    platform: 'browser',
-    target: [
-        'es2022',
-        'chrome92',
-        'edge92',
-        'firefox90',
-        'safari15.4'
-    ],
-    plugins: [minifyModules, inlineCSS],
-    charset: 'utf8',
-    ignoreAnnotations: true,
-    tsconfigRaw: tsconfig
-}).then(async (result) => {
-    if (result.outputFiles.any()) {
+    if (result.outputFiles && result.outputFiles.length > 0) {
         let out = result.outputFiles[0].text
             .replace(/\r\n?|\n/g, '\r\n')
             .replace(/ \/\* .*? \*\//g, '')
@@ -182,6 +189,14 @@ esbuild.build({
             .replace(/^\s*$/gm, '');
         await promises.writeFile(distUncompressPath, out);
     } else {
+        console.error(`构建失败：${result.errors}`);
         process.exit(1);
     }
-}).catch(() => process.exit(1));
+
+    console.log('构建完成');
+}
+
+main().catch((err) => {
+    console.error('构建失败:', err);
+    process.exit(1);
+});

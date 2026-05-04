@@ -1,6 +1,8 @@
 import path from 'path';
 import esbuild from 'esbuild';
+
 type PluginBuild = esbuild.PluginBuild;
+
 const inlineCSS = {
     name: 'inlineCSS',
     setup(build: PluginBuild) {
