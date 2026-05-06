@@ -1,8 +1,15 @@
 declare namespace Aria2 {
-    interface Result {
+    interface IResult {
         id: string,
-        jsonrpc: string,
+        jsonrpc: string
+    }
+
+    interface StartsResult extends IResult {
         result: Array<Status>
+    }
+
+    interface AuctionResult extends IResult {
+        result: string
     }
 
     interface Uri {
