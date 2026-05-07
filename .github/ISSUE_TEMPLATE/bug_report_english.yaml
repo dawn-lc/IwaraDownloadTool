@@ -1,7 +1,7 @@
 name: Bug Report
 description: Feedback on encountered BUGs, abnormal phenomena in use, etc.
 title: "[Bug]: "
-labels: ["BUG"]
+type: "Bug"
 assignees:
   - dawn-lc
 body:

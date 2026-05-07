@@ -1,7 +1,7 @@
 name: Suggest
 description: Propose suggestions for the script.
 title: "[Suggest]: "
-labels: ["建议"]
+type: "Suggest"
 assignees:
   - dawn-lc
 body:

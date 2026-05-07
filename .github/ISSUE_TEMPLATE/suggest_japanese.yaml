@@ -1,7 +1,7 @@
 name: 提案する
 description: スクリプトに対する提案を提出する
 title: "[提案]: "
-labels: ["建议"]
+type: "Suggest"
 assignees:
   - dawn-lc
 body:
