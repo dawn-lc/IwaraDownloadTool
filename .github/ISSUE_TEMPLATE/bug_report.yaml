@@ -1,7 +1,7 @@
 name: 反馈BUG
 description: 反馈遇到的BUG、使用中的异常现象等
 title: "[Bug]: "
-labels: ["BUG"]
+type: "Bug"
 assignees:
   - dawn-lc
 body:

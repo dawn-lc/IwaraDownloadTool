@@ -676,7 +676,7 @@ export class menu {
             let ID = unsafeWindow.location.href.toURL().pathname.split('/')[2]
             await pushDownloadTask(await parseVideoInfo({
                 Type: 'init', ID
-            }), true)
+            }))
         })
 
         let aria2TaskCheckButton = this.button('aria2TaskCheck', (name, event) => {

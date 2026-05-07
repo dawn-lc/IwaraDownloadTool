@@ -3,6 +3,7 @@ import { promises, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
+import { execSync } from 'child_process';
 import inlineCSS from './inlineCSS.ts';
 import minifyModules from './minifyModules.ts';
 
@@ -104,8 +105,25 @@ function replaceTemplateVars(text: string, vars: Record<string, string>): string
 }
 
 
+function typeCheck(): void {
+    console.log('正在检查 TypeScript 类型...');
+    try {
+        execSync('npx tsc --noEmit --project tsconfig.json', {
+            cwd: root,
+            stdio: 'inherit',
+        });
+        console.log('TypeScript 类型检查通过');
+    } catch {
+        console.error('TypeScript 类型检查失败，构建终止');
+        process.exit(1);
+    }
+}
+
 async function main() {
     ensureDir(distPath);
+
+    // 类型检查
+    typeCheck();
 
     // 读取配置
     const packageInfo = JSON.parse(readFileSync(packagePath, 'utf8'));

@@ -73,7 +73,16 @@ export const unlimitedFetch = async (
                             statusText: response.statusText,
                         }));
                     },
-                    onerror: reject
+                    onerror: (err) => {
+                        reject(new Error(
+                            typeof err === 'string'
+                                ? err
+                                : err?.error || err?.statusText || 'GM_xmlhttpRequest network error'
+                        ));
+                    },
+                    ontimeout: () => {
+                        reject(new Error('Request timeout'));
+                    }
                 });
             });
         } else {

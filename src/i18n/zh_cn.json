@@ -101,7 +101,8 @@
     "cdnCacheFinded": "→ 进入 MMD Fans 缓存页面 ←",
     "openVideoLink": "→ 进入视频页面 ←",
     "copySucceed": "复制成功！",
-    "pushTaskSucceed": "推送下载任务成功！",
+    "pushTaskSucceed": "推送下载任务成功",
+    "pushTaskFail": "推送下载任务失败",
     "exportConfig": "导出配置",
     "importConfig": "导入配置",
     "exportConfigSucceed": "配置已导出至剪切板！",
@@ -129,5 +130,8 @@
     "pushTaskFailed": "推送下载任务失败！",
     "parsingFailed": "视频信息解析失败！",
     "autoFollowFailed": "自动关注视频作者失败！",
-    "autoLikeFailed": "自动点赞视频失败！"
+    "autoLikeFailed": "自动点赞视频失败！",
+    "aria2TaskRestartError": "读取或分析需要重启的下载任务时出现错误！",
+    "noAria2TasksNeedRestart": "未发现需要重启的下载任务！",
+    "duplicateTaskAnalysisError": "分析重复的的下载任务时出现错误！"
 }
