@@ -3,9 +3,9 @@
 [日本語](.github/README/README_ja.md) <sup>*日本語ローカライズを提供してくれる翻訳ボランティアを必要としています。</sup>
 
 # Iwara 视频下载工具
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool?ref=badge_shield)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool?ref=badge_shield&issueType=security)
-![GitHub All Releases](https://img.shields.io/github/downloads/dawn-lc/IwaraDownloadTool/total)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FIwaraEnhance%2FIwaraDownloadTool.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FIwaraEnhance%2FIwaraDownloadTool?ref=badge_shield)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FIwaraEnhance%2FIwaraDownloadTool.svg?type=shield&issueType=security)](https://app.fossa.com/projects/git%2Bgithub.com%2FIwaraEnhance%2FIwaraDownloadTool?ref=badge_shield&issueType=security)
+![GitHub All Releases](https://img.shields.io/github/downloads/IwaraEnhance/IwaraDownloadTool/total)
 
 
  * 批量下载视频
@@ -27,9 +27,9 @@
 * 从 GreasyFork 安装
  **[前往](https://sleazyfork.org/scripts/422239)**
 * GitHub Release
- **[安装](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
+ **[安装](https://github.com/IwaraEnhance/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
 * GitHub Release \[预览版\]
- **[安装](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
+ **[安装](https://github.com/IwaraEnhance/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 
 #### 支持以下浏览器
 
@@ -43,17 +43,17 @@
 
 #### 详细使用说明
 
-  前往 [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
+  前往 [Wiki](https://github.com/IwaraEnhance/IwaraDownloadTool/wiki)
 
 ## 参与贡献
 
-  我们欢迎所有形式的贡献！请查看 [贡献指南](https://github.com/dawn-lc/IwaraDownloadTool/blob/master/CONTRIBUTING.md) 了解如何开始。
+  我们欢迎所有形式的贡献！请查看 [贡献指南](https://github.com/IwaraEnhance/IwaraDownloadTool/blob/master/CONTRIBUTING.md) 了解如何开始。
 
 ##  鸣谢
 
 感谢以下开发者对 IwaraDownloadTool 作出的贡献，有你们 IwaraDownloadTool 才能变得更好！
 
-[![Contributors](https://contrib.rocks/image?repo=dawn-lc/IwaraDownloadTool&max=1000)](https://github.com/dawn-lc/IwaraDownloadTool/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=IwaraEnhance/IwaraDownloadTool&max=1000)](https://github.com/IwaraEnhance/IwaraDownloadTool/graphs/contributors)
 
 ## 依赖库
 - [day.js](https://github.com/iamkun/dayjs) - [MIT License](https://opensource.org/licenses/MIT)
@@ -69,4 +69,4 @@
 
 本项目基于 [MIT License](https://opensource.org/licenses/MIT) 协议开源，请遵守相关协议条款。
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdawn-lc%2FIwaraDownloadTool?ref=badge_large)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FIwaraEnhance%2FIwaraDownloadTool.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FIwaraEnhance%2FIwaraDownloadTool?ref=badge_large)

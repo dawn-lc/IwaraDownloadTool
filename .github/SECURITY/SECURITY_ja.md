@@ -16,7 +16,7 @@
 ### 📧 報告方法
 
 1. **Issue を作成（推奨）**  
-   [GitHub Issues](https://github.com/dawn-lc/IwaraDownloadTool/issues/new) にアクセスし、タイトルに `[Security]` プレフィックスを付けて報告してください。
+   [GitHub Issues](https://github.com/IwaraEnhance/IwaraDownloadTool/issues/new) にアクセスし、タイトルに `[Security]` プレフィックスを付けて報告してください。
 
 2. **メンテナーに直接連絡**  
    機密性の高い脆弱性の場合は、リポジトリのホームページに記載されている連絡先からメンテナーに直接連絡することもできます。

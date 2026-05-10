@@ -16,7 +16,7 @@
 ### 📧 报告方式
 
 1. **创建 Issue（推荐）**  
-   前往 [GitHub Issues](https://github.com/dawn-lc/IwaraDownloadTool/issues/new) 提交报告，并在标题中标注 `[Security]` 前缀。
+   前往 [GitHub Issues](https://github.com/IwaraEnhance/IwaraDownloadTool/issues/new) 提交报告，并在标题中标注 `[Security]` 前缀。
 
 2. **直接联系维护者**  
    如果漏洞较为敏感，你也可以通过仓库主页提供的联系方式直接联系维护者。

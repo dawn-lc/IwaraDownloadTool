@@ -6,13 +6,13 @@
 // @name:zh-CN        Iwara 批量下载工具
 // @description:zh-CN 批量下载 Iwara 视频
 // @icon              https://www.google.com/s2/favicons?sz=64&domain=iwara.tv
-// @namespace         https://github.com/dawn-lc/
+// @namespace         https://github.com/IwaraEnhance/
 // @author            dawn-lc
 // @license           Apache-2.0
 // @copyright         2026, Dawnlc (https://dawnlc.me/)
-// @supportURL        https://github.com/dawn-lc/IwaraDownloadTool/issues
-// @updateURL         https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.mata.js
-// @downloadURL       https://github.com/dawn-lc/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.user.js
+// @supportURL        https://github.com/IwaraEnhance/IwaraDownloadTool/issues
+// @updateURL         https://github.com/IwaraEnhance/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.mata.js
+// @downloadURL       https://github.com/IwaraEnhance/IwaraDownloadTool/releases/download/%#release_tag#%/IwaraDownloadTool.user.js
 // @connect           iwara.tv
 // @connect           *.iwara.*
 // @connect           localhost

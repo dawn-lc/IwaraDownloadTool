@@ -10,7 +10,7 @@
 
 ## 📌 提交 Issue
 
-在提交 Issue 前，请先查看 [已有 Issues](https://github.com/dawn-lc/IwaraDownloadTool/issues)，避免重复。
+在提交 Issue 前，请先查看 [已有 Issues](https://github.com/IwaraEnhance/IwaraDownloadTool/issues)，避免重复。
 
 ### 🐛 报告 Bug
 
