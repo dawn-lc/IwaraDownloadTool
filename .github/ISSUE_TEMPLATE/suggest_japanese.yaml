@@ -1,9 +1,7 @@
 name: 提案する
 description: スクリプトに対する提案を提出する
 title: "[提案]: "
-type: "Suggest"
-assignees:
-  - dawn-lc
+type: Suggest
 body:
   - type: checkboxes
     id: checks

@@ -1,9 +1,7 @@
 name: 提出建议
 description: 提出对脚本的建议。
 title: "[建议]: "
-type: "Suggest"
-assignees:
-  - dawn-lc
+type: Suggest
 body:
   - type: checkboxes
     id: checks
