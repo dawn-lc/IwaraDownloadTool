@@ -1,8 +1,8 @@
  # Iwara 视频下载工具
 
-[![GitHub license](https://img.shields.io/github/license/dawn-lc/IwaraDownloadTool.svg?style=flat-square&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
-[![GitHub Star](https://img.shields.io/github/stars/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Star&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
-[![GitHub Fork](https://img.shields.io/github/forks/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Fork&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
+[![GitHub license](https://img.shields.io/github/license/IwaraEnhance/IwaraDownloadTool.svg?style=flat-square&color=4285dd&logo=github)](https://github.com/IwaraEnhance/IwaraDownloadTool/)
+[![GitHub Star](https://img.shields.io/github/stars/IwaraEnhance/IwaraDownloadTool.svg?style=flat-square&label=Star&color=4285dd&logo=github)](https://github.com/IwaraEnhance/IwaraDownloadTool/)
+[![GitHub Fork](https://img.shields.io/github/forks/IwaraEnhance/IwaraDownloadTool.svg?style=flat-square&label=Fork&color=4285dd&logo=github)](https://github.com/IwaraEnhance/IwaraDownloadTool/)
 
  * 批量下载
  * 支持基于Aria2实现的下载器
@@ -31,7 +31,7 @@
 
 #### 详细使用说明
 
-* [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
+* [Wiki](https://github.com/IwaraEnhance/IwaraDownloadTool/wiki)
 
 #### 路径可用变量
 

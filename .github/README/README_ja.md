@@ -1,8 +1,8 @@
 # Iwara ビデオダウンローダーツール
 
-[![GitHub license](https://img.shields.io/github/license/dawn-lc/IwaraDownloadTool.svg?style=flat-square&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
-[![GitHub Star](https://img.shields.io/github/stars/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Star&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
-[![GitHub Fork](https://img.shields.io/github/forks/dawn-lc/IwaraDownloadTool.svg?style=flat-square&label=Fork&color=4285dd&logo=github)](https://github.com/dawn-lc/IwaraDownloadTool/)
+[![GitHub license](https://img.shields.io/github/license/IwaraEnhance/IwaraDownloadTool.svg?style=flat-square&color=4285dd&logo=github)](https://github.com/IwaraEnhance/IwaraDownloadTool/)
+[![GitHub Star](https://img.shields.io/github/stars/IwaraEnhance/IwaraDownloadTool.svg?style=flat-square&label=Star&color=4285dd&logo=github)](https://github.com/IwaraEnhance/IwaraDownloadTool/)
+[![GitHub Fork](https://img.shields.io/github/forks/IwaraEnhance/IwaraDownloadTool.svg?style=flat-square&label=Fork&color=4285dd&logo=github)](https://github.com/IwaraEnhance/IwaraDownloadTool/)
 
 # Iwara 動画ダウンロードツール
 
@@ -23,9 +23,9 @@
 * GreasyFork からインストール  
  **[訪問](https://sleazyfork.org/scripts/422239)**
 * GitHub リリース版  
- **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
+ **[インストール](https://github.com/IwaraEnhance/IwaraDownloadTool/releases/download/latest/IwaraDownloadTool.user.js)**
 * GitHub リリース版 [プレビュー版]  
- **[インストール](https://github.com/dawn-lc/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
+ **[インストール](https://github.com/IwaraEnhance/IwaraDownloadTool/releases/download/preview/IwaraDownloadTool.user.js)**
 
 #### サポートされているブラウザ
 
@@ -38,7 +38,7 @@
 
 #### 詳細な使用説明
 
-* [Wiki](https://github.com/dawn-lc/IwaraDownloadTool/wiki)
+* [Wiki](https://github.com/IwaraEnhance/IwaraDownloadTool/wiki)
 
 #### 利用可能なパス変数
 

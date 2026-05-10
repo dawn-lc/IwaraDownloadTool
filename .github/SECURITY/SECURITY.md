@@ -16,7 +16,7 @@ We take security seriously. If you discover a security vulnerability, please rep
 ### 📧 How to Report
 
 1. **Create an Issue (Recommended)**  
-   Go to [GitHub Issues](https://github.com/dawn-lc/IwaraDownloadTool/issues/new) and prefix the title with `[Security]`.
+   Go to [GitHub Issues](https://github.com/IwaraEnhance/IwaraDownloadTool/issues/new) and prefix the title with `[Security]`.
 
 2. **Contact the Maintainer Directly**  
    If the vulnerability is sensitive, you may also contact the maintainer directly through the contact information provided on the repository homepage.

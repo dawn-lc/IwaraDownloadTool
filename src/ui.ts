@@ -357,7 +357,7 @@ export class configEdit {
                 className: 'rainbow-text',
                 attributes: {
                     style: 'float: inline-end;',
-                    href: 'https://github.com/dawn-lc/IwaraDownloadTool/wiki/路径可用变量'
+                    href: 'https://github.com/IwaraEnhance/IwaraDownloadTool/wiki/路径可用变量'
                 }
             }))
         ]
