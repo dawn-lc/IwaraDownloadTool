@@ -1,9 +1,7 @@
 name: Bug Report
 description: Feedback on encountered BUGs, abnormal phenomena in use, etc.
 title: "[Bug]: "
-type: "Bug"
-assignees:
-  - dawn-lc
+type: Bug
 body:
   - type: checkboxes
     id: checks

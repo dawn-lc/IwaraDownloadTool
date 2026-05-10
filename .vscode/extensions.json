@@ -2,6 +2,7 @@
     "recommendations": [
         "aaron-bond.better-comments",
         "kisstkondoros.vscode-gutter-preview",
-        "vscode-icons-team.vscode-icons"
+        "vscode-icons-team.vscode-icons",
+        "codfrm.scriptcat-vscode"
     ]
 }

@@ -53,7 +53,7 @@ if (GM_getValue('isDebug')) {
 
 unsafeWindow.fetch = createInterceptedFetch();
 
-export var apiEndpoint = 'apiq.iwara.tv'
+export var apiEndpoint = 'api.iwara.tv'
 export const isPageType = (type: string): type is PageType => new Set(Object.values(PageType)).has(type as PageType)
 export var isLoggedIn = () => !(unsafeWindow.localStorage.getItem('token') ?? '').isEmpty()
 export var rating = () => localStorage.getItem('rating') ?? 'all'
