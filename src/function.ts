@@ -1,11 +1,11 @@
 import "./env";
 import { delay, isArray, isConvertibleToNumber, isNullOrUndefined, isString, isVideoInfo, prune, stringify, UUID } from "./env"
 import { i18nList } from "./i18n"
-import { ToastType, DownloadType } from "./enum"
+import { ToastType, DownloadType, PageType } from "./enum"
 import { Config, config } from "./config"
 import { unlimitedFetch, renderNode } from "./extension"
 import { Dictionary, Path } from "./class"
-import { domain, apiEndpoint, isLoggedIn, selectList } from "./main"
+import { domain, apiEndpoint, isLoggedIn, selectList, pluginMenu } from "./main"
 import { activeToasts, Toast, ToastOptions } from "./toastify";
 import { originalConsole } from "./hijack";
 import { db } from "./db";
@@ -1377,7 +1377,7 @@ export async function pushDownloadTask(videoInfo: VideoInfo) {
                     }
                 )
             }
-            if (config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
+            if (pluginMenu.pageType !== PageType.Video && config.checkDownloadLink && checkIsHaveDownloadLink(`${videoInfo.Description} ${videoInfo.Comments}`)) {
                 let toastBody = toastNode([
                     `${videoInfo.Title}[${videoInfo.ID}] %#findedDownloadLink#%`,
                     { nodeType: 'br' },
